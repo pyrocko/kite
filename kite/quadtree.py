@@ -140,7 +140,7 @@ class Quadtree(Subject):
 
         self.log = logging.getLogger('Quadtree')
 
-        self.epsilon = 2*num.nanstd(self.data)
+        self.epsilon = 1.*num.nanstd(self.data)
 
     @property
     def data(self):
@@ -156,22 +156,20 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
-        if value < 1e-3:
+        if value < .03:
             return
-        if self._base_nodes is None:
-            self._initBaseNodes()
 
         self._epsilon = value
-        
+
         self._leafs = None
         self.log.info('Changing epsilon to %0.3f' % value)
         t0 = time.time()
-        for b in self._base_nodes:
+        for b in self.base_nodes:
             b.evaluateNode()
         # for l in self.leafs:
         #     l.evaluateLeaf()
         self.log.info('New tree has %d leafs [%0.8f s]' %
-                       (len(self.leafs), (time.time()-t0)))
+                      (len(self.leafs), (time.time()-t0)))
         self._notify()
         return
 
@@ -179,7 +177,7 @@ class Quadtree(Subject):
     def leafs(self):
         if self._leafs is None:
             self._leafs = []
-            for n in self._base_nodes:
+            for n in self.base_nodes:
                 self._leafs.extend([c for c in n.iterLeafs()])
         return self._leafs
 
@@ -199,7 +197,11 @@ class Quadtree(Subject):
     def focal_points(self):
         return num.array([n.focal_point for n in self.leafs])
 
-    def _initBaseNodes(self):
+    @property
+    def base_nodes(self):
+        if self._base_nodes is not None:
+            return self._base_nodes
+
         self._base_nodes = []
         init_length = num.power(2, num.ceil(num.log(num.min(self.data.shape)) /
                                             num.log(2)))
@@ -211,8 +213,10 @@ class Quadtree(Subject):
                 _cy = iy * init_length
                 self._base_nodes.append(QuadNode(self, _cx, _cy,
                                         int(init_length)))
+
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
+        return self._base_nodes
 
     def __str__(self):
         return '''
