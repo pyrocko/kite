@@ -179,7 +179,7 @@ class Plot2DQuadTree(object):
         self._quadtree.subscribe(self._update)
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
-        self.fig.show()
+        plt.show()
 
     def _updateRectangles(self):
         for rect in self._rectangles:
