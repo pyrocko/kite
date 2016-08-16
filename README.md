@@ -1,4 +1,2 @@
 # KITE
-## Tools handling earthquake displacement from satellite interferometry
-### serving pyrocko
--------------------
+## Handling spatial earthquake displacement towards pyrocko
