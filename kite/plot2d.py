@@ -143,7 +143,7 @@ class Plot2DQuadTree(object):
 
         _finishPlot(figure, axes)
 
-    def plotInteractive(self):
+    def interactive(self):
         from matplotlib.widgets import Slider
 
         _setCanvas(self)

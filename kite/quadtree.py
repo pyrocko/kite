@@ -3,7 +3,6 @@ import logging
 import time
 
 from kite.meta import Subject
-from kite.plot2d import Plot2DQuadTree
 
 
 class QuadNode(object):
@@ -138,6 +137,8 @@ class Quadtree(Subject):
         self._means = None
         self._focal_points = None
 
+        self._plot = None
+
         self.log = logging.getLogger('Quadtree')
 
         self.epsilon = 1.*num.nanstd(self.data)
@@ -217,6 +218,13 @@ class Quadtree(Subject):
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
         return self._base_nodes
+
+    @property
+    def plot(self):
+        if self._plot is None:
+            from kite.plot2d import Plot2DQuadTree
+            self._plot = Plot2DQuadTree(self)
+        return self._plot
 
     def __str__(self):
         return '''
