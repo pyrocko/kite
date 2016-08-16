@@ -18,8 +18,7 @@ sc.y = mat['yy_ig']
 
 
 #sc.los.plot()
-a = Plot2DQuadTree(sc.quadtree)
-a.plotInteractive()
+sc.quadtree.plot.interactive()
 #qt = Quadtree(sc)
 #qp = Plot2DQuadTree(qt, cmap='RdBu')
 #qp.plotInteractive()
