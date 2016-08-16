@@ -136,12 +136,13 @@ class Quadtree(Subject):
         self._leafs = None
         self._means = None
         self._focal_points = None
+        self._data_std = num.nanstd(self.data)
 
         self._plot = None
 
         self.log = logging.getLogger('Quadtree')
 
-        self.epsilon = 1.*num.nanstd(self.data)
+        self.epsilon = 1.*self._data_std
 
     @property
     def data(self):
@@ -157,7 +158,7 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
-        if value < .03:
+        if value < 0.125 * self._data_std:
             return
 
         self._epsilon = value
@@ -245,10 +246,6 @@ if __name__ == '__main__':
     sc = SceneSynTest.createGauss(2000, 2000)
     sc.los.plot()
 
-    qt = Quadtree(sc, .1)
-    # dir(qt.epsilon)
-    qp = Plot2DQuadTree(qt, cmap='RdBu')
-    qp.plotInteractive()
     # for e in num.linspace(0.01, .1, num=20):
     #     qt.epsilon = e
     # qp = Plot2DQuadTree(qt, cmap='spectral')

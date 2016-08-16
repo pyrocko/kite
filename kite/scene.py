@@ -4,6 +4,8 @@ import numpy as num
 import logging
 from kite.meta import Subject
 from kite.plot2d import Plot2D
+import kite.scene_io as scene_io
+
 
 SAR_META_KEYS = """
 name
@@ -11,9 +13,6 @@ satellite
 orbit
 los
 """.split()
-
-SAR_IO_MODULES = [
-]
 
 logging.basicConfig(level=20)
 
@@ -33,12 +32,12 @@ class Displacement(object):
         self.plot = Plot2D(self)
 
     @property
-    def x(self):
-        return self._scene.x
+    def utm_x(self):
+        return self._scene.utm_x
 
     @property
-    def y(self):
-        return self._scene.y
+    def utm_y(self):
+        return self._scene.utm_y
 
     @property
     def X(self):
@@ -52,12 +51,12 @@ class Displacement(object):
 class DisplacementCartesian(Displacement):
     """Cartesian displacement derived from Line Of Sight (LOS) displacement vector
 
-    :param dx: NxM matrix of displacement in x direction
-    :type dx: :py:class:`numpy.Array`
-    :param dy: NxM matrix of displacement in y direction
-    :type dy: :py:class:`numpy.Array`
-    :param dz: NxM matrix of displacement in z direction
-    :type dz: :py:class:`numpy.Array`
+    :param dE: NxM matrix of displacement in East direction
+    :type dE: :py:class:`numpy.Array`
+    :param dN: NxM matrix of displacement in North direction
+    :type dN: :py:class:`numpy.Array`
+    :param dU: NxM matrix of displacement in Up direction
+    :type dU: :py:class:`numpy.Array`
     """
     def __init__(self, scene):
         Displacement.__init__(self, scene)
@@ -66,12 +65,12 @@ class DisplacementCartesian(Displacement):
         self._scene.subscribe(self._flush_vectors)
 
         self.plot.title = 'Displacement Cartesian'
-        self.plot.default_component = 'dx'
+        self.plot.default_component = 'dE'
 
     def _flush_vectors(self):
-        self._dx = None
-        self._dy = None
-        self._dz = None
+        self._dE = None
+        self._dN = None
+        self._dU = None
         self._dr = None
 
     def _init_vectors(self):
@@ -81,15 +80,15 @@ class DisplacementCartesian(Displacement):
             == self._scene.los.theta.shape, \
             'LOS displacement, phi, theta are not aligned.'
 
-        self._dx = self._scene.los.displacement \
+        self._dE = self._scene.los.displacement \
             * num.sin(self._scene.los.theta) * num.cos(self._scene.los.phi)
-        self._dy = self._scene.los.displacement \
+        self._dN = self._scene.los.displacement \
             * num.sin(self._scene.los.theta) * num.sin(self._scene.los.phi)
-        self._dz = self._scene.los.displacement \
+        self._dU = self._scene.los.displacement \
             * num.cos(self._scene.los.theta)
-        self._dr = num.sqrt(self._dx**2 + self._dy**2 + self._dz**2) \
+        self._dr = num.sqrt(self._dE**2 + self._dN**2 + self._dU**2) \
             * num.sign(self._scene.los.displacement)
-        # self._dabs = self._dx + self._dy + self._dz
+        # self._dabs = self._dE + self._dN + self._dU
 
     def _get_cached_property(self, prop):
         if self.__getattribute__(prop) is None:
@@ -97,16 +96,16 @@ class DisplacementCartesian(Displacement):
         return self.__getattribute__(prop)
 
     @property
-    def dx(self):
-        return self._get_cached_property('_dx')
+    def dE(self):
+        return self._get_cached_property('_dE')
 
     @property
-    def dy(self):
-        return self._get_cached_property('_dy')
+    def dN(self):
+        return self._get_cached_property('_dN')
 
     @property
-    def dz(self):
-        return self._get_cached_property('_dz')
+    def dU(self):
+        return self._get_cached_property('_dU')
 
     @property
     def dr(self):
@@ -169,18 +168,18 @@ class DisplacementLOS(Displacement):
         self._scene._notify()
 
 
-class Scene(guts.Object, Subject):
+class Scene(Subject):
     """Scene holding satellite ground dispacements measurements
 
-    :param x: Geographical latitudal reference for
+    :param utm_x: UTM latitudal reference vector for
                 displacement, theta, phi arrays (N)
-    :type x: :py:class:`numpy.Array`
-    :param x: Geographical longitudal reference for
+    :type utm_x: :py:class:`numpy.Array`
+    :param utm_y: UTM longitudal reference vector for
                 displacement, theta, phi arrays (N)
-    :type y: :py:class:`numpy.Array`
-    :param X: Derived meshed latitudes
+    :type utm_y: :py:class:`numpy.Array`
+    :param X: Derived meshed utm_y
     :type X: :py:class:`numpy.Array`
-    :param X: Derived meshed longitudes
+    :param X: Derived meshed utm_x
     :type Y: :py:class:`numpy.Array`
 
     :param meta: Meta information for the scene
@@ -201,14 +200,14 @@ satellite measurements
 
         SARScene is initiated with spherical coordinates
         """
-        guts.Object.__init__(self)
+        # guts.Object.__init__(self)
         Subject.__init__(self)
 
         self.meta = MetaSatellite()
         self.log = logging.getLogger('SARScene/%s' % self.meta.title)
 
-        self._x = None
-        self._y = None
+        self._utm_x = None
+        self._utm_y = None
         # Meshed Grids
         self._X = None
         self._Y = None
@@ -221,27 +220,27 @@ satellite measurements
         self.log.debug('Instance created')
 
     @property
-    def x(self):
+    def utm_x(self):
         """Vector holding x-coordinates of the scene """
-        return self._x
+        return self._utm_x
 
-    @x.setter
-    def x(self, value):
-        _setDataNumpy(self, '_x', value)
+    @utm_x.setter
+    def utm_x(self, value):
+        _setDataNumpy(self, '_utm_x', value)
 
     @property
-    def y(self):
+    def utm_y(self):
         """Vector holding y-coordinates of the scene """
-        return self._y
+        return self._utm_y
 
-    @y.setter
-    def y(self, value):
-        _setDataNumpy(self, '_y', value)
+    @utm_y.setter
+    def utm_y(self, value):
+        _setDataNumpy(self, '_utm_y', value)
 
     # Properties holding the meshed grids
 
     def _createMeshedGrids(self):
-        self._X, self._Y = num.meshgrid(self.x, self.y)
+        self._X, self._Y = num.meshgrid(self.utm_y, self.lats)
 
     @property
     def X(self):
@@ -282,7 +281,7 @@ satellite measurements
     @classmethod
     def load(cls, filename, **kwargs):
         raise NotImplemented('Coming soon!')
-        for module in SAR_IO_MODULES:
+        for module in scene_io.__all__:
             if module.validate(filename, **kwargs):
                 break
             raise TypeError('Could not recognize format for %s' % filename)
@@ -294,48 +293,6 @@ satellite measurements
         cls.los.y = module.y
 
         return cls
-
-
-class SARIO(object):
-    """ Prototype class for SARIO objects """
-
-    def __init__(self):
-        self.theta = None
-        self.phi = None
-        self.displacement = None
-        self.x = None
-        self.y = None
-
-    def read(self, filename, **kwargs):
-        """Read function of the file format
-
-        :param filename: file to read
-        :type filename: string
-        :param **kwargs: Keyword arguments
-        :type **kwargs: {dict}
-        """
-        pass
-
-    def write(self, filename, **kwargs):
-        """Write method for IO
-
-        :param filename: file to write to
-        :type filename: string
-        :param **kwargs: Keyword arguments
-        :type **kwargs: {dict}
-        """
-        pass
-
-    def validate(self, filename, **kwargs):
-        """Validate file format
-
-        :param filename: file to validate
-        :type filename: string
-        :returns: Validation
-        :rtype: {bool}
-        """
-        pass
-        return False
 
 
 class Meta(guts.Object):
@@ -350,26 +307,52 @@ class MetaSatellite(Meta):
 
 class SceneSynTest(Scene):
     """Test scene generating synthetic displacements """
+    def __call__(self):
+        return self.createGauss()
+
     @classmethod
     def createGauss(cls, nx=1000, ny=1000, **kwargs):
         scene = cls()
-        scene.meta.title = 'Synthetic Input - Gaussian distribution'
+        scene.meta.title = 'Synthetic Input | Gaussian distribution'
         cls_dim = (nx, ny)
 
-        scene.x = num.linspace(2455, 3845, cls_dim[0])
-        scene.y = num.linspace(1045, 2403, cls_dim[1])
+        scene.utm_x = num.linspace(2455, 3845, cls_dim[0])
+        scene.utm_y = num.linspace(1045, 2403, cls_dim[1])
         scene.los.theta = num.repeat(
             num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]) \
             .reshape(cls_dim)
         scene.los.phi = num.rot90(scene.los.theta)
 
-        scene.los.displacement = scene._gaussAnomaly(scene.x, scene.y,
+        scene.los.displacement = scene._gaussAnomaly(scene.utm_x,
+                                                     scene.utm_y,
                                                      **kwargs)
         return scene
 
+    @classmethod
+    def createSine(cls, nx=1000, ny=1000, **kwargs):
+        scene = cls()
+        scene.meta.title = 'Synthetic Input | Sine distribution'
+        cls_dim = (nx, ny)
+
+        scene.utm_x = num.linspace(2455, 3845, cls_dim[0])
+        scene.utm_y = num.linspace(1045, 2403, cls_dim[1])
+        scene.los.theta = num.repeat(
+            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]) \
+            .reshape(cls_dim)
+        scene.los.phi = num.rot90(scene.los.theta)
+
+        scene.los.displacement = scene._sineAnomaly(scene.utm_x,
+                                                    scene.utm_y, **kwargs)
+        return scene
+
+    @staticmethod
+    def _sineAnomaly(x, y, k1=.01, k2=.01, amplitude=3.):
+        X, Y = num.meshgrid(x, y)
+        return num.sin(k1 * X) * num.sin(k2 * Y)
+
     @staticmethod
     def _gaussAnomaly(x, y, sigma_x=.007, sigma_y=.005,
-                      amplitude=3, x0=None, y0=None):
+                      amplitude=3., x0=None, y0=None):
         if x0 is None:
             x0 = x.min() + abs(x.max()-x.min())/2
         if y0 is None:
