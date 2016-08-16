@@ -1,12 +1,17 @@
+import importlib
+
+
 class SceneIO(object):
     """ Prototype class for SARIO objects """
 
     def __init__(self):
-        self.theta = None
-        self.phi = None
-        self.displacement = None
-        self.x = None
-        self.y = None
+        self.data_items = {
+            'phi': None,
+            'theta': None,
+            'displacement': None,
+            'utm_x': None,
+            'utm_y': None
+        }
 
     def read(self, filename, **kwargs):
         """Read function of the file format
@@ -41,7 +46,33 @@ class SceneIO(object):
 
 
 class MatlabData(SceneIO):
-    pass
+    def __init__(self):
+        self.io = importlib.import_module('scipy.io')
+        SceneIO.__init__(self)
+
+    def validate(self, filename):
+        try:
+            self.io.loadmat(filename)
+            return True
+        except:
+            return False
+
+    def read(self, filename):
+        mat = self.io.loadmat(filename)
+
+        for mat_k, v in mat.iteritems():
+            for io_k in self.data_items.iterkeys():
+                if io_k in mat_k:
+                    self.data_items[io_k] = mat[mat_k]
+                elif 'ig_' in mat_k:
+                    self.data_items['displacement'] = mat[mat_k]
+                elif 'xx' in mat_k:
+                    self.data_items['utm_x'] = mat[mat_k]
+                elif 'yy' in mat_k:
+                    self.data_items['utm_y'] = mat[mat_k]
+
+        return self.data_items
+
 
 __all__ = """
 MatlabData
