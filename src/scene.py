@@ -16,7 +16,7 @@ logging.basicConfig(level=20)
 
 def _setDataNumpy(obj, variable, value):
     if isinstance(value, num.ndarray):
-        obj.__setattr__(variable, value)
+        return obj.__setattr__(variable, value)
     else:
         raise TypeError('value must be of type numpy.ndarray')
 
@@ -173,14 +173,35 @@ satellite measurements
         _setDataNumpy(self, '_phi', value)
         self._notify()
 
+    @phi.getter
+    def phi(self):
+        if isinstance(self._phi, float):
+            _a = num.empty_like(self.displacement)
+            _a.fill(self._phi)
+            return _a
+        else:
+            return self._phi
+
     @property
     def theta(self):
         return self._theta
 
     @theta.setter
     def theta(self, value):
-        _setDataNumpy(self, '_theta', value)
+        if isinstance(value, float):
+            self._theta = value
+        else:
+            _setDataNumpy(self, '_theta', value)
         self._notify()
+
+    @theta.getter
+    def theta(self):
+        if isinstance(self._theta, float):
+            _a = num.empty_like(self.displacement)
+            _a.fill(self._theta)
+            return _a
+        else:
+            return self._theta
 
     @property
     def utm_x(self):
@@ -235,7 +256,11 @@ satellite measurements
             self._plot.default_component = 'displacement'
         return self._plot
 
-    def mapRasterToCoordinates(self, x, y):
+    # @plot.__doc__
+    # def plot(self):
+    #     return self._plot.__doc__
+
+    def mapLocalToUTM(self, x, y):
         return self.x[x], self.y[y]
 
     @classmethod
