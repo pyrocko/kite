@@ -10,6 +10,13 @@ DEFAULT_IMSHOW = {
     'aspect': 'equal'
 }
 
+_VALID_COMPONENTS = {
+    'displacement': 'Displacement LOS',
+    'cartesian.dE': 'Displacement dE',
+    'cartesian.dN': 'Displacement dN',
+    'cartesian.dU': 'Displacement dU',
+}
+
 
 def _getAxes(axes):
     raise DeprecationWarning('To be removed!')
@@ -41,12 +48,10 @@ def _setCanvas(obj, figure=None, axes=None):
 
 
 class Plot2D(object):
-    def __init__(self, displacement):
+    def __init__(self, scene):
+        self._scene = scene
+        self._default_component = 'displacement'
         self.title = 'Displacement'
-        self.colorbar_label = ''
-        self.default_component = 'displacement'
-
-        self._displacement = displacement
 
         self.fig = None
         self.ax = None
@@ -58,7 +63,7 @@ class Plot2D(object):
 
     def _decorateAxes(self):
         self.ax.set_title('%s\n%s' % (self.title,
-                                      self._displacement.meta.title))
+                                      self._scene.meta.title))
 
     def _decorateImshow(self):
         array = self._im.get_array()
@@ -66,23 +71,25 @@ class Plot2D(object):
 
         self._im.set_clim(-_vmax, _vmax)
         self._im.set_extent(
-                    (self._displacement.utm_x.min(),
-                     self._displacement.utm_x.max(),
-                     self._displacement.utm_y.min(),
-                     self._displacement.utm_y.max()))
+                    (self._scene.utm_x.min(),
+                     self._scene.utm_x.max(),
+                     self._scene.utm_y.min(),
+                     self._scene.utm_y.max()))
 
     def plot(self, component=None, axes=None, figure=None, **kwargs):
+        if component is None:
+            component = self.default_component
+        try:
+            if component not in _VALID_COMPONENTS.keys():
+                raise AttributeError
+            data = eval('self._scene.%s' % component)
+        except:
+            raise AttributeError('Invalid component %s' % component)
+
         _setCanvas(self, figure, axes)
         self._decorateAxes()
 
-        if component is None:
-            component = self.default_component
-
-        try:
-            data = getattr(self._displacement, component)
-        except:
-            raise AttributeError('Invalid component %s' % component)
-        self.colorbar_label = component
+        self.colorbar_label = _VALID_COMPONENTS[component]
 
         _kwargs = DEFAULT_IMSHOW.copy()
         _kwargs.update(kwargs)
