@@ -34,7 +34,6 @@ class DisplacementCartesian(object):
     def __init__(self, scene):
         self._scene = scene
         self._flush_vectors()
-        self._plot = None
 
         self.meta = self._scene.meta
         self.utm_x = self._scene.utm_x
