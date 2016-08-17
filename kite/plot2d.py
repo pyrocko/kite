@@ -90,7 +90,9 @@ class Plot2D(object):
         self._im = self.ax.imshow(data, **_kwargs)
         self._decorateImshow()
 
-        if figure is not None:
+        self.ax.set_aspect('equal')
+
+        if figure is None:
             self.addColorbar()
 
         _finishPlot(figure, axes)
@@ -102,6 +104,8 @@ class Plot2D(object):
 
 
 class QuadLeafRectangle(matplotlib.patches.Rectangle):
+    __slots__ = ('_plotquadtree', 'leaf')
+
     def __init__(self, plotquadtree, leaf, **kwargs):
         matplotlib.patches.Rectangle.__init__(self, (0, 0), 0, 0, **kwargs)
 
@@ -144,6 +148,7 @@ class Plot2DQuadTree(object):
         self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
         self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
         self.ax.set_aspect('equal')
+        self.ax.invert_yaxis()
 
         _finishPlot(figure, axes)
 
@@ -155,8 +160,6 @@ class Plot2DQuadTree(object):
         from matplotlib.widgets import Slider
 
         _setCanvas(self)
-        # pl = Plot2D(self._quadtree._scene.los)
-        # pl(axes=self.ax)
 
         def change_epsilon(e):
             self._quadtree.epsilon = e
@@ -214,6 +217,7 @@ class Plot2DQuadTree(object):
 
         self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
         self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
+        self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
 
         self.log.info('Redrew %d rectangles [%0.8f s]' %

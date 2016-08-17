@@ -46,6 +46,19 @@ class SceneIO(object):
 
 
 class MatlabData(SceneIO):
+    """Reads Matlab .mat files into :py:class:`kite.scene.Scene`
+    
+    Variable naming convenctions in .mat file
+    ============ ==================
+    Property     .mat name contains
+    ============ ==================
+    Displacement `ig_`
+    Phi          `phi`
+    Theta        `theta`
+    UTM_X        `xx`
+    UTM_Y        `yy`
+    ============ ==================
+    """
     def __init__(self):
         self.io = importlib.import_module('scipy.io')
         SceneIO.__init__(self)
