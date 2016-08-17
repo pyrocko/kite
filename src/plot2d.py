@@ -141,7 +141,7 @@ class Plot2DQuadTree(object):
         self.sm = cm.ScalarMappable(cmap=cmap)
         self.sm.set_clim(-1, 1)
 
-        self.log = logging.getLogger(self.__class__.__name__)
+        self._log = logging.getLogger(self.__class__.__name__)
 
     def __call__(self, *args, **kwargs):
         return self.plot(*args, **kwargs)
@@ -227,7 +227,7 @@ class Plot2DQuadTree(object):
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
 
-        self.log.info('Redrew %d rectangles [%0.8f s]' %
+        self._log.info('Redrew %d rectangles [%0.8f s]' %
                       (len(self._rectangles), time.time()-t0))
 
     def _decorateAxes(self):

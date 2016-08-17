@@ -137,7 +137,7 @@ satellite measurements
         Subject.__init__(self)
 
         self.meta = MetaSatellite()
-        self.log = logging.getLogger('Scene/%s' % self.meta.title)
+        self._log = logging.getLogger('Scene/%s' % self.meta.title)
 
         self._displacement = None
         self._phi = None
@@ -153,7 +153,7 @@ satellite measurements
 
         self.cartesian = DisplacementCartesian(self)
 
-        self.log.debug('Instance created')
+        self._log.debug('Instance created')
 
     @property
     def displacement(self):

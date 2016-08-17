@@ -115,13 +115,12 @@ class Quadtree(Subject):
         self._leafs = None
         self._means = None
         self._focal_points = None
-        self._data_std = num.nanstd(self.data)
-
         self._plot = None
 
-        self.log = logging.getLogger('Quadtree')
+        self._full_data_std = num.nanstd(self.data)
+        self._log = logging.getLogger('Quadtree')
 
-        self.epsilon = 1.*self._data_std
+        self.epsilon = 1.*self._full_data_std
 
     @property
     def data(self):
@@ -137,21 +136,21 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
-        if value < 0.1 * self._data_std:
+        if value < 0.1 * self._full_data_std:
             return
 
         self._epsilon = value
 
         self._leafs = None
-        self.log.info('Changing epsilon to %0.3f' % value)
+        self._log.info('Changing epsilon to %0.3f' % value)
         t0 = time.time()
 
         for b in self.base_nodes:
             # self.mp.Process(target=b.evaluateNode).start()
             b.evaluateNode()
         # time.sleep(.1)
-        self.log.info('New tree has %d leafs [%0.8f s]' %
-                      (len(self.leafs), (time.time()-t0)))
+        self._log.info('New tree has %d leafs [%0.8f s]' %
+                       (len(self.leafs), (time.time()-t0)))
         self._notify()
         return
 
