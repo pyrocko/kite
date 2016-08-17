@@ -43,18 +43,14 @@ class TestGaussScene(unittest.TestCase):
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
 
-        for comp in ['displacement']:
-            self.sar.plot(comp, figure=fig)
-            _save_fig(fig)
-
         for comp in ['theta', 'phi']:
             im = self.sar.plot(comp, figure=fig, cmap='spectral')
             im.set_clim(im.get_array().min(), im.get_array().max())
             _save_fig(fig)
 
-        for comp in ['dr', 'dx', 'dy', 'dz']:
-            continue
-            self.sar.cartesian.plot(comp, figure=fig)
+        for comp in ['cartesian.dE', 'displacement',
+                     'cartesian.dN', 'cartesian.dU']:
+            self.sar.plot(comp, figure=fig)
             _save_fig(fig)
 
     def test_quadtree(self):
@@ -98,18 +94,14 @@ class TestMatScene(unittest.TestCase):
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots()
 
-        for comp in ['displacement']:
-            self.sar.plot(comp, figure=fig)
-            _save_fig(fig)
-
         for comp in ['theta', 'phi']:
             im = self.sar.plot(comp, figure=fig, cmap='spectral')
             im.set_clim(im.get_array().min(), im.get_array().max())
             _save_fig(fig)
 
-        for comp in ['dr', 'drx', 'dy', 'dz']:
-            continue
-            self.sar.cartesian.plot(comp, figure=fig)
+        for comp in ['cartesian.dE', 'displacement',
+                     'cartesian.dN', 'cartesian.dU']:
+            self.sar.plot(comp, figure=fig)
             _save_fig(fig)
 
     def test_quadtree(self):
