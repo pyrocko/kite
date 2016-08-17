@@ -27,16 +27,16 @@ class TestGaussScene(unittest.TestCase):
         self.sar = SceneSynTest.createGauss()
 
     def test_cartesian_conversion(self):
-        r = num.sqrt(self.sar.cartesian.dx**2 +
-                     self.sar.cartesian.dy**2 + self.sar.cartesian.dz**2)
+        r = num.sqrt(self.sar.cartesian.dE**2 +
+                     self.sar.cartesian.dN**2 + self.sar.cartesian.dU**2)
 
         # theta = num.arccos(self.sar.cartesian.dz / r)
         # phi = num.arctan(self.sar.cartesian.dy / self.sar.cartesian.dx)
 
-        num.testing.assert_almost_equal(self.sar.los.displacement, r)
-        # num.testing.assert_almost_equal(self.sar.los.theta, theta)
-        # num.testing.assert_almost_equal(self.sar.los.phi, phi)
-        num.testing.assert_almost_equal(self.sar.los.displacement,
+        num.testing.assert_almost_equal(self.sar.displacement, r)
+        # num.testing.assert_almost_equal(self.sar.theta, theta)
+        # num.testing.assert_almost_equal(self.sar.phi, phi)
+        num.testing.assert_almost_equal(self.sar.displacement,
                                         self.sar.cartesian.dr)
 
     def test_plotting(self):
@@ -44,15 +44,16 @@ class TestGaussScene(unittest.TestCase):
         fig, ax = plt.subplots()
 
         for comp in ['displacement']:
-            self.sar.los.plot(comp, figure=fig)
+            self.sar.plot(comp, figure=fig)
             _save_fig(fig)
 
         for comp in ['theta', 'phi']:
-            im = self.sar.los.plot(comp, figure=fig, cmap='spectral')
+            im = self.sar.plot(comp, figure=fig, cmap='spectral')
             im.set_clim(im.get_array().min(), im.get_array().max())
             _save_fig(fig)
 
         for comp in ['dr', 'dx', 'dy', 'dz']:
+            continue
             self.sar.cartesian.plot(comp, figure=fig)
             _save_fig(fig)
 
@@ -78,19 +79,19 @@ class TestMatScene(unittest.TestCase):
         self.sar = Scene()
         self.sar.meta.title = 'Matlab Input - Myanmar 2011-02-14'
 
-        self.sar.los.phi = mat['phi_dsc_defo']
-        self.sar.los.theta = mat['theta_dsc_defo']
-        self.sar.los.displacement = mat['ig_dc']
-        self.sar.x = mat['xx_ig']
-        self.sar.y = mat['yy_ig']
+        self.sar.phi = mat['phi_dsc_defo']
+        self.sar.theta = mat['theta_dsc_defo']
+        self.sar.displacement = mat['ig_dc']
+        self.sar.utm_x = mat['xx_ig']
+        self.sar.utm_y = mat['yy_ig']
 
     def test_cartesian_conversion(self):
         # theta = num.arccos(self.sar.cartesian.dz / r)
         # phi = num.arctan(self.sar.cartesian.dy / self.sar.cartesian.dx)
 
-        # num.testing.assert_almost_equal(self.sar.los.theta, theta)
-        # num.testing.assert_almost_equal(self.sar.los.phi, phi)
-        num.testing.assert_almost_equal(self.sar.los.displacement,
+        # num.testing.assert_almost_equal(self.sar.theta, theta)
+        # num.testing.assert_almost_equal(self.sar.phi, phi)
+        num.testing.assert_almost_equal(self.sar.displacement,
                                         self.sar.cartesian.dr)
 
     def test_plotting(self):
@@ -98,15 +99,16 @@ class TestMatScene(unittest.TestCase):
         fig, ax = plt.subplots()
 
         for comp in ['displacement']:
-            self.sar.los.plot(comp, figure=fig)
+            self.sar.plot(comp, figure=fig)
             _save_fig(fig)
 
         for comp in ['theta', 'phi']:
-            im = self.sar.los.plot(comp, figure=fig, cmap='spectral')
+            im = self.sar.plot(comp, figure=fig, cmap='spectral')
             im.set_clim(im.get_array().min(), im.get_array().max())
             _save_fig(fig)
 
-        for comp in ['dr', 'dx', 'dy', 'dz']:
+        for comp in ['dr', 'drx', 'dy', 'dz']:
+            continue
             self.sar.cartesian.plot(comp, figure=fig)
             _save_fig(fig)
 

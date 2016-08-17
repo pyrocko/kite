@@ -12,6 +12,7 @@ DEFAULT_IMSHOW = {
 
 
 def _getAxes(axes):
+    raise DeprecationWarning('To be removed!')
     if axes is None:
         return plt.subplots(1, 1)
     elif isinstance(axes, plt.Axes):
@@ -21,9 +22,10 @@ def _getAxes(axes):
 
 
 def _finishPlot(figure=None, axes=None):
-    if not isinstance(axes, plt.Axes) and not isinstance(figure, plt.Figure):
-        return plt.show()
-    return None
+    """Show plot if figure nor axes is given """
+    if isinstance(axes, plt.Axes) or isinstance(figure, plt.Figure):
+        return None
+    return plt.show()
 
 
 def _setCanvas(obj, figure=None, axes=None):
@@ -34,8 +36,8 @@ def _setCanvas(obj, figure=None, axes=None):
     elif isinstance(figure, plt.Figure):
         obj.fig, obj.ax = figure, figure.gca()
     else:
-        raise TypeError('Axes has to be of type matplotlib.Axes\n'
-                        'Figure has to be of type matplotlib.Figure')
+        raise TypeError('axes has to be of type matplotlib.Axes\n'
+                        'figure has to be of type matplotlib.Figure')
 
 
 class Plot2D(object):
@@ -64,8 +66,10 @@ class Plot2D(object):
 
         self._im.set_clim(-_vmax, _vmax)
         self._im.set_extent(
-                    (self._displacement.x.min(), self._displacement.x.max(),
-                     self._displacement.y.min(), self._displacement.y.max()))
+                    (self._displacement.utm_x.min(),
+                     self._displacement.utm_x.max(),
+                     self._displacement.utm_y.min(),
+                     self._displacement.utm_y.max()))
 
     def plot(self, component=None, axes=None, figure=None, **kwargs):
         _setCanvas(self, figure, axes)
@@ -86,7 +90,9 @@ class Plot2D(object):
         self._im = self.ax.imshow(data, **_kwargs)
         self._decorateImshow()
 
-        if figure is not None:
+        self.ax.set_aspect('equal')
+
+        if figure is None:
             self.addColorbar()
 
         _finishPlot(figure, axes)
@@ -98,6 +104,8 @@ class Plot2D(object):
 
 
 class QuadLeafRectangle(matplotlib.patches.Rectangle):
+    __slots__ = ('_plotquadtree', 'leaf')
+
     def __init__(self, plotquadtree, leaf, **kwargs):
         matplotlib.patches.Rectangle.__init__(self, (0, 0), 0, 0, **kwargs)
 
@@ -135,20 +143,23 @@ class Plot2DQuadTree(object):
         _setCanvas(self, figure, axes)
 
         self._updateRectangles()
-
         self._decorateAxes()
-        self.ax.set_xlim((0, self._quadtree._scene.x.size))
-        self.ax.set_ylim((0, self._quadtree._scene.y.size))
+        self._addInfoText()
+        self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
+        self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
         self.ax.set_aspect('equal')
+        self.ax.invert_yaxis()
 
         _finishPlot(figure, axes)
+
+    def _addInfoText(self):
+        self.ax.text(.975, .975, '%d Leafs' % len(self._quadtree.leafs),
+                     transform=self.ax.transAxes, ha='right', va='top')
 
     def interactive(self):
         from matplotlib.widgets import Slider
 
         _setCanvas(self)
-        # pl = Plot2D(self._quadtree._scene.los)
-        # pl(axes=self.ax)
 
         def change_epsilon(e):
             self._quadtree.epsilon = e
@@ -159,22 +170,26 @@ class Plot2DQuadTree(object):
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
 
-        self.ax.plot(axes=self.ax)
+        self.plot(axes=self.ax)
 
         epsilon = Slider(ax_eps, 'Epsilon',
-                         self._quadtree.epsilon - 1*self._quadtree.epsilon,
-                         self._quadtree.epsilon + 1*self._quadtree.epsilon,
+                         self._quadtree.epsilon - 1.*self._quadtree.epsilon,
+                         self._quadtree.epsilon + 1.*self._quadtree.epsilon,
                          valinit=self._quadtree.epsilon, valfmt='%1.3f')
+
+        # Catch events
         epsilon.on_changed(change_epsilon)
         self._quadtree.subscribe(self._update)
-
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
-        _finishPlot()
+        plt.show()
 
     def _updateRectangles(self):
         for rect in self._rectangles:
-            self.ax.artists.remove(rect)
+            try:
+                self.ax.artists.remove(rect)
+            except ValueError:
+                pass
 
         self._rectangles = [QuadLeafRectangle(self, leaf)
                             for leaf in self._quadtree.leafs]
@@ -184,21 +199,26 @@ class Plot2DQuadTree(object):
     def _update(self):
         t0 = time.time()
 
+        # Update colormap limits
         _vmax = num.abs(self._quadtree.means).max()
         self.sm.set_clim(-_vmax, _vmax)
 
         self._updateRectangles()
 
-        self.ax.draw_artist(self._rectangles[-1])
+        self.ax.texts = []
+        self._addInfoText()
 
+        # Update figure.canvas
+        self.ax.draw_artist(self._rectangles[-1])
         self.fig.canvas.blit(self.ax.bbox)
 
         # self.collections = []
         # self.ax.scatter(*zip(*self._quadtree.focal_points), s=4, color='k')
 
-        self.ax.set_xlim((0, self._quadtree._scene.x.size))
-        self.ax.set_ylim((0, self._quadtree._scene.y.size))
-        # self.fig.canvas.draw()
+        self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
+        self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
+        self.ax.invert_yaxis()
+        self.ax.set_aspect('equal')
 
         self.log.info('Redrew %d rectangles [%0.8f s]' %
                       (len(self._rectangles), time.time()-t0))
