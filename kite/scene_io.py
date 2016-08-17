@@ -48,7 +48,7 @@ class SceneIO(object):
 class MatlabData(SceneIO):
     """Reads Matlab .mat files into :py:class:`kite.scene.Scene`
     
-    Variable naming convenctions in .mat file
+    Variable naming convenctions in .mat variables
     ============ ==================
     Property     .mat name contains
     ============ ==================
