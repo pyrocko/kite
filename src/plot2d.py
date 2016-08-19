@@ -5,13 +5,15 @@ import matplotlib.patches
 import logging
 import time
 
-DEFAULT_IMSHOW = {
+_DEFAULT_IMSHOW = {
     'cmap': 'RdBu',
     'aspect': 'equal'
 }
 
 _VALID_COMPONENTS = {
     'displacement': 'Displacement LOS',
+    'theta': 'Theta LOS',
+    'phi': 'Phi LOS',
     'cartesian.dE': 'Displacement dE',
     'cartesian.dN': 'Displacement dN',
     'cartesian.dU': 'Displacement dU',
@@ -50,7 +52,6 @@ def _setCanvas(obj, figure=None, axes=None):
 class Plot2D(object):
     def __init__(self, scene):
         self._scene = scene
-        self._default_component = 'displacement'
         self.title = 'Displacement'
 
         self.fig = None
@@ -76,22 +77,36 @@ class Plot2D(object):
                      self._scene.utm_y.min(),
                      self._scene.utm_y.max()))
 
-    def plot(self, component=None, axes=None, figure=None, **kwargs):
-        if component is None:
-            component = self.default_component
+    def plot(self, component='displacement', axes=None, figure=None, **kwargs):
+        """Plots any component fom Scene
+
+        :param **kwargs: Keyword args forwarded to `matplotlib.plt.imshow()`
+        :type **kwargs: {dict}
+        :param component: Component to plot
+            ['phi', 'cartesian.dU', 'displacement', 'cartesian.dE',
+            'theta', 'cartesian.dN']`, defaults to `'displacement'`
+        :type component: {string}, optional
+        :param axes: Axes instance to plot in, defaults to None
+        :type axes: [:py:class:`matplotlib.Axes`], optional
+        :param figure: Figure instance to plot in, defaults to None
+        :type figure: [:py:class:`matplotlib.Figure`], optional
+        :returns: Imshow instance
+        :rtype: {[:py:class:`matplotlib.image.AxesImage`]}
+        :raises: AttributeError
+        """
         try:
             if component not in _VALID_COMPONENTS.keys():
-                raise AttributeError
+                raise AttributeError('Invalid component %s' % component)
             data = eval('self._scene.%s' % component)
         except:
-            raise AttributeError('Invalid component %s' % component)
+            raise AttributeError('Could not access component %s' % component)
 
         _setCanvas(self, figure, axes)
         self._decorateAxes()
 
         self.colorbar_label = _VALID_COMPONENTS[component]
 
-        _kwargs = DEFAULT_IMSHOW.copy()
+        _kwargs = _DEFAULT_IMSHOW.copy()
         _kwargs.update(kwargs)
 
         self._im = self.ax.imshow(data, **_kwargs)
@@ -124,7 +139,7 @@ class QuadLeafRectangle(matplotlib.patches.Rectangle):
         self.set_width(self.leaf.length)
 
         # self.set_alpha(.5)
-        self.set_color(self._plotquadtree.sm.to_rgba(self.leaf.mean))
+        self.set_color(self._plotquadtree.sm.to_rgba(self.leaf.median))
         if self._plotquadtree.ax is not None:
             self.set_transform(self._plotquadtree.ax.transData)
 
@@ -203,12 +218,14 @@ class Plot2DQuadTree(object):
 
         self.ax.artists.extend(self._rectangles)
 
+    def _updateColormap(self):
+        _vmax = num.abs(self._quadtree.means).max()
+        self.sm.set_clim(-_vmax, _vmax)
+
     def _update(self):
         t0 = time.time()
 
-        # Update colormap limits
-        _vmax = num.abs(self._quadtree.means).max()
-        self.sm.set_clim(-_vmax, _vmax)
+        self._updateColormap()
 
         self._updateRectangles()
 
@@ -228,7 +245,7 @@ class Plot2DQuadTree(object):
         self.ax.set_aspect('equal')
 
         self._log.info('Redrew %d rectangles [%0.8f s]' %
-                      (len(self._rectangles), time.time()-t0))
+                       (len(self._rectangles), time.time()-t0))
 
     def _decorateAxes(self):
         pass
