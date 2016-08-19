@@ -3,15 +3,15 @@ import logging
 import time
 # import importlib
 
-from kite.meta import Subject
+from kite.meta import Subject, property_cached
 
 
 class QuadNode(object):
     """A Node in the Quadtree
     """
-    __slots__ = ('parent', '_tree', '_children',
-                 'llx', 'lly', 'length',
-                 'data', '_mean', '_median', 'std', '_var')
+    # __slots__ = ('parent', '_tree', '_children',
+    #              'llx', 'lly', 'length',
+    #              'data', '_mean', '_median', 'std', '_var')
 
     def __init__(self, tree, llx, lly, length, parent=None):
 
@@ -25,35 +25,38 @@ class QuadNode(object):
 
         self.data = self._tree.data[self.llx:self.llx+self.length,
                                     self.lly:self.lly+self.length]
-        self.std = num.nanstd(self.data)
-        # Caching slots
-        self._mean = None
-        self._median = None
-        self._var = None
 
-    @property
+    @property_cached
     def nan_fraction(self):
         return float(num.sum(num.isnan(self.data)))/self.data.size
 
-    @property
+    @property_cached
     def mean(self):
-        if self._mean is None:
-            self._mean = num.nanmean(self.data)
-        return self._mean
+        return num.nanmean(self.data)
 
-    @property
+    @property_cached
     def median(self):
-        if self._median is None:
-            self._median = num.nanmedian(self.data)
-        return self._median
+        return num.nanmedian(self.data)
 
-    @property
+    @property_cached
+    def std(self):
+        return num.nanstd(self.data)
+
+    @property_cached
     def var(self):
-        if self._var is None:
-            self._var = num.nanvar(self.data)
-        return self._var
+        return num.nanvar(self.data)
 
-    @property
+    @property_cached
+    def median_std(self):
+        '''Standard deviation from median'''
+        return num.nanstd(self.data - self.median)
+
+    @property_cached
+    def mean_std(self):
+        '''Standard deviation from mean'''
+        return num.nanstd(self.data - self.mean)
+
+    @property_cached
     def focal_point(self):
         return (self.llx + self.length/2, self.lly + self.length/2)
 
@@ -71,7 +74,7 @@ class QuadNode(object):
 
     def _iterSplitNode(self):
         if self.length == 1:
-            yield ()
+            yield None
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
             _q = QuadNode(self._tree,
                           self.llx + self.length/2 * _nx,
@@ -81,14 +84,13 @@ class QuadNode(object):
                 continue
             yield _q
 
-    def evaluateNode(self):
-        if self.std > self._tree.epsilon:
-            # self.nan_fraction > .75 or \
-            # self.length > .2 * num.max(self._tree.data.shape):
+    def evaluateNode(self, eval_func):
+        if eval_func(self) > self._tree.epsilon:  # or\
+            # self.length > .1 * max(self._tree.data.shape): !! Very Expensive
             if self._children is None:
                 self._children = [c for c in self._iterSplitNode()]
             for c in self._children:
-                c.evaluateNode()
+                c.evaluateNode(eval_func)
         else:
             self._children = None
 
@@ -109,34 +111,30 @@ class Quadtree(Subject):
     def __init__(self, scene, epsilon=None):
         Subject.__init__(self)
 
-        # self.mp = importlib.import_module('multiprocessing')
+        self.methods = {
+            'mean_std': lambda node: node.mean_std,
+            'median_std': lambda node: node.median_std,
+            'std': lambda node: node.std,
+        }
 
         self._scene = scene
-
         self.data = self._scene.displacement
-
-        self._base_nodes = None
-        self._epsilon = None
-
-        self._leafs = None
-        self._means = None
-        self._focal_points = None
-        self._plot = None
-
         self._full_data_std = num.nanstd(self.data)
-        self._full_data_var = num.nanvar(self.data)
+
+        self._epsilon = None
+        self._leafs = None
 
         self._log = logging.getLogger('Quadtree')
 
-        self.epsilon = 1.*self._full_data_std
+        self.setMethod('median_std')
 
-    @property
-    def data(self):
-        return self._data
-
-    @data.setter
-    def data(self, value):
-        self._data = value
+    def setMethod(self, method):
+        if method not in self.methods.keys():
+            raise AttributeError('Method %s not in %s'
+                                 % (method, self.methods))
+        self.method = method
+        self.epsilon = num.mean([self.methods[self.method](b)
+                                 for b in self.base_nodes])
 
     @property
     def epsilon(self):
@@ -147,17 +145,14 @@ class Quadtree(Subject):
         if value < 0.1 * self._full_data_std:
             self._log.info('Epsilon is out of bounds [%0.3f]' % value)
             return
-
         self._epsilon = value
-
         self._leafs = None
         self._log.info('Changing epsilon to %0.3f' % value)
         t0 = time.time()
 
         for b in self.base_nodes:
-            # self.mp.Process(target=b.evaluateNode).start()
-            b.evaluateNode()
-        # time.sleep(.1)
+            b.evaluateNode(self.methods[self.method])
+
         self._log.info('New tree has %d leafs [%0.8f s]' %
                        (len(self.leafs), (time.time()-t0)))
         self._notify()
@@ -183,11 +178,8 @@ class Quadtree(Subject):
     def focal_points(self):
         return num.array([n.focal_point for n in self.leafs])
 
-    @property
+    @property_cached
     def base_nodes(self):
-        if self._base_nodes is not None:
-            return self._base_nodes
-
         self._base_nodes = []
         init_length = num.power(2, num.ceil(num.log(num.min(self.data.shape)) /
                                             num.log(2)))
@@ -204,12 +196,10 @@ class Quadtree(Subject):
             raise AssertionError('Could not init base nodes.')
         return self._base_nodes
 
-    @property
+    @property_cached
     def plot(self):
-        if self._plot is None:
-            from kite.plot2d import Plot2DQuadTree
-            self._plot = Plot2DQuadTree(self)
-        return self._plot
+        from kite.plot2d import Plot2DQuadTree
+        return Plot2DQuadTree(self)
 
     def __str__(self):
         return '''
