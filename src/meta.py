@@ -2,6 +2,7 @@
 
 
 class Subject(object):
+    '''Subject - Obsever model realization '''
     def __init__(self):
         self._listeners = list()
 
