@@ -1,6 +1,18 @@
 #!/bin/python
 
 
+def property_cached(func):
+    var_name = '_cached_' + func.__name__
+
+    @property
+    def cache_return(instance, *args, **kwargs):
+        if instance.__dict__.get(var_name, None) is None:
+            instance.__dict__[var_name] = func(instance)
+        return instance.__dict__[var_name]
+
+    return cache_return
+
+
 class Subject(object):
     '''Subject - Obsever model realization '''
     def __init__(self):
