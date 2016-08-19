@@ -32,6 +32,10 @@ class QuadNode(object):
         self._var = None
 
     @property
+    def nan_fraction(self):
+        return float(num.sum(num.isnan(self.data)))/self.data.size
+
+    @property
     def mean(self):
         if self._mean is None:
             self._mean = num.nanmean(self.data)
@@ -65,7 +69,7 @@ class QuadNode(object):
                 for q in c.iterLeafs():
                     yield q
 
-    def _split_iter(self):
+    def _iterSplitNode(self):
         if self.length == 1:
             yield ()
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
@@ -79,8 +83,10 @@ class QuadNode(object):
 
     def evaluateNode(self):
         if self.std > self._tree.epsilon:
+            # self.nan_fraction > .75 or \
+            # self.length > .2 * num.max(self._tree.data.shape):
             if self._children is None:
-                self._children = [c for c in self._split_iter()]
+                self._children = [c for c in self._iterSplitNode()]
             for c in self._children:
                 c.evaluateNode()
         else:
@@ -118,6 +124,8 @@ class Quadtree(Subject):
         self._plot = None
 
         self._full_data_std = num.nanstd(self.data)
+        self._full_data_var = num.nanvar(self.data)
+
         self._log = logging.getLogger('Quadtree')
 
         self.epsilon = 1.*self._full_data_std
@@ -137,6 +145,7 @@ class Quadtree(Subject):
     @epsilon.setter
     def epsilon(self, value):
         if value < 0.1 * self._full_data_std:
+            self._log.info('Epsilon is out of bounds [%0.3f]' % value)
             return
 
         self._epsilon = value
@@ -164,17 +173,13 @@ class Quadtree(Subject):
 
     @property
     def means(self):
-        return self._means
-
-    @means.getter
-    def means(self):
         return num.array([n.mean for n in self.leafs])
 
     @property
-    def focal_points(self):
-        return self._focal_points
+    def medians(self):
+        return num.array([n.median for n in self.leafs])
 
-    @focal_points.getter
+    @property
     def focal_points(self):
         return num.array([n.focal_point for n in self.leafs])
 
