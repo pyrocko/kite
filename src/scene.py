@@ -31,21 +31,39 @@ class DisplacementCartesian(object):
     :param dU: NxM matrix of displacement in Up direction
     :type dU: :py:class:`numpy.Array`
     """
+    def _cached_displacement(component):
+        """Factory method for cashed properties """
+        def u_getter(instance):
+            if instance.__dict__.get(component, None) is None:
+                instance._init_vectors()
+            return instance.__dict__[component]
+
+        def u_setter(instance, value):
+            instance.__dict__[component] = value
+
+        def u_doc():
+            return "Cartesian displacement in component %s" % component[1:]
+
+        return property(u_getter, u_setter, doc=u_doc())
+
+    dE = _cached_displacement('dE')
+    dN = _cached_displacement('dN')
+    dU = _cached_displacement('dU')
+    dr = _cached_displacement('dr')
+
     def __init__(self, scene):
         self._scene = scene
-        self._flush_vectors()
 
         self.meta = self._scene.meta
-        self.utm_x = self._scene.utm_x
-        self.utm_y = self._scene.utm_y
 
-        self._scene.subscribe(self._flush_vectors)
+        # self._flush_vectors()
+        # self._scene.subscribe(self._flush_vectors)
 
     def _flush_vectors(self):
-        self._dE = None
-        self._dN = None
-        self._dU = None
-        self._dr = None
+        self.dE = None
+        self.dN = None
+        self.dU = None
+        self.dr = None
 
     def _init_vectors(self):
         """Initialise the cartesian vectors from LOS measurements """
@@ -54,40 +72,19 @@ class DisplacementCartesian(object):
             == self._scene.theta.shape, \
             'LOS displacement, phi, theta are not aligned.'
 
-        self._dE = self._scene.displacement \
+        self.dE = self._scene.displacement \
             * num.sin(self._scene.theta) * num.cos(self._scene.phi)
-        self._dN = self._scene.displacement \
+        self.dN = self._scene.displacement \
             * num.sin(self._scene.theta) * num.sin(self._scene.phi)
-        self._dU = self._scene.displacement \
+        self.dU = self._scene.displacement \
             * num.cos(self._scene.theta)
-        self._dr = num.sqrt(self._dE**2 + self._dN**2 + self._dU**2) \
+        self.dr = num.sqrt(self.dE**2 + self.dN**2 + self.dU**2) \
             * num.sign(self._scene.displacement)
         # self._dabs = self._dE + self._dN + self._dU
 
-    def _get_cached_property(self, prop):
-        if self.__getattribute__(prop) is None:
-            self._init_vectors()
-        return self.__getattribute__(prop)
-
-    @property
-    def dE(self):
-        return self._get_cached_property('_dE')
-
-    @property
-    def dN(self):
-        return self._get_cached_property('_dN')
-
-    @property
-    def dU(self):
-        return self._get_cached_property('_dU')
-
-    @property
-    def dr(self):
-        return self._get_cached_property('_dr')
-
     @property
     def plot(self):
-        if self._plot is None:
+        if self.__dict__.get('_plot', None) is None:
             from kite.plot2d import Plot2D
             self._plot = Plot2D(self)
             self._plot.title = 'Displacement Cartesian'
@@ -149,7 +146,6 @@ satellite measurements
         self._Y = None
 
         self._quadtree = None
-        self._plot = None
 
         self.cartesian = DisplacementCartesian(self)
 
@@ -170,7 +166,10 @@ satellite measurements
 
     @phi.setter
     def phi(self, value):
-        _setDataNumpy(self, '_phi', value)
+        if isinstance(value, float):
+            self._theta = value
+        else:
+            _setDataNumpy(self, '_phi', value)
         self._notify()
 
     @phi.getter
@@ -249,16 +248,13 @@ satellite measurements
 
     @property
     def plot(self):
-        if self._plot is None:
+        if self.__dict__.get('_plot', None) is None:
             from kite.plot2d import Plot2D
             self._plot = Plot2D(self)
             self._plot.title = 'Displacement LOS'
             self._plot.default_component = 'displacement'
+            self.plot.__doc__ = self._plot.__doc__
         return self._plot
-
-    # @plot.__doc__
-    # def plot(self):
-    #     return self._plot.__doc__
 
     def mapLocalToUTM(self, x, y):
         return self.x[x], self.y[y]
