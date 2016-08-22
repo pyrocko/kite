@@ -60,6 +60,10 @@ class QuadNode(object):
     def focal_point(self):
         return (self.llx + self.length/2, self.lly + self.length/2)
 
+    @property_cached
+    def bilinear_std(self):
+        raise NotImplementedError('Bilinear fit not implemented')
+
     @property
     def children(self):
         return self._children
@@ -111,30 +115,49 @@ class Quadtree(Subject):
     def __init__(self, scene, epsilon=None):
         Subject.__init__(self)
 
-        self.methods = {
+        self.split_methods = {
             'mean_std': lambda node: node.mean_std,
             'median_std': lambda node: node.median_std,
             'std': lambda node: node.std,
         }
 
+        self.norm_methods = {
+            'mean': lambda node: node.mean,
+            'median': lambda node: node.median,
+        }
+
         self._scene = scene
         self.data = self._scene.displacement
-        self._full_data_std = num.nanstd(self.data)
 
         self._epsilon = None
         self._leafs = None
 
         self._log = logging.getLogger('Quadtree')
 
-        self.setMethod('median_std')
+        self.setSplitMethod('median_std')
 
-    def setMethod(self, method):
-        if method not in self.methods.keys():
+    def setSplitMethod(self, method):
+        """Set splitting method for quadtree tiles
+
+        * `mean_std` tiles standard deviation from tile's mean is evaluated
+        * `median_std` tiles standard deviation from tile's median is evaluated
+        * `std` tiles standard deviation is evaluated
+
+        :param method: Choose from methods `['mean_std', 'median_std', 'std']`
+        :type method: string
+        :raises: AttributeError
+        """
+        if method not in self.split_methods.keys():
             raise AttributeError('Method %s not in %s'
-                                 % (method, self.methods))
+                                 % (method, self.split_methods))
+        self._log.info('Changing to discretesiation method %s' % method)
         self.method = method
-        self.epsilon = num.mean([self.methods[self.method](b)
-                                 for b in self.base_nodes])
+        self.epsilon = self._init_epsilon
+
+    @property
+    def _init_epsilon(self):
+        return num.mean([self.split_methods[self.method](b)
+                         for b in self._base_nodes])
 
     @property
     def epsilon(self):
@@ -142,7 +165,7 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
-        if value < 0.1 * self._full_data_std:
+        if value < 0.1 * self._init_epsilon:
             self._log.info('Epsilon is out of bounds [%0.3f]' % value)
             return
         self._epsilon = value
@@ -150,8 +173,8 @@ class Quadtree(Subject):
         self._log.info('Changing epsilon to %0.3f' % value)
         t0 = time.time()
 
-        for b in self.base_nodes:
-            b.evaluateNode(self.methods[self.method])
+        for b in self._base_nodes:
+            b.evaluateNode(self.split_methods[self.method])
 
         self._log.info('New tree has %d leafs [%0.8f s]' %
                        (len(self.leafs), (time.time()-t0)))
@@ -162,24 +185,44 @@ class Quadtree(Subject):
     def leafs(self):
         if self._leafs is None:
             self._leafs = []
-            for n in self.base_nodes:
+            for n in self._base_nodes:
                 self._leafs.extend([c for c in n.iterLeafs()])
         return self._leafs
 
     @property
-    def means(self):
+    def leaf_means(self):
         return num.array([n.mean for n in self.leafs])
 
     @property
-    def medians(self):
+    def leaf_medians(self):
         return num.array([n.median for n in self.leafs])
 
     @property
-    def focal_points(self):
+    def leaf_focal_points(self):
         return num.array([n.focal_point for n in self.leafs])
 
+    @property
+    def leaf_matrix_mean(self):
+        return self._getLeafsNormMatrix(method='mean')
+
+    @property
+    def leaf_matrix_median(self):
+        return self._getLeafsNormMatrix(method='median')
+
+    def _getLeafsNormMatrix(self, method='median'):
+        if method not in self.norm_methods.keys():
+            raise AttributeError('Method %s is not in %s' % (method,
+                                 self.norm_methods.keys()))
+
+        leaf_matrix = num.empty_like(self.data)
+        leaf_matrix.fill(num.nan)
+        for l in self.leafs:
+            leaf_matrix[l.llx:l.llx+l.length, l.lly:l.lly+l.length] = \
+                self.norm_methods[method](l)
+        return leaf_matrix
+
     @property_cached
-    def base_nodes(self):
+    def _base_nodes(self):
         self._base_nodes = []
         init_length = num.power(2, num.ceil(num.log(num.min(self.data.shape)) /
                                             num.log(2)))
@@ -207,8 +250,9 @@ Quadtree for %s
   Initiated: %s
   Epsilon: %0.3f
   nLeafs:  %d
+  Method: %s
         ''' % (repr(self._scene), (self._base_nodes is not None),
-               self.epsilon, len(self.leafs))
+               self.epsilon, len(self.leafs), self.method)
 
 __all__ = '''
 Quadtree
