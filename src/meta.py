@@ -10,6 +10,10 @@ def property_cached(func):
             instance.__dict__[var_name] = func(instance)
         return instance.__dict__[var_name]
 
+    @cache_return.setter
+    def cache_return(instance, value):
+        instance.__dict__[var_name] = value
+
     return cache_return
 
 
