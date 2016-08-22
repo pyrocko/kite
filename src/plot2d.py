@@ -152,7 +152,6 @@ class Plot2DQuadTree(object):
     def __init__(self, quadtree, cmap='RdBu', **kwargs):
         from matplotlib import cm
         self._quadtree = quadtree
-        self._rectangles = []
 
         self.fig = None
         self.ax = None
@@ -167,16 +166,13 @@ class Plot2DQuadTree(object):
 
     def plot(self, figure=None, axes=None, **kwargs):
         _setCanvas(self, figure, axes)
-        _vmax = num.abs(self._quadtree.leaf_means).max()
 
         # self._updateRectangles()
         self._decorateAxes()
         self._addInfoText()
         self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
         self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
-        self.im = self.ax.imshow(self._quadtree.leaf_matrix_means,
-                                 cmap=self.sm.get_cmap())
-        self.im.set_clim(-_vmax, _vmax)
+
         # self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
 
@@ -197,6 +193,21 @@ class Plot2DQuadTree(object):
         def close_figure(*args):
             self._quadtree.unsubscribe(self._update)
 
+        def _update(self):
+            t0 = time.time()
+            _vmax = num.abs(self._quadtree.leaf_means).max()
+
+            self.im.set_data(self._quadtree.leaf_matrix_means)
+            self.im.set_clim(-_vmax, _vmax)
+
+            self.ax.texts = []
+            self._addInfoText()
+
+            self.ax.draw_artist(self.im)
+
+            self._log.info('Redrew %d leafs [%0.8f s]' %
+                           (len(self._quadtree.leafs), time.time()-t0))
+
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
 
@@ -209,53 +220,10 @@ class Plot2DQuadTree(object):
 
         # Catch events
         epsilon.on_changed(change_epsilon)
-        self._quadtree.subscribe(self._update)
+        self._quadtree.subscribe(_update)
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
         plt.show()
-
-    def _updateRectangles(self):
-        for rect in self._rectangles:
-            try:
-                self.ax.artists.remove(rect)
-            except ValueError:
-                pass
-
-        self._rectangles = [QuadLeafRectangle(self, leaf)
-                            for leaf in self._quadtree.leafs]
-
-        self.ax.artists.extend(self._rectangles)
-
-    def _updateColormap(self):
-        _vmax = num.abs(self._quadtree.leaf_means).max()
-        self.sm.set_clim(-_vmax, _vmax)
-
-    def _update(self):
-        t0 = time.time()
-        _vmax = num.abs(self._quadtree.leaf_means).max()
-
-        # self._updateColormap()
-        # self._updateRectangles()
-        self.im.set_data(self._quadtree.leaf_matrix_means)
-        self.im.set_clim(-_vmax, _vmax)
-
-        self.ax.texts = []
-        self._addInfoText()
-
-        # Update figure.canvas
-        self.ax.draw_artist(self.im)
-        # self.fig.canvas.blit(self.ax.bbox)
-
-        # self.collections = []
-        # self.ax.scatter(*zip(*self._quadtree.focal_points), s=4, color='k')
-
-        # self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
-        # self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
-        # self.ax.invert_yaxis()
-        # self.ax.set_aspect('equal')
-
-        self._log.info('Redrew %d leafs [%0.8f s]' %
-                       (len(self._quadtree.leafs), time.time()-t0))
 
     def _decorateAxes(self):
         pass
