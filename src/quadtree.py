@@ -103,8 +103,7 @@ class QuadNode(object):
     def createTree(self, eval_func):
         if eval_func(self) > self._tree._epsilon_limit:  # or\
             # self.length > .1 * max(self._tree._data.shape): !! Very Expensive
-            if self._children is None:
-                self._children = [c for c in self._iterSplitNode()]
+            self._children = [c for c in self._iterSplitNode()]
             for c in self._children:
                 c.createTree(eval_func)
         else:
@@ -160,21 +159,36 @@ class Quadtree(Subject):
         :raises: AttributeError
         """
         global _NNODES
+
         if split_method not in self._split_methods.keys():
             raise AttributeError('Method %s not in %s'
                                  % (split_method, self._split_methods))
 
         self._log.info('Creating tree using %s method...' % split_method)
+
         self.split_method = split_method
         self._split_func = self._split_methods[split_method]
 
-        self._epsilon_limit = self._epsilon_init * .1
+        self._epsilon_limit = self._epsilon_init * .2
         self.epsilon = self._epsilon_init
 
         _NNODES = len(self._base_nodes)
         t0 = time.time()
-        for b in self._base_nodes:
-            b.createTree(self._split_func)
+
+        def createTree(base_node):
+            base_node.createTree(self._split_func)
+            return base_node
+
+        if False:
+            from pathos.pools import ProcessPool as Pool
+
+            pool = Pool(timeout=.25)
+            self._log.info('Utilizing %d cpu cores' % pool.nodes)
+            res = pool.map(createTree, [b for b in self._base_nodes])
+            self._base_nodes = [r for r in res]
+        else:
+            self._base_nodes = [createTree(b) for b in self._base_nodes]
+
         self._log.info('Tree created, %d nodes [%0.8f s]' % (_NNODES,
                                                              time.time()-t0))
 
@@ -200,8 +214,8 @@ class Quadtree(Subject):
     def leafs(self):
         t0 = time.time()
         leafs = []
-        for n in self._base_nodes:
-            leafs.extend([c for c in n.iterLeafsEval(self._split_func)])
+        for b in self._base_nodes:
+            leafs.extend([l for l in b.iterLeafsEval(self._split_func)])
         self._log.info('Gathering leafs for epsilon %.3f [%0.8f s]' %
                        (self.epsilon, time.time()-t0))
         return leafs
@@ -243,7 +257,7 @@ class Quadtree(Subject):
         self._base_nodes = []
         init_length = num.power(2,
                                 num.ceil(num.log(num.min(self._data.shape)) /
-                                         num.log(2)))
+                                         num.log(2)))/2
         nx, ny = num.ceil(num.array(self._data.shape)/init_length)
 
         for ix in range(int(nx)):
