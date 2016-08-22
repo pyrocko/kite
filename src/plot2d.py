@@ -126,6 +126,10 @@ class Plot2D(object):
 
 
 class QuadLeafRectangle(matplotlib.patches.Rectangle):
+    """Representation if Quadleaf matplotlib.patches.Rectangle
+
+    Not used at the moment
+    """
     __slots__ = ('_plotquadtree', 'leaf')
 
     def __init__(self, plotquadtree, leaf, **kwargs):
@@ -163,13 +167,17 @@ class Plot2DQuadTree(object):
 
     def plot(self, figure=None, axes=None, **kwargs):
         _setCanvas(self, figure, axes)
+        _vmax = num.abs(self._quadtree.leaf_means).max()
 
-        self._updateRectangles()
+        # self._updateRectangles()
         self._decorateAxes()
         self._addInfoText()
         self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
         self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
-        self.ax.set_aspect('equal')
+        self.im = self.ax.imshow(self._quadtree.leaf_matrix_means,
+                                 cmap=self.sm.get_cmap())
+        self.im.set_clim(-_vmax, _vmax)
+        # self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
 
         _finishPlot(figure, axes)
@@ -224,28 +232,30 @@ class Plot2DQuadTree(object):
 
     def _update(self):
         t0 = time.time()
+        _vmax = num.abs(self._quadtree.leaf_means).max()
 
-        self._updateColormap()
-
-        self._updateRectangles()
+        # self._updateColormap()
+        # self._updateRectangles()
+        self.im.set_data(self._quadtree.leaf_matrix_means)
+        self.im.set_clim(-_vmax, _vmax)
 
         self.ax.texts = []
         self._addInfoText()
 
         # Update figure.canvas
-        self.ax.draw_artist(self._rectangles[-1])
-        self.fig.canvas.blit(self.ax.bbox)
+        self.ax.draw_artist(self.im)
+        # self.fig.canvas.blit(self.ax.bbox)
 
         # self.collections = []
         # self.ax.scatter(*zip(*self._quadtree.focal_points), s=4, color='k')
 
-        self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
-        self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
-        self.ax.invert_yaxis()
-        self.ax.set_aspect('equal')
+        # self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
+        # self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
+        # self.ax.invert_yaxis()
+        # self.ax.set_aspect('equal')
 
-        self._log.info('Redrew %d rectangles [%0.8f s]' %
-                       (len(self._rectangles), time.time()-t0))
+        self._log.info('Redrew %d leafs [%0.8f s]' %
+                       (len(self._quadtree.leafs), time.time()-t0))
 
     def _decorateAxes(self):
         pass
