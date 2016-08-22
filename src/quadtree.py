@@ -5,6 +5,8 @@ import time
 
 from kite.meta import Subject, property_cached
 
+_NNODES = 0
+
 
 class QuadNode(object):
     """A Node in the Quadtree
@@ -14,6 +16,8 @@ class QuadNode(object):
     #              'data', '_mean', '_median', 'std', '_var')
 
     def __init__(self, tree, llx, lly, length, parent=None):
+        global _NNODES
+        _NNODES += 1
 
         self.parent = parent
         self._tree = tree
@@ -155,6 +159,7 @@ class Quadtree(Subject):
         :type split_method: string
         :raises: AttributeError
         """
+        global _NNODES
         if split_method not in self._split_methods.keys():
             raise AttributeError('Method %s not in %s'
                                  % (split_method, self._split_methods))
@@ -166,8 +171,12 @@ class Quadtree(Subject):
         self._epsilon_limit = self._epsilon_init * .1
         self.epsilon = self._epsilon_init
 
+        _NNODES = len(self._base_nodes)
+        t0 = time.time()
         for b in self._base_nodes:
             b.createTree(self._split_func)
+        self._log.info('Tree created, %d nodes [%0.8f s]' % (_NNODES,
+                                                             time.time()-t0))
 
     @property
     def _epsilon_init(self):
