@@ -253,7 +253,6 @@ satellite measurements
             self._plot = Plot2D(self)
             self._plot.title = 'Displacement LOS'
             self._plot.default_component = 'displacement'
-            self.plot.__doc__ = self._plot.__doc__
         return self._plot
 
     def mapLocalToUTM(self, x, y):
@@ -270,6 +269,9 @@ satellite measurements
             module = eval('scene_io.%s()' % mod)
             if module.validate(filename, **kwargs):
                 data = module.read(filename, **kwargs)
+                scene._log.debug('Recognized format %s for file %s' %
+                                 (mod, filename))
+                break
         if data is None:
             raise TypeError('Could not recognize format for %s' % filename)
 
