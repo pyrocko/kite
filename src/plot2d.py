@@ -219,7 +219,7 @@ class Plot2DQuadTree(object):
         self.ax.artists.extend(self._rectangles)
 
     def _updateColormap(self):
-        _vmax = num.abs(self._quadtree.means).max()
+        _vmax = num.abs(self._quadtree.leaf_means).max()
         self.sm.set_clim(-_vmax, _vmax)
 
     def _update(self):
