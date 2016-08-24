@@ -188,7 +188,7 @@ class Quadtree(Subject):
         self.split_method = split_method
         self._split_func = self._split_methods[split_method]
 
-        self._epsilon_limit = self._epsilon_init * .2
+        self._epsilon_limit = self._epsilon_init * .25
         self.epsilon = self._epsilon_init
 
         self._initTree()
@@ -197,10 +197,9 @@ class Quadtree(Subject):
         _NNODES = len(self._base_nodes)
         t0 = time.time()
 
-        if True:
+        if False:
             from multiprocessing import JoinableQueue, Process
 
-            queue = JoinableQueue()
             processes = []
             for i in xrange(1):
                 p = Process(target=workerBaseNode,
@@ -210,13 +209,9 @@ class Quadtree(Subject):
                 processes.append(p)
 
             for b in self._base_nodes:
-                print b
                 queue.put(b)
-                print queue.qsize()
             queue.close()
             queue.join()
-
-            print queue
         else:
             self._base_nodes = [b.createTree(self._split_func)
                                 for b in self._base_nodes]
