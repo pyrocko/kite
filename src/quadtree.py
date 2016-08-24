@@ -4,7 +4,6 @@ import time
 # import importlib
 
 from kite.meta import Subject, property_cached
-
 _NNODES = 0
 
 
@@ -109,6 +108,14 @@ class QuadNode(object):
         else:
             self._children = None
 
+    def _createTree(self):
+        if self.mean_std > self._tree._epsilon_limit:
+            self._children = [c for c in self._iterSplitNode()]
+            for c in self._children:
+                c._createTree()
+        else:
+            self._children = None
+
     def __str__(self):
         return '''QuadNode:
   llx: %d px
@@ -120,6 +127,20 @@ class QuadNode(object):
   var: %.4f
         ''' % (self.llx, self.lly, self.length, self.mean, self.median,
                self.std, self.var)
+
+
+def workerBaseNode(queue):
+    import traceback
+    while True:
+        try:
+            base_node = queue.get()
+        except:
+            traceback.print_tb()
+        if base_node is None:
+            break
+        base_node._createTree()
+        queue.put(base_node)
+        queue.task_done()
 
 
 class Quadtree(Subject):
@@ -164,30 +185,41 @@ class Quadtree(Subject):
             raise AttributeError('Method %s not in %s'
                                  % (split_method, self._split_methods))
 
-        self._log.info('Creating tree using %s method...' % split_method)
-
         self.split_method = split_method
         self._split_func = self._split_methods[split_method]
 
         self._epsilon_limit = self._epsilon_init * .2
         self.epsilon = self._epsilon_init
 
+        self._initTree()
+
+    def _initTree(self):
         _NNODES = len(self._base_nodes)
         t0 = time.time()
 
-        def createTree(base_node):
-            base_node.createTree(self._split_func)
-            return base_node
+        if True:
+            from multiprocessing import JoinableQueue, Process
 
-        if False:
-            from pathos.pools import ProcessPool as Pool
+            queue = JoinableQueue()
+            processes = []
+            for i in xrange(1):
+                p = Process(target=workerBaseNode,
+                            args=(queue,))
+                p.daemon = True
+                p.start()
+                processes.append(p)
 
-            pool = Pool(timeout=.25)
-            self._log.info('Utilizing %d cpu cores' % pool.nodes)
-            res = pool.map(createTree, [b for b in self._base_nodes])
-            self._base_nodes = [r for r in res]
+            for b in self._base_nodes:
+                print b
+                queue.put(b)
+                print queue.qsize()
+            queue.close()
+            queue.join()
+
+            print queue
         else:
-            self._base_nodes = [createTree(b) for b in self._base_nodes]
+            self._base_nodes = [b.createTree(self._split_func)
+                                for b in self._base_nodes]
 
         self._log.info('Tree created, %d nodes [%0.8f s]' % (_NNODES,
                                                              time.time()-t0))
