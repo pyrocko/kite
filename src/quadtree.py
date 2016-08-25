@@ -1,9 +1,8 @@
 import numpy as num
 import logging
 import time
-# import importlib
-
 from kite.meta import Subject, property_cached
+
 _NNODES = 0
 
 
@@ -109,6 +108,7 @@ class QuadNode(object):
             self._children = None
 
     def _createTree(self):
+        ''' Deprecated - used by multiprocessing '''
         if self.mean_std > self._tree._epsilon_limit:
             self._children = [c for c in self._iterSplitNode()]
             for c in self._children:
@@ -141,6 +141,11 @@ def workerBaseNode(queue):
         base_node._createTree()
         queue.put(base_node)
         queue.task_done()
+
+
+def createTree(base_node):
+    base_node._createTree()
+    return base_node
 
 
 class Quadtree(Subject):
@@ -179,8 +184,6 @@ class Quadtree(Subject):
         :type split_method: string
         :raises: AttributeError
         """
-        global _NNODES
-
         if split_method not in self._split_methods.keys():
             raise AttributeError('Method %s not in %s'
                                  % (split_method, self._split_methods))
@@ -188,18 +191,20 @@ class Quadtree(Subject):
         self.split_method = split_method
         self._split_func = self._split_methods[split_method]
 
-        self._epsilon_limit = self._epsilon_init * .25
+        self._epsilon_limit = self._epsilon_init * .3
         self.epsilon = self._epsilon_init
 
         self._initTree()
 
     def _initTree(self):
+        global _NNODES
         _NNODES = len(self._base_nodes)
         t0 = time.time()
 
         if False:
             from multiprocessing import JoinableQueue, Process
 
+            queue = JoinableQueue()
             processes = []
             for i in xrange(1):
                 p = Process(target=workerBaseNode,
@@ -212,9 +217,16 @@ class Quadtree(Subject):
                 queue.put(b)
             queue.close()
             queue.join()
+        elif False:
+            from pathos.pools import ProcessPool as Pool
+
+            pool = Pool(timeout=.25)
+            self._log.info('Utilizing %d cpu cores' % pool.nodes)
+            res = pool.map(createTree, [b for b in self._base_nodes])
+            self._base_nodes = [r for r in res]
         else:
-            self._base_nodes = [b.createTree(self._split_func)
-                                for b in self._base_nodes]
+            for b in self._base_nodes:
+                b.createTree(self._split_func)
 
         self._log.info('Tree created, %d nodes [%0.8f s]' % (_NNODES,
                                                              time.time()-t0))
@@ -243,8 +255,8 @@ class Quadtree(Subject):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval(self._split_func)])
-        self._log.info('Gathering leafs for epsilon %.3f [%0.8f s]' %
-                       (self.epsilon, time.time()-t0))
+        self._log.info('Gathering leafs (%d)for epsilon %.3f [%0.8f s]' %
+                       (len(leafs), self.epsilon, time.time()-t0))
         return leafs
 
     @property
@@ -300,8 +312,18 @@ class Quadtree(Subject):
 
     @property_cached
     def plot(self):
-        from kite.plot2d import Plot2DQuadTree
-        return Plot2DQuadTree(self)
+        from kite.plot2d import PlotQuadTree2D
+        return PlotQuadTree2D(self)
+
+    def getStaticTarget(self):
+        raise NotImplementedError
+
+    def dump(self):
+        raise NotImplementedError
+
+    @classmethod
+    def load(cls, filename):
+        raise NotImplementedError
 
     def __str__(self):
         return '''

@@ -2,7 +2,7 @@
 from pyrocko import guts
 import numpy as num
 import logging
-from kite.meta import Subject
+from kite.meta import Subject, property_cached
 
 SAR_META_KEYS = """
 name
@@ -85,8 +85,8 @@ class DisplacementCartesian(object):
     @property
     def plot(self):
         if self.__dict__.get('_plot', None) is None:
-            from kite.plot2d import Plot2D
-            self._plot = Plot2D(self)
+            from kite.plot2d import PlotDisplacement
+            self._plot = PlotDisplacement(self)
             self._plot.title = 'Displacement Cartesian'
             self._plot.default_component = 'dE'
         return self._plot
@@ -239,21 +239,15 @@ satellite measurements
             self._createMeshedGrids()
         return self._Y
 
-    @property
+    @property_cached
     def quadtree(self):
-        if self._quadtree is None:
-            from kite.quadtree import Quadtree
-            self._quadtree = Quadtree(self)
-        return self._quadtree
+        from kite.quadtree import Quadtree
+        return Quadtree(self)
 
-    @property
+    @property_cached
     def plot(self):
-        if self.__dict__.get('_plot', None) is None:
-            from kite.plot2d import Plot2D
-            self._plot = Plot2D(self)
-            self._plot.title = 'Displacement LOS'
-            self._plot.default_component = 'displacement'
-        return self._plot
+        from kite.plot2d import PlotDisplacement2D
+        return PlotDisplacement2D(self)
 
     def mapLocalToUTM(self, x, y):
         return self.x[x], self.y[y]
