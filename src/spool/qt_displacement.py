@@ -97,8 +97,11 @@ class QKiteScene(QtGui.QWidget, _QKiteScene):
         _QKiteScene.__init__(self, scene)
 
         QKiteScenePlot2D(self)
-        QKiteControlScene(self)
-
+        tab1 = QtGui.QDockWidget('Colorbar', self)
+        tab1.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
+        tab1.setWidget(QKiteControlScene(parent=tab1, scene=scene))
+        tab1.setFloating(True)
+        tab1.setFeatures(QtGui.QDockWidget.DockWidgetFeature.DockWidgetMovable)
 
 if __name__ == '__main__':
     import sys
