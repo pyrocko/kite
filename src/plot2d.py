@@ -1,7 +1,6 @@
-# import numpy as num
 import numpy as num
 import matplotlib.pyplot as plt
-import matplotlib.patches
+from matplotlib.image import AxesImage
 import logging
 import time
 
@@ -11,9 +10,9 @@ _DEFAULT_IMSHOW = {
 }
 
 _VALID_COMPONENTS = {
-    'displacement': 'Displacement LOS',
-    'theta': 'Theta LOS',
-    'phi': 'Phi LOS',
+    'displacement': 'LOS Displacement',
+    'theta': 'LOS Theta',
+    'phi': 'LOS Phi',
     'cartesian.dE': 'Displacement dE',
     'cartesian.dN': 'Displacement dN',
     'cartesian.dU': 'Displacement dU',
@@ -50,142 +49,253 @@ def _setCanvas(obj, figure=None, axes=None):
 
 
 class Plot2D(object):
-    def __init__(self, scene):
-        self._scene = scene
-        self.title = 'Displacement'
-
-        self.fig = None
-        self.ax = None
-        self._im = None
-        self._cb = None
-
-    def __call__(self, *args, **kwargs):
-        return self.plot(*args, **kwargs)
-
-    def _decorateAxes(self):
-        self.ax.set_title('%s\n%s' % (self.title,
-                                      self._scene.meta.title))
-
-    def _decorateImshow(self):
-        array = self._im.get_array()
-        _vmax = num.abs(array).max()
-
-        self._im.set_clim(-_vmax, _vmax)
-        self._im.set_extent(
-                    (self._scene.utm_x.min(),
-                     self._scene.utm_x.max(),
-                     self._scene.utm_y.min(),
-                     self._scene.utm_y.max()))
-
-    def plot(self, component='displacement', axes=None, figure=None, **kwargs):
-        """Plots any component fom Scene
-
-        :param **kwargs: Keyword args forwarded to `matplotlib.plt.imshow()`
-        :type **kwargs: {dict}
-        :param component: Component to plot
-            ['phi', 'cartesian.dU', 'displacement', 'cartesian.dE',
-            'theta', 'cartesian.dN']`, defaults to `'displacement'`
-        :type component: {string}, optional
-        :param axes: Axes instance to plot in, defaults to None
-        :type axes: [:py:class:`matplotlib.Axes`], optional
-        :param figure: Figure instance to plot in, defaults to None
-        :type figure: [:py:class:`matplotlib.Figure`], optional
-        :returns: Imshow instance
-        :rtype: {[:py:class:`matplotlib.image.AxesImage`]}
-        :raises: AttributeError
-        """
-        try:
-            if component not in _VALID_COMPONENTS.keys():
-                raise AttributeError('Invalid component %s' % component)
-            data = eval('self._scene.%s' % component)
-        except:
-            raise AttributeError('Could not access component %s' % component)
-
-        _setCanvas(self, figure, axes)
-        self._decorateAxes()
-
-        self.colorbar_label = _VALID_COMPONENTS[component]
-
-        _kwargs = _DEFAULT_IMSHOW.copy()
-        _kwargs.update(kwargs)
-
-        self._im = self.ax.imshow(data, **_kwargs)
-        self._decorateImshow()
-
-        self.ax.set_aspect('equal')
-
-        if figure is None:
-            self.addColorbar()
-
-        _finishPlot(figure, axes)
-        return self._im
-
-    def addColorbar(self):
-        self._cb = self.fig.colorbar(self._im)
-        self._cb.set_label(self.colorbar_label)
-
-
-class QuadLeafRectangle(matplotlib.patches.Rectangle):
-    """Representation if Quadleaf matplotlib.patches.Rectangle
-
-    Not used at the moment
+    """Base class for matplotlib 2D plots
     """
-    __slots__ = ('_plotquadtree', 'leaf')
-
-    def __init__(self, plotquadtree, leaf, **kwargs):
-        matplotlib.patches.Rectangle.__init__(self, (0, 0), 0, 0, **kwargs)
-
-        self._plotquadtree = plotquadtree
-        self.leaf = leaf
-
-        self.set_xy((self.leaf.llx, self.leaf.lly))
-        self.set_height(self.leaf.length)
-        self.set_width(self.leaf.length)
-
-        # self.set_alpha(.5)
-        self.set_color(self._plotquadtree.sm.to_rgba(self.leaf.median))
-        if self._plotquadtree.ax is not None:
-            self.set_transform(self._plotquadtree.ax.transData)
-
-
-class Plot2DQuadTree(object):
-    def __init__(self, quadtree, cmap='RdBu', **kwargs):
-        from matplotlib import cm
-        self._quadtree = quadtree
+    def __init__(self, scene, **kwargs):
+        self._scene = scene
+        self._data = None
 
         self.fig = None
         self.ax = None
+        self._show_fig = False
 
-        self.sm = cm.ScalarMappable(cmap=cmap)
-        self.sm.set_clim(-1, 1)
+        self.title = 'unnamed'
+
+        self.setCanvas(**kwargs)
 
         self._log = logging.getLogger(self.__class__.__name__)
 
     def __call__(self, *args, **kwargs):
         return self.plot(*args, **kwargs)
 
-    def plot(self, figure=None, axes=None, **kwargs):
-        _setCanvas(self, figure, axes)
+    def setCanvas(self, **kwargs):
+        """Set canvas to plot in
 
-        # self._updateRectangles()
-        self._decorateAxes()
-        self._addInfoText()
-        self.ax.set_xlim((0, self._quadtree._scene.utm_x.size))
-        self.ax.set_ylim((0, self._quadtree._scene.utm_y.size))
+        :param figure: Matplotlib figure to plot in
+        :type figure: :py:class:`matplotlib.Figure`
+        :param axes: Matplotlib axes to plot in
+        :type axes: :py:class:`matplotlib.Axes`
+        :raises: TypeError
+        """
+        axes = kwargs.get('axes', None)
+        figure = kwargs.get('figure', None)
 
-        # self.ax.set_aspect('equal')
+        if self.fig is not None:
+            return
+        elif axes is None and figure is None:
+            self.fig, self.ax = plt.subplots(1, 1)
+            self._show_fig = True
+        elif isinstance(axes, plt.Axes):
+            self.fig, self.ax = axes.get_figure(), axes
+        elif isinstance(figure, plt.Figure):
+            self.fig, self.ax = figure, figure.gca()
+        else:
+            raise TypeError('axes has to be of type matplotlib.Axes\n'
+                            'figure has to be of type matplotlib.Figure')
+        self.image = AxesImage(self.ax)
+        self.ax.add_artist(self.image)
+
+        return
+
+    @property
+    def data(self):
+        """ Data passed to matplotlib.image.AxesImage """
+        return self._data
+
+    @data.setter
+    def data(self, value):
+        self._data = value
+        self.image.set_data(self.data)
+
+    @data.getter
+    def data(self):
+        if self._data is None:
+            return num.empty((50, 50))
+        return self._data
+
+    def _initImagePlot(self, **kwargs):
+        """ Initiate the plot
+
+        :param figure: Matplotlib figure to plot in
+        :type figure: :py:class:`matplotlib.Figure`
+        :param axes: Matplotlib axes to plot in
+        :type axes: :py:class:`matplotlib.Axes`
+        """
+        self.setCanvas(**kwargs)
+
+        self.setColormap(kwargs.get('cmap', 'RdBu'))
+
+        self.ax.set_xlim((0, self._scene.utm_x.size))
+        self.ax.set_ylim((0, self._scene.utm_y.size))
+        self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
 
-        _finishPlot(figure, axes)
+        self.ax.set_title(self.title)
+
+        def close_figure(ev):
+            self.fig = None
+            self.ax = None
+
+        self.fig.canvas.mpl_connect('close_event', close_figure)
+
+    def plot(self, **kwargs):
+        """Placeholder in prototype class
+
+        :param figure: Matplotlib figure to plot in
+        :type figure: :py:class:`matplotlib.Figure`
+        :param axes: Matplotlib axes to plot in
+        :type axes: :py:class:`matplotlib.Axes`
+        :param **kwargs: kwargs are passed into `plt.imshow`
+        :type **kwargs: dict
+        :raises: NotImplemented
+        """
+        raise NotImplemented
+        self._initImagePlot(**kwargs)
+        if self._show_fig:
+            plt.show()
+
+    def _updateImage(self):
+        self.image.set_data(self.data)
+
+    def setColormap(self, cmap='RdBu'):
+        """Set matplotlib colormap
+
+        :param cmap: matplotlib colormap name, defaults to 'RdBu'
+        :type cmap: str, optional
+        """
+        self.image.set_cmap(cmap)
+        self._updateImage()
+
+    def setColormapAuto(self, symmetric=True):
+        """Set colormap limits automatically
+
+        :param symmetric: symmetric colormap around 0, defaults to True
+        :type symmetric: bool, optional
+        """
+        if symmetric:
+            vmax = num.nanmax(num.abs(self.data))
+            vmin = -vmax
+        else:
+            vmax = num.nanmax(num.abs(self.data))
+            vmin = num.nanmin(num.abs(self.data))
+        self.setColormapLimits(vmin, vmax)
+
+    def setColormapLimits(self, vmin=None, vmax=None):
+        """Set colormap limits
+
+        :param vmin: lower limit, defaults to None
+        :type vmin: float, optional
+        :param vmax: upper limit, defaults to None
+        :type vmax: float, optional
+        """
+        self.image.set_clim(vmin, vmax)
+
+
+class PlotDisplacement2D(Plot2D):
+    """Plotting 2D displacements though Matplotlib
+    """
+    def __init__(self, scene, **kwargs):
+        Plot2D.__init__(self, scene, **kwargs)
+
+        self.components_available = {
+            'displacement': 'LOS Displacement',
+            'theta': 'LOS Theta',
+            'phi': 'LOS Phi',
+            'cartesian.dE': 'Displacement dE',
+            'cartesian.dN': 'Displacement dN',
+            'cartesian.dU': 'Displacement dU',
+        }
+
+    def plot(self, component='displacement', **kwargs):
+        """Plots any component fom Scene
+        The following components are recognizes
+
+        - 'cartesian.dE'
+        - 'cartesian.dN'
+        - 'cartesian.dU'
+        - 'displacement'
+        - 'phi'
+        - 'theta'
+
+        :param **kwargs: Keyword args forwarded to `matplotlib.plt.imshow()`
+        :type **kwargs: {dict}
+        :param component: Component to plot
+['cartesian.dE', 'cartesian.dN', 'cartesian.dU',
+'displacement', 'phi', 'theta']
+        :type component: {string}, optional
+        :param axes: Axes instance to plot in, defaults to None
+        :type axes: :py:class:`matplotlib.Axes`, optional
+        :param figure: Figure instance to plot in, defaults to None
+        :type figure: :py:class:`matplotlib.Figure`, optional
+        :param **kwargs: kwargs are passed into `plt.imshow`
+        :type **kwargs: dict
+        :returns: Imshow instance
+        :rtype: :py:class:`matplotlib.image.AxesImage`
+        :raises: AttributeError
+        """
+        self.setComponent(component)
+        self.title = self.components_available[component]
+        self._initImagePlot(**kwargs)
+
+        if self._show_fig:
+            plt.show()
+
+    def setComponent(self, component):
+        """Set displacement component to plot
+
+        :param component: Displacement component to plot in
+['cartesian.dE', 'cartesian.dN', 'cartesian.dU',
+'displacement', 'phi', 'theta']
+        :type component: str
+        :raises: AttributeError, AttributeError
+        """
+        try:
+            if component not in self.components_available.keys():
+                raise AttributeError('Invalid component %s' % component)
+            self.data = eval('self._scene.%s' % component)
+        except:
+            raise AttributeError('Could not access component %s' % component)
+
+    def availableComponents(self):
+        return self.components_available
+
+
+class PlotQuadTree2D(Plot2D):
+    """Plotting 2D Quadtrees though Matplotlib
+    """
+    def __init__(self, quadtree, **kwargs):
+        self._quadtree = quadtree
+
+        Plot2D.__init__(self, quadtree._scene)
+
+    def plot(self, **kwargs):
+        """Plot current quadtree
+
+        :param axes: Axes instance to plot in, defaults to None
+        :type axes: [:py:class:`matplotlib.Axes`], optional
+        :param figure: Figure instance to plot in, defaults to None
+        :type figure: [:py:class:`matplotlib.Figure`], optional
+        :param **kwargs: kwargs are passed into `plt.imshow`
+        :type **kwargs: dict
+        """
+        self.data = self._quadtree.leaf_matrix_means
+        self.title = 'Quadtree Means'
+
+        self._initImagePlot(**kwargs)
+        self._addInfoText()
+
+        if self._show_fig:
+            plt.show()
 
     def _addInfoText(self):
+        """ Add number of leafs in self.ax """
         self.ax.text(.975, .975, '%d Leafs' % len(self._quadtree.leafs),
                      transform=self.ax.transAxes, ha='right', va='top')
 
     def interactive(self):
+        """Simple interactive quadtree plot with matplot
+        """
         from matplotlib.widgets import Slider
-
-        _setCanvas(self)
 
         def change_epsilon(e):
             self._quadtree.epsilon = e
@@ -193,17 +303,14 @@ class Plot2DQuadTree(object):
         def close_figure(*args):
             self._quadtree.unsubscribe(self._update)
 
-        def _update(self):
+        def _update():
             t0 = time.time()
-            _vmax = num.abs(self._quadtree.leaf_means).max()
-
-            self.im.set_data(self._quadtree.leaf_matrix_means)
-            self.im.set_clim(-_vmax, _vmax)
 
             self.ax.texts = []
             self._addInfoText()
-
-            self.ax.draw_artist(self.im)
+            self.data = self._quadtree.leaf_matrix_means
+            self.setColormapAuto()
+            self.ax.draw_artist(self.image)
 
             self._log.info('Redrew %d leafs [%0.8f s]' %
                            (len(self._quadtree.leafs), time.time()-t0))
@@ -211,7 +318,11 @@ class Plot2DQuadTree(object):
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
 
-        self.plot(axes=self.ax)
+        self.data = self._quadtree.leaf_matrix_means
+        self.title = 'Quadtree Means - Interactive'
+
+        self._initImagePlot()
+        self._addInfoText()
 
         epsilon = Slider(ax_eps, 'Epsilon',
                          self._quadtree.epsilon - 1.*self._quadtree.epsilon,
@@ -224,9 +335,6 @@ class Plot2DQuadTree(object):
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
         plt.show()
-
-    def _decorateAxes(self):
-        pass
 
 
 __all__ = """
