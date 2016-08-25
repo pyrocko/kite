@@ -19,35 +19,6 @@ _VALID_COMPONENTS = {
 }
 
 
-def _getAxes(axes):
-    raise DeprecationWarning('To be removed!')
-    if axes is None:
-        return plt.subplots(1, 1)
-    elif isinstance(axes, plt.Axes):
-        return axes.get_figure(), axes
-    else:
-        raise TypeError('Axes has to be of type matplotlib.Axes')
-
-
-def _finishPlot(figure=None, axes=None):
-    """Show plot if figure nor axes is given """
-    if isinstance(axes, plt.Axes) or isinstance(figure, plt.Figure):
-        return None
-    return plt.show()
-
-
-def _setCanvas(obj, figure=None, axes=None):
-    if axes is None and figure is None:
-        obj.fig, obj.ax = plt.subplots(1, 1)
-    elif isinstance(axes, plt.Axes):
-        obj.fig, obj.ax = axes.get_figure(), axes
-    elif isinstance(figure, plt.Figure):
-        obj.fig, obj.ax = figure, figure.gca()
-    else:
-        raise TypeError('axes has to be of type matplotlib.Axes\n'
-                        'figure has to be of type matplotlib.Figure')
-
-
 class Plot2D(object):
     """Base class for matplotlib 2D plots
     """
