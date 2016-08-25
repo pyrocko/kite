@@ -164,25 +164,26 @@ class Plot2D(Subject):
 
     @staticmethod
     def _availableColormaps():
-        return [('Perceptually Uniform Sequential',
-                 ['viridis', 'inferno', 'plasma', 'magma']),
-                ('Sequential', ['Blues', 'BuGn', 'BuPu',
-                                'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd',
-                                'PuBu', 'PuBuGn', 'PuRd', 'Purples', 'RdPu',
-                                'Reds', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd']),
-                ('Sequential (2)', ['afmhot', 'autumn', 'bone', 'cool',
-                                    'copper', 'gist_heat', 'gray', 'hot',
-                                    'pink', 'spring', 'summer', 'winter']),
+        return [  # ('Perceptually Uniform Sequential',
+                #  ['viridis', 'inferno', 'plasma', 'magma']),
+                # ('Sequential', ['Blues', 'BuGn', 'BuPu',
+                #                 'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd',
+                #                 'PuBu', 'PuBuGn', 'PuRd', 'Purples', 'RdPu',
+                #               'Reds', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd']),
+                # ('Sequential (2)', ['afmhot', 'autumn', 'bone', 'cool',
+                #                     'copper', 'gist_heat', 'gray', 'hot',
+                #                     'pink', 'spring', 'summer', 'winter']),
                 ('Diverging', ['BrBG', 'bwr', 'coolwarm', 'PiYG', 'PRGn',
                                'RdBu', 'RdGy', 'RdYlBu', 'RdYlGn', 'Spectral',
                                'seismic', 'PuOr']),
                 ('Qualitative', ['Accent', 'Dark2', 'Paired', 'Pastel1',
                                  'Pastel2', 'Set1', 'Set2', 'Set3']),
-                ('Miscellaneous', ['gist_earth', 'terrain', 'ocean',
-                                   'brg', 'CMRmap', 'cubehelix', 'gist_stern',
-                                   'gnuplot', 'gnuplot2', 'gist_ncar',
-                                   'nipy_spectral', 'jet', 'rainbow',
-                                   'gist_rainbow', 'hsv', 'flag', 'prism'])]
+                # ('Miscellaneous', ['gist_earth', 'terrain', 'ocean',
+                #                  'brg', 'CMRmap', 'cubehelix', 'gist_stern',
+                #                    'gnuplot', 'gnuplot2', 'gist_ncar',
+                #                    'nipy_spectral', 'jet', 'rainbow',
+                #                    'gist_rainbow', 'hsv', 'flag', 'prism'])
+                ]
 
 
 class PlotDisplacement2D(Plot2D):
