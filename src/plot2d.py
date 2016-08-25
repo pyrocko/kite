@@ -1,5 +1,6 @@
 import numpy as num
 import matplotlib.pyplot as plt
+from kite.meta import Subject
 from matplotlib.image import AxesImage
 import logging
 import time
@@ -19,20 +20,19 @@ _VALID_COMPONENTS = {
 }
 
 
-class Plot2D(object):
+class Plot2D(Subject):
     """Base class for matplotlib 2D plots
     """
     def __init__(self, scene, **kwargs):
+        Subject.__init__(self)
         self._scene = scene
         self._data = None
 
         self.fig = None
         self.ax = None
-        self._show_fig = False
+        self._show_plt = False
 
         self.title = 'unnamed'
-
-        self.setCanvas(**kwargs)
 
         self._log = logging.getLogger(self.__class__.__name__)
 
@@ -51,22 +51,20 @@ class Plot2D(object):
         axes = kwargs.get('axes', None)
         figure = kwargs.get('figure', None)
 
-        if self.fig is not None:
-            return
-        elif axes is None and figure is None:
-            self.fig, self.ax = plt.subplots(1, 1)
-            self._show_fig = True
-        elif isinstance(axes, plt.Axes):
+        if isinstance(axes, plt.Axes):
             self.fig, self.ax = axes.get_figure(), axes
+            self._show_plt = False
         elif isinstance(figure, plt.Figure):
             self.fig, self.ax = figure, figure.gca()
+            self._show_plt = False
+        elif axes is None and figure is None and self.fig is None:
+            self.fig, self.ax = plt.subplots(1, 1)
+            self._show_plt = True
         else:
-            raise TypeError('axes has to be of type matplotlib.Axes\n'
+            raise TypeError('axes has to be of type matplotlib.Axes. '
                             'figure has to be of type matplotlib.Figure')
         self.image = AxesImage(self.ax)
         self.ax.add_artist(self.image)
-
-        return
 
     @property
     def data(self):
@@ -106,8 +104,10 @@ class Plot2D(object):
         def close_figure(ev):
             self.fig = None
             self.ax = None
-
-        self.fig.canvas.mpl_connect('close_event', close_figure)
+        try:
+            self.fig.canvas.mpl_connect('close_event', close_figure)
+        except:
+            pass
 
     def plot(self, **kwargs):
         """Placeholder in prototype class
@@ -122,7 +122,7 @@ class Plot2D(object):
         """
         raise NotImplemented
         self._initImagePlot(**kwargs)
-        if self._show_fig:
+        if self._show_plt:
             plt.show()
 
     def _updateImage(self):
@@ -135,7 +135,7 @@ class Plot2D(object):
         :type cmap: str, optional
         """
         self.image.set_cmap(cmap)
-        self._updateImage()
+        self._notify()
 
     def setColormapAuto(self, symmetric=True):
         """Set colormap limits automatically
@@ -160,6 +160,29 @@ class Plot2D(object):
         :type vmax: float, optional
         """
         self.image.set_clim(vmin, vmax)
+        self._notify()
+
+    @staticmethod
+    def _availableColormaps():
+        return [('Perceptually Uniform Sequential',
+                 ['viridis', 'inferno', 'plasma', 'magma']),
+                ('Sequential', ['Blues', 'BuGn', 'BuPu',
+                                'GnBu', 'Greens', 'Greys', 'Oranges', 'OrRd',
+                                'PuBu', 'PuBuGn', 'PuRd', 'Purples', 'RdPu',
+                                'Reds', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd']),
+                ('Sequential (2)', ['afmhot', 'autumn', 'bone', 'cool',
+                                    'copper', 'gist_heat', 'gray', 'hot',
+                                    'pink', 'spring', 'summer', 'winter']),
+                ('Diverging', ['BrBG', 'bwr', 'coolwarm', 'PiYG', 'PRGn',
+                               'RdBu', 'RdGy', 'RdYlBu', 'RdYlGn', 'Spectral',
+                               'seismic', 'PuOr']),
+                ('Qualitative', ['Accent', 'Dark2', 'Paired', 'Pastel1',
+                                 'Pastel2', 'Set1', 'Set2', 'Set3']),
+                ('Miscellaneous', ['gist_earth', 'terrain', 'ocean',
+                                   'brg', 'CMRmap', 'cubehelix', 'gist_stern',
+                                   'gnuplot', 'gnuplot2', 'gist_ncar',
+                                   'nipy_spectral', 'jet', 'rainbow',
+                                   'gist_rainbow', 'hsv', 'flag', 'prism'])]
 
 
 class PlotDisplacement2D(Plot2D):
@@ -204,11 +227,11 @@ class PlotDisplacement2D(Plot2D):
         :rtype: :py:class:`matplotlib.image.AxesImage`
         :raises: AttributeError
         """
+        self._initImagePlot(**kwargs)
         self.setComponent(component)
         self.title = self.components_available[component]
-        self._initImagePlot(**kwargs)
 
-        if self._show_fig:
+        if self._show_plt:
             plt.show()
 
     def setComponent(self, component):
@@ -224,7 +247,7 @@ class PlotDisplacement2D(Plot2D):
             if component not in self.components_available.keys():
                 raise AttributeError('Invalid component %s' % component)
             self.data = eval('self._scene.%s' % component)
-        except:
+        except AttributeError:
             raise AttributeError('Could not access component %s' % component)
 
     def availableComponents(self):
@@ -255,7 +278,7 @@ class PlotQuadTree2D(Plot2D):
         self._initImagePlot(**kwargs)
         self._addInfoText()
 
-        if self._show_fig:
+        if self._show_plt:
             plt.show()
 
     def _addInfoText(self):
@@ -267,6 +290,7 @@ class PlotQuadTree2D(Plot2D):
         """Simple interactive quadtree plot with matplot
         """
         from matplotlib.widgets import Slider
+        self._initImagePlot()
 
         def change_epsilon(e):
             self._quadtree.epsilon = e
@@ -292,7 +316,6 @@ class PlotQuadTree2D(Plot2D):
         self.data = self._quadtree.leaf_matrix_means
         self.title = 'Quadtree Means - Interactive'
 
-        self._initImagePlot()
         self._addInfoText()
 
         epsilon = Slider(ax_eps, 'Epsilon',
