@@ -93,6 +93,7 @@ class Plot2D(Subject):
         self.setCanvas(**kwargs)
 
         self.setColormap(kwargs.get('cmap', 'RdBu'))
+        self.setColormapAuto(symmetric=True)
 
         self.ax.set_xlim((0, self._scene.utm_x.size))
         self.ax.set_ylim((0, self._scene.utm_y.size))
