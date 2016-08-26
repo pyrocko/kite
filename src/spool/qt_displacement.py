@@ -65,28 +65,36 @@ class QKiteControlColormap(QtGui.QHBoxLayout):
         self.addColormapsComboBox()
 
     def addColormapsComboBox(self):
-        self.cm_cbox = QtGui.QComboBox()
+        self.cm_combo = QtGui.QComboBox()
         for cmtype, cmlist in self.plot._availableColormaps():
-            self.cm_cbox.addItem('%s' % cmtype)
-            _i = self.cm_cbox.findText('%s' % cmtype)
-            self.cm_cbox.setItemData(_i, '', role=QtCore.Qt.UserRole-1)
+            self.cm_combo.addItem('%s' % cmtype)
+            _i = self.cm_combo.findText('%s' % cmtype)
+            self.cm_combo.setItemData(_i, '', role=QtCore.Qt.UserRole-1)
             for cm in cmlist:
-                self.cm_cbox.addItem(' %s' % cm, cm)
+                self.cm_combo.addItem(' %s' % cm, cm)
 
-        _i = self.cm_cbox.findData(self.plot.image.get_cmap().name)
-        self.cm_cbox.setCurrentIndex(_i)
+        _i = self.cm_combo.findData(self.plot.image.get_cmap().name)
+        self.cm_combo.setCurrentIndex(_i)
 
         def change_colormap(index):
-            self.plot.setColormap(self.cm_cbox.itemData(index))
+            self.plot.setColormap(self.cm_combo.itemData(index))
 
-        self.cm_cbox.currentIndexChanged.connect(change_colormap)
-        self.addWidget(self.cm_cbox)
+        self.cm_combo.currentIndexChanged.connect(change_colormap)
+        self.addWidget(self.cm_combo)
 
-    def addColormapSlider(self):
-        pass
+    def addColormapRangeSlider(self):
+        self.cm_slider = QtGui.QSlider()
+        self.addWidget(self.cm_slider)
 
     def addColormapAutoChecker(self):
-        pass
+        self.cm_auto = QtGui.QCheckBox()
+        self.cm_auto.setText('Auto range')
+        self.addWidget(self.cm_auto)
+
+    def addColormapSymmetricChecker(self):
+        self.cm_sym = QtGui.QCheckBox()
+        self.cm_sym.setText('Symetric range')
+        self.addWidget(self.cm_sym)
 
 class QKiteControlComponent(QtGui.QWidget):
     pass
