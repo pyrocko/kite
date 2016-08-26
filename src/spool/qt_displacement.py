@@ -79,14 +79,14 @@ class QKiteColormapControl(QtGui.QHBoxLayout):
         _i = self.cm_cbox.findText(self.plot.image.get_cmap().name)
         self.cm_cbox.setCurrentIndex(_i)
 
-        def change_colormap(index):
+        def changeColormap(index):
             self.plot.setColormap(self.cm_cbox.itemText(index))
 
-        self.cm_cbox.currentIndexChanged.connect(change_colormap)
+        self.cm_cbox.currentIndexChanged.connect(changeColormap)
         self.addWidget(self.cm_cbox)
 
     def addSlider(self):
-        pass
+        self.cm_slider = QtGui.QSlider()
 
 
 class QKiteColormapComboBox(QtGui.QComboBox, _QKiteScene):
