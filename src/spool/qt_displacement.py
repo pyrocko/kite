@@ -1,9 +1,11 @@
 #!/bin/python
 from PySide import QtGui
 from PySide import QtCore
+import matplotlib
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg \
                                         as FigureCanvas
 from matplotlib.figure import Figure
+matplotlib.rcParams['backend.qt4'] = 'PySide'
 
 
 class _QKiteScene(object):
@@ -21,7 +23,7 @@ class _QKiteScene(object):
         raise AttributeError('Scene must be defined')
 
 
-class QKiteDisplacementPlot2D(FigureCanvas, _QKiteScene):
+class QKiteScenePlot2D(FigureCanvas, _QKiteScene):
     def __init__(self, parent=None, scene=None):
 
         self.fig = Figure(frameon=False, tight_layout=True)
@@ -35,49 +37,43 @@ class QKiteDisplacementPlot2D(FigureCanvas, _QKiteScene):
         self.plot = self.scene.plot
         self.plot.plot(axes=self.axes)
 
-        self.plot.subscribe(self.updatePlot)
+        def updatePlot():
+            self.fig.canvas.draw()
 
-    def updatePlot(self):
-        self.fig.canvas.draw()
+        self.plot.subscribe(updatePlot)
 
 
-class QKiteDisplacementControl(QtGui.QWidget, _QKiteScene):
+class QKiteControlScene(QtGui.QWidget, _QKiteScene):
     def __init__(self, parent=None, scene=None):
         QtGui.QWidget.__init__(self, parent)
         _QKiteScene.__init__(self, scene)
 
-        QKiteColormapControl(self, self.scene.plot)
+        QKiteControlColormap(self, self.scene.plot)
 
 
-class _QKiteSlider(QtGui.QSlider, _QKiteScene):
-    def __init__(self, parent=None, scene=None):
-        QtGui.QSlider.__init__(self, parent)
-        _QKiteScene.__init__(self, scene)
-
-
-class QKiteColormapControl(QtGui.QHBoxLayout):
+class QKiteControlColormap(QtGui.QHBoxLayout):
     def __init__(self, parent=None, plot=None):
         QtGui.QHBoxLayout.__init__(self, parent)
         if not parent.__dict__.get('plot', None) and plot is None:
             raise AttributeError('Plot2D instance must be defined')
         self.plot = plot or parent.plot
 
-        label = QtGui.QLabel('Colormap')
+        # label = QtGui.QLabel('Colormap')
 
-        self.addWidget(label)
-        self.addComboBox()
+        # self.addWidget(label)
+        self.addColormapsComboBox()
 
-    def addComboBox(self):
-        self.cm_cbox = QtGui.QComboBox()
+    def addColormapsComboBox(self):
+        self.cm_combo = QtGui.QComboBox()
         for cmtype, cmlist in self.plot._availableColormaps():
-            self.cm_cbox.addItem(cmtype)
-            _i = self.cm_cbox.findText(cmtype)
-            self.cm_cbox.setItemData(_i, '', role=QtCore.Qt.UserRole-1)
+            self.cm_combo.addItem('%s' % cmtype)
+            _i = self.cm_combo.findText('%s' % cmtype)
+            self.cm_combo.setItemData(_i, '', role=QtCore.Qt.UserRole-1)
+            for cm in cmlist:
+                self.cm_combo.addItem(' %s' % cm, cm)
 
-            self.cm_cbox.addItems(cmlist)
-
-        _i = self.cm_cbox.findText(self.plot.image.get_cmap().name)
-        self.cm_cbox.setCurrentIndex(_i)
+        _i = self.cm_combo.findData(self.plot.image.get_cmap().name)
+        self.cm_combo.setCurrentIndex(_i)
 
         def changeColormap(index):
             self.plot.setColormap(self.cm_cbox.itemText(index))
@@ -87,27 +83,45 @@ class QKiteColormapControl(QtGui.QHBoxLayout):
 
     def addSlider(self):
         self.cm_slider = QtGui.QSlider()
+        self.addWidget(self.cm_combo)
+
+    def addColormapRangeSlider(self):
+        self.cm_slider = QtGui.QSlider()
+        self.addWidget(self.cm_slider)
+
+    def addColormapAutoChecker(self):
+        self.cm_auto = QtGui.QCheckBox()
+        self.cm_auto.setText('Auto range')
+        self.addWidget(self.cm_auto)
+
+    def addColormapSymmetricChecker(self):
+        self.cm_sym = QtGui.QCheckBox()
+        self.cm_sym.setText('Symetric range')
+        self.addWidget(self.cm_sym)
 
 
-class QKiteColormapComboBox(QtGui.QComboBox, _QKiteScene):
+class QKiteControlComponent(QtGui.QWidget):
     pass
 
 
-class QKiteDisplacement(QtGui.QWidget, _QKiteScene):
+class QKiteScene(QtGui.QWidget, _QKiteScene):
     def __init__(self, parent=None, scene=None):
         QtGui.QWidget.__init__(self, parent)
         _QKiteScene.__init__(self, scene)
 
-        QKiteDisplacementPlot2D(self)
-        QKiteDisplacementControl(self)
-
+        QKiteScenePlot2D(self)
+        tab1 = QtGui.QDockWidget('Colorbar', self)
+        tab1.setAllowedAreas(
+            QtCore.Qt.LeftDockWidgetArea | QtCore.Qt.RightDockWidgetArea)
+        tab1.setWidget(QKiteControlScene(parent=tab1, scene=scene))
+        tab1.setFloating(True)
+        tab1.setFeatures(QtGui.QDockWidget.DockWidgetFeature.DockWidgetMovable)
 
 if __name__ == '__main__':
-    import sys
     from kite.scene import SceneSynTest
     sc = SceneSynTest.createGauss()
 
-    qt_app = QtGui.QApplication(sys.argv)
-    app = QKiteDisplacement(scene=sc)
+    qt_app = QtGui.QApplication(['KiteSpool'])
+    app = QKiteScene(scene=sc)
     app.show()
     qt_app.exec_()
