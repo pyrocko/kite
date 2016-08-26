@@ -31,6 +31,7 @@ class Plot2D(Subject):
         self.fig = None
         self.ax = None
         self._show_plt = False
+        self._colormap_symmetric = True
 
         self.title = 'unnamed'
 
@@ -75,6 +76,7 @@ class Plot2D(Subject):
     def data(self, value):
         self._data = value
         self.image.set_data(self.data)
+        self.colormapAdjust()
 
     @data.getter
     def data(self):
@@ -93,7 +95,7 @@ class Plot2D(Subject):
         self.setCanvas(**kwargs)
 
         self.setColormap(kwargs.get('cmap', 'RdBu'))
-        self.setColormapAuto(symmetric=True)
+        self.colormapAdjust()
 
         self.ax.set_xlim((0, self._scene.utm_x.size))
         self.ax.set_ylim((0, self._scene.utm_y.size))
@@ -138,33 +140,45 @@ class Plot2D(Subject):
         self.image.set_cmap(cmap)
         self._notify()
 
-    def setColormapAuto(self, symmetric=True):
+    def colormapAdjust(self):
         """Set colormap limits automatically
 
         :param symmetric: symmetric colormap around 0, defaults to True
         :type symmetric: bool, optional
         """
-        if symmetric:
-            vmax = num.nanmax(num.abs(self.data))
-            vmin = -vmax
-        else:
-            vmax = num.nanmax(num.abs(self.data))
-            vmin = num.nanmin(num.abs(self.data))
-        self.setColormapLimits(vmin, vmax)
+        vmax = num.nanmax(self.data)
+        vmin = num.nanmin(self.data)
+        self.colormap_limits = (vmin, vmax)
 
-    def setColormapLimits(self, vmin=None, vmax=None):
-        """Set colormap limits
+    @property
+    def colormap_symmetric(self):
+        return self._colormap_symmetric
 
-        :param vmin: lower limit, defaults to None
-        :type vmin: float, optional
-        :param vmax: upper limit, defaults to None
-        :type vmax: float, optional
-        """
+    @colormap_symmetric.setter
+    def colormap_symmetric(self, value):
+        self._colormap_symmetric = value
+        self.colormapAdjust()
+
+    @property
+    def colormap_limits(self):
+        return self.image.get_clim()
+
+    @colormap_limits.setter
+    def colormap_limits(self, limits):
+        if not isinstance(limits, tuple):
+            raise AttributeError('Limits have to be a tuple (vmin, vmax)')
+        vmin, vmax = limits
+
+        if self.colormap_symmetric:
+            _max = max(abs(vmin), abs(vmax))
+            vmin, vmax = -_max, _max
         self.image.set_clim(vmin, vmax)
+
+        print 'notify'
         self._notify()
 
     @staticmethod
-    def _availableColormaps():
+    def _colormapsAvailable():
         return [  # ('Perceptually Uniform Sequential',
                 #  ['viridis', 'inferno', 'plasma', 'magma']),
                 # ('Sequential', ['Blues', 'BuGn', 'BuPu',
@@ -202,6 +216,8 @@ class PlotDisplacement2D(Plot2D):
             'cartesian.dU': 'Displacement dU',
         }
 
+        self._component = 'displacement'
+
     def plot(self, component='displacement', **kwargs):
         """Plots any component fom Scene
         The following components are recognizes
@@ -230,30 +246,25 @@ class PlotDisplacement2D(Plot2D):
         :raises: AttributeError
         """
         self._initImagePlot(**kwargs)
-        self.setComponent(component)
+        self.component = component
         self.title = self.components_available[component]
 
         if self._show_plt:
             plt.show()
 
-    def setComponent(self, component):
-        """Set displacement component to plot
+    @property
+    def component(self):
+        return self._component
 
-        :param component: Displacement component to plot in
-['cartesian.dE', 'cartesian.dN', 'cartesian.dU',
-'displacement', 'phi', 'theta']
-        :type component: str
-        :raises: AttributeError, AttributeError
-        """
+    @component.setter
+    def component(self, component):
         try:
             if component not in self.components_available.keys():
                 raise AttributeError('Invalid component %s' % component)
+            print 'setting self.data'
             self.data = eval('self._scene.%s' % component)
         except AttributeError:
             raise AttributeError('Could not access component %s' % component)
-
-    def availableComponents(self):
-        return self.components_available
 
 
 class PlotQuadTree2D(Plot2D):
@@ -306,7 +317,7 @@ class PlotQuadTree2D(Plot2D):
             self.ax.texts = []
             self._addInfoText()
             self.data = self._quadtree.leaf_matrix_means
-            self.setColormapAuto()
+            self.colormapAdjust()
             self.ax.draw_artist(self.image)
 
             self._log.info('Redrew %d leafs [%0.8f s]' %
