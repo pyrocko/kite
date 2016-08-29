@@ -8,7 +8,7 @@ setup(
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken',
     author_email='misken@geophysik.uni-kiel.de',
-    install_requires=['numpy', 'logging', 'pyrocko', 'scipy'],
+    install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'matplotlib', 'pyside'],
     packages=['kite'],
     package_dir={'kite': 'src'},
 )
