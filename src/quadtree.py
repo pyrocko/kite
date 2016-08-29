@@ -255,7 +255,7 @@ class Quadtree(Subject):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval(self._split_func)])
-        self._log.info('Gathering leafs (%d)for epsilon %.3f [%0.8f s]' %
+        self._log.info('Gathering leafs (%d) for epsilon %.3f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
 

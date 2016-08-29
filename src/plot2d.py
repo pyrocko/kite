@@ -297,7 +297,7 @@ class PlotQuadTree2D(Plot2D):
                 },
             'median': {
                 'name': 'Median',
-                'eval': lambda qt: qt.leaf_matrix_means,
+                'eval': lambda qt: qt.leaf_matrix_medians,
                 },
         }
         self._component = 'mean'
@@ -342,6 +342,18 @@ class PlotQuadTree2D(Plot2D):
         self.ax.text(.975, .975, '%d Leafs' % len(self._quadtree.leafs),
                      transform=self.ax.transAxes, ha='right', va='top')
 
+    def _update(self):
+            t0 = time.time()
+
+            self.ax.texts = []
+            self._addInfoText()
+            self.data = self._quadtree.leaf_matrix_means
+            self.colormapAdjust()
+            self.ax.draw_artist(self.image)
+
+            self._log.info('Redrew %d leafs [%0.8f s]' %
+                           (len(self._quadtree.leafs), time.time()-t0))
+
     def interactive(self):
         """Simple interactive quadtree plot with matplot
         """
@@ -353,18 +365,6 @@ class PlotQuadTree2D(Plot2D):
 
         def close_figure(*args):
             self._quadtree.unsubscribe(self._update)
-
-        def _update():
-            t0 = time.time()
-
-            self.ax.texts = []
-            self._addInfoText()
-            self.data = self._quadtree.leaf_matrix_means
-            self.colormapAdjust()
-            self.ax.draw_artist(self.image)
-
-            self._log.info('Redrew %d leafs [%0.8f s]' %
-                           (len(self._quadtree.leafs), time.time()-t0))
 
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
@@ -381,7 +381,7 @@ class PlotQuadTree2D(Plot2D):
 
         # Catch events
         epsilon.on_changed(change_epsilon)
-        self._quadtree.subscribe(_update)
+        self._quadtree.subscribe(self._update)
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
         plt.show()
