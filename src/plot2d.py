@@ -174,7 +174,6 @@ class Plot2D(Subject):
             vmin, vmax = -_max, _max
         self.image.set_clim(vmin, vmax)
 
-        print 'notify'
         self._notify()
 
     @staticmethod
@@ -208,12 +207,30 @@ class PlotDisplacement2D(Plot2D):
         Plot2D.__init__(self, scene, **kwargs)
 
         self.components_available = {
-            'displacement': 'LOS Displacement',
-            'theta': 'LOS Theta',
-            'phi': 'LOS Phi',
-            'cartesian.dE': 'Displacement dE',
-            'cartesian.dN': 'Displacement dN',
-            'cartesian.dU': 'Displacement dU',
+            'displacement': {
+                'name': 'LOS Displacement',
+                'eval': lambda sc: sc.displacement,
+                },
+            'theta': {
+                'name': 'LOS Theta',
+                'eval': lambda sc: sc.theta,
+                },
+            'phi': {
+                'name': 'LOS Phi',
+                'eval': lambda sc: sc.phi,
+                },
+            'dE': {
+                'name': 'Displacement dE',
+                'eval': lambda sc: sc.cartesian.dE,
+                },
+            'dN': {
+                'name': 'Displacement dN',
+                'eval': lambda sc: sc.cartesian.dN
+                },
+            'dU': {
+                'name': 'Displacement dU',
+                'eval': lambda sc: sc.cartesian.dU,
+                },
         }
 
         self._component = 'displacement'
@@ -261,8 +278,8 @@ class PlotDisplacement2D(Plot2D):
         try:
             if component not in self.components_available.keys():
                 raise AttributeError('Invalid component %s' % component)
-            print 'setting self.data'
-            self.data = eval('self._scene.%s' % component)
+            self.data = self.components_available[component]['eval'](
+                                                                self._scene)
         except AttributeError:
             raise AttributeError('Could not access component %s' % component)
 
@@ -273,7 +290,33 @@ class PlotQuadTree2D(Plot2D):
     def __init__(self, quadtree, **kwargs):
         self._quadtree = quadtree
 
+        self.components_available = {
+            'mean': {
+                'name': 'Mean',
+                'eval': lambda qt: qt.leaf_matrix_means,
+                },
+            'median': {
+                'name': 'Median',
+                'eval': lambda qt: qt.leaf_matrix_means,
+                },
+        }
+        self._component = 'mean'
+
         Plot2D.__init__(self, quadtree._scene)
+
+    @property
+    def component(self):
+        return self._component
+
+    @component.setter
+    def component(self, component):
+        try:
+            if component not in self.components_available.keys():
+                raise AttributeError('Invalid component %s' % component)
+            self.data = self.components_available[component]['eval'](
+                                                                self._quadtree)
+        except AttributeError:
+            raise AttributeError('Could not access component %s' % component)
 
     def plot(self, **kwargs):
         """Plot current quadtree
@@ -285,10 +328,10 @@ class PlotQuadTree2D(Plot2D):
         :param **kwargs: kwargs are passed into `plt.imshow`
         :type **kwargs: dict
         """
+        self._initImagePlot(**kwargs)
         self.data = self._quadtree.leaf_matrix_means
         self.title = 'Quadtree Means'
 
-        self._initImagePlot(**kwargs)
         self._addInfoText()
 
         if self._show_plt:

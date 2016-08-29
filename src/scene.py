@@ -280,8 +280,7 @@ satellite measurements
 
 class Meta(guts.Object):
     title = guts.String.T(default='unnamed')
-    satellite_name = guts.String.T(default='unnanmed')
-    # orbit = guts.String.T()
+    satellite_name = guts.String.T(default='unnamed')
 
 
 class MetaSatellite(Meta):
