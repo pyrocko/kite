@@ -3,7 +3,7 @@
 from PySide import QtGui
 from PySide import QtCore
 
-import qt_scene
+import scene_qtgraph
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
@@ -17,12 +17,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addScene(self, scene):
         self.scenes.append(scene)
-        self.ui.tabs.addTab(qt_scene.QKiteDisplacementTab(self.ui.tabs,
-                                                          scene=scene),
+        self.ui.tabs.addTab(scene_qtgraph.QKiteDisplacementDock(scene=scene),
                             'Displacement')
-        self.ui.tabs.addTab(qt_scene.QKiteQuadtreeTab(self.ui.tabs,
-                                                      scene=scene),
-                            'Quadtree')
 
     @staticmethod
     def loadUi(parent):
@@ -39,13 +35,20 @@ class Spool(QtGui.QApplication):
     def __init__(self, *args, **kwargs):
         QtGui.QApplication.__init__(self, ['KiteSpool'], *args, **kwargs)
 
-        self.spool_window = SpoolMainWindow()
-
 if __name__ == '__main__':
-    from kite.scene import SceneSynTest
-    sc = SceneSynTest.createGauss()
+    from kite.scene import SceneSynTest, Scene
+    import sys
+    import numpy as num
+    if len(sys.argv) > 1:
+        sc = Scene.load(sys.argv[1])
+        sc.displacement[sc.displacement == num.nan] = 3
+    else:
+        sc = SceneSynTest.createGauss()
 
+    print sc
     app = Spool()
-    app.spool_window.addScene(sc)
+
+    spool_win = SpoolMainWindow()
+    spool_win.addScene(sc)
 
     app.exec_()
