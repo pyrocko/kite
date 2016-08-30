@@ -3,30 +3,22 @@ import logging
 import time
 from kite.meta import Subject, property_cached
 
-_NNODES = 0
-
 
 class QuadNode(object):
     """A Node in the Quadtree
     """
-    # __slots__ = ('parent', '_tree', '_children',
+    # __slots__ = ('parent', '_tree', 'children',
     #              'llx', 'lly', 'length',
     #              'data', '_mean', '_median', 'std', '_var')
 
-    def __init__(self, tree, llx, lly, length, parent=None):
-        global _NNODES
-        _NNODES += 1
-
-        self.parent = parent
-        self._tree = tree
-        self._children = None
-
+    def __init__(self, data_complete, llx, lly, length):
         self.llx = int(llx)
         self.lly = int(lly)
         self.length = int(length)
 
-        self.data = self._tree._data[self.llx:self.llx+self.length,
-                                     self.lly:self.lly+self.length]
+        self._data_complete = data_complete
+
+        self.children = None
 
     @property_cached
     def nan_fraction(self):
@@ -66,55 +58,62 @@ class QuadNode(object):
     def bilinear_std(self):
         raise NotImplementedError('Bilinear fit not implemented')
 
-    @property
-    def children(self):
-        return self._children
+    @property_cached
+    def data(self):
+        return self._data_complete[self.llx:self.llx+self.length,
+                                   self.lly:self.lly+self.length]
+
+    def iterTree(self):
+        yield self
+        if self.children is not None:
+            for c in self.children:
+                for rc in c.iterTree():
+                    yield rc
 
     def iterLeafs(self):
-        if self._children is None:
+        if self.children is None:
             yield self
         else:
             for c in self.children:
                 for q in c.iterLeafs():
                     yield q
 
-    def iterLeafsEval(self, eval_func):
-        if eval_func(self) < self._tree.epsilon or self.children is None:
+    def iterLeafsEval(self, eval_func, epsilon):
+        if eval_func(self) < epsilon or self.children is None:
             yield self
         else:
             for c in self.children:
-                for q in c.iterLeafsEval(eval_func):
+                for q in c.iterLeafsEval(eval_func, epsilon):
                     yield q
 
     def _iterSplitNode(self):
         if self.length == 1:
             yield None
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
-            _q = QuadNode(self._tree,
+            _q = QuadNode(self._data_complete,
                           self.llx + self.length/2 * _nx,
                           self.lly + self.length/2 * _ny,
-                          self.length/2, parent=self)
+                          self.length/2)
             if _q.data.size == 0 or num.isnan(_q.data).all():
                 continue
             yield _q
 
-    def createTree(self, eval_func):
-        if eval_func(self) > self._tree._epsilon_limit:  # or\
+    def createTree(self, eval_func, epsilon_limit):
+        if eval_func(self) > epsilon_limit:  # or\
             # self.length > .1 * max(self._tree._data.shape): !! Very Expensive
-            self._children = [c for c in self._iterSplitNode()]
-            for c in self._children:
-                c.createTree(eval_func)
+            self.children = [c for c in self._iterSplitNode()]
+            for c in self.children:
+                c.createTree(eval_func, epsilon_limit)
         else:
-            self._children = None
+            self.children = None
 
-    def _createTree(self):
-        ''' Deprecated - used by multiprocessing '''
-        if self.mean_std > self._tree._epsilon_limit:
-            self._children = [c for c in self._iterSplitNode()]
-            for c in self._children:
-                c._createTree()
-        else:
-            self._children = None
+    def __getstate__(self):
+        return self.llx, self.lly, self.length,\
+               self.children, self._data_complete
+
+    def __setstate__(self, state):
+        self.llx, self.lly, self.length,\
+            self.children, self._data_complete = state
 
     def __str__(self):
         return '''QuadNode:
@@ -129,22 +128,9 @@ class QuadNode(object):
                self.std, self.var)
 
 
-def workerBaseNode(queue):
-    import traceback
-    while True:
-        try:
-            base_node = queue.get()
-        except:
-            traceback.print_tb()
-        if base_node is None:
-            break
-        base_node._createTree()
-        queue.put(base_node)
-        queue.task_done()
-
-
-def createTree(base_node):
-    base_node._createTree()
+def createTree(args):
+    base_node, func, epsilon_limit = args
+    base_node.createTree(func, epsilon_limit)
     return base_node
 
 
@@ -172,7 +158,7 @@ class Quadtree(Subject):
 
         self.setSplitMethod('median_std')
 
-    def setSplitMethod(self, split_method):
+    def setSplitMethod(self, split_method, parallel=True):
         """Set splitting method for quadtree tiles
 
         * `mean_std` tiles standard deviation from tile's mean is evaluated
@@ -191,85 +177,88 @@ class Quadtree(Subject):
         self.split_method = split_method
         self._split_func = self._split_methods[split_method]
 
-        self._epsilon_limit = self._epsilon_init * .3
+        self._epsilon_init = None
+        self._epsilon_limit = None
         self.epsilon = self._epsilon_init
 
-        self._initTree()
+        self._initTree(parallel)
 
-    def _initTree(self):
-        global _NNODES
-        _NNODES = len(self._base_nodes)
+    def _initTree(self, parallel=True):
         t0 = time.time()
-
-        if False:
-            from multiprocessing import JoinableQueue, Process
-
-            queue = JoinableQueue()
-            processes = []
-            for i in xrange(1):
-                p = Process(target=workerBaseNode,
-                            args=(queue,))
-                p.daemon = True
-                p.start()
-                processes.append(p)
-
-            for b in self._base_nodes:
-                queue.put(b)
-            queue.close()
-            queue.join()
-        elif False:
+        if parallel:
             from pathos.pools import ProcessPool as Pool
+            '''
+            Pathos uses dill instead of pickle, this works w lambdas
+            '''
 
             pool = Pool(timeout=.25)
             self._log.info('Utilizing %d cpu cores' % pool.nodes)
-            res = pool.map(createTree, [b for b in self._base_nodes])
+            res = pool.map(createTree, [(b,
+                                         self._split_func,
+                                         self._epsilon_limit)
+                                        for b in self._base_nodes])
+
             self._base_nodes = [r for r in res]
         else:
             for b in self._base_nodes:
-                b.createTree(self._split_func)
+                b.createTree(self._split_func, self._epsilon_limit)
 
-        self._log.info('Tree created, %d nodes [%0.8f s]' % (_NNODES,
+        self._log.info('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                              time.time()-t0))
-
-    @property
-    def _epsilon_init(self):
-        return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property
     def epsilon(self):
         return self._epsilon
 
+    @property_cached
+    def _epsilon_init(self):
+        return num.nanstd(self._data)
+        return num.mean([self._split_func(b) for b in self._base_nodes])
+
+    @property_cached
+    def _epsilon_limit(self):
+        return self._epsilon_init * .2
+
     @epsilon.setter
     def epsilon(self, value):
         if value < self._epsilon_limit:
-            self._log.info('Epsilon is out of bounds [%0.3f]' % value)
+            self._log.info('Epsilon is out of bounds [%0.3f], epsilon_limits' %
+                           (value, self._epsilon_limit))
             return
         self.leafs = None
         self._epsilon = value
         self._notify()
         return
 
+    @property
+    def nnodes(self):
+        nodes = []
+        for b in self._base_nodes:
+            nodes.extend([n for n in b.iterTree()])
+        return len(nodes)
+
     @property_cached
     def leafs(self):
         t0 = time.time()
         leafs = []
         for b in self._base_nodes:
-            leafs.extend([l for l in b.iterLeafsEval(self._split_func)])
+            leafs.extend([l for l in b.iterLeafsEval(self._split_func,
+                                                     self.epsilon)])
         self._log.info('Gathering leafs (%d) for epsilon %.3f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
 
     @property
     def leaf_means(self):
-        return num.array([n.mean for n in self.leafs])
+        return num.array([l.mean for l in self.leafs])
 
     @property
     def leaf_medians(self):
-        return num.array([n.median for n in self.leafs])
+        return num.array([l.median for l in self.leafs])
 
     @property
     def leaf_focal_points(self):
-        return num.array([n.focal_point for n in self.leafs])
+        return num.array([l.focal_point for l in self.leafs])
 
     @property
     def leaf_matrix_means(self):
@@ -296,15 +285,16 @@ class Quadtree(Subject):
         self._base_nodes = []
         init_length = num.power(2,
                                 num.ceil(num.log(num.min(self._data.shape)) /
-                                         num.log(2)))/2
+                                         num.log(2)))/4
         nx, ny = num.ceil(num.array(self._data.shape)/init_length)
 
         for ix in range(int(nx)):
             for iy in range(int(ny)):
                 _cx = ix * init_length
                 _cy = iy * init_length
-                self._base_nodes.append(QuadNode(self, _cx, _cy,
-                                        int(init_length)))
+                self._base_nodes.append(QuadNode(self._data,
+                                                 _cx, _cy,
+                                                 int(init_length)))
 
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
@@ -330,10 +320,13 @@ class Quadtree(Subject):
 Quadtree for %s
   initiated: %s
   epsilon: %0.3f
+  epsilon_init: %0.3f
+  epsilon_limit: %0.3f
   nleafs: %d
   split_method: %s
         ''' % (repr(self._scene), (self._base_nodes is not None),
-               self.epsilon, len(self.leafs), self.split_method)
+               self.epsilon, self._epsilon_init, self._epsilon_limit,
+               len(self.leafs), self.split_method)
 
 __all__ = '''
 Quadtree
