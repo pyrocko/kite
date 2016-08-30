@@ -141,9 +141,9 @@ class Quadtree(Subject):
         Subject.__init__(self)
 
         self._split_methods = {
-            'mean_std': lambda node: node.mean_std,
-            'median_std': lambda node: node.median_std,
-            'std': lambda node: node.std,
+            'mean_std': ['Std from mean', lambda node: node.mean_std],
+            'median_std': ['Std from median', lambda node: node.median_std],
+            'std': ['Std', lambda node: node.std],
         }
         self._norm_methods = {
             'mean': lambda node: node.mean,
@@ -158,6 +158,7 @@ class Quadtree(Subject):
 
         self._log = logging.getLogger('Quadtree')
 
+        self.splitMethodChanged = Subject()
         self.setSplitMethod('median_std')
 
     def setSplitMethod(self, split_method, parallel=True):
@@ -177,13 +178,14 @@ class Quadtree(Subject):
                                  % (split_method, self._split_methods))
 
         self.split_method = split_method
-        self._split_func = self._split_methods[split_method]
+        self._split_func = self._split_methods[split_method][1]
 
         self._epsilon_init = None
         self._epsilon_limit = None
         self.epsilon = self._epsilon_init
 
         self._initTree(parallel)
+        self.splitMethodChanged._notify()
 
     def _initTree(self, parallel):
         t0 = time.time()
