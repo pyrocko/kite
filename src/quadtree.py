@@ -7,9 +7,11 @@ from kite.meta import Subject, property_cached
 class QuadNode(object):
     """A Node in the Quadtree
     """
-    # __slots__ = ('parent', '_tree', 'children',
-    #              'llx', 'lly', 'length',
-    #              'data', '_mean', '_median', 'std', '_var')
+    # __slots__ = ('llx', 'lly', 'length', '_data_complete', 'children'
+    #              '_cached_nan_fraction', '_cached_mean', '_cached_ median',
+    #              '_cached_std', '_cached_var', '_cached_median_std',
+    #              '_cached_mean_std', '_cached_focal_point',
+    #              '_cached_bilinear_std', '_cached_data')
 
     def __init__(self, data_complete, llx, lly, length):
         self.llx = int(llx)
@@ -128,7 +130,7 @@ class QuadNode(object):
                self.std, self.var)
 
 
-def createTree(args):
+def createTreeParallel(args):
     base_node, func, epsilon_limit = args
     base_node.createTree(func, epsilon_limit)
     return base_node
@@ -183,7 +185,7 @@ class Quadtree(Subject):
 
         self._initTree(parallel)
 
-    def _initTree(self, parallel=True):
+    def _initTree(self, parallel):
         t0 = time.time()
         if parallel:
             from pathos.pools import ProcessPool as Pool
@@ -191,14 +193,14 @@ class Quadtree(Subject):
             Pathos uses dill instead of pickle, this works w lambdas
             '''
 
-            pool = Pool(timeout=.25)
+            pool = Pool()
             self._log.info('Utilizing %d cpu cores' % pool.nodes)
-            res = pool.map(createTree, [(b,
-                                         self._split_func,
-                                         self._epsilon_limit)
-                                        for b in self._base_nodes])
-
+            res = pool.map(createTreeParallel, [(b,
+                                                 self._split_func,
+                                                 self._epsilon_limit)
+                                                for b in self._base_nodes])
             self._base_nodes = [r for r in res]
+
         else:
             for b in self._base_nodes:
                 b.createTree(self._split_func, self._epsilon_limit)
@@ -232,10 +234,11 @@ class Quadtree(Subject):
 
     @property
     def nnodes(self):
-        nodes = []
+        i = 0
         for b in self._base_nodes:
-            nodes.extend([n for n in b.iterTree()])
-        return len(nodes)
+            for n in b.iterTree():
+                i += 1
+        return i
 
     @property_cached
     def leafs(self):
