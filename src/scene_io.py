@@ -160,6 +160,8 @@ class Gamma(SceneIO):
         self.data_items['displacement'] = \
             self.data_items['displacement'].reshape(par['nlines'],
                                                     par['width'])
+        self.data_items['displacement'][self.data_items['displacement']
+                                        == -0.] = num.nan
 
         # LatLon UTM Conversion
         utm_x, utm_y, utm_zone, _ = utm.from_latlon(par['corner_lat'],
