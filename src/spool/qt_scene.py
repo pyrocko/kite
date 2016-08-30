@@ -147,6 +147,7 @@ class QKiteToolColormap(QtGui.QWidget):
 
         cm_colormap.addWidget(QtGui.QLabel('Colormap'))
         cm_colormap.addWidget(cm_combo)
+
         return cm_colormap
 
     def getColormapRange(self):
@@ -182,7 +183,6 @@ class QKiteToolColormap(QtGui.QWidget):
         def fromSpinRange():
             vmax, vmin = max_spin.value(), min_spin.value()
             self.plot.colormap_limits = (vmin, vmax)
-            return
 
         max_spin.valueChanged.connect(fromSpinRange)
         max_slider.valueChanged.connect(
