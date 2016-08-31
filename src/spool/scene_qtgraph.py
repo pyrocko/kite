@@ -10,7 +10,7 @@ from pyqtgraph import dockarea
 
 
 class _QKitePlot(pg.PlotWidget):
-    def __init__(self):
+    def __init__(self, container):
         pg.PlotWidget.__init__(self)
 
         # self.components_available = {
@@ -18,13 +18,26 @@ class _QKitePlot(pg.PlotWidget):
 
         # self._component = None
 
+        self.container = container
+
         self.image = pg.ImageItem(None)
         self.image.setCompositionMode(
             QtGui.QPainter.CompositionMode_SourceOver)
+
         self.setAspectLocked(True)
+        self.setBackground((255, 255, 255, 255))
 
         self.addItem(self.image)
         self.update()
+
+        # self.addIsocurve()
+        # self.scalebar()
+
+    def scalebar(self):
+        ''' Not working '''
+        self.scale_bar = pg.ScaleBar(10, width=5, suffix='m')
+        self.scale_bar.setParentItem(self.plotItem)
+        self.scale_bar.anchor((1, 1), (1, 1), offset=(-20, -20))
 
     @property
     def component(self):
@@ -42,17 +55,16 @@ class _QKitePlot(pg.PlotWidget):
         return self.components_available[self.component][1](self.container)
 
     def update(self):
-        lmax, lmin = num.nanmax(self.data), num.nanmin(self.data)
-        lvl = max(abs(lmax), abs(lmin))
-
-        self.image.setImage(self.data, levels=(-lvl, lvl), autoDownsample=True)
+        self.image.setImage(self.data, autoDownsample=True)
         # self.addIsocurves()
 
-    def addIsocurves(self):
-        self.isocurves = pg.IsocurveItem(None)
-        self.isocurves.setData(self.data)
-        self.isocurves.setLevel(0.01)
-        self.addItem(self.isocurves)
+    def addIsocurve(self, level=0.):
+        iso = pg.IsocurveItem(level=level, pen='g')
+        iso.setZValue(1000)
+        iso.setData(pg.gaussianFilter(self.data, (5, 5)))
+        iso.setParentItem(self.image)
+
+        self.iso = iso
 
 
 class QKiteDisplacementPlot(_QKitePlot):
@@ -67,9 +79,21 @@ class QKiteDisplacementPlot(_QKitePlot):
             'dU': ['Displacement dU', lambda sc: sc.cartesian.dU],
         }
         self._component = 'displacement'
-        self.container = scene
 
-        _QKitePlot.__init__(self)
+        _QKitePlot.__init__(self, container=scene)
+
+        # ll_x, ll_y = scene.utm_x.min(), scene.utm_y.min()
+        # ur_x, ur_y = scene.utm_x.max(), scene.utm_y.max()
+
+        # scale_x = scene.utm_x.size/abs(ur_x - ll_x)
+        # scale_y = scene.utm_y.size/abs(ur_y - ll_y)
+
+        # self.image.translate(ll_x, ll_y)
+        # self.image.scale(scale_x, scale_y)
+        # self.setLimits(xMin=ll_x-(scale_x*scene.utm_x.size)*.2,
+        #                xMax=ur_x+(scale_x*scene.utm_x.size)*.2,
+        #                yMin=ll_y-(scale_y*scene.utm_y.size)*.2,
+        #                yMax=ur_y+(scale_y*scene.utm_y.size)*.2)
 
 
 class QKiteQuadtreePlot(_QKitePlot):
@@ -80,11 +104,9 @@ class QKiteQuadtreePlot(_QKitePlot):
             'median': ['Median Theta', lambda qt: qt.leaf_matrix_medians],
         }
         self._component = 'mean'
-        self.container = quadtree
 
+        _QKitePlot.__init__(self, container=quadtree)
         self.container.subscribe(self.update)
-
-        _QKitePlot.__init__(self)
 
 
 class QKiteToolComponents(QtGui.QWidget):
@@ -124,51 +146,6 @@ class QKiteToolComponents(QtGui.QWidget):
         return layout
 
 
-class QKiteToolGradient(QtGui.QWidget):
-    def __init__(self, plot):
-        QtGui.QWidget.__init__(self)
-        self.plot = plot
-
-        self.gradient = pg.GradientWidget(orientation='top')
-        self.gradient.restoreState({'ticks':
-                                    [(0., (106, 0, 31, 255)),
-                                     (.5, (255, 255, 255, 255)),
-                                     (1., (8, 54, 104, 255))],
-                                    'mode': 'rgb'})
-
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.getGradientWidget())
-        self.layout.addWidget(self.getResetButton())
-        self.layout.addStretch(3)
-
-    def getGradientWidget(self):
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(self.gradient)
-
-        def updatePlot():
-            self.plot.image.setLookupTable(
-                self.gradient.getLookupTable(100, alpha=True))
-        self.gradient.sigGradientChanged.connect(updatePlot)
-
-        group = QtGui.QGroupBox('Control Colormap')
-        group.setLayout(layout)
-
-        return group
-
-    def getResetButton(self):
-        btn = QtGui.QPushButton('Reset Colormap')
-
-        def resetColormap():
-            self.gradient.restoreState({'ticks':
-                                        [(0., (106, 0, 31, 255)),
-                                         (.5, (255, 255, 255, 255)),
-                                         (1., (8, 54, 104, 255))],
-                                        'mode': 'rgb'})
-
-        btn.released.connect(resetColormap)
-        return btn
-
-
 class QKiteToolQuadtree(QtGui.QWidget):
     def __init__(self, plot=None):
         QtGui.QWidget.__init__(self)
@@ -177,6 +154,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.getEpsilonChanger())
         self.layout.addWidget(self.getMethodsChanger())
+        self.layout.addWidget(self.getInfoPanel())
         self.layout.addStretch(3)
 
     def getEpsilonChanger(self):
@@ -207,6 +185,8 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(slider)
 
         group = QtGui.QGroupBox('Epsilon Control')
+        group.setToolTip('''<p>Standard deviation/split
+                        method of each tile is >= epsilon</p>''')
         group.setLayout(layout)
 
         return group
@@ -227,10 +207,97 @@ class QKiteToolQuadtree(QtGui.QWidget):
 
             layout.addWidget(btn)
 
-        group = QtGui.QGroupBox('Split Method')
+        group = QtGui.QGroupBox('Tile Split Criteria')
         group.setLayout(layout)
 
         return group
+
+    def getInfoPanel(self):
+        layout = QtGui.QVBoxLayout()
+        info_text = QtGui.QLabel()
+
+        def updateInfoText():
+            info_text.setText('''
+                <table><tr>
+                <td style='padding-right: 10px'>Leaf count:</td>
+                    <td><b>%d</b></td>
+                </tr><tr>
+                <td>Epsilon current:</td><td>%0.3f</td>
+                </tr><tr>
+                <td>Epsilon limit:</td><td>%0.3f</td>
+                </tr></table>
+                ''' % (len(self.quadtree.leafs), self.quadtree.epsilon,
+                       self.quadtree._epsilon_limit))
+
+        updateInfoText()
+        self.quadtree.subscribe(updateInfoText)
+
+        layout.addWidget(info_text)
+        group = QtGui.QGroupBox('Quadtree Information')
+        group.setLayout(layout)
+
+        return group
+
+
+class QKiteToolTransect(pg.PlotWidget):
+    def __init__(self, plot):
+        pg.PlotWidget.__init__(self)
+        self.plot = plot
+
+        self.transect = pg.PlotDataItem()
+        self.addItem(self.transect)
+
+        self.polyline = pg.PolyLineROI(positions=[(0, 0), (300, 300)],
+                                       pen='g')
+        self.plot.addItem(self.polyline)
+        self.polyline.sigRegionChangeFinished.connect(self.updateTransect)
+
+    def updateTransect(self):
+        trans = num.ndarray((0))
+        for line in self.polyline.segments:
+            trans = num.append(trans,
+                               line.getArrayRegion(self.plot.data,
+                                                   self.plot.image))
+        self.transect.setData(trans)
+        # self.transect.setData(trans[0], num.linspace(0, 100, trans[0].size))
+
+
+class QKiteToolHistogram(pg.HistogramLUTWidget):
+    def __init__(self, plot):
+        pg.HistogramLUTWidget.__init__(self, image=plot.image)
+        self.plot = plot
+
+        _zero_marker = pg.InfiniteLine(pos=0, angle=0, pen='w', movable=False)
+        _zero_marker.setValue(0.)
+        _zero_marker.setZValue(1000)
+        self.vb.addItem(_zero_marker)
+
+        self.symetricColormap()
+        # self.isoCurveControl()
+
+    def symetricColormap(self):
+        default_cmap = {'ticks':
+                        [[0., (106, 0, 31, 255)],
+                         [.5, (255, 255, 255, 255)],
+                         [1., (8, 54, 104, 255)]],
+                        'mode': 'rgb'}
+        lvl_min = num.nanmin(self.plot.data)
+        lvl_max = num.nanmax(self.plot.data)
+        abs_range = max(abs(lvl_min), abs(lvl_max))
+
+        self.gradient.restoreState(default_cmap)
+        self.setLevels(-abs_range, abs_range)
+
+    def isoCurveControl(self):
+        iso_ctrl = pg.InfiniteLine(pos=0, angle=0, pen='g', movable=True)
+        iso_ctrl.setValue(0.)
+        iso_ctrl.setZValue(1000)
+
+        def isolineChange():
+            self.plot.iso.setLevel(iso_ctrl.value())
+
+        iso_ctrl.sigDragged.connect(isolineChange)
+        self.vb.addItem(iso_ctrl)
 
 
 class QKiteDock(dockarea.DockArea):
@@ -256,7 +323,9 @@ class QKiteDisplacementDock(QKiteDock):
         self.main_widget = QKiteDisplacementPlot
         self.tools = {
             'Components': QKiteToolComponents,
-            'Colormap': QKiteToolGradient,
+            # 'Colormap': QKiteToolGradient,
+            'Transect': QKiteToolTransect,
+            'Histogram': QKiteToolHistogram,
         }
 
         QKiteDock.__init__(self, scene)
@@ -269,7 +338,7 @@ class QKiteQuadtreeDock(QKiteDock):
         self.tools = {
             'Quadtree Control': QKiteToolQuadtree,
             'Components': QKiteToolComponents,
-            'Colormap': QKiteToolGradient,
+            'Histogram': QKiteToolHistogram,
         }
 
         QKiteDock.__init__(self, quadtree)
