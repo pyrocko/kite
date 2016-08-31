@@ -141,9 +141,9 @@ class Quadtree(Subject):
         Subject.__init__(self)
 
         self._split_methods = {
-            'mean_std': ['Std from mean', lambda node: node.mean_std],
-            'median_std': ['Std from median', lambda node: node.median_std],
-            'std': ['Std', lambda node: node.std],
+            'mean_std': ['Std around mean', lambda node: node.mean_std],
+            'median_std': ['Std around median', lambda node: node.median_std],
+            'std': ['Standard deviation (std)', lambda node: node.std],
         }
         self._norm_methods = {
             'mean': lambda node: node.mean,
@@ -161,7 +161,7 @@ class Quadtree(Subject):
         self.splitMethodChanged = Subject()
         self.setSplitMethod('median_std')
 
-    def setSplitMethod(self, split_method, parallel=True):
+    def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
 
         * `mean_std` tiles standard deviation from tile's mean is evaluated
@@ -217,7 +217,7 @@ class Quadtree(Subject):
     @property_cached
     def _epsilon_init(self):
         return num.nanstd(self._data)
-        return num.mean([self._split_func(b) for b in self._base_nodes])
+        # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
     def _epsilon_limit(self):
@@ -225,6 +225,7 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
+        value = float(value)
         if value < self._epsilon_limit:
             self._log.info('Epsilon is out of bounds [%0.3f], epsilon_limits' %
                            (value, self._epsilon_limit))
