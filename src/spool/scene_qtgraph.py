@@ -45,7 +45,7 @@ class _QKitePlot(pg.PlotWidget):
         lmax, lmin = num.nanmax(self.data), num.nanmin(self.data)
         lvl = max(abs(lmax), abs(lmin))
 
-        self.image.setImage(self.data, levels=(-lvl, lvl))
+        self.image.setImage(self.data, levels=(-lvl, lvl), autoDownsample=True)
         # self.addIsocurves()
 
     def addIsocurves(self):
