@@ -17,6 +17,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addScene(self, scene):
         self.scenes.append(scene)
+        self.ui.tabs.setMovable(True)
         self.ui.tabs.addTab(scene_qtgraph.QKiteDisplacementDock(scene),
                             'Displacement')
         self.ui.tabs.addTab(scene_qtgraph.QKiteQuadtreeDock(scene.quadtree),
