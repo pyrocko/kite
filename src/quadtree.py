@@ -54,7 +54,14 @@ class QuadNode(object):
 
     @property_cached
     def focal_point(self):
-        return (self.llx + self.length/2, self.lly + self.length/2)
+        w_x = num.linspace(0, 1., self.data.shape[0], endpoint=True)
+        w_y = num.linspace(0, 1., self.data.shape[1], endpoint=True)
+        w_X, w_Y = num.meshgrid(w_x, w_y, sparse=False, copy=False)
+
+        nan = num.isnan(self.data)
+        x = num.median(w_X.T[~nan])*self.data.shape[0] + self.llx
+        y = num.median(w_Y.T[~nan])*self.data.shape[1] + self.lly
+        return x, y
 
     @property_cached
     def bilinear_std(self):
@@ -141,9 +148,9 @@ class Quadtree(Subject):
         Subject.__init__(self)
 
         self._split_methods = {
-            'mean_std': ['Std from mean', lambda node: node.mean_std],
-            'median_std': ['Std from median', lambda node: node.median_std],
-            'std': ['Std', lambda node: node.std],
+            'mean_std': ['Std around mean', lambda node: node.mean_std],
+            'median_std': ['Std around median', lambda node: node.median_std],
+            'std': ['Standard deviation (std)', lambda node: node.std],
         }
         self._norm_methods = {
             'mean': lambda node: node.mean,
@@ -161,7 +168,7 @@ class Quadtree(Subject):
         self.splitMethodChanged = Subject()
         self.setSplitMethod('median_std')
 
-    def setSplitMethod(self, split_method, parallel=True):
+    def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
 
         * `mean_std` tiles standard deviation from tile's mean is evaluated
@@ -217,7 +224,7 @@ class Quadtree(Subject):
     @property_cached
     def _epsilon_init(self):
         return num.nanstd(self._data)
-        return num.mean([self._split_func(b) for b in self._base_nodes])
+        # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
     def _epsilon_limit(self):
@@ -225,9 +232,13 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
+        value = float(value)
+        if self._epsilon == value:
+            return
         if value < self._epsilon_limit:
-            self._log.info('Epsilon is out of bounds [%0.3f], epsilon_limits' %
-                           (value, self._epsilon_limit))
+            self._log.info(
+                'Epsilon is out of bounds [%0.3f], epsilon_limit %0.3f' %
+                (value, self._epsilon_limit))
             return
         self.leafs = None
         self._epsilon = value
@@ -249,7 +260,7 @@ class Quadtree(Subject):
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval(self._split_func,
                                                      self.epsilon)])
-        self._log.info('Gathering leafs (%d) for epsilon %.3f [%0.8f s]' %
+        self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
 
@@ -293,13 +304,12 @@ class Quadtree(Subject):
                                          num.log(2)))/4
         nx, ny = num.ceil(num.array(self._data.shape)/init_length)
 
-        for ix in range(int(nx)):
-            for iy in range(int(ny)):
-                _cx = ix * init_length
-                _cy = iy * init_length
+        for ix in xrange(int(nx)):
+            for iy in xrange(int(ny)):
+                llx = ix * init_length
+                lly = iy * init_length
                 self._base_nodes.append(QuadNode(self._data,
-                                                 _cx, _cy,
-                                                 int(init_length)))
+                                                 llx, lly, init_length))
 
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
