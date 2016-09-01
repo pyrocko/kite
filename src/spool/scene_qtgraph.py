@@ -21,11 +21,12 @@ class _QKitePlot(pg.PlotWidget):
         self.container = container
 
         self.image = pg.ImageItem(None)
-        self.image.setCompositionMode(
-            QtGui.QPainter.CompositionMode_SourceOver)
+        # self.image.setAutoDownsample(True)
 
         self.setAspectLocked(True)
-        self.setBackground((255, 255, 255, 255))
+        self.plotItem.getAxis('left').setZValue(100)
+        self.plotItem.getAxis('bottom').setZValue(100)
+        # self.setBackground((255, 255, 255, 255))
 
         self.addItem(self.image)
         self.update()
@@ -52,10 +53,11 @@ class _QKitePlot(pg.PlotWidget):
 
     @property
     def data(self):
-        return self.components_available[self.component][1](self.container)
+        _data = self.components_available[self.component][1](self.container)
+        return _data  # num.nan_to_num(_data)
 
     def update(self):
-        self.image.setImage(self.data, autoDownsample=True)
+        self.image.updateImage(self.data, autoDownsample=True)
         # self.addIsocurves()
 
     def addIsocurve(self, level=0.):
@@ -74,26 +76,28 @@ class QKiteDisplacementPlot(_QKitePlot):
             'displacement': ['LOS Displacement', lambda sc: sc.displacement],
             'theta': ['LOS Theta', lambda sc: sc.theta],
             'phi': ['LOS Phi', lambda sc: sc.phi],
-            'dE': ['Displacement dE', lambda sc: sc.cartesian.dE],
-            'dN': ['Displacement dN', lambda sc: sc.cartesian.dN],
-            'dU': ['Displacement dU', lambda sc: sc.cartesian.dU],
+            'dE': ['LOS dE', lambda sc: sc.cartesian.dE],
+            'dN': ['LOS dN', lambda sc: sc.cartesian.dN],
+            'dU': ['LOS dU', lambda sc: sc.cartesian.dU],
         }
         self._component = 'displacement'
 
         _QKitePlot.__init__(self, container=scene)
+        self.transformUTM()
 
-        # ll_x, ll_y = scene.utm_x.min(), scene.utm_y.min()
-        # ur_x, ur_y = scene.utm_x.max(), scene.utm_y.max()
+    def transformUTM(self):
+        ll_x, ll_y = self.container.utm_x.min(), self.container.utm_y.min()
+        ur_x, ur_y = self.container.utm_x.max(), self.container.utm_y.max()
 
-        # scale_x = scene.utm_x.size/abs(ur_x - ll_x)
-        # scale_y = scene.utm_y.size/abs(ur_y - ll_y)
+        scale_x = self.container.utm_x.size/abs(ur_x - ll_x)
+        scale_y = self.container.utm_y.size/abs(ur_y - ll_y)
 
-        # self.image.translate(ll_x, ll_y)
-        # self.image.scale(scale_x, scale_y)
-        # self.setLimits(xMin=ll_x-(scale_x*scene.utm_x.size)*.2,
-        #                xMax=ur_x+(scale_x*scene.utm_x.size)*.2,
-        #                yMin=ll_y-(scale_y*scene.utm_y.size)*.2,
-        #                yMax=ur_y+(scale_y*scene.utm_y.size)*.2)
+        self.image.translate(ll_x, ll_y)
+        self.image.scale(scale_x, scale_y)
+        self.setLimits(xMin=ll_x-(scale_x*self.container.utm_x.size)*.2,
+                       xMax=ur_x+(scale_x*self.container.utm_x.size)*.2,
+                       yMin=ll_y-(scale_y*self.container.utm_y.size)*.2,
+                       yMax=ur_y+(scale_y*self.container.utm_y.size)*.2)
 
 
 class QKiteQuadtreePlot(_QKitePlot):
@@ -103,10 +107,25 @@ class QKiteQuadtreePlot(_QKitePlot):
             'mean': ['Mean Displacement', lambda qt: qt.leaf_matrix_means],
             'median': ['Median Theta', lambda qt: qt.leaf_matrix_medians],
         }
-        self._component = 'mean'
+        self._component = 'median'
 
         _QKitePlot.__init__(self, container=quadtree)
+        self.quadtree = self.container
+
+        _focalp_color = (0, 0, 0, 100)
+        self.focal_points = pg.ScatterPlotItem(size=1.5,
+                                               pen=pg.mkPen(_focalp_color,
+                                                            width=1),
+                                               brush=pg.mkBrush(_focalp_color))
+
+        self.addItem(self.focal_points)
+        self.updateFocalPoints()
+
         self.container.subscribe(self.update)
+        self.container.subscribe(self.updateFocalPoints)
+
+    def updateFocalPoints(self):
+        self.focal_points.setData(pos=self.container.leaf_focal_points)
 
 
 class QKiteToolComponents(QtGui.QWidget):
@@ -164,22 +183,25 @@ class QKiteToolQuadtree(QtGui.QWidget):
         spin = QtGui.QDoubleSpinBox()
 
         def changeEpsilon():
-            self.quadtree.epsilon = spin.value()
-            slider.setValue(spin.value())
+            epsilon = round(spin.value(), 3)
+            self.quadtree.epsilon = epsilon
+            slider.setValue(epsilon)
 
         def updateRange():
             for wdgt in [slider, spin]:
                 wdgt.setValue(self.quadtree.epsilon)
                 wdgt.setRange(self.quadtree._epsilon_limit,
-                              3*self.quadtree._epsilon)
-                wdgt.setSingleStep(self.quadtree._epsilon/1e2)
+                              3*self.quadtree.epsilon)
+                wdgt.setSingleStep(round((self.quadtree.epsilon -
+                                          self.quadtree._epsilon_limit)*.2, 3))
 
-        updateRange()
         spin.setDecimals(3)
+        updateRange()
 
         self.quadtree.splitMethodChanged.subscribe(updateRange)
         spin.valueChanged.connect(changeEpsilon)
-        slider.valueChanged.connect(lambda: spin.setValue(slider.value()))
+        slider.valueChanged.connect(lambda: spin.setValue(round(slider.value(),
+                                                                3)))
 
         layout.addWidget(spin)
         layout.addWidget(slider)
@@ -244,45 +266,67 @@ class QKiteToolTransect(pg.PlotWidget):
         pg.PlotWidget.__init__(self)
         self.plot = plot
 
-        self.transect = pg.PlotDataItem()
-        self.addItem(self.transect)
+        self.trans_plot = pg.PlotDataItem(antialias=True)
+        self.addItem(self.trans_plot)
+        self.plotItem.getAxis('bottom').setLabel('Distance / m')
+        self.plotItem.getAxis('left').setLabel('Displacement / m')
+        self.addPolyLine()
+        self.polyline.sigRegionChangeFinished.connect(self.updateTransPlot)
+        self.plot.image.sigImageChanged.connect(self.updateTransPlot)
+        # self.plot.image.sigImageChanged.connect(self.addPolyLine)
 
-        self.polyline = pg.PolyLineROI(positions=[(0, 0), (300, 300)],
-                                       pen='g')
+    def addPolyLine(self):
+        [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
+        self.polyline = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
+                                                   ymin+(ymax-ymin)*.4),
+                                                  (xmin+(xmax-xmin)*.6,
+                                                   ymin+(ymax-ymin)*.6)],
+                                       pen=pg.mkPen('g', width=2))
         self.plot.addItem(self.polyline)
-        self.polyline.sigRegionChangeFinished.connect(self.updateTransect)
 
-    def updateTransect(self):
+    def updateTransPlot(self):
         trans = num.ndarray((0))
+        length = 0
         for line in self.polyline.segments:
-            trans = num.append(trans,
-                               line.getArrayRegion(self.plot.data,
-                                                   self.plot.image))
-        self.transect.setData(trans)
-        # self.transect.setData(trans[0], num.linspace(0, 100, trans[0].size))
+            trans = num.append(trans, line.getArrayRegion(self.plot.data,
+                                                          self.plot.image))
+            p1, p2 = line.listPoints()
+            length += (p2-p1).length()
+        # interpolate over NaNs
+        nans, x = num.isnan(trans), lambda z: z.nonzero()[0]
+        trans[nans] = num.interp(x(nans), x(~nans), trans[~nans])
+
+        self.trans_plot.setData(num.linspace(0, length, trans.size), trans)
 
 
 class QKiteToolHistogram(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
-        self.plot = plot
+
+        self._plot = plot
 
         _zero_marker = pg.InfiniteLine(pos=0, angle=0, pen='w', movable=False)
         _zero_marker.setValue(0.)
         _zero_marker.setZValue(1000)
         self.vb.addItem(_zero_marker)
 
-        self.symetricColormap()
+        self.axis.setLabel('Displacement / m')
+        # self.plot.rotate(-90)
+        # self.layout.rotate(90)
+        # self.gradient.setOrientation('bottom')
+        self.setSymColormap()
+        self._plot.image.sigImageChanged.connect(self.setSymColormap)
         # self.isoCurveControl()
 
-    def symetricColormap(self):
+    def setSymColormap(self):
         default_cmap = {'ticks':
-                        [[0., (106, 0, 31, 255)],
+                        [[0., (0, 0, 0, 255)],
+                         [1e-3, (106, 0, 31, 255)],
                          [.5, (255, 255, 255, 255)],
                          [1., (8, 54, 104, 255)]],
                         'mode': 'rgb'}
-        lvl_min = num.nanmin(self.plot.data)
-        lvl_max = num.nanmax(self.plot.data)
+        lvl_min = num.nanmin(self._plot.data)
+        lvl_max = num.nanmax(self._plot.data)
         abs_range = max(abs(lvl_min), abs(lvl_max))
 
         self.gradient.restoreState(default_cmap)
@@ -294,7 +338,7 @@ class QKiteToolHistogram(pg.HistogramLUTWidget):
         iso_ctrl.setZValue(1000)
 
         def isolineChange():
-            self.plot.iso.setLevel(iso_ctrl.value())
+            self._plot.iso.setLevel(iso_ctrl.value())
 
         iso_ctrl.sigDragged.connect(isolineChange)
         self.vb.addItem(iso_ctrl)
@@ -309,8 +353,7 @@ class QKiteDock(dockarea.DockArea):
         main_dock.addWidget(main_widget)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
-            tool_dock = dockarea.Dock(name,
-                                      widget=tool(main_widget),
+            tool_dock = dockarea.Dock(name, widget=tool(main_widget),
                                       size=(5, 10))
             self.addDock(tool_dock, position='bottom')
 
