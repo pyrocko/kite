@@ -167,7 +167,7 @@ satellite measurements
     @phi.setter
     def phi(self, value):
         if isinstance(value, float):
-            self._theta = value
+            self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
         self._notify()

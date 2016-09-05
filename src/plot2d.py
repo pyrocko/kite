@@ -207,30 +207,18 @@ class PlotDisplacement2D(Plot2D):
         Plot2D.__init__(self, scene, **kwargs)
 
         self.components_available = {
-            'displacement': {
-                'name': 'LOS Displacement',
-                'eval': lambda sc: sc.displacement,
-                },
-            'theta': {
-                'name': 'LOS Theta',
-                'eval': lambda sc: sc.theta,
-                },
-            'phi': {
-                'name': 'LOS Phi',
-                'eval': lambda sc: sc.phi,
-                },
-            'dE': {
-                'name': 'Displacement dE',
-                'eval': lambda sc: sc.cartesian.dE,
-                },
-            'dN': {
-                'name': 'Displacement dN',
-                'eval': lambda sc: sc.cartesian.dN
-                },
-            'dU': {
-                'name': 'Displacement dU',
-                'eval': lambda sc: sc.cartesian.dU,
-                },
+            'displacement': {'name': 'LOS Displacement',
+                             'eval': lambda sc: sc.displacement},
+            'theta': {'name': 'LOS Theta',
+                      'eval': lambda sc: sc.theta},
+            'phi': {'name': 'LOS Phi',
+                    'eval': lambda sc: sc.phi},
+            'dE': {'name': 'Displacement dE',
+                   'eval': lambda sc: sc.cartesian.dE},
+            'dN': {'name': 'Displacement dN',
+                   'eval': lambda sc: sc.cartesian.dN},
+            'dU': {'name': 'Displacement dU',
+                   'eval': lambda sc: sc.cartesian.dU},
         }
 
         self._component = 'displacement'

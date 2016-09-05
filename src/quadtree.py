@@ -7,9 +7,11 @@ from kite.meta import Subject, property_cached
 class QuadNode(object):
     """A Node in the Quadtree
     """
-    # __slots__ = ('parent', '_tree', 'children',
-    #              'llx', 'lly', 'length',
-    #              'data', '_mean', '_median', 'std', '_var')
+    # __slots__ = ('llx', 'lly', 'length', '_data_complete', 'children'
+    #              '_cached_nan_fraction', '_cached_mean', '_cached_ median',
+    #              '_cached_std', '_cached_var', '_cached_median_std',
+    #              '_cached_mean_std', '_cached_focal_point',
+    #              '_cached_bilinear_std', '_cached_data')
 
     def __init__(self, data_complete, llx, lly, length):
         self.llx = int(llx)
@@ -128,7 +130,7 @@ class QuadNode(object):
                self.std, self.var)
 
 
-def createTree(args):
+def createTreeParallel(args):
     base_node, func, epsilon_limit = args
     base_node.createTree(func, epsilon_limit)
     return base_node
@@ -139,9 +141,9 @@ class Quadtree(Subject):
         Subject.__init__(self)
 
         self._split_methods = {
-            'mean_std': lambda node: node.mean_std,
-            'median_std': lambda node: node.median_std,
-            'std': lambda node: node.std,
+            'mean_std': ['Std around mean', lambda node: node.mean_std],
+            'median_std': ['Std around median', lambda node: node.median_std],
+            'std': ['Standard deviation (std)', lambda node: node.std],
         }
         self._norm_methods = {
             'mean': lambda node: node.mean,
@@ -156,9 +158,10 @@ class Quadtree(Subject):
 
         self._log = logging.getLogger('Quadtree')
 
+        self.splitMethodChanged = Subject()
         self.setSplitMethod('median_std')
 
-    def setSplitMethod(self, split_method, parallel=True):
+    def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
 
         * `mean_std` tiles standard deviation from tile's mean is evaluated
@@ -175,15 +178,16 @@ class Quadtree(Subject):
                                  % (split_method, self._split_methods))
 
         self.split_method = split_method
-        self._split_func = self._split_methods[split_method]
+        self._split_func = self._split_methods[split_method][1]
 
         self._epsilon_init = None
         self._epsilon_limit = None
         self.epsilon = self._epsilon_init
 
         self._initTree(parallel)
+        self.splitMethodChanged._notify()
 
-    def _initTree(self, parallel=True):
+    def _initTree(self, parallel):
         t0 = time.time()
         if parallel:
             from pathos.pools import ProcessPool as Pool
@@ -191,14 +195,14 @@ class Quadtree(Subject):
             Pathos uses dill instead of pickle, this works w lambdas
             '''
 
-            pool = Pool(timeout=.25)
+            pool = Pool()
             self._log.info('Utilizing %d cpu cores' % pool.nodes)
-            res = pool.map(createTree, [(b,
-                                         self._split_func,
-                                         self._epsilon_limit)
-                                        for b in self._base_nodes])
-
+            res = pool.map(createTreeParallel, [(b,
+                                                 self._split_func,
+                                                 self._epsilon_limit)
+                                                for b in self._base_nodes])
             self._base_nodes = [r for r in res]
+
         else:
             for b in self._base_nodes:
                 b.createTree(self._split_func, self._epsilon_limit)
@@ -213,7 +217,7 @@ class Quadtree(Subject):
     @property_cached
     def _epsilon_init(self):
         return num.nanstd(self._data)
-        return num.mean([self._split_func(b) for b in self._base_nodes])
+        # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
     def _epsilon_limit(self):
@@ -221,6 +225,7 @@ class Quadtree(Subject):
 
     @epsilon.setter
     def epsilon(self, value):
+        value = float(value)
         if value < self._epsilon_limit:
             self._log.info('Epsilon is out of bounds [%0.3f], epsilon_limits' %
                            (value, self._epsilon_limit))
@@ -232,10 +237,11 @@ class Quadtree(Subject):
 
     @property
     def nnodes(self):
-        nodes = []
+        i = 0
         for b in self._base_nodes:
-            nodes.extend([n for n in b.iterTree()])
-        return len(nodes)
+            for n in b.iterTree():
+                i += 1
+        return i
 
     @property_cached
     def leafs(self):
