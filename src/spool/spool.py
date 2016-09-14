@@ -30,6 +30,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
         uifile = QtCore.QFile(path.dirname(path.realpath(__file__))
                               + '/ui/spool.ui')
+        print path.dirname(path.realpath(__file__)) + '/ui/spool.ui'
         uifile.open(QtCore.QFile.ReadOnly)
 
         ui = QtUiTools.QUiLoader().load(uifile, parent)
@@ -39,16 +40,18 @@ class SpoolMainWindow(QtGui.QMainWindow):
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None):
         QtGui.QApplication.__init__(self, ['KiteSpool'])
+        self.aboutToQuit.connect(self.deleteLater)
 
         self.spool_win = SpoolMainWindow()
         if scene is not None:
             self.addScene(scene)
-
         self.exec_()
 
     def addScene(self, scene):
         return self.spool_win.addScene(scene)
 
+    def __del__(self):
+        pass
 
 __all__ = '''
 Spool

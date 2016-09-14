@@ -173,7 +173,7 @@ satellite measurements
             self._createMeshedGrids()
         return self._utm_gridY
 
-    def getUTMExtend(self):
+    def getUTMExtent(self):
         """Get the UTM extend and pixel spacing of the LOS Displacement grid
 
         :returns: ll_x, ll_y, ur_x, ur_y, dx, dy
@@ -182,8 +182,8 @@ satellite measurements
         ll_x, ll_y = self.utm_x.min(), self.utm_y.min()
         ur_x, ur_y = self.utm_x.max(), self.utm_y.max()
 
-        dx = self.utm_x.size/abs(ur_x - ll_x)
-        dy = self.utm_x.size/abs(ur_x - ll_x)
+        dx = abs(ur_x - ll_x)/self.utm_x.size
+        dy = abs(ur_y - ll_y)/self.utm_y.size
         return ll_x, ll_y, ur_x, ur_y, dx, dy
 
     def mapLocalToUTM(self, x, y):

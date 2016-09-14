@@ -1,6 +1,7 @@
 import numpy as num
 import logging
 import time
+import yaml
 from kite.meta import Subject, property_cached
 
 
@@ -83,12 +84,16 @@ class QuadNode(object):
                 for q in c.iterLeafs():
                     yield q
 
-    def iterLeafsEval(self, eval_func, epsilon):
-        if eval_func(self) < epsilon or self.children is None:
+    def iterLeafsEval(self):
+        if (self._tree._split_func(self) < self._tree.epsilon and
+            not self.length > self._tree._tile_size_lim_p[1])\
+           or self.children is None:
+            yield self
+        elif self.children[0].length < self._tree._tile_size_lim_p[0]:
             yield self
         else:
             for c in self.children:
-                for q in c.iterLeafsEval(eval_func, epsilon):
+                for q in c.iterLeafsEval():
                     yield q
 
     def _iterSplitNode(self):
@@ -114,13 +119,13 @@ class QuadNode(object):
 
     def __getstate__(self):
         return self.llx, self.lly, self.length,\
-               self.children, self._data_complete
+               self.children, self._tree
 
     def __setstate__(self, state):
         self.llx, self.lly, self.length,\
-            self.children, self._data_complete = state
+            self.children, self._tree = state
 
-    def __str__(self):
+    def __repr__(self):
         return '''QuadNode:
   llx: %d px
   lly: %d px
@@ -139,10 +144,10 @@ def createTreeParallel(args):
     return base_node
 
 
-class Quadtree(Subject):
-    def __init__(self, scene, epsilon=None):
-        Subject.__init__(self)
+class Quadtree(object):
+    yaml_tag = '!Quadtree'
 
+    def __init__(self, scene, epsilon=None):
         self._split_methods = {
             'mean_std': ['Std around mean', lambda node: node.mean_std],
             'median_std': ['Std around median', lambda node: node.median_std],
@@ -157,12 +162,16 @@ class Quadtree(Subject):
         self._data = self._scene.displacement
 
         self._epsilon = None
-        self._max_nan = None
+        self._nan_allowed = None
+        self._tile_size_lim = (250, 5000)
+
         self._leafs = None
 
         self._log = logging.getLogger('Quadtree')
 
         self.splitMethodChanged = Subject()
+        self.treeUpdate = Subject()
+
         self.setSplitMethod('median_std')
 
     def setSplitMethod(self, split_method, parallel=False):
@@ -240,23 +249,46 @@ class Quadtree(Subject):
             return
         self.leafs = None
         self._epsilon = value
-        self._notify()
+
+        self.treeUpdate._notify()
         return
 
     @property
-    def max_nan(self):
-        return self._max_nan
+    def nan_allowed(self):
+        return self._nan_allowed
 
-    @max_nan.setter
-    def max_nan(self, value):
+    @nan_allowed.setter
+    def nan_allowed(self, value):
         if value > 1. or value < 0.:
-            raise AttributeError('NaN fraction must be 0 <= max_nan <=1 ')
+            raise AttributeError('NaN fraction must be 0 <= nan_allowed <=1 ')
         if value == 1.:
             value = None
 
         self.leafs = None
-        self._max_nan = value
-        self._notify()
+        self._nan_allowed = value
+        self.treeUpdate._notify()
+
+    @property
+    def tile_size_lim(self):
+        return self._tile_size_lim
+
+    @tile_size_lim.setter
+    def tile_size_lim(self, value):
+        tile_size_min, tile_size_max = value
+        if tile_size_min > tile_size_max:
+            self._log.info('tile_size_min > tile_size_max is required')
+            return
+        self._tile_size_lim = (tile_size_min, tile_size_max)
+
+        self._tile_size_lim_p = None
+        self.leafs = None
+        self.treeUpdate._notify()
+
+    @property_cached
+    def _tile_size_lim_p(self):
+        dp = self._scene.getUTMExtent()[-1]
+        return (int(self.tile_size_lim[0] / dp),
+                int(self.tile_size_lim[1] / dp))
 
     @property
     def nnodes(self):
@@ -271,19 +303,9 @@ class Quadtree(Subject):
         t0 = time.time()
         leafs = []
         for b in self._base_nodes:
-            leafs.extend([l for l in b.iterLeafsEval(self._split_func,
-                                                     self.epsilon)])
-
-        if self.max_nan is not None:
-            t0 = time.time()
-            leafs[:] = [l for l in leafs if l.nan_fraction < self.max_nan]
-            # print 'No itertools: %0.8f' % (time.time()-t0)
-            # t0 = time.time()
-            # leafs = [l for l in it.ifilterfalse(
-            #                         lambda l: l.nan_fraction < self.max_nan,
-            #                         leafs)]
-            # print 'No itertools: %0.8f' % (time.time()-t0)
-
+            leafs.extend([l for l in b.iterLeafsEval()])
+        if self.nan_allowed is not None:
+            leafs[:] = [l for l in leafs if l.nan_fraction < self.nan_allowed]
         self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
@@ -338,6 +360,9 @@ class Quadtree(Subject):
             raise AssertionError('Could not init base nodes.')
         return self._base_nodes
 
+    def getUTMExtent(self):
+        return self._scene.getUTMExtent()
+
     @property_cached
     def plot(self):
         from kite.plot2d import PlotQuadTree2D
@@ -346,12 +371,18 @@ class Quadtree(Subject):
     def getStaticTarget(self):
         raise NotImplementedError
 
-    def dump(self):
-        raise NotImplementedError
-
     @classmethod
     def load(cls, filename):
         raise NotImplementedError
+
+    def __repr__(self):
+        return '%s(split_method=%s, epsilon=%.4f, '\
+               'nan_allowed=%.4f, tile_size_lim=%s)' % (
+                self.__class__.__name__,
+                self.split_method,
+                self.epsilon,
+                self.nan_allowed or 1.,
+                self.tile_size_lim)
 
     def __str__(self):
         return '''

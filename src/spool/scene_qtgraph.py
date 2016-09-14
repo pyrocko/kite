@@ -74,12 +74,6 @@ class QKiteDisplacementPlot(_QKitePlot):
     def __init__(self, scene):
 
         self.components_available = {
-            # 'displacement': {
-            #     'button'
-            #     'func'
-            #     'detailed desc'
-            #     'colormap_autoscale'
-            # }
             'displacement': ['LOS Displacement', lambda sc: sc.displacement],
             'theta': ['LOS Theta', lambda sc: sc.theta],
             'phi': ['LOS Phi', lambda sc: sc.phi],
@@ -92,12 +86,12 @@ class QKiteDisplacementPlot(_QKitePlot):
         self._component = 'displacement'
 
         _QKitePlot.__init__(self, container=scene)
-        # self.transformToUTM()
+        self.transformToUTM()
 
     def transformToUTM(self):
         padding = 100
-        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.getUTMExtend()
-        print self.container.getUTMExtend()
+        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.getUTMExtent()
+        print self.container.getUTMExtent()
 
         self.image.translate(ll_x, ll_y)
         self.image.scale(dx, dy)
@@ -130,11 +124,11 @@ class QKiteQuadtreePlot(_QKitePlot):
         self.addItem(self.focal_points)
         self.updateFocalPoints()
 
-        self.container.subscribe(self.update)
-        self.container.subscribe(self.updateFocalPoints)
+        self.quadtree.treeUpdate.subscribe(self.update)
+        self.quadtree.treeUpdate.subscribe(self.updateFocalPoints)
 
     def updateFocalPoints(self):
-        self.focal_points.setData(pos=self.container.leaf_focal_points)
+        self.focal_points.setData(pos=self.quadtree.leaf_focal_points)
 
 
 class QKiteToolComponents(QtGui.QWidget):
@@ -184,17 +178,18 @@ class QKiteToolComponents(QtGui.QWidget):
         layout = QtGui.QVBoxLayout()
         info_text = QtGui.QLabel()
 
-        table_content = [
-            ['Component', '<b>%s</b>' %
-             self.plot.components_available[self.plot.component][0]],
-            ['Max value', '%0.4f' % num.nanmax(self.plot.data)],
-            ['Min value', '%0.4f' % num.nanmin(self.plot.data)],
-            ['Mean value', '%0.4f' % num.nanmean(self.plot.data)],
-            ['Resolution px', '%d x %d' % (self.plot.data.shape[0],
-                                           self.plot.data.shape[1])],
-        ]
-
         def updateInfoText():
+            table_content = [
+                ('Component', '<b>%s</b>' %
+                 self.plot.components_available[self.plot.component][0]),
+                ('Max value', '%0.4f' % num.nanmax(self.plot.data)),
+                ('Min value', '%0.4f' % num.nanmin(self.plot.data)),
+                ('Mean value', '%0.4f' % num.nanmean(self.plot.data)),
+                ('Resolution px', '%d x %d' % (self.plot.data.shape[0],
+                                               self.plot.data.shape[1])),
+                ('dx', '%d m' % self.plot.container.getUTMExtent()[-2]),
+                ('dy', '%d m' % self.plot.container.getUTMExtent()[-1]),
+                ]
             rstr = '<table>'
             for (metric, value) in table_content:
                 rstr += '<tr><td style="padding-right: 15px">%s:</td>' \
@@ -207,7 +202,7 @@ class QKiteToolComponents(QtGui.QWidget):
         self.plot.image.sigImageChanged.connect(updateInfoText)
 
         layout.addWidget(info_text)
-        group = QtGui.QGroupBox('Component Information')
+        group = QtGui.QGroupBox('Scene Information')
         group.setLayout(layout)
 
         return group
@@ -221,6 +216,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.getEpsilonChanger())
         self.layout.addWidget(self.getNaNFractionChanger())
+        self.layout.addWidget(self.getTileSizeChanger())
         self.layout.addWidget(self.getMethodsChanger())
         self.layout.addWidget(self.getInfoPanel())
         self.layout.addStretch(3)
@@ -255,7 +251,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(spin)
         layout.addWidget(slider)
 
-        group = QtGui.QGroupBox('Epsilon Control')
+        group = QtGui.QGroupBox('Epsilon')
         group.setToolTip('''<p>Standard deviation/split
                         method of each tile is >= epsilon</p>''')
         group.setLayout(layout)
@@ -269,18 +265,16 @@ class QKiteToolQuadtree(QtGui.QWidget):
         spin = QtGui.QDoubleSpinBox()
 
         def changeNaNFraction():
-            max_nan = round(spin.value(), 3)
-            self.quadtree.max_nan = max_nan
-            slider.setValue(max_nan)
+            nan_allowed = round(spin.value(), 3)
+            self.quadtree.nan_allowed = nan_allowed
+            slider.setValue(nan_allowed)
 
-        def updateRange():
-            for wdgt in [slider, spin]:
-                wdgt.setValue(self.quadtree.max_nan or 1.)
-                wdgt.setRange(0., 1.)
-                wdgt.setSingleStep(.05)
+        for wdgt in [slider, spin]:
+            wdgt.setValue(self.quadtree.nan_allowed or 1.)
+            wdgt.setRange(0., 1.)
+            wdgt.setSingleStep(.05)
 
         spin.setDecimals(2)
-        updateRange()
 
         spin.valueChanged.connect(changeNaNFraction)
         slider.valueChanged.connect(lambda: spin.setValue(round(slider.value(),
@@ -290,7 +284,59 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(slider)
 
         group = QtGui.QGroupBox('Allowed NaN Fraction')
-        group.setToolTip('''<p>Maximum NaN pixel fraction per tile</p>''')
+        group.setToolTip('''<p>Maximum <b>NaN pixel
+            fraction allowed</b> per tile</p>''')
+        group.setLayout(layout)
+
+        return group
+
+    def getTileSizeChanger(self):
+        layout = QtGui.QGridLayout()
+
+        slider_smin = QtGui.QSlider(QtCore.Qt.Horizontal)
+        spin_smin = QtGui.QSpinBox()
+        slider_smax = QtGui.QSlider(QtCore.Qt.Horizontal)
+        spin_smax = QtGui.QSpinBox()
+
+        def changeTileLimits():
+            self.quadtree.tile_size_lim = (spin_smax.value(),
+                                           spin_smin.value())
+            slider_smin.setValue(spin_smin.value())
+            slider_smax.setValue(spin_smax.value())
+
+        for wdgt in [slider_smax, slider_smin, spin_smax, spin_smin]:
+            wdgt.setRange(0, 10000)
+            wdgt.setSingleStep(50)
+
+        for wdgt in [slider_smin, spin_smin]:
+            wdgt.setValue(self.quadtree.tile_size_lim[1])
+        slider_smin.valueChanged.connect(
+            lambda: spin_smin.setValue(slider_smin.value()))
+        spin_smin.valueChanged.connect(changeTileLimits)
+        spin_smin.setSuffix(' m')
+
+        for wdgt in [slider_smax, spin_smax]:
+            wdgt.setValue(self.quadtree.tile_size_lim[0])
+        slider_smax.valueChanged.connect(
+            lambda: spin_smax.setValue(slider_smax.value()))
+        spin_smax.valueChanged.connect(changeTileLimits)
+        spin_smax.setSuffix(' m')
+
+        layout.addWidget(QtGui.QLabel('Max',
+                                      toolTip='Minimum tile size in meter'),
+                         1, 1)
+        layout.addWidget(spin_smax, 1, 2)
+        layout.addWidget(slider_smax, 1, 3)
+
+        layout.addWidget(QtGui.QLabel('Min',
+                                      toolTip='Minimum tile size in meter'),
+                         2, 1)
+        layout.addWidget(spin_smin, 2, 2)
+        layout.addWidget(slider_smin, 2, 3)
+
+        group = QtGui.QGroupBox('Tile Size Limits')
+        group.setToolTip('''<p>Tile size limits
+                         overwrite the desired epsilon parameter</p>''')
         group.setLayout(layout)
 
         return group
@@ -321,20 +367,24 @@ class QKiteToolQuadtree(QtGui.QWidget):
         info_text = QtGui.QLabel()
 
         def updateInfoText():
-            info_text.setText('''
-                <table><tr>
-                <td style='padding-right: 10px'>Leaf count:</td>
-                    <td><b>%d</b></td>
-                </tr><tr>
-                <td>Epsilon current:</td><td>%0.3f</td>
-                </tr><tr>
-                <td>Epsilon limit:</td><td>%0.3f</td>
-                </tr></table>
-                ''' % (len(self.quadtree.leafs), self.quadtree.epsilon,
-                       self.quadtree._epsilon_limit))
+            infos = [
+                ('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
+                ('Epsilon current', '%0.3f' % self.quadtree.epsilon),
+                ('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
+                ('Allowed NaN fraction',
+                 '%d%%' % int((self.quadtree.nan_allowed or 1.) * 100)),
+                ('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
+                ('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]),
+            ]
+            _text = '<table>'
+            for (param, value) in infos:
+                _text += '''<tr><td style='padding-right: 10px'>%s:</td>
+                    <b>%s</td></tr>''' % (param, value)
+            _text += '</table>'
+            info_text.setText(_text)
 
         updateInfoText()
-        self.quadtree.subscribe(updateInfoText)
+        self.quadtree.treeUpdate.subscribe(updateInfoText)
 
         layout.addWidget(info_text)
         group = QtGui.QGroupBox('Quadtree Information')
@@ -436,7 +486,9 @@ class QKiteDock(dockarea.DockArea):
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             tool_dock = dockarea.Dock(name, widget=tool(main_widget),
-                                      size=(5, 10))
+                                      size=(3, 10),
+                                      autoOrientation=False)
+
             self.addDock(tool_dock, position='bottom')
 
         self.addDock(main_dock, position='left')
