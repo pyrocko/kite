@@ -4,6 +4,7 @@ from PySide import QtGui
 from PySide import QtCore
 
 import scene_qtgraph
+from os import path
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
@@ -27,7 +28,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def loadUi(parent):
         from PySide import QtUiTools
 
-        uifile = QtCore.QFile('data/spool.ui')
+        uifile = QtCore.QFile(path.dirname(path.realpath(__file__))
+                              + '/ui/spool.ui')
         uifile.open(QtCore.QFile.ReadOnly)
 
         ui = QtUiTools.QUiLoader().load(uifile, parent)
@@ -35,8 +37,22 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
 
 class Spool(QtGui.QApplication):
-    def __init__(self, *args, **kwargs):
-        QtGui.QApplication.__init__(self, ['KiteSpool'], *args, **kwargs)
+    def __init__(self, scene=None):
+        QtGui.QApplication.__init__(self, ['KiteSpool'])
+
+        self.spool_win = SpoolMainWindow()
+        if scene is not None:
+            self.addScene(scene)
+
+        self.exec_()
+
+    def addScene(self, scene):
+        return self.spool_win.addScene(scene)
+
+
+__all__ = '''
+Spool
+'''.split()
 
 if __name__ == '__main__':
     from kite.scene import SceneSynTest, Scene
@@ -46,9 +62,4 @@ if __name__ == '__main__':
     else:
         sc = SceneSynTest.createGauss()
 
-    app = Spool()
-
-    spool_win = SpoolMainWindow()
-    spool_win.addScene(sc)
-
-    app.exec_()
+    Spool(scene=sc)

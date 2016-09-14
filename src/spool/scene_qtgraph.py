@@ -3,6 +3,7 @@ from PySide import QtGui
 from PySide import QtCore
 from qt_utils import QDoubleSlider
 
+
 import numpy as num
 
 import pyqtgraph as pg
@@ -73,39 +74,47 @@ class QKiteDisplacementPlot(_QKitePlot):
     def __init__(self, scene):
 
         self.components_available = {
+            # 'displacement': {
+            #     'button'
+            #     'func'
+            #     'detailed desc'
+            #     'colormap_autoscale'
+            # }
             'displacement': ['LOS Displacement', lambda sc: sc.displacement],
             'theta': ['LOS Theta', lambda sc: sc.theta],
             'phi': ['LOS Phi', lambda sc: sc.phi],
-            'dE': ['LOS dE', lambda sc: sc.cartesian.dE],
-            'dN': ['LOS dN', lambda sc: sc.cartesian.dN],
-            'dU': ['LOS dU', lambda sc: sc.cartesian.dU],
+            'thetaDeg': ['LOS Theta degree', lambda sc: sc.los.degTheta],
+            'phiDeg': ['LOS Phi degree', lambda sc: sc.los.degPhi],
+            'unitE': ['LOS unitE', lambda sc: sc.los.unitE],
+            'unitN': ['LOS unitN', lambda sc: sc.los.unitN],
+            'unitU': ['LOS unitU', lambda sc: sc.los.unitU],
         }
         self._component = 'displacement'
 
         _QKitePlot.__init__(self, container=scene)
-        self.transformUTM()
+        # self.transformToUTM()
 
-    def transformUTM(self):
-        ll_x, ll_y = self.container.utm_x.min(), self.container.utm_y.min()
-        ur_x, ur_y = self.container.utm_x.max(), self.container.utm_y.max()
-
-        scale_x = self.container.utm_x.size/abs(ur_x - ll_x)
-        scale_y = self.container.utm_y.size/abs(ur_y - ll_y)
+    def transformToUTM(self):
+        padding = 100
+        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.getUTMExtend()
+        print self.container.getUTMExtend()
 
         self.image.translate(ll_x, ll_y)
-        self.image.scale(scale_x, scale_y)
-        self.setLimits(xMin=ll_x-(scale_x*self.container.utm_x.size)*.2,
-                       xMax=ur_x+(scale_x*self.container.utm_x.size)*.2,
-                       yMin=ll_y-(scale_y*self.container.utm_y.size)*.2,
-                       yMax=ur_y+(scale_y*self.container.utm_y.size)*.2)
+        self.image.scale(dx, dy)
+        self.setLimits(xMin=ll_x-dx*padding,
+                       xMax=ur_x+dx*padding,
+                       yMin=ll_y-dy*padding,
+                       yMax=ur_y+dy*padding)
 
 
 class QKiteQuadtreePlot(_QKitePlot):
     def __init__(self, quadtree):
 
         self.components_available = {
-            'mean': ['Mean Displacement', lambda qt: qt.leaf_matrix_means],
-            'median': ['Median Theta', lambda qt: qt.leaf_matrix_medians],
+            'mean': ['Mean Displacement',
+                     lambda qt: qt.leaf_matrix_means],
+            'median': ['Median Displacement',
+                       lambda qt: qt.leaf_matrix_medians],
         }
         self._component = 'median'
 
@@ -133,9 +142,12 @@ class QKiteToolComponents(QtGui.QWidget):
         QtGui.QWidget.__init__(self)
         self.plot = plot
 
-        self.setLayout(self.getComponentsLayout())
+        self.layout = QtGui.QVBoxLayout(self)
+        self.layout.addWidget(self.getComponentsGroup())
+        self.layout.addWidget(self.getInfoPanel())
+        self.layout.addStretch(3)
 
-    def getComponentsLayout(self):
+    def getComponentsGroup(self):
         from functools import partial
 
         layout = QtGui.QVBoxLayout()
@@ -162,7 +174,43 @@ class QKiteToolComponents(QtGui.QWidget):
             btn.clicked.connect(partial(changeComponent, comp))
 
         layout.addStretch(3)
-        return layout
+
+        group = QtGui.QGroupBox('Scene Components')
+        group.setLayout(layout)
+
+        return group
+
+    def getInfoPanel(self):
+        layout = QtGui.QVBoxLayout()
+        info_text = QtGui.QLabel()
+
+        table_content = [
+            ['Component', '<b>%s</b>' %
+             self.plot.components_available[self.plot.component][0]],
+            ['Max value', '%0.4f' % num.nanmax(self.plot.data)],
+            ['Min value', '%0.4f' % num.nanmin(self.plot.data)],
+            ['Mean value', '%0.4f' % num.nanmean(self.plot.data)],
+            ['Resolution px', '%d x %d' % (self.plot.data.shape[0],
+                                           self.plot.data.shape[1])],
+        ]
+
+        def updateInfoText():
+            rstr = '<table>'
+            for (metric, value) in table_content:
+                rstr += '<tr><td style="padding-right: 15px">%s:</td>' \
+                        '<td>%s</td></tr>' % (metric, value)
+            rstr += '</table>'
+
+            info_text.setText(rstr)
+
+        updateInfoText()
+        self.plot.image.sigImageChanged.connect(updateInfoText)
+
+        layout.addWidget(info_text)
+        group = QtGui.QGroupBox('Component Information')
+        group.setLayout(layout)
+
+        return group
 
 
 class QKiteToolQuadtree(QtGui.QWidget):
@@ -172,6 +220,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
 
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.getEpsilonChanger())
+        self.layout.addWidget(self.getNaNFractionChanger())
         self.layout.addWidget(self.getMethodsChanger())
         self.layout.addWidget(self.getInfoPanel())
         self.layout.addStretch(3)
@@ -209,6 +258,39 @@ class QKiteToolQuadtree(QtGui.QWidget):
         group = QtGui.QGroupBox('Epsilon Control')
         group.setToolTip('''<p>Standard deviation/split
                         method of each tile is >= epsilon</p>''')
+        group.setLayout(layout)
+
+        return group
+
+    def getNaNFractionChanger(self):
+        layout = QtGui.QHBoxLayout()
+
+        slider = QDoubleSlider(QtCore.Qt.Horizontal)
+        spin = QtGui.QDoubleSpinBox()
+
+        def changeNaNFraction():
+            max_nan = round(spin.value(), 3)
+            self.quadtree.max_nan = max_nan
+            slider.setValue(max_nan)
+
+        def updateRange():
+            for wdgt in [slider, spin]:
+                wdgt.setValue(self.quadtree.max_nan or 1.)
+                wdgt.setRange(0., 1.)
+                wdgt.setSingleStep(.05)
+
+        spin.setDecimals(2)
+        updateRange()
+
+        spin.valueChanged.connect(changeNaNFraction)
+        slider.valueChanged.connect(lambda: spin.setValue(round(slider.value(),
+                                                                3)))
+
+        layout.addWidget(spin)
+        layout.addWidget(slider)
+
+        group = QtGui.QGroupBox('Allowed NaN Fraction')
+        group.setToolTip('''<p>Maximum NaN pixel fraction per tile</p>''')
         group.setLayout(layout)
 
         return group
