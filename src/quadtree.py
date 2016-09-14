@@ -7,18 +7,14 @@ from kite.meta import Subject, property_cached
 class QuadNode(object):
     """A Node in the Quadtree
     """
-    # __slots__ = ('llx', 'lly', 'length', '_data_complete', 'children'
-    #              '_cached_nan_fraction', '_cached_mean', '_cached_ median',
-    #              '_cached_std', '_cached_var', '_cached_median_std',
-    #              '_cached_mean_std', '_cached_focal_point',
-    #              '_cached_bilinear_std', '_cached_data')
 
-    def __init__(self, data_complete, llx, lly, length):
+    def __init__(self, tree, llx, lly, length):
         self.llx = int(llx)
         self.lly = int(lly)
         self.length = int(length)
 
-        self._data_complete = data_complete
+        self._tree = tree
+        self._scene = self._tree._scene
 
         self.children = None
 
@@ -69,8 +65,8 @@ class QuadNode(object):
 
     @property_cached
     def data(self):
-        return self._data_complete[self.llx:self.llx+self.length,
-                                   self.lly:self.lly+self.length]
+        return self._scene.displacement[self.llx:self.llx+self.length,
+                                        self.lly:self.lly+self.length]
 
     def iterTree(self):
         yield self
@@ -99,7 +95,7 @@ class QuadNode(object):
         if self.length == 1:
             yield None
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
-            _q = QuadNode(self._data_complete,
+            _q = QuadNode(self._tree,
                           self.llx + self.length/2 * _nx,
                           self.lly + self.length/2 * _ny,
                           self.length/2)
@@ -161,6 +157,7 @@ class Quadtree(Subject):
         self._data = self._scene.displacement
 
         self._epsilon = None
+        self._max_nan = None
         self._leafs = None
 
         self._log = logging.getLogger('Quadtree')
@@ -187,6 +184,7 @@ class Quadtree(Subject):
         self.split_method = split_method
         self._split_func = self._split_methods[split_method][1]
 
+        # Clearing cached properties through None
         self._epsilon_init = None
         self._epsilon_limit = None
         self.epsilon = self._epsilon_init
@@ -246,6 +244,21 @@ class Quadtree(Subject):
         return
 
     @property
+    def max_nan(self):
+        return self._max_nan
+
+    @max_nan.setter
+    def max_nan(self, value):
+        if value > 1. or value < 0.:
+            raise AttributeError('NaN fraction must be 0 <= max_nan <=1 ')
+        if value == 1.:
+            value = None
+
+        self.leafs = None
+        self._max_nan = value
+        self._notify()
+
+    @property
     def nnodes(self):
         i = 0
         for b in self._base_nodes:
@@ -260,6 +273,17 @@ class Quadtree(Subject):
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval(self._split_func,
                                                      self.epsilon)])
+
+        if self.max_nan is not None:
+            t0 = time.time()
+            leafs[:] = [l for l in leafs if l.nan_fraction < self.max_nan]
+            # print 'No itertools: %0.8f' % (time.time()-t0)
+            # t0 = time.time()
+            # leafs = [l for l in it.ifilterfalse(
+            #                         lambda l: l.nan_fraction < self.max_nan,
+            #                         leafs)]
+            # print 'No itertools: %0.8f' % (time.time()-t0)
+
         self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
@@ -308,8 +332,7 @@ class Quadtree(Subject):
             for iy in xrange(int(ny)):
                 llx = ix * init_length
                 lly = iy * init_length
-                self._base_nodes.append(QuadNode(self._data,
-                                                 llx, lly, init_length))
+                self._base_nodes.append(QuadNode(self, llx, lly, init_length))
 
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
