@@ -1,48 +1,50 @@
 #!/bin/python
 
 from PySide import QtGui
-from PySide import QtCore
+# from PySide import QtCore
 
 import scene_qtgraph
 from os import path
+
+import qtutils
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
-
-        self.ui = self.loadUi(self)
+        self.loadUi()
         self.scenes = []
 
-        self.ui.show()
+        self.show()
 
     def addScene(self, scene):
         self.scenes.append(scene)
-        self.ui.tabs.setMovable(True)
-        self.ui.tabs.addTab(scene_qtgraph.QKiteDisplacementDock(scene),
-                            'Displacement')
-        self.ui.tabs.addTab(scene_qtgraph.QKiteQuadtreeDock(scene.quadtree),
-                            'Quadtree')
+        self.tabs.setMovable(True)
+        self.tabs.addTab(scene_qtgraph.QKiteDisplacementDock(scene),
+                         'Displacement')
+        self.tabs.addTab(scene_qtgraph.QKiteQuadtreeDock(scene.quadtree),
+                         'Quadtree')
 
-    @staticmethod
-    def loadUi(parent):
-        from PySide import QtUiTools
+    def exit(self):
+        pass
 
-        uifile = QtCore.QFile(path.dirname(path.realpath(__file__))
-                              + '/ui/spool.ui')
-        print path.dirname(path.realpath(__file__)) + '/ui/spool.ui'
-        uifile.open(QtCore.QFile.ReadOnly)
-
-        ui = QtUiTools.QUiLoader().load(uifile, parent)
-        return ui
+    def loadUi(self):
+        ui_file = path.join(path.dirname(path.realpath(__file__)),
+                            'ui/spool.ui')
+        qtutils.loadUi(ui_file, baseinstance=self)
+        return
 
 
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None):
         QtGui.QApplication.__init__(self, ['KiteSpool'])
-        self.aboutToQuit.connect(self.deleteLater)
+        # self.setStyle('plastique')
 
         self.spool_win = SpoolMainWindow()
+
+        self.aboutToQuit.connect(self.deleteLater)
+        self.spool_win.actionExit.triggered.connect(self.exit)
+
         if scene is not None:
             self.addScene(scene)
         self.exec_()

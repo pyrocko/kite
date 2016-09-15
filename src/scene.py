@@ -174,7 +174,7 @@ satellite measurements
         return self._utm_gridY
 
     def getUTMExtent(self):
-        """Get the UTM extend and pixel spacing of the LOS Displacement grid
+        """Get the UTM extent and pixel spacing of the LOS Displacement grid
 
         :returns: ll_x, ll_y, ur_x, ur_y, dx, dy
         :rtype: {tuple}

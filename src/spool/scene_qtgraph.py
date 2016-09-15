@@ -221,6 +221,9 @@ class QKiteToolQuadtree(QtGui.QWidget):
         self.layout.addWidget(self.getInfoPanel())
         self.layout.addStretch(3)
 
+        self.scroll_area = QtGui.QScrollArea()
+        self.scroll_area.setWidget(self)
+
     def getEpsilonChanger(self):
         layout = QtGui.QHBoxLayout()
 
@@ -379,7 +382,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
             _text = '<table>'
             for (param, value) in infos:
                 _text += '''<tr><td style='padding-right: 10px'>%s:</td>
-                    <b>%s</td></tr>''' % (param, value)
+                    <td><b>%s</td></tr>''' % (param, value)
             _text += '</table>'
             info_text.setText(_text)
 
@@ -393,42 +396,87 @@ class QKiteToolQuadtree(QtGui.QWidget):
         return group
 
 
-class QKiteToolTransect(pg.PlotWidget):
+class QKiteToolTransect(QtGui.QWidget):
     def __init__(self, plot):
-        pg.PlotWidget.__init__(self)
+        QtGui.QWidget.__init__(self)
         self.plot = plot
 
-        self.trans_plot = pg.PlotDataItem(antialias=True)
-        self.addItem(self.trans_plot)
-        self.plotItem.getAxis('bottom').setLabel('Distance / m')
-        self.plotItem.getAxis('left').setLabel('Displacement / m')
-        self.addPolyLine()
-        self.polyline.sigRegionChangeFinished.connect(self.updateTransPlot)
+        self.trans_plot = pg.PlotDataItem(antialias=True,
+                                          fillLevel=0.,
+                                          fillBrush=pg.mkBrush(0, 127, 0,
+                                                               150))
+
+        self.plt_wdgt = pg.PlotWidget(labels={'bottom': 'Distance / m',
+                                              'left': 'Displacement / m'})
+        self.plt_wdgt.showGrid(True, True, alpha=.5)
+        self.plt_wdgt.addItem(self.trans_plot)
+        self.plt_wdgt.enableAutoRange()
+
+        self.poly_line = None
+
+        self.layout = QtGui.QVBoxLayout(self)
+        self.layout.addWidget(self.plt_wdgt)
+        self.layout.addWidget(self.getPolyControl())
+
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
         # self.plot.image.sigImageChanged.connect(self.addPolyLine)
 
-    def addPolyLine(self):
-        [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
-        self.polyline = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
-                                                   ymin+(ymax-ymin)*.4),
-                                                  (xmin+(xmax-xmin)*.6,
-                                                   ymin+(ymax-ymin)*.6)],
-                                       pen=pg.mkPen('g', width=2))
-        self.plot.addItem(self.polyline)
+    def getPolyControl(self):
+        wdgt = QtGui.QWidget()
+
+        def addPolyLine():
+            [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
+            self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
+                                                        ymin+(ymax-ymin)*.4),
+                                                       (xmin+(xmax-xmin)*.6,
+                                                        ymin+(ymax-ymin)*.6)],
+                                            pen=pg.mkPen('g', width=2))
+            self.plot.addItem(self.poly_line)
+            self.updateTransPlot()
+            self.poly_line.sigRegionChangeFinished.connect(
+                self.updateTransPlot)
+
+        def clearPolyLine():
+            try:
+                self.plot.removeItem(self.poly_line)
+                self.poly_line = None
+                self.updateTransPlot()
+            except Exception as e:
+                print e
+
+        btn_addPoly = QtGui.QPushButton('Create Transsect')
+        btn_addPoly.clicked.connect(addPolyLine)
+        btn_clearPoly = QtGui.QPushButton('Clear Transsect')
+        btn_clearPoly.clicked.connect(clearPolyLine)
+
+        layout = QtGui.QHBoxLayout(wdgt)
+        layout.addWidget(btn_addPoly)
+        layout.addWidget(btn_clearPoly)
+
+        return wdgt
 
     def updateTransPlot(self):
-        trans = num.ndarray((0))
+        if self.poly_line is None:
+            self.trans_plot.setData((0))
+            return
+
+        transect = num.ndarray((0))
         length = 0
-        for line in self.polyline.segments:
-            trans = num.append(trans, line.getArrayRegion(self.plot.data,
-                                                          self.plot.image))
+        for line in self.poly_line.segments:
+            transect = num.append(transect,
+                                  line.getArrayRegion(self.plot.data,
+                                                      self.plot.image))
             p1, p2 = line.listPoints()
             length += (p2-p1).length()
         # interpolate over NaNs
-        nans, x = num.isnan(trans), lambda z: z.nonzero()[0]
-        trans[nans] = num.interp(x(nans), x(~nans), trans[~nans])
+        nans, x = num.isnan(transect), lambda z: z.nonzero()[0]
+        transect[nans] = num.interp(x(nans), x(~nans), transect[~nans])
+        length = num.linspace(0, length, transect.size)
 
-        self.trans_plot.setData(num.linspace(0, length, trans.size), trans)
+        self.trans_plot.setData(length, transect)
+        self.plt_wdgt.setLimits(xMin=length.min(), xMax=length.max(),
+                                yMin=transect.min(), yMax=transect.max()*1.1)
+        return
 
 
 class QKiteToolHistogram(pg.HistogramLUTWidget):
@@ -480,18 +528,25 @@ class QKiteDock(dockarea.DockArea):
     def __init__(self, container):
         dockarea.DockArea.__init__(self)
 
-        main_dock = dockarea.Dock(self.title)
         main_widget = self.main_widget(container)
-        main_dock.addWidget(main_widget)
+        main_dock = dockarea.Dock(self.title,
+                                  autoOrientation=False,
+                                  widget=main_widget)
+
+        histogram_dock = dockarea.Dock('Colormap',
+                                       autoOrientation=False,
+                                       widget=QKiteToolHistogram(main_widget))
+        histogram_dock.setStretch(.3, None)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             tool_dock = dockarea.Dock(name, widget=tool(main_widget),
-                                      size=(3, 10),
+                                      size=(2, 3),
                                       autoOrientation=False)
 
             self.addDock(tool_dock, position='bottom')
 
         self.addDock(main_dock, position='left')
+        self.addDock(histogram_dock, position='left')
 
 
 class QKiteDisplacementDock(QKiteDock):
@@ -502,7 +557,7 @@ class QKiteDisplacementDock(QKiteDock):
             'Components': QKiteToolComponents,
             # 'Colormap': QKiteToolGradient,
             'Transect': QKiteToolTransect,
-            'Histogram': QKiteToolHistogram,
+            # 'Histogram': QKiteToolHistogram,
         }
 
         QKiteDock.__init__(self, scene)
@@ -515,7 +570,7 @@ class QKiteQuadtreeDock(QKiteDock):
         self.tools = {
             'Quadtree Control': QKiteToolQuadtree,
             'Components': QKiteToolComponents,
-            'Histogram': QKiteToolHistogram,
+            # 'Histogram': QKiteToolHistogram,
         }
 
         QKiteDock.__init__(self, quadtree)
