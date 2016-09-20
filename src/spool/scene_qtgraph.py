@@ -14,26 +14,33 @@ class _QKitePlot(pg.PlotWidget):
     def __init__(self, container):
         pg.PlotWidget.__init__(self)
 
-        # self.components_available = {
-        # }
-
-        # self._component = None
-
         self.container = container
 
         self.image = pg.ImageItem(None)
-        # self.image.setAutoDownsample(True)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        # self.setBackground((255, 255, 255, 255))
 
         self.addItem(self.image)
         self.update()
 
+        self.transformToUTM()
+
         # self.addIsocurve()
         # self.scalebar()
+
+    def transformToUTM(self):
+        padding = 100
+        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.UTMExtent()
+        print self.container.UTMExtent()
+
+        self.image.translate(ll_x, ll_y)
+        self.image.scale(dx, dy)
+        self.setLimits(xMin=ll_x-dx*padding,
+                       xMax=ur_x+dx*padding,
+                       yMin=ll_y-dy*padding,
+                       yMax=ur_y+dy*padding)
 
     def scalebar(self):
         ''' Not working '''
@@ -86,19 +93,6 @@ class QKiteDisplacementPlot(_QKitePlot):
         self._component = 'displacement'
 
         _QKitePlot.__init__(self, container=scene)
-        self.transformToUTM()
-
-    def transformToUTM(self):
-        padding = 100
-        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.getUTMExtent()
-        print self.container.getUTMExtent()
-
-        self.image.translate(ll_x, ll_y)
-        self.image.scale(dx, dy)
-        self.setLimits(xMin=ll_x-dx*padding,
-                       xMax=ur_x+dx*padding,
-                       yMin=ll_y-dy*padding,
-                       yMax=ur_y+dy*padding)
 
 
 class QKiteQuadtreePlot(_QKitePlot):
@@ -128,7 +122,7 @@ class QKiteQuadtreePlot(_QKitePlot):
         self.quadtree.treeUpdate.subscribe(self.updateFocalPoints)
 
     def updateFocalPoints(self):
-        self.focal_points.setData(pos=self.quadtree.leaf_focal_points)
+        self.focal_points.setData(pos=self.quadtree.leaf_focal_points_utm)
 
 
 class QKiteToolComponents(QtGui.QWidget):
@@ -187,8 +181,8 @@ class QKiteToolComponents(QtGui.QWidget):
                 ('Mean value', '%0.4f' % num.nanmean(self.plot.data)),
                 ('Resolution px', '%d x %d' % (self.plot.data.shape[0],
                                                self.plot.data.shape[1])),
-                ('dx', '%d m' % self.plot.container.getUTMExtent()[-2]),
-                ('dy', '%d m' % self.plot.container.getUTMExtent()[-1]),
+                ('dx', '%d m' % self.plot.container.UTMExtent()[-2]),
+                ('dy', '%d m' % self.plot.container.UTMExtent()[-1]),
                 ]
             rstr = '<table>'
             for (metric, value) in table_content:
