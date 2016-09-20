@@ -159,8 +159,8 @@ satellite measurements
     def _createMeshedGrids(self):
         _utm_gridX, _utm_gridY = num.meshgrid(self.utm_x, self.utm_y)
         nan = num.isnan(self.displacement)
-        self._utm_gridX = num.ma.masked_array(_utm_gridX, nan)
-        self._utm_gridY = num.ma.masked_array(_utm_gridY, nan)
+        self._utm_gridX = num.ma.masked_array(_utm_gridX.T, nan)
+        self._utm_gridY = num.ma.masked_array(_utm_gridY.T, nan)
 
     @property
     def utm_gridX(self):
