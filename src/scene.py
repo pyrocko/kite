@@ -157,7 +157,10 @@ satellite measurements
     # Properties holding the meshed grids
 
     def _createMeshedGrids(self):
-        self._utm_gridX, self._utm_gridY = num.meshgrid(self.utm_y, self.lats)
+        _utm_gridX, _utm_gridY = num.meshgrid(self.utm_x, self.utm_y)
+        nan = num.isnan(self.displacement)
+        self._utm_gridX = num.ma.masked_array(_utm_gridX, nan)
+        self._utm_gridY = num.ma.masked_array(_utm_gridY, nan)
 
     @property
     def utm_gridX(self):
@@ -173,7 +176,8 @@ satellite measurements
             self._createMeshedGrids()
         return self._utm_gridY
 
-    def getUTMExtent(self):
+    @property_cached
+    def _UTMExtent(self):
         """Get the UTM extent and pixel spacing of the LOS Displacement grid
 
         :returns: ll_x, ll_y, ur_x, ur_y, dx, dy
@@ -186,8 +190,13 @@ satellite measurements
         dy = abs(ur_y - ll_y)/self.utm_y.size
         return ll_x, ll_y, ur_x, ur_y, dx, dy
 
-    def mapLocalToUTM(self, x, y):
-        return self.x[x], self.y[y]
+    def UTMExtent(self):
+        return self._UTMExtent
+
+    def _mapGridToUTM(self, x, y):
+        ll_x, ll_y, ur_x, ur_y, dx, dy = self.UTMExtent()
+        return (ll_x + (x * dx),
+                ll_y + (y * dy))
 
     @property_cached
     def quadtree(self):
