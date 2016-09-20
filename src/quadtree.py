@@ -1,8 +1,8 @@
 import numpy as num
 import logging
 import time
-import yaml
 from kite.meta import Subject, property_cached
+# from pyrock.util import clock
 
 
 class QuadNode(object):
@@ -16,6 +16,8 @@ class QuadNode(object):
 
         self._tree = tree
         self._scene = self._tree._scene
+        self._slice_x = slice(self.llx, self.llx+self.length)
+        self._slice_y = slice(self.lly, self.lly+self.length)
 
         self.children = None
 
@@ -50,7 +52,7 @@ class QuadNode(object):
         return num.nanstd(self.data - self.mean)
 
     @property_cached
-    def focal_point(self):
+    def _focal_point(self):
         w_x = num.linspace(0, 1., self.data.shape[0], endpoint=True)
         w_y = num.linspace(0, 1., self.data.shape[1], endpoint=True)
         w_X, w_Y = num.meshgrid(w_x, w_y, sparse=False, copy=False)
@@ -61,13 +63,24 @@ class QuadNode(object):
         return x, y
 
     @property_cached
+    def focal_point_utm(self):
+        return self._scene._mapGridToUTM(*self._focal_point)
+
+    @property_cached
     def bilinear_std(self):
         raise NotImplementedError('Bilinear fit not implemented')
 
     @property_cached
     def data(self):
-        return self._scene.displacement[self.llx:self.llx+self.length,
-                                        self.lly:self.lly+self.length]
+        return self._scene.displacement[self._slice_x, self._slice_y]
+
+    @property_cached
+    def utm_gridX(self):
+        return self._scene.utm_gridX[self._slice_x, self._slice_y]
+
+    @property_cached
+    def utm_gridY(self):
+        return self._scene.utm_gridY[self._slice_x, self._slice_y]
 
     def iterTree(self):
         yield self
@@ -286,7 +299,7 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_p(self):
-        dp = self._scene.getUTMExtent()[-1]
+        dp = self._scene.UTMExtent()[-1]
         return (int(self.tile_size_lim[0] / dp),
                 int(self.tile_size_lim[1] / dp))
 
@@ -319,8 +332,12 @@ class Quadtree(object):
         return num.array([l.median for l in self.leafs])
 
     @property
-    def leaf_focal_points(self):
-        return num.array([l.focal_point for l in self.leafs])
+    def _leaf_focal_points(self):
+        return num.array([l._focal_point for l in self.leafs])
+
+    @property
+    def leaf_focal_points_utm(self):
+        return num.array([l.focal_point_utm for l in self.leafs])
 
     @property
     def leaf_matrix_means(self):
@@ -360,13 +377,17 @@ class Quadtree(object):
             raise AssertionError('Could not init base nodes.')
         return self._base_nodes
 
-    def getUTMExtent(self):
-        return self._scene.getUTMExtent()
+    def UTMExtent(self):
+        return self._scene.UTMExtent()
 
     @property_cached
     def plot(self):
         from kite.plot2d import PlotQuadTree2D
         return PlotQuadTree2D(self)
+
+    @property_cached
+    def covariance(self):
+        return Covariance(self)
 
     def getStaticTarget(self):
         raise NotImplementedError
@@ -374,15 +395,6 @@ class Quadtree(object):
     @classmethod
     def load(cls, filename):
         raise NotImplementedError
-
-    def __repr__(self):
-        return '%s(split_method=%s, epsilon=%.4f, '\
-               'nan_allowed=%.4f, tile_size_lim=%s)' % (
-                self.__class__.__name__,
-                self.split_method,
-                self.epsilon,
-                self.nan_allowed or 1.,
-                self.tile_size_lim)
 
     def __str__(self):
         return '''
@@ -397,8 +409,128 @@ Quadtree for %s
                self.epsilon, self._epsilon_init, self._epsilon_limit,
                len(self.leafs), self.split_method)
 
+
+def _covarianceMatrixWorker(args):
+    ind, subsampl,\
+        node1_utmX, node1_utmY, node2_utmX, node2_utmY = args
+    node1_subsmpl = subsampl if not float(node1_utmX.size)/subsampl < 1.\
+        else int(num.floor(float(node1_utmX.size)*subsampl))
+    node2_subsmpl = subsampl if not float(node2_utmX.size)/subsampl < 1.\
+        else int(num.floor(float(node2_utmX.size)*subsampl))
+
+    node1_subsmpl = subsampl
+    node2_subsmpl = subsampl
+    dx = (node1_utmX.compressed()[::node1_subsmpl][:, num.newaxis] -
+          node2_utmX.compressed()[::node2_subsmpl][num.newaxis, :])
+    dy = (node1_utmY.compressed()[::node1_subsmpl][:, num.newaxis] -
+          node2_utmY.compressed()[::node2_subsmpl][num.newaxis, :])
+    d = num.median(num.sqrt(dx**2 + dy**2))
+    # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
+    return ind, d
+
+
+class Covariance(object):
+    """Analytical covariance of quadtree
+
+    The covariance is used as a weighting measure for the optimization process
+
+    :param sc: [description]
+    :type sc: [type]
+    :param for e in num.linspace(0.1, .00005, num: [description]
+    :type for e in num.linspace(0.1, .00005, num: [type]
+    """
+    def __init__(self, quadtree):
+        self._quadtree = quadtree
+
+        self.subsampling = 8
+        self.a = 7
+        self.b = 1.e-5
+        self.c = 1.
+
+        self._log = logging.getLogger('Covariance')
+
+        def clearCovariance():
+            self.matrix = None
+            self.matrix_fast = None
+        self._quadtree.treeUpdate.subscribe(clearCovariance)
+
+    @property_cached
+    def matrix(self):
+        return self._calcMatrix(method='matrix')
+
+    @property_cached
+    def matrix_fast(self):
+        return self._calcMatrix(method='focal')
+
+    def _calcMatrix(self, method='focal'):
+        nl = len(self._quadtree.leafs)
+        cov_matrix = num.zeros((nl, nl))
+
+        if method == 'focal':
+            for nx, ny in num.nditer(num.triu_indices_from(cov_matrix)):
+                node1 = self._quadtree.leafs[nx]
+                node2 = self._quadtree.leafs[ny]
+
+                cov = self._nodeMeanCovariance(node1, node2, method=method)
+                cov_matrix[(nx, ny), (ny, nx)] = cov
+
+        elif method == 'matrix':
+            from multiprocessing import Pool, cpu_count
+            from progressbar import ProgressBar, ETA, Bar
+            self._log.info('Building tasks...')
+            worker_chunksize = 48 * self.subsampling
+
+            tasks = []
+            for nx, ny in num.nditer(num.triu_indices_from(cov_matrix)):
+                node1 = self._quadtree.leafs[nx]
+                node2 = self._quadtree.leafs[ny]
+                tasks.append(((nx, ny), self.subsampling,
+                             node1.utm_gridX, node1.utm_gridY,
+                             node2.utm_gridX, node2.utm_gridY))
+            pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
+                                                           ETA()])
+
+            self._log.info('Multiprocessing covariance matrix'
+                           ' - subsampling %d on %d cpus' %
+                           (self.subsampling, cpu_count()))
+            pool = Pool(maxtasksperchild=worker_chunksize)
+            result = pool.imap_unordered(_covarianceMatrixWorker, tasks,
+                                         chunksize=worker_chunksize)
+            pool.close()
+            pbar.start()
+            for i, res in enumerate(result):
+                (nx, ny), d = res
+                cov_matrix[(nx, ny), (ny, nx)] = d
+                pbar.update(i)
+            pool.terminate()
+
+        return cov_matrix
+
+    @staticmethod
+    def _nodeDistanceFocal(node1, node2):
+        return num.sqrt((node1.focal_point_utm[0]
+                         - node2.focal_point_utm[0])**2 +
+                        (node1.focal_point_utm[1]
+                         - node2.focal_point_utm[1])**2)
+
+    def _nodeCovariance(self, node1, node2, method='focal'):
+        if method == 'matrix':
+            d = self._nodeDistanceMatrix(node1, node2)
+        elif method == 'focal':
+            d = self._nodeDistanceFocal(node1, node2)
+        d *= 1e6
+        return d*1e-6
+        return self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
+
+    def _nodeMeanCovariance(self, node1, node2, method='focal'):
+        if method == 'matrix':
+            return num.mean(self._nodeCovariance(node1, node2, method=method))
+        elif method == 'focal':
+            return self._nodeCovariance(node1, node2, method=method)
+
 __all__ = '''
 Quadtree
+Covariance
 '''.split()
 
 
