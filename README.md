@@ -9,6 +9,8 @@ git clone https://gitext.gfz-potsdam.de/isken/kite.git
 cd kite
 sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl
 sudo pip install .
+cd src/pyqtgraph
+sudo pip install .
 ```
 
 ## Example
