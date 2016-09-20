@@ -64,7 +64,10 @@ class QuadNode(object):
 
     @property_cached
     def focal_point_utm(self):
-        return self._scene._mapGridToUTM(*self._focal_point)
+        # return self._scene._mapGridToUTM(*self._focal_point)
+        x = num.median(self.utm_gridX.compressed())
+        y = num.median(self.utm_gridY.compressed())
+        return x, y
 
     @property_cached
     def bilinear_std(self):
@@ -410,20 +413,20 @@ Quadtree for %s
                len(self.leafs), self.split_method)
 
 
-def _covarianceMatrixWorker(args):
+def _leafMatrixCovarianceWorker(args):
     ind, subsampl,\
-        node1_utmX, node1_utmY, node2_utmX, node2_utmY = args
-    node1_subsmpl = subsampl if not float(node1_utmX.size)/subsampl < 1.\
-        else int(num.floor(float(node1_utmX.size)*subsampl))
-    node2_subsmpl = subsampl if not float(node2_utmX.size)/subsampl < 1.\
-        else int(num.floor(float(node2_utmX.size)*subsampl))
+        leaf1_utmX, leaf1_utmY, leaf2_utmX, leaf2_utmY = args
+    leaf1_subsmpl = subsampl if not float(leaf1_utmX.size)/subsampl < 1.\
+        else int(num.floor(float(leaf1_utmX.size)*subsampl))
+    leaf2_subsmpl = subsampl if not float(leaf2_utmX.size)/subsampl < 1.\
+        else int(num.floor(float(leaf2_utmX.size)*subsampl))
 
-    node1_subsmpl = subsampl
-    node2_subsmpl = subsampl
-    dx = (node1_utmX.compressed()[::node1_subsmpl][:, num.newaxis] -
-          node2_utmX.compressed()[::node2_subsmpl][num.newaxis, :])
-    dy = (node1_utmY.compressed()[::node1_subsmpl][:, num.newaxis] -
-          node2_utmY.compressed()[::node2_subsmpl][num.newaxis, :])
+    leaf1_subsmpl = subsampl
+    leaf2_subsmpl = subsampl
+    dx = (leaf1_utmX.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+          leaf2_utmX.compressed()[::leaf2_subsmpl][num.newaxis, :])
+    dy = (leaf1_utmY.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+          leaf2_utmY.compressed()[::leaf2_subsmpl][num.newaxis, :])
     d = num.median(num.sqrt(dx**2 + dy**2))
     # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
     return ind, d
@@ -434,25 +437,42 @@ class Covariance(object):
 
     The covariance is used as a weighting measure for the optimization process
 
-    :param sc: [description]
-    :type sc: [type]
-    :param for e in num.linspace(0.1, .00005, num: [description]
-    :type for e in num.linspace(0.1, .00005, num: [type]
+    We assume the analytical formula
+    `cov(dist) = c * exp(-dist/b) * cos(dist/a)`
+
+    where `dist` is
+    1) the distance between quadleaf focal points (`Covariance.matrix_focal`)
+    2) statistical distances between quadleaf pixels to pixel
+        (`Covariance.matrix`), subsampled accoring to `Covariance.subsampling`.
+
+    :param quadtree: Quadtree to work on
+    :type quadtree: `:python:kite.quadtree.Quadtree`
+    :param a: , defaults to 1.
+    :type a: number, optional
+    :param b: [description], defaults to 1.
+    :type b: number, optional
+    :param c: [description], defaults to 1.
+    :type c: number, optional
+    :param subsampling: [description], defaults to 8
+    :type subsampling: number, optional
     """
-    def __init__(self, quadtree):
+    def __init__(self, quadtree, a=1., b=1., c=1., subsampling=8):
         self._quadtree = quadtree
 
-        self.subsampling = 8
-        self.a = 7
-        self.b = 1.e-5
-        self.c = 1.
+        self.a = a
+        self.b = b
+        self.c = c
+        self.subsampling = subsampling
 
         self._log = logging.getLogger('Covariance')
 
+        self.covarianceUpdate = Subject()
+
         def clearCovariance():
             self.matrix = None
-            self.matrix_fast = None
+            self.matrix_focal_points = None
         self._quadtree.treeUpdate.subscribe(clearCovariance)
+        self.covarianceUpdate.subscribe(clearCovariance)
 
     @property_cached
     def matrix(self):
@@ -465,13 +485,14 @@ class Covariance(object):
     def _calcMatrix(self, method='focal'):
         nl = len(self._quadtree.leafs)
         cov_matrix = num.zeros((nl, nl))
+        cov_iter = num.nditer(num.triu_indices_from(cov_matrix))
 
         if method == 'focal':
-            for nx, ny in num.nditer(num.triu_indices_from(cov_matrix)):
-                node1 = self._quadtree.leafs[nx]
-                node2 = self._quadtree.leafs[ny]
+            for nx, ny in cov_iter:
+                leaf1 = self._quadtree.leafs[nx]
+                leaf2 = self._quadtree.leafs[ny]
 
-                cov = self._nodeMeanCovariance(node1, node2, method=method)
+                cov = self._leafFocalCovariance(leaf1, leaf2)
                 cov_matrix[(nx, ny), (ny, nx)] = cov
 
         elif method == 'matrix':
@@ -481,52 +502,42 @@ class Covariance(object):
             worker_chunksize = 48 * self.subsampling
 
             tasks = []
-            for nx, ny in num.nditer(num.triu_indices_from(cov_matrix)):
-                node1 = self._quadtree.leafs[nx]
-                node2 = self._quadtree.leafs[ny]
+            for nx, ny in cov_iter:
+                leaf1 = self._quadtree.leafs[nx]
+                leaf2 = self._quadtree.leafs[ny]
                 tasks.append(((nx, ny), self.subsampling,
-                             node1.utm_gridX, node1.utm_gridY,
-                             node2.utm_gridX, node2.utm_gridY))
+                             leaf1.utm_gridX, leaf1.utm_gridY,
+                             leaf2.utm_gridX, leaf2.utm_gridY))
             pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
                                                            ETA()])
 
             self._log.info('Multiprocessing covariance matrix'
-                           ' - subsampling %d on %d cpus' %
+                           ' - subsampling %dx on %d cpus' %
                            (self.subsampling, cpu_count()))
             pool = Pool(maxtasksperchild=worker_chunksize)
-            result = pool.imap_unordered(_covarianceMatrixWorker, tasks,
-                                         chunksize=worker_chunksize)
-            pool.close()
+            results = pool.imap_unordered(_leafMatrixCovarianceWorker, tasks,
+                                          chunksize=worker_chunksize)
             pbar.start()
-            for i, res in enumerate(result):
-                (nx, ny), d = res
+            for i, result in enumerate(results):
+                (nx, ny), d = result
                 cov_matrix[(nx, ny), (ny, nx)] = d
                 pbar.update(i)
-            pool.terminate()
+            pool.close()
+            pool.join()
 
         return cov_matrix
 
     @staticmethod
-    def _nodeDistanceFocal(node1, node2):
-        return num.sqrt((node1.focal_point_utm[0]
-                         - node2.focal_point_utm[0])**2 +
-                        (node1.focal_point_utm[1]
-                         - node2.focal_point_utm[1])**2)
+    def _leafFocalDistance(leaf1, leaf2):
+        return num.sqrt((leaf1.focal_point_utm[0]
+                         - leaf2.focal_point_utm[0])**2 +
+                        (leaf1.focal_point_utm[1]
+                         - leaf2.focal_point_utm[1])**2)
 
-    def _nodeCovariance(self, node1, node2, method='focal'):
-        if method == 'matrix':
-            d = self._nodeDistanceMatrix(node1, node2)
-        elif method == 'focal':
-            d = self._nodeDistanceFocal(node1, node2)
-        d *= 1e6
-        return d*1e-6
+    def _leafFocalCovariance(self, leaf1, leaf2):
+        d = self._leafFocalDistance(leaf1, leaf2)
+        return d
         return self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
-
-    def _nodeMeanCovariance(self, node1, node2, method='focal'):
-        if method == 'matrix':
-            return num.mean(self._nodeCovariance(node1, node2, method=method))
-        elif method == 'focal':
-            return self._nodeCovariance(node1, node2, method=method)
 
 __all__ = '''
 Quadtree
