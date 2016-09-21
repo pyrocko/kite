@@ -99,7 +99,7 @@ class Gamma(SceneIO):
         path = os.path.dirname(os.path.realpath(filename))
         try:
             return glob.glob('%s/*.gc_par' % path)[0]
-        except ValueError:
+        except IndexError:
             raise ImportError('Could not find Gamma parameter file (.gc_par)')
 
     def _parseParameterFile(self, parameter_file):
