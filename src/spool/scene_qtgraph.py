@@ -33,7 +33,6 @@ class _QKitePlot(pg.PlotWidget):
     def transformToUTM(self):
         padding = 100
         ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.UTMExtent()
-        print self.container.UTMExtent()
 
         self.image.translate(ll_x, ll_y)
         self.image.scale(dx, dy)
