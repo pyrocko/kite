@@ -5,9 +5,9 @@ Purpose of this framework is streamlining of InSAR processing routines for earth
 ## Requirements and Installation
 
 ```sh
+sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl
 git clone https://gitext.gfz-potsdam.de/isken/kite.git
 cd kite
-sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl
 sudo pip install .
 cd src/pyqtgraph
 sudo pip install .
