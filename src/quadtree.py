@@ -19,6 +19,7 @@ class QuadNode(object):
         self._slice_x = slice(self.llx, self.llx+self.length)
         self._slice_y = slice(self.lly, self.lly+self.length)
 
+        self.id = 'node_%d-%d-%d' % (self.llx, self.lly, self.length)
         self.children = None
 
     @property_cached
@@ -141,18 +142,6 @@ class QuadNode(object):
         self.llx, self.lly, self.length,\
             self.children, self._tree = state
 
-    def __repr__(self):
-        return '''QuadNode:
-  llx: %d px
-  lly: %d px
-  length: %d px
-  mean: %.4f
-  median: %.4f
-  std: %.4f
-  var: %.4f
-        ''' % (self.llx, self.lly, self.length, self.mean, self.median,
-               self.std, self.var)
-
 
 def createTreeParallel(args):
     base_node, func, epsilon_limit = args
@@ -161,8 +150,27 @@ def createTreeParallel(args):
 
 
 class Quadtree(object):
-    yaml_tag = '!Quadtree'
+    """Quadtree for simplifying InSAR displacement data held in
+    :python:`kite.Scene`
 
+    Post-earthquake InSAR displacement scenes can hold a vast amount of data,
+    which is unsuiteable for use with modelling code. By simplifying the data
+    systematically through a parametrized quadtree we can reduce the dataset to
+    significant displacements and have high-resolution where it matters and
+    lower resolution at regions with less or constant deformation.
+
+    :param epsilon: %0.3f: [description]
+    :type epsilon: %0.3f: [type]
+    :param epsilon_init: %0.3f: [description]
+    :type epsilon_init: %0.3f: [type]
+    :param epsilon_limit: %0.3f: [description]
+    :type epsilon_limit: %0.3f: [type]
+    :param nleafs: %d: [description]
+    :type nleafs: %d: [type]
+    :param split_method: %s: [description]
+    :type split_method: %s: [type]
+    :param
+    """
     def __init__(self, scene, epsilon=None):
         self._split_methods = {
             'mean_std': ['Std around mean', lambda node: node.mean_std],
@@ -221,9 +229,7 @@ class Quadtree(object):
         t0 = time.time()
         if parallel:
             from pathos.pools import ProcessPool as Pool
-            '''
-            Pathos uses dill instead of pickle, this works w lambdas
-            '''
+            # Pathos uses dill instead of pickle, this works w lambdas
 
             pool = Pool()
             self._log.info('Utilizing %d cpu cores' % pool.nodes)
@@ -308,11 +314,11 @@ class Quadtree(object):
 
     @property
     def nnodes(self):
-        i = 0
+        nnodes = 0
         for b in self._base_nodes:
             for n in b.iterTree():
-                i += 1
-        return i
+                nnodes += 1
+        return nnodes
 
     @property_cached
     def leafs(self):
@@ -414,6 +420,17 @@ Quadtree for %s
 
 
 def _leafMatrixCovarianceWorker(args):
+    """Worker function serving :python:`multiprocessing.Pool`
+
+    :param args:
+        `(ind, subsampl, leaf1_utmX, leaf1_utmY, leaf2_utmX, leaf2_utmY)`
+        Where `ind` is tuple of matrix indices `(nx, ny)`, `subsampl`
+        subsampling factor `leaf?_utm?` are 2-dim masekd arrays holding UTM
+        data from :python:`kite.quadtree.QuadNode`.
+    :type args: [tuple]
+    :returns: ((nx, ny), covariance)
+    :rtype: {[tuple]}
+    """
     ind, subsampl,\
         leaf1_utmX, leaf1_utmY, leaf2_utmX, leaf2_utmY = args
     leaf1_subsmpl = subsampl if not float(leaf1_utmX.size)/subsampl < 1.\
@@ -423,22 +440,25 @@ def _leafMatrixCovarianceWorker(args):
 
     leaf1_subsmpl = subsampl
     leaf2_subsmpl = subsampl
-    dx = (leaf1_utmX.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-          leaf2_utmX.compressed()[::leaf2_subsmpl][num.newaxis, :])
-    dy = (leaf1_utmY.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-          leaf2_utmY.compressed()[::leaf2_subsmpl][num.newaxis, :])
-    d = num.median(num.sqrt(dx**2 + dy**2))
+    # Looks ugly but re we want to conserve memory
+    d = num.median(num.sqrt(
+        (leaf1_utmX.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_utmX.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
+        (leaf1_utmY.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_utmY.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
+    cov = d
     # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
-    return ind, d
+    return ind, cov
 
 
 class Covariance(object):
-    """Analytical covariance of quadtree
+    """Analytical covariance used for weighting of quadtree.
 
-    The covariance is used as a weighting measure for the optimization process
+    The covariance between :python:`kite.quadtree.Quadtree` leafs is used as a
+    weighting measure for the optimization process.
 
     We assume the analytical formula
-    `cov(dist) = c * exp(-dist/b) * cos(dist/a)`
+        `cov(dist) = c * exp(-dist/b) [* cos(dist/a)]`
 
     where `dist` is
     1) the distance between quadleaf focal points (`Covariance.matrix_focal`)
@@ -447,16 +467,17 @@ class Covariance(object):
 
     :param quadtree: Quadtree to work on
     :type quadtree: `:python:kite.quadtree.Quadtree`
-    :param a: , defaults to 1.
+    :param a: scaling the cosinus term. `None` disabled this part of the term,
+        defaults to None.
     :type a: number, optional
     :param b: [description], defaults to 1.
     :type b: number, optional
     :param c: [description], defaults to 1.
     :type c: number, optional
-    :param subsampling: [description], defaults to 8
+    :param subsampling: Subsampling of distances, defaults to 8
     :type subsampling: number, optional
     """
-    def __init__(self, quadtree, a=1., b=1., c=1., subsampling=8):
+    def __init__(self, quadtree, a=None, b=1., c=1., subsampling=8):
         self._quadtree = quadtree
 
         self.a = a
@@ -464,7 +485,7 @@ class Covariance(object):
         self.c = c
         self.subsampling = subsampling
 
-        self._log = logging.getLogger('Covariance')
+        self._leaf_mapping = None
 
         self.covarianceUpdate = Subject()
 
@@ -474,23 +495,65 @@ class Covariance(object):
         self._quadtree.treeUpdate.subscribe(clearCovariance)
         self.covarianceUpdate.subscribe(clearCovariance)
 
+        self._log = logging.getLogger('Covariance')
+
+    def __call__(self, *args, **kwargs):
+        return self.getWeight(*args, **kwargs)
+
     @property_cached
     def matrix(self):
+        """ Covariance matrix calculated from sub-distances pairs from quadtree
+        node-to-node, subsampled by `Covariance.subsampling`
+        """
         return self._calcMatrix(method='matrix')
 
     @property_cached
-    def matrix_fast(self):
+    def matrix_focal(self):
+        """ This matrix uses distances between focal points. Fast but
+        statistically not reliable method. For final approach use
+        `Covariance.matrix` """
         return self._calcMatrix(method='focal')
 
+    def _getLeafs(self, nx, ny):
+        """Helper function returning appropriate QuadNodes and for maintaining
+        the internal mapping
+
+        :param nx: matrix x position
+        :type nx: int
+        :param ny: matrix y position
+        :type ny: int
+        :returns: tuple of `:python:kite.quadtree.QuadNode` for nx and ny
+        :rtype: {[tuple]}
+        """
+        leaf1 = self._quadtree.leafs[nx]
+        leaf2 = self._quadtree.leafs[ny]
+
+        self._leaf_mapping[leaf1.id] = nx
+        self._leaf_mapping[leaf2.id] = ny
+
+        return leaf1, leaf2
+
     def _calcMatrix(self, method='focal'):
+        """Calculates the covariance matrix
+
+        :param method: Either `'focal'` point distances are used - this is
+        quick but statistically not reliable.
+        Or `'matrix'`, where the full quadtree pixel distances matrices are
+        calculated, subsampled as set in `Covariance.subsampling`.
+        , defaults to 'focal'
+        :type method: str, optional
+        :returns: Covariance matrix
+        :rtype: {:python:numpy.ndarray}
+        """
         nl = len(self._quadtree.leafs)
         cov_matrix = num.zeros((nl, nl))
         cov_iter = num.nditer(num.triu_indices_from(cov_matrix))
 
+        self._leaf_mapping = {}
+
         if method == 'focal':
             for nx, ny in cov_iter:
-                leaf1 = self._quadtree.leafs[nx]
-                leaf2 = self._quadtree.leafs[ny]
+                leaf1, leaf2 = self._getLeafs(nx, ny)
 
                 cov = self._leafFocalCovariance(leaf1, leaf2)
                 cov_matrix[(nx, ny), (ny, nx)] = cov
@@ -498,31 +561,32 @@ class Covariance(object):
         elif method == 'matrix':
             from multiprocessing import Pool, cpu_count
             from progressbar import ProgressBar, ETA, Bar
-            self._log.info('Building tasks...')
+
+            self._log.info('Preprocessing covariance matrix'
+                           ' - subsampling %dx on %d cpus' %
+                           (self.subsampling, cpu_count()))
             worker_chunksize = 48 * self.subsampling
 
             tasks = []
             for nx, ny in cov_iter:
-                leaf1 = self._quadtree.leafs[nx]
-                leaf2 = self._quadtree.leafs[ny]
+                leaf1, leaf2 = self._getLeafs(nx, ny)
+
                 tasks.append(((nx, ny), self.subsampling,
                              leaf1.utm_gridX, leaf1.utm_gridY,
                              leaf2.utm_gridX, leaf2.utm_gridY))
-            pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
-                                                           ETA()])
 
-            self._log.info('Multiprocessing covariance matrix'
-                           ' - subsampling %dx on %d cpus' %
-                           (self.subsampling, cpu_count()))
             pool = Pool(maxtasksperchild=worker_chunksize)
             results = pool.imap_unordered(_leafMatrixCovarianceWorker, tasks,
                                           chunksize=worker_chunksize)
-            pbar.start()
+            pool.close()
+
+            pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
+                                                           ETA()]).start()
             for i, result in enumerate(results):
                 (nx, ny), d = result
                 cov_matrix[(nx, ny), (ny, nx)] = d
                 pbar.update(i)
-            pool.close()
+            print "Joining pool..."
             pool.join()
 
         return cov_matrix
@@ -538,6 +602,28 @@ class Covariance(object):
         d = self._leafFocalDistance(leaf1, leaf2)
         return d
         return self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
+
+    def _getMapping(self, leaf1, leaf2):
+        if isinstance(leaf1, QuadNode):
+            leaf1 = leaf1.id
+        if isinstance(leaf2, QuadNode):
+            leaf2 = leaf2.id
+        try:
+            return self._leaf_mapping[leaf1], self._leaf_mapping[leaf2]
+        except KeyError as e:
+            raise KeyError('Unknown quadtree leaf with id %s' % e)
+
+    def getDistance(self, leaf1, leaf2):
+        """Get the distances between `leaf1` and `leaf2` in `m`
+
+        :param leaf1: Leaf 1
+        :type leaf1: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
+        :param leaf2: Leaf 2
+        :type leaf2: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
+        :returns: Distance between `leaf1` and `leaf2`
+        :rtype: {float}
+        """
+        return self.matrix[self._getMapping(leaf1, leaf2)]
 
 __all__ = '''
 Quadtree
