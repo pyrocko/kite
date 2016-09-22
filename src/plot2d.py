@@ -97,8 +97,8 @@ class Plot2D(Subject):
         self.setColormap(kwargs.get('cmap', 'RdBu'))
         self.colormapAdjust()
 
-        self.ax.set_xlim((0, self._scene.utm_x.size))
-        self.ax.set_ylim((0, self._scene.utm_y.size))
+        self.ax.set_xlim((0, self._scene.utm.x.size))
+        self.ax.set_ylim((0, self._scene.utm.y.size))
         self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
 

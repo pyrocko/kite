@@ -80,9 +80,9 @@ class Matlab(SceneIO):
                 elif 'ig_' in mat_k:
                     self.data_items['displacement'] = mat[mat_k]
                 elif 'xx' in mat_k:
-                    self.data_items['utm_x'] = mat[mat_k]
+                    self.data_items['utm_x'] = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
-                    self.data_items['utm_y'] = mat[mat_k]
+                    self.data_items['utm_y'] = mat[mat_k].flatten()
 
         return self.data_items
 
