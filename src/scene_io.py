@@ -48,7 +48,7 @@ class SceneIO(object):
 class Matlab(SceneIO):
     """Reads Matlab .mat files into :py:class:`kite.scene.Scene`
 
-    Variable naming convenctions in .mat variables
+    Variable naming conventions in .mat variables
     ============ ==================
     Property     .mat name contains
     ============ ==================
@@ -90,7 +90,7 @@ class Matlab(SceneIO):
 class Gamma(SceneIO):
     """Reads Gamma binary files
 
-    [description]
+    A `.par` file is expected in the import folder
     """
     def _getParameterFile(self, filename):
         import os
