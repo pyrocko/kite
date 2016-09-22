@@ -254,7 +254,7 @@ class Scene(guts.Object):
     @property_cached
     def quadtree(self):
         from kite.quadtree import Quadtree
-        return Quadtree(self)
+        return Quadtree(scene=self)
 
     @property_cached
     def plot(self):

@@ -2,7 +2,6 @@ import numpy as num
 import logging
 from pyrocko import guts
 from kite.meta import Subject, property_cached
-from quadtree import QuadNode
 
 
 def _leafMatrixCovarianceWorker(args):
@@ -53,47 +52,37 @@ class Covariance(guts.Object):
 
     :param quadtree: Quadtree to work on
     :type quadtree: `:python:kite.quadtree.Quadtree`
-    :param a: scaling the cosinus term. `None` disabled this part of the term,
-        defaults to None.
-    :type a: number, optional
-    :param b: [description], defaults to 1.
-    :type b: number, optional
-    :param c: [description], defaults to 1.
-    :type c: number, optional
-    :param subsampling: Subsampling of distances, defaults to 8
-    :type subsampling: number, optional
-    """
+   """
     a = guts.Float.T(default=1.,
                      help='Weight factor a')
     b = guts.Float.T(default=1.,
                      help='Weight factor b')
     c = guts.Float.T(default=1.,
                      help='Weight factor c')
-    subsampling = guts.Int(default=8,
-                           help='Subsampling of distance matrices')
+    subsampling = guts.Int.T(default=8,
+                             help='Subsampling of distance matrices')
 
-    def __init__(self, quadtree, a=None, b=1., c=1., subsampling=8):
-        self._quadtree = quadtree
-
-        self.a = a
-        self.b = b
-        self.c = c
-        self.subsampling = subsampling
-
-        self._leaf_mapping = None
-
+    def __init__(self, *args, **kwargs):
+        guts.Object.__init__(self)
         self.covarianceUpdate = Subject()
+        self.covarianceUpdate.subscribe(self._clearCovariance)
 
-        def clearCovariance():
-            self.matrix = None
-            self.matrix_focal_points = None
-        self._quadtree.treeUpdate.subscribe(clearCovariance)
-        self.covarianceUpdate.subscribe(clearCovariance)
+        if 'quadtree' in kwargs.keys():
+            self.setQuadtree(kwargs.pop('quadtree'))
+        self._leaf_mapping = None
 
         self._log = logging.getLogger('Covariance')
 
     def __call__(self, *args, **kwargs):
-        return self.getWeight(*args, **kwargs)
+        return self.getDistance(*args, **kwargs)
+
+    def setQuadtree(self, quadtree):
+        self._quadtree = quadtree
+        self._quadtree.treeUpdate.subscribe(self._clearCovariance)
+
+    def _clearCovariance(self):
+        self.matrix = None
+        self.matrix_focal_points = None
 
     @property_cached
     def matrix(self):
@@ -199,9 +188,9 @@ class Covariance(guts.Object):
         return self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
 
     def _getMapping(self, leaf1, leaf2):
-        if isinstance(leaf1, QuadNode):
+        if not isinstance(leaf1, str):
             leaf1 = leaf1.id
-        if isinstance(leaf2, QuadNode):
+        if not isinstance(leaf2, str):
             leaf2 = leaf2.id
         try:
             return self._leaf_mapping[leaf1], self._leaf_mapping[leaf2]
