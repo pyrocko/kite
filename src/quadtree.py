@@ -19,7 +19,7 @@ class QuadNode(object):
         self._slice_x = slice(self.llx, self.llx+self.length)
         self._slice_y = slice(self.lly, self.lly+self.length)
 
-        self.id = 'node_%d-%d-%d' % (self.llx, self.lly, self.length)
+        self.id = 'node_%d-%d_%d' % (self.llx, self.lly, self.length)
         self.children = None
 
     @property_cached
@@ -65,9 +65,9 @@ class QuadNode(object):
 
     @property_cached
     def focal_point_utm(self):
-        # return self._scene._mapGridToUTM(*self._focal_point)
-        x = num.median(self.utm_gridX.compressed())
-        y = num.median(self.utm_gridY.compressed())
+        self._scene.utm._mapGridXY(*self._focal_point)
+        x = num.median(self.utm_grid_x.compressed())
+        y = num.median(self.utm_grid_y.compressed())
         return x, y
 
     @property_cached
@@ -79,12 +79,12 @@ class QuadNode(object):
         return self._scene.displacement[self._slice_x, self._slice_y]
 
     @property_cached
-    def utm_gridX(self):
-        return self._scene.utm_gridX[self._slice_x, self._slice_y]
+    def utm_grid_x(self):
+        return self._scene.utm.grid_x[self._slice_x, self._slice_y]
 
     @property_cached
-    def utm_gridY(self):
-        return self._scene.utm_gridY[self._slice_x, self._slice_y]
+    def utm_grid_y(self):
+        return self._scene.utm.grid_y[self._slice_x, self._slice_y]
 
     def iterTree(self):
         yield self
@@ -117,13 +117,14 @@ class QuadNode(object):
         if self.length == 1:
             yield None
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
-            _q = QuadNode(self._tree,
-                          self.llx + self.length/2 * _nx,
-                          self.lly + self.length/2 * _ny,
-                          self.length/2)
-            if _q.data.size == 0 or num.isnan(_q.data).all():
+            n = QuadNode(self._tree,
+                         self.llx + self.length/2 * _nx,
+                         self.lly + self.length/2 * _ny,
+                         self.length/2)
+            if n.data.size == 0 or num.all(num.isnan(n.data)):
+                n = None
                 continue
-            yield _q
+            yield n
 
     def createTree(self, eval_func, epsilon_limit):
         if eval_func(self) > epsilon_limit:  # or\
@@ -184,6 +185,7 @@ class Quadtree(object):
 
         self._scene = scene
         self._data = self._scene.displacement
+        self.utm = self._scene.utm
 
         self._epsilon = None
         self._nan_allowed = None
@@ -308,7 +310,7 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_p(self):
-        dp = self._scene.UTMExtent()[-1]
+        dp = self._scene.utm.extent()[-1]
         return (int(self.tile_size_lim[0] / dp),
                 int(self.tile_size_lim[1] / dp))
 
@@ -373,7 +375,7 @@ class Quadtree(object):
         self._base_nodes = []
         init_length = num.power(2,
                                 num.ceil(num.log(num.min(self._data.shape)) /
-                                         num.log(2)))/4
+                                         num.log(2)))
         nx, ny = num.ceil(num.array(self._data.shape)/init_length)
 
         for ix in xrange(int(nx)):
@@ -385,9 +387,6 @@ class Quadtree(object):
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
         return self._base_nodes
-
-    def UTMExtent(self):
-        return self._scene.UTMExtent()
 
     @property_cached
     def plot(self):
@@ -572,8 +571,8 @@ class Covariance(object):
                 leaf1, leaf2 = self._getLeafs(nx, ny)
 
                 tasks.append(((nx, ny), self.subsampling,
-                             leaf1.utm_gridX, leaf1.utm_gridY,
-                             leaf2.utm_gridX, leaf2.utm_gridY))
+                             leaf1.utm_grid_x, leaf1.utm_grid_y,
+                             leaf2.utm_grid_x, leaf2.utm_grid_y))
 
             pool = Pool(maxtasksperchild=worker_chunksize)
             results = pool.imap_unordered(_leafMatrixCovarianceWorker, tasks,
