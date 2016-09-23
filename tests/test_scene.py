@@ -1,17 +1,16 @@
 #!/bin/python
 import unittest
+import os.path
 import numpy as num
 from kite.scene import Scene, SceneSynTest
-from kite.quadtree import Quadtree
 
 
 class TestGaussScene(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        unittest.TestCase.__init__(self, *args, **kwargs)
-        self.sc = SceneSynTest.createGauss()
+    def setUp(self):
+        self.sc = SceneSynTest()
 
     def test_quadtree(self):
-        qt = Quadtree(self.sc, .1)
+        qt = self.sc.quadtree
         for e in num.linspace(0.118, .2, num=30):
             qt.epsilon = e
 
@@ -24,20 +23,46 @@ class TestGaussScene(unittest.TestCase):
         for s in num.linspace(200, 4000, num=30):
             qt.tile_size_lim = (0, 5000)
 
+    def test_covariance(self):
+        self.sc.quadtree.epsilon = .118
+        self.sc.quadtree.covariance.subsampling = 24
+        cov = self.sc.quadtree.covariance
 
-class TestMatScene(unittest.TestCase):
-    def __init__(self, *args, **kwargs):
-        unittest.TestCase.__init__(self, *args, **kwargs)
+        matrix_focal = cov.matrix_focal
+        matrix = cov.matrix
+        num.testing.assert_allclose(matrix, matrix_focal,
+                                    rtol=1e-7, atol=2e3, verbose=True)
 
-        _file = 'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat'
+    def test_io(self):
+        import tempfile
+        import shutil
 
-        self.sc = Scene.load(_file)
-        self.sc.utm_x *= 1000
-        self.sc.utm_y *= 1000
-        self.sc.meta.title = 'Matlab Input - Myanmar 2011-02-14'
+        tmp_dir = tempfile.mkdtemp()
+        try:
+            self.sc.save(os.path.join(tmp_dir,
+                         self.__class__.__name__))
+            load_scene = Scene.load(os.path.join(tmp_dir,
+                                                 self.__class__.__name__))
+            del load_scene
+        finally:
+            pass
+            shutil.rmtree(tmp_dir)
+
+
+class TestMatlabScene(unittest.TestCase):
+
+    def setUp(self):
+        file = os.path.join(
+         os.path.abspath(os.path.dirname(__file__)),
+         'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+
+        self.sc = Scene.import_file(file)
+        self.sc.utm.x *= 1000
+        self.sc.utm.y *= 1000
+        self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
 
     def test_quadtree(self):
-        qt = Quadtree(self.sc, .1)
+        qt = self.sc.quadtree
         for e in num.linspace(0.118, .3, num=30):
             qt.epsilon = e
 
