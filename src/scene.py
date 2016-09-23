@@ -20,6 +20,10 @@ class UserIOWarning(UserWarning):
     pass
 
 
+class SceneError(Exception):
+    pass
+
+
 class UTMFrameConfig(guts.Object):
     zone = guts.String.T(default='None',
                          help='UTM zone of scene')
@@ -258,6 +262,8 @@ class Scene(object):
         return PlotDisplacement2D(self)
 
     def spool(self):
+        if self.displacement is None:
+            raise SceneError('Can not display an empty scene.')
         from kite.spool import Spool
         return Spool(scene=self)
 
