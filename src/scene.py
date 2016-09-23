@@ -2,11 +2,10 @@
 import warnings
 import logging
 import numpy as num
+
 from pyrocko import guts
-from pyrocko.guts_array import Array
+from kite.quadtree import QuadtreeConfig
 from kite.meta import Subject, property_cached
-
-
 logging.basicConfig(level=20)
 
 
@@ -21,57 +20,57 @@ class UserIOWarning(UserWarning):
     pass
 
 
-class LOSUnitVectors(object):
-    def __init__(self, scene):
-        self._scene = scene
-        self._scene.sceneChanged.subscribe(self._flush_vectors)
-
-    def _flush_vectors(self):
-        self.unitE = None
-        self.unitN = None
-        self.unitU = None
-
-    @property_cached
-    def unitE(self):
-        return num.cos(self._scene.phi) * num.cos(self._scene.theta)
-
-    @property_cached
-    def unitN(self):
-        return num.sin(self._scene.phi) * num.cos(self._scene.theta)
-
-    @property_cached
-    def unitU(self):
-        return num.sin(self._scene.theta)
-
-    @property_cached
-    def degTheta(self):
-        return num.rad2deg(self._scene.theta)
-
-    @property_cached
-    def degPhi(self):
-        return num.rad2deg(self._scene.phi)
-
-
-class UTMFrame(guts.Object):
-    """UTM frame holding geographical references for :python:`kite.Scene`
-    """
+class UTMFrameConfig(guts.Object):
     zone = guts.String.T(default='None',
                          help='UTM zone of scene')
-    x__ = Array.T(default=num.array([]),
-                  serialize_as='base64', serialize_dtype=num.float64,
-                  help='UTM coordinate vector along x-axis of scene grid')
-    y__ = Array.T(default=num.array([]),
-                  serialize_as='base64', serialize_dtype=num.float64,
-                  help='UTM coordinate vector along y-axis of scene grid')
+    llx = guts.Float.T(default=0.,
+                       help='Scene UTM x-coordinate of lower left corner')
+    lly = guts.Float.T(default=0.,
+                       help='Scene UTM y-coordinate of lower left corner')
+    dx = guts.Float.T(default=0.,
+                      help='Scene pixel spacing in x direction (meter)')
+    dy = guts.Float.T(default=0.,
+                      help='Scene pixel spacing in y direction (meter)')
 
-    def __init__(self, *args, **kwargs):
-        guts.Object.__init__(self)
-        self._scene = kwargs.pop('scene', None)
-        self._x = kwargs.pop('x', None)
-        self._y = kwargs.pop('y', None)
 
-    def setScene(self, scene):
+class UTMFrame(object):
+    """UTM frame holding geographical references for :python:`kite.Scene`
+    """
+    def __init__(self, scene, config=UTMFrameConfig()):
         self._scene = scene
+        self.config = config
+        self._scene.sceneChanged.subscribe(self._parseConfig)
+
+        self._x = None
+        self._y = None
+
+    def _parseConfig(self):
+        if (self.config.llx == 0. and self.config.lly == 0. and
+                self.config.dx == 0. and self.config.dy == 0.) or\
+                self._scene.displacement is None:
+            return
+        self._x = self.config.llx +\
+            num.arange(self._scene.displacement.shape[0]) * self.config.dx
+        self._y = self.config.lly +\
+            num.arange(self._scene.displacement.shape[1]) * self.config.dy
+        return
+
+    def _updateExtent(self):
+        if self.x is None or self.y is None:
+            return
+        llx, lly = self.x.min(), self.y.min()
+        urx, ury = self.x.max(), self.y.max()
+
+        self.config.llx = llx
+        self.config.dx = abs(urx - llx)/self.x.size
+        self.config.lly = lly
+        self.config.dy = abs(ury - lly)/self.y.size
+        self.config.regularize()
+
+        self.grid_x = None
+        self.grid_y = None
+        self._extent = None
+        return
 
     @property
     def x(self):
@@ -80,9 +79,9 @@ class UTMFrame(guts.Object):
     @x.setter
     def x(self, value):
         if isinstance(value, float):
-            value = num.repeat(value, 100)
+            value = num.repeat(value, 100)  # Fix this!
         self._x = num.sort(value)
-        self.grid_x = None
+        self._updateExtent()
 
     @property
     def y(self):
@@ -93,7 +92,7 @@ class UTMFrame(guts.Object):
         if isinstance(value, float):
             value = num.repeat(value, 100)
         self._y = num.sort(value)
-        self.grid_y = None
+        self._updateExtent()
 
     @property_cached
     def grid_x(self):
@@ -113,12 +112,10 @@ class UTMFrame(guts.Object):
 
     @property_cached
     def _extent(self):
-        ll_x, ll_y = self.x.min(), self.y.min()
-        ur_x, ur_y = self.x.max(), self.y.max()
+        urx, ury = self.x.max(), self.y.max()
 
-        dx = abs(ur_x - ll_x)/self.x.size
-        dy = abs(ur_y - ll_y)/self.y.size
-        return ll_x, ll_y, ur_x, ur_y, dx, dy
+        return (self.config.llx, self.config.lly, urx, ury,
+                self.config.dx, self.config.dy)
 
     def extent(self):
         """Get the UTM extent and pixel spacing of the LOS Displacement grid
@@ -139,12 +136,18 @@ class MetaSatellite(guts.Object):
     scene_title = guts.String.T(default='Unnamed Scene')
     scene_id = guts.String.T(default='INSAR')
     scene_view = guts.String.T(default='ASCENDING')
-    date_first_view = guts.Timestamp.T(default=1475107200.0)
-    date_second_view = guts.Timestamp.T(default=1474416000.0)
+    date_first_view = guts.Timestamp.T(default=0.0)
+    date_second_view = guts.Timestamp.T(default=86400.0)
     satellite_name = guts.String.T(default='Unnamed Satellite')
 
 
-class Scene(guts.Object):
+class SceneConfig(guts.Object):
+    meta = MetaSatellite.T(default=MetaSatellite())
+    utm = UTMFrameConfig.T(default=UTMFrameConfig())
+    quadtree = QuadtreeConfig.T(default=QuadtreeConfig())
+
+
+class Scene(object):
     """Scene holding satellite LOS ground dispacements measurements
 
     :param displacement: NxM matrix of displacement in LOS
@@ -181,24 +184,17 @@ class Scene(guts.Object):
     :param quadtree: Quadtree for the scene
     :type quadtree: :py:class:`kite.quadtree.Quadtree`
     """
-    meta = MetaSatellite.T(optional=True)
-    utm = UTMFrame.T(optional=True)
-
-    def __init__(self, **kwargs):
-        guts.Object.__init__(self)
+    def __init__(self, config=SceneConfig()):
+        self.config = config
+        self.meta = self.config.meta
+        self._log = logging.getLogger('Scene/%s' % self.meta.scene_title)
         self.sceneChanged = Subject()
 
         self._displacement = None
         self._phi = None
         self._theta = None
-        self.meta = kwargs.get('meta', MetaSatellite())
-        self.utm = kwargs.get('utm', UTMFrame(scene=self))
         self.los = LOSUnitVectors(scene=self)
-
-        if 'utm' in kwargs.keys():
-            self.utm.setScene(self)
-
-        self._log = logging.getLogger('Scene/%s' % self.meta.scene_title)
+        self.utm = UTMFrame(scene=self, config=self.config.utm)
 
     @property
     def displacement(self):
@@ -254,7 +250,7 @@ class Scene(guts.Object):
     @property_cached
     def quadtree(self):
         from kite.quadtree import Quadtree
-        return Quadtree(scene=self)
+        return Quadtree(scene=self, config=self.config.quadtree)
 
     @property_cached
     def plot(self):
@@ -300,7 +296,6 @@ class Scene(guts.Object):
         from kite import scene_io
 
         scene = cls()
-
         data = None
 
         for mod in scene_io.__all__:
@@ -321,8 +316,8 @@ class Scene(guts.Object):
 
         return scene
 
-    def dump(self, scene_name=None):
-        """Dump kite scene to file structure named `scene_name`
+    def save(self, scene_name=None):
+        """Save kite scene to file structure named `scene_name`
 
         Saves the current scene meta information and UTM frame to a YAML
         (`.yml`) file. Numerical data (`Scene.displacement`,
@@ -343,15 +338,14 @@ class Scene(guts.Object):
             'phi': 'phi',
         }
 
-        guts.Object.dump(self,
-                         filename='%s.yml' % filename,
-                         header='Kite YAML Config')
+        self.config.dump(filename='%s.yml' % filename,
+                         header='KiteScene YAML Config')
         for comp, ext in components.iteritems():
             num.save(file='%s.%s' % (filename, ext),
                      arr=self.__getattribute__(comp))
 
-    @staticmethod
-    def load(scene_name):
+    @classmethod
+    def load(cls, scene_name):
         """Load a kite scene from `scene_name.[yml,dsp,tht,phi]` structure
 
         :param scene_name: Filenames the scene data is saved under
@@ -359,18 +353,20 @@ class Scene(guts.Object):
         :returns: Scene object from data resources
         :rtype: {:python:`kite.Scene`}
         """
+
         success = False
         components = {
             'displacement': 'dsp',
             'theta': 'tht',
             'phi': 'phi',
         }
+
         try:
-            scene = guts.load(filename='%s.yml' % scene_name)
+            scene = cls()
+            scene.config = guts.load(filename='%s.yml' % scene_name)
             success = True
         except IOError:
-            scene = Scene()
-            warnings.warn('Could not load %s.yml' % scene_name, UserIOWarning)
+            raise UserIOWarning('Could not load %s.yml' % scene_name)
 
         for comp, ext in components.iteritems():
             try:
@@ -385,6 +381,37 @@ class Scene(guts.Object):
             raise IOError('Could not load kite scene container %s'
                           % scene_name)
         return scene
+
+
+class LOSUnitVectors(object):
+    def __init__(self, scene):
+        self._scene = scene
+        self._scene.sceneChanged.subscribe(self._flush_vectors)
+
+    def _flush_vectors(self):
+        self.unitE = None
+        self.unitN = None
+        self.unitU = None
+
+    @property_cached
+    def unitE(self):
+        return num.cos(self._scene.phi) * num.cos(self._scene.theta)
+
+    @property_cached
+    def unitN(self):
+        return num.sin(self._scene.phi) * num.cos(self._scene.theta)
+
+    @property_cached
+    def unitU(self):
+        return num.sin(self._scene.theta)
+
+    @property_cached
+    def degTheta(self):
+        return num.rad2deg(self._scene.theta)
+
+    @property_cached
+    def degPhi(self):
+        return num.rad2deg(self._scene.phi)
 
 
 class SceneSynTest(Scene):
@@ -446,9 +473,7 @@ class SceneSynTest(Scene):
         return gauss_anomaly
 
 
-__all__ = """
-Scene
-""".split()
+__all__ = ['Scene', 'SceneConfig']
 
 
 if __name__ == '__main__':

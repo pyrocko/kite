@@ -348,7 +348,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         for method in self.quadtree._split_methods.keys():
             btn = QtGui.QRadioButton()
             btn.setText(self.quadtree._split_methods[method][0])
-            btn.setChecked(method == self.quadtree.split_method)
+            btn.setChecked(method == self.quadtree.config.split_method)
             btn.clicked.connect(partial(changeMethod, method))
 
             layout.addWidget(btn)
