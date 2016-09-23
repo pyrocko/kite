@@ -45,7 +45,7 @@ class CovarianceConfig(guts.Object):
                      help='Weight factor c - covariance scaling')
     variance = guts.Float.T(default=9999.,
                             help='Node variance')
-    distance_cutoff = guts.Int.T(default=99e9,
+    distance_cutoff = guts.Int.T(default=-9999,
                                  help='Cutoff distance for covariance weight '
                                       'matrix -> cov(d>distance_cutoff)=0')
     subsampling = guts.Int.T(default=8,
