@@ -208,7 +208,7 @@ class Quadtree(object):
         self.splitMethodChanged = Subject()
         self._log = logging.getLogger('Quadtree')
         self.setScene(scene)
-        self.setConfig(config)
+        self.parseConfig(config)
 
         self._leafs = None
 
@@ -217,7 +217,7 @@ class Quadtree(object):
         self._data = self._scene.displacement
         self.utm = self._scene.utm
 
-    def setConfig(self, config):
+    def parseConfig(self, config):
         self.config = config
         self.setSplitMethod(self.config.split_method)
         if not self.config.epsilon == 9999.:

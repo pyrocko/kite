@@ -132,7 +132,7 @@ class UTMFrame(object):
                 ll_y + (y * dy))
 
 
-class MetaSatellite(guts.Object):
+class Meta(guts.Object):
     scene_title = guts.String.T(default='Unnamed Scene')
     scene_id = guts.String.T(default='INSAR')
     scene_view = guts.String.T(default='ASCENDING')
@@ -142,7 +142,7 @@ class MetaSatellite(guts.Object):
 
 
 class SceneConfig(guts.Object):
-    meta = MetaSatellite.T(default=MetaSatellite())
+    meta = Meta.T(default=Meta())
     utm = UTMFrameConfig.T(default=UTMFrameConfig())
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig())
 
@@ -172,7 +172,7 @@ class Scene(object):
     :type Y: :py:class:`numpy.ndarray`
 
     :param meta: Meta information for the scene
-    :type meta: :py:class:`kite.scene.MetaSatellite`
+    :type meta: :py:class:`kite.scene.Meta`
 
     :param los: Displacement measurements (displacement, theta, phi) from
         satellite measurements
@@ -339,7 +339,8 @@ class Scene(object):
         }
 
         self.config.dump(filename='%s.yml' % filename,
-                         header='KiteScene YAML Config')
+                         header='kite.Scene YAML Config\n'
+                                'values of 9999.0 == NaN')
         for comp, ext in components.iteritems():
             num.save(file='%s.%s' % (filename, ext),
                      arr=self.__getattribute__(comp))
@@ -382,6 +383,9 @@ class Scene(object):
                           % scene_name)
         return scene
 
+    def __str__(self):
+        return self.config.__str__()
+
 
 class LOSUnitVectors(object):
     def __init__(self, scene):
@@ -416,40 +420,38 @@ class LOSUnitVectors(object):
 
 class SceneSynTest(Scene):
     """Test scenes for synthetic displacements """
-    def __call__(self):
-        return self.createGauss()
+    def __init__(self):
+        Scene.__init__(self)
+        self.createGauss()
 
-    @classmethod
-    def createGauss(cls, nx=1000, ny=1000, **kwargs):
-        scene = cls()
-        scene.meta.title = 'Synthetic Input | Gaussian distribution'
+    def createGauss(self, nx=500, ny=500, **kwargs):
+        scene = self
+        scene.meta.scene_title = 'Synthetic Displacement | Gaussian'
         cls_dim = (nx, ny)
 
-        scene.utm_x = num.linspace(2455, 3845, cls_dim[0])
-        scene.utm_y = num.linspace(1045, 2403, cls_dim[1])
+        scene.utm.x = num.linspace(2455, 3845, cls_dim[0])
+        scene.utm.y = num.linspace(1045, 2403, cls_dim[1])
         scene.theta = num.repeat(
-            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]) \
-            .reshape(cls_dim)
+            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]).reshape(cls_dim)
         scene.phi = num.rot90(scene.theta)
 
-        scene.displacement = scene._gaussAnomaly(scene.utm_x, scene.utm_y,
+        scene.displacement = scene._gaussAnomaly(scene.utm.x, scene.utm.y,
                                                  **kwargs)
         return scene
 
     @classmethod
-    def createSine(cls, nx=1000, ny=1000, **kwargs):
+    def createSine(cls, nx=500, ny=500, **kwargs):
         scene = cls()
-        scene.meta.title = 'Synthetic Input | Sine distribution'
+        scene.meta.title = 'Synthetic Displacement | Sine'
         cls_dim = (nx, ny)
 
-        scene.utm_x = num.linspace(2455, 3845, cls_dim[0])
-        scene.utm_y = num.linspace(1045, 2403, cls_dim[1])
+        scene.utm.x = num.linspace(2455, 3845, cls_dim[0])
+        scene.utm.y = num.linspace(1045, 2403, cls_dim[1])
         scene.theta = num.repeat(
-            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]) \
-            .reshape(cls_dim)
+            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]).reshape(cls_dim)
         scene.phi = num.rot90(scene.theta)
 
-        scene.displacement = scene._sineAnomaly(scene.utm_x, scene.utm_y,
+        scene.displacement = scene._sineAnomaly(scene.utm.x, scene.utm.y,
                                                 **kwargs)
         return scene
 
