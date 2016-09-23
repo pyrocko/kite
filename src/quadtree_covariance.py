@@ -36,6 +36,22 @@ def _leafMatrixCovarianceWorker(args):
     return ind, cov
 
 
+class CovarianceConfig(guts.Object):
+    a = guts.Float.T(default=1.,
+                     help='Weight factor a - cosine decay')
+    b = guts.Float.T(default=1.,
+                     help='Weight factor b - exponential decay')
+    c = guts.Float.T(default=1.,
+                     help='Weight factor c - covariance scaling')
+    variance = guts.Float.T(default=9999.,
+                            help='Node variance')
+    distance_cutoff = guts.Int.T(default=99e9,
+                                 help='Cutoff distance for covariance weight '
+                                      'matrix -> cov(d>distance_cutoff)=0')
+    subsampling = guts.Int.T(default=8,
+                             help='Subsampling of distance matrices')
+
+
 class Covariance(guts.Object):
     """Analytical covariance used for weighting of quadtree.
 
@@ -48,46 +64,40 @@ class Covariance(guts.Object):
     where `dist` is
     1) the distance between quadleaf focal points (`Covariance.matrix_focal`)
     2) statistical distances between quadleaf pixels to pixel
-        (`Covariance.matrix`), subsampled accoring to `Covariance.subsampling`.
+        (`Covariance.matrix`), subsampled accoring to
+        `Covariance.config.subsampling`.
 
     :param quadtree: Quadtree to work on
     :type quadtree: `:python:kite.quadtree.Quadtree`
    """
-    a = guts.Float.T(default=1.,
-                     help='Weight factor a')
-    b = guts.Float.T(default=1.,
-                     help='Weight factor b')
-    c = guts.Float.T(default=1.,
-                     help='Weight factor c')
-    subsampling = guts.Int.T(default=8,
-                             help='Subsampling of distance matrices')
-
-    def __init__(self, *args, **kwargs):
-        guts.Object.__init__(self)
+    def __init__(self, quadtree, config=CovarianceConfig()):
         self.covarianceUpdate = Subject()
         self.covarianceUpdate.subscribe(self._clearCovariance)
-
-        if 'quadtree' in kwargs.keys():
-            self.setQuadtree(kwargs.pop('quadtree'))
-        self._leaf_mapping = None
+        self.config = config
+        self._quadtree = quadtree
 
         self._log = logging.getLogger('Covariance')
 
     def __call__(self, *args, **kwargs):
         return self.getDistance(*args, **kwargs)
 
-    def setQuadtree(self, quadtree):
-        self._quadtree = quadtree
-        self._quadtree.treeUpdate.subscribe(self._clearCovariance)
-
     def _clearCovariance(self):
         self.matrix = None
         self.matrix_focal_points = None
 
+    @property
+    def subsampling(self):
+        return self.config.subsampling
+
+    @subsampling.setter
+    def subsampling(self, value):
+        self._clearCovariance()
+        self.config.subsampling = value
+
     @property_cached
     def matrix(self):
         """ Covariance matrix calculated from sub-distances pairs from quadtree
-        node-to-node, subsampled by `Covariance.subsampling`
+        node-to-node, subsampled by `Covariance.config.subsampling`
         """
         return self._calcMatrix(method='matrix')
 
@@ -98,7 +108,7 @@ class Covariance(guts.Object):
         `Covariance.matrix` """
         return self._calcMatrix(method='focal')
 
-    def _getLeafs(self, nx, ny):
+    def _mapLeafs(self, nx, ny):
         """Helper function returning appropriate QuadNodes and for maintaining
         the internal mapping
 
@@ -123,7 +133,7 @@ class Covariance(guts.Object):
         :param method: Either `'focal'` point distances are used - this is
         quick but statistically not reliable.
         Or `'matrix'`, where the full quadtree pixel distances matrices are
-        calculated, subsampled as set in `Covariance.subsampling`.
+        calculated, subsampled as set in `Covariance.config.subsampling`.
         , defaults to 'focal'
         :type method: str, optional
         :returns: Covariance matrix
@@ -137,7 +147,7 @@ class Covariance(guts.Object):
 
         if method == 'focal':
             for nx, ny in cov_iter:
-                leaf1, leaf2 = self._getLeafs(nx, ny)
+                leaf1, leaf2 = self._mapLeafs(nx, ny)
 
                 cov = self._leafFocalCovariance(leaf1, leaf2)
                 cov_matrix[(nx, ny), (ny, nx)] = cov
@@ -148,14 +158,14 @@ class Covariance(guts.Object):
 
             self._log.info('Preprocessing covariance matrix'
                            ' - subsampling %dx on %d cpus' %
-                           (self.subsampling, cpu_count()))
-            worker_chunksize = 48 * self.subsampling
+                           (self.config.subsampling, cpu_count()))
+            worker_chunksize = 48 * self.config.subsampling
 
             tasks = []
             for nx, ny in cov_iter:
-                leaf1, leaf2 = self._getLeafs(nx, ny)
+                leaf1, leaf2 = self._mapLeafs(nx, ny)
 
-                tasks.append(((nx, ny), self.subsampling,
+                tasks.append(((nx, ny), self.config.subsampling,
                              leaf1.utm_grid_x, leaf1.utm_grid_y,
                              leaf2.utm_grid_x, leaf2.utm_grid_y))
 
@@ -170,7 +180,6 @@ class Covariance(guts.Object):
                 (nx, ny), d = result
                 cov_matrix[(nx, ny), (ny, nx)] = d
                 pbar.update(i)
-            print "Joining pool..."
             pool.join()
 
         return cov_matrix
@@ -209,4 +218,5 @@ class Covariance(guts.Object):
         """
         return self.matrix[self._getMapping(leaf1, leaf2)]
 
-__all__ = ['Covariance']
+
+__all__ = ['Covariance', 'CovarianceConfig']

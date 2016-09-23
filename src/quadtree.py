@@ -2,9 +2,9 @@ import numpy as num
 import logging
 import time
 from pyrocko import guts
-from kite.scene import Scene
+
 from kite.meta import Subject, property_cached
-from quadtree_covariance import Covariance
+from kite.quadtree_covariance import CovarianceConfig
 # from pyrock.util import clock
 
 
@@ -152,7 +152,26 @@ def createTreeParallel(args):
     return base_node
 
 
-class Quadtree(guts.Object):
+class QuadtreeConfig(guts.Object):
+    split_method = guts.String.T(
+        default='median_std',
+        help='Tile split method, available methods '
+             ' [\'mean_std\' \'median_std\' \'std\']')
+    epsilon = guts.Float.T(
+        default=9999.,
+        help='Threshold for tile splitting, measure for '
+             'quadtree nodes\' variance')
+    nan_allowed = guts.Float.T(
+        default=9999.,
+        help='Allowed NaN fraction per tile')
+    tile_size_lim = guts.Tuple.T(
+        2, guts.Float.T(),
+        default=(250, 5000),
+        help='Minimum and maximum allowed tile size')
+    covariance = CovarianceConfig.T(default=CovarianceConfig())
+
+
+class Quadtree(object):
     """Quadtree for simplifying InSAR displacement data held in
     :python:`kite.Scene`
 
@@ -174,25 +193,7 @@ class Quadtree(guts.Object):
     :type split_method: %s: [type]
     :param
     """
-    epsilon__ = guts.Float.T(
-        default=1.,
-        help='Threshold for tile splitting, measure for '
-             'quadtree nodes\' variance')
-    nan_allowed__ = guts.Float.T(
-        default=1.,
-        help='Allowed NaN fraction per tile')
-    tile_size_lim__ = guts.Tuple.T(
-        2, guts.Float.T(),
-        default=(250, 5000),
-        help='Minimum and maximum allowed tile size')
-    split_method = guts.String.T(
-        default='median_std',
-        help='Tile split method, available methods '
-             ' [\'mean_std\' \'median_std\' \'std\']')
-    covariance__ = Covariance.T(
-        optional=True)
-
-    def __init__(self, *args, **kwargs):
+    def __init__(self, scene, config=QuadtreeConfig()):
         self._split_methods = {
             'mean_std': ['Std around mean', lambda node: node.mean_std],
             'median_std': ['Std around median', lambda node: node.median_std],
@@ -205,27 +206,24 @@ class Quadtree(guts.Object):
 
         self.treeUpdate = Subject()
         self.splitMethodChanged = Subject()
-
         self._log = logging.getLogger('Quadtree')
-        self.setScene(kwargs.pop('scene', Scene()))
-
-        if 'covariance' in kwargs.keys():
-            self.covariance = kwargs.pop('covariance')
-            self.covariance.setQuadtree(self)
+        self.setScene(scene)
+        self.setConfig(config)
 
         self._leafs = None
-        self._epsilon = None
-        self._nan_allowed = kwargs.pop('nan_allowed', 1.)
-        self.tile_size_lim = kwargs.pop('tile_size_lim', (250, 5000))
-        guts.Object.__init__(self)
-
-        self.setSplitMethod(kwargs.pop('split_method', 'median_std'))
-        self.epsilon = kwargs.pop('epsilon', self._epsilon_init)
 
     def setScene(self, scene):
         self._scene = scene
         self._data = self._scene.displacement
         self.utm = self._scene.utm
+
+    def setConfig(self, config):
+        self.config = config
+        self.setSplitMethod(self.config.split_method)
+        if not self.config.epsilon == 9999.:
+            self.epsilon = self.config.epsilon
+        self.nan_allowed = self.config.nan_allowed
+        self.tile_size_lim = self.config.tile_size_lim
 
     def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
@@ -243,7 +241,7 @@ class Quadtree(guts.Object):
             raise AttributeError('Method %s not in %s'
                                  % (split_method, self._split_methods))
 
-        self.split_method = split_method
+        self.config.split_method = split_method
         self._split_func = self._split_methods[split_method][1]
 
         # Clearing cached properties through None
@@ -277,16 +275,12 @@ class Quadtree(guts.Object):
 
     @property
     def epsilon(self):
-        return self._epsilon
+        return self.config.epsilon
 
     @epsilon.setter
     def epsilon(self, value):
         value = float(value)
-        if '_epsilon' not in self.__dict__.keys():
-            self._epsilon = value
-            return
-
-        if self._epsilon == value:
+        if self.config.epsilon == value:
             return
         if value < self._epsilon_limit:
             self._log.info(
@@ -294,7 +288,7 @@ class Quadtree(guts.Object):
                 (value, self._epsilon_limit))
             return
         self.leafs = None
-        self._epsilon = value
+        self.config.epsilon = value
 
         self.treeUpdate._notify()
         return
@@ -310,22 +304,22 @@ class Quadtree(guts.Object):
 
     @property
     def nan_allowed(self):
-        return self._nan_allowed
+        return self.config.nan_allowed
 
     @nan_allowed.setter
     def nan_allowed(self, value):
-        if value > 1. or value < 0.:
+        if (value > 1. or value < 0.) and value != 9999.:
             raise AttributeError('NaN fraction must be 0 <= nan_allowed <=1')
         if value == 1.:
-            value = None
+            value = 9999.
 
         self.leafs = None
-        self._nan_allowed = value
+        self.config.nan_allowed = value
         self.treeUpdate._notify()
 
     @property
     def tile_size_lim(self):
-        return self._tile_size_lim
+        return self.config.tile_size_lim
 
     @tile_size_lim.setter
     def tile_size_lim(self, value):
@@ -333,7 +327,7 @@ class Quadtree(guts.Object):
         if tile_size_min > tile_size_max:
             self._log.info('tile_size_min > tile_size_max is required')
             return
-        self._tile_size_lim = (tile_size_min, tile_size_max)
+        self.config.tile_size_lim = (tile_size_min, tile_size_max)
 
         self._tile_size_lim_p = None
         self.leafs = None
@@ -359,7 +353,7 @@ class Quadtree(guts.Object):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval()])
-        if self.nan_allowed is not None:
+        if self.nan_allowed != 9999.:
             leafs[:] = [l for l in leafs if l.nan_fraction < self.nan_allowed]
         self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))
@@ -426,16 +420,14 @@ class Quadtree(guts.Object):
 
     @property_cached
     def covariance(self):
-        return Covariance(quadtree=self)
+        from kite.quadtree_covariance import Covariance
+        return Covariance(quadtree=self, config=self.config.covariance)
 
     def getStaticTarget(self):
         raise NotImplementedError
 
 
-__all__ = '''
-Quadtree
-QuadNode
-'''.split()
+__all__ = ['Quadtree', 'QuadtreeConfig']
 
 
 if __name__ == '__main__':
