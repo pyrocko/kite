@@ -55,6 +55,10 @@ class QuadNode(object):
         return num.nanstd(self.data - self.mean)
 
     @property_cached
+    def bilinear_std(self):
+        raise NotImplementedError('Bilinear fit not implemented')
+
+    @property_cached
     def _focal_point(self):
         w_x = num.linspace(0, 1., self.data.shape[0], endpoint=True)
         w_y = num.linspace(0, 1., self.data.shape[1], endpoint=True)
@@ -73,12 +77,13 @@ class QuadNode(object):
         return x, y
 
     @property_cached
-    def bilinear_std(self):
-        raise NotImplementedError('Bilinear fit not implemented')
-
-    @property_cached
     def data(self):
         return self._scene.displacement[self._slice_x, self._slice_y]
+
+    @property_cached
+    def data_masked(self):
+        d = self._scene.displacement[self._slice_x, self._slice_y]
+        return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
 
     @property_cached
     def utm_grid_x(self):

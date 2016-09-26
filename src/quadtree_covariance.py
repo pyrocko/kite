@@ -3,37 +3,13 @@ import logging
 from pyrocko import guts
 from kite.meta import Subject, property_cached
 
+from multiprocessing import Pool, cpu_count
+from progressbar import ProgressBar, ETA, Bar
 
-def _leafMatrixCovarianceWorker(args):
-    """Worker function serving :python:`multiprocessing.Pool`
-
-    :param args:
-        `(ind, subsampl, leaf1_utmX, leaf1_utmY, leaf2_utmX, leaf2_utmY)`
-        Where `ind` is tuple of matrix indices `(nx, ny)`, `subsampl`
-        subsampling factor `leaf?_utm?` are 2-dim masekd arrays holding UTM
-        data from :python:`kite.quadtree.QuadNode`.
-    :type args: [tuple]
-    :returns: ((nx, ny), covariance)
-    :rtype: {[tuple]}
-    """
-    ind, subsampl,\
-        leaf1_utmX, leaf1_utmY, leaf2_utmX, leaf2_utmY = args
-    leaf1_subsmpl = subsampl if not float(leaf1_utmX.size)/subsampl < 1.\
-        else int(num.floor(float(leaf1_utmX.size)*subsampl))
-    leaf2_subsmpl = subsampl if not float(leaf2_utmX.size)/subsampl < 1.\
-        else int(num.floor(float(leaf2_utmX.size)*subsampl))
-
-    leaf1_subsmpl = subsampl
-    leaf2_subsmpl = subsampl
-    # Looks ugly but re we want to conserve memory
-    d = num.median(num.sqrt(
-        (leaf1_utmX.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_utmX.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
-        (leaf1_utmY.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_utmY.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
-    cov = d
-    # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
-    return ind, cov
+try:
+    import arrayfire as af
+except:
+    af = None
 
 
 class CovarianceConfig(guts.Object):
@@ -50,6 +26,60 @@ class CovarianceConfig(guts.Object):
                                       'matrix -> cov(d>distance_cutoff)=0')
     subsampling = guts.Int.T(default=8,
                              help='Subsampling of distance matrices')
+
+
+def _workerLeafMatrixCovariance(args):
+    """Worker function serving :python:`multiprocessing.Pool`
+
+    :param args:
+        `(ind, subsampl, leaf1_utm_grid_x, leaf1_utm_grid_y,
+          leaf2_utm_grid_x, leaf2_utm_grid_y)`
+        Where `ind` is tuple of matrix indices `(nx, ny)`, `subsampl`
+        subsampling factor `leaf?_utm?` are 2-dim masekd arrays holding UTM
+        data from :python:`kite.quadtree.QuadNode`.
+    :type args: [tuple]
+    :returns: ((nx, ny), covariance)
+    :rtype: {[tuple]}
+    """
+    (ind, subsampl,
+     leaf1_utm_grid_x, leaf1_utm_grid_y,
+     leaf2_utm_grid_x, leaf2_utm_grid_y) = args
+    leaf1_subsmpl = subsampl if not float(leaf1_utm_grid_x.size)/subsampl < 1.\
+        else int(num.floor(float(leaf1_utm_grid_x.size)*subsampl))
+    leaf2_subsmpl = subsampl if not float(leaf2_utm_grid_x.size)/subsampl < 1.\
+        else int(num.floor(float(leaf2_utm_grid_x.size)*subsampl))
+
+    # Looks ugly but re we want to conserve memory
+    d = num.median(num.sqrt(
+        (leaf1_utm_grid_x.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_utm_grid_x.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
+        (leaf1_utm_grid_y.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_utm_grid_y.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
+    cov = d
+    # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
+    return ind, cov
+
+
+def _workerNodeVariance(args):
+    (subsmpl,
+     node1_data, node1_utm_grid_x, node1_utm_grid_y,
+     node2_data, node2_utm_grid_x, node2_utm_grid_y) = args
+
+    n1_tu = num.triu_indices_from(node1_utm_grid_x)
+    n2_tu = num.triu_indices_from(node2_utm_grid_x)
+
+    d = num.sqrt(
+        (node1_utm_grid_x.compressed()[::subsmpl][:, num.newaxis] -
+         node2_utm_grid_x.compressed()[::subsmpl][num.newaxis, :])**2 +
+        (node1_utm_grid_y.compressed()[::subsmpl][:, num.newaxis] -
+         node2_utm_grid_y.compressed()[::subsmpl][num.newaxis, :])**2)
+
+    var = (node1_data.compressed()[::subsmpl][:, num.newaxis] -
+           node2_data.compressed()[::subsmpl][num.newaxis, :])**2
+    cov = (node1_data.compressed()[::subsmpl][:, num.newaxis] *
+           node2_data.compressed()[::subsmpl][num.newaxis, :])
+
+    return d, var, cov
 
 
 class Covariance(guts.Object):
@@ -153,13 +183,10 @@ class Covariance(guts.Object):
                 cov_matrix[(nx, ny), (ny, nx)] = cov
 
         elif method == 'matrix':
-            from multiprocessing import Pool, cpu_count
-            from progressbar import ProgressBar, ETA, Bar
-
             self._log.info('Preprocessing covariance matrix'
                            ' - subsampling %dx on %d cpus' %
                            (self.config.subsampling, cpu_count()))
-            worker_chunksize = 48 * self.config.subsampling
+            worker_chunksize = 24 * self.config.subsampling
 
             tasks = []
             for nx, ny in cov_iter:
@@ -168,18 +195,17 @@ class Covariance(guts.Object):
                 tasks.append(((nx, ny), self.config.subsampling,
                              leaf1.utm_grid_x, leaf1.utm_grid_y,
                              leaf2.utm_grid_x, leaf2.utm_grid_y))
-
             pool = Pool(maxtasksperchild=worker_chunksize)
-            results = pool.imap_unordered(_leafMatrixCovarianceWorker, tasks,
+            results = pool.imap_unordered(_workerLeafMatrixCovariance, tasks,
                                           chunksize=worker_chunksize)
             pool.close()
 
             pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
                                                            ETA()]).start()
             for i, result in enumerate(results):
-                (nx, ny), d = result
-                cov_matrix[(nx, ny), (ny, nx)] = d
-                pbar.update(i)
+                (nx, ny), cov = result
+                cov_matrix[(nx, ny), (ny, nx)] = cov
+                pbar.update(i+1)
             pool.join()
 
         return cov_matrix
@@ -217,6 +243,59 @@ class Covariance(guts.Object):
         :rtype: {float}
         """
         return self.matrix[self._getMapping(leaf1, leaf2)]
+
+    def parameterAnalysis(self, nodes, subsampling=16):
+        """Analyse covariance parameters from list of *noisy* quadtree nodes
+
+        as described by Sudhaus, H. and Jónsson, S. (2009),
+          Improved source modelling through combined use of InSAR and GPS under
+          consideration of correlated data errors: application to
+          the June 2000 Kleifarvatn earthquake,
+          Iceland. Geophysical Journal International,
+          176: 389–404. doi:10.1111/j.1365-246X.2008.03989.x
+
+        :param nodes: List of :python:`kite.quadtree.QuadNode`
+            for variance calculation
+        :type nodes: list
+        :param subsampling: Subsampling factor for node variance analysis
+        :type subsampling: int
+        """
+        self._log.info('Analysing variance parameters...')
+
+        dist = []
+        var = []
+        cov = []
+
+        nnodes = len(nodes)
+        tasks = []
+        for n1, node1 in enumerate(nodes):
+            for n2 in xrange(nnodes):
+                node2 = nodes[n2]
+                tasks.append((subsampling,
+                              node1.data_masked,
+                              node1.utm_grid_x, node1.utm_grid_y,
+                              node2.data_masked,
+                              node2.utm_grid_x, node2.utm_grid_y))
+
+        pool = Pool(maxtasksperchild=32)
+        results = pool.imap_unordered(_workerNodeVariance, tasks, chunksize=16)
+        pool.close()
+
+        pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
+                                                       ETA()]).start()
+        for i, r in enumerate(results):
+            d, v, c = r
+            dist.append(d.flatten())
+            var.append(v.flatten())
+            cov.append(c.flatten())
+            pbar.update(i+1)
+        pool.join()
+        return (num.concatenate(dist),
+                num.concatenate(var), num.concatenate(cov))
+
+    def parameterAnalysisAuto(self, nnodes=5, **kwargs):
+        nodes = sorted(self._quadtree.leafs, key=lambda n: n.length)
+        return self.parameterAnalysis(nodes[-nnodes:], **kwargs)
 
 
 __all__ = ['Covariance', 'CovarianceConfig']
