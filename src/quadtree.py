@@ -134,7 +134,8 @@ class QuadNode(object):
             yield n
 
     def createTree(self, eval_func, epsilon_limit):
-        if eval_func(self) > epsilon_limit:  # or\
+        if eval_func(self) > epsilon_limit or\
+           self.length > self._tree._tile_size_lim_p[1]:  # or\
             # self.length > .1 * max(self._tree._data.shape): !! Very Expensive
             self.children = [c for c in self._iterSplitNode()]
             for c in self.children:
