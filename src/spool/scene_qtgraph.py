@@ -295,8 +295,8 @@ class QKiteToolQuadtree(QtGui.QWidget):
         spin_smax = QtGui.QSpinBox()
 
         def changeTileLimits():
-            self.quadtree.tile_size_lim = (spin_smax.value(),
-                                           spin_smin.value())
+            self.quadtree.tile_size_lim = (spin_smin.value(),
+                                           spin_smax.value())
             slider_smin.setValue(spin_smin.value())
             slider_smax.setValue(spin_smax.value())
 
@@ -305,14 +305,14 @@ class QKiteToolQuadtree(QtGui.QWidget):
             wdgt.setSingleStep(50)
 
         for wdgt in [slider_smin, spin_smin]:
-            wdgt.setValue(self.quadtree.tile_size_lim[1])
+            wdgt.setValue(self.quadtree.tile_size_lim[0])
         slider_smin.valueChanged.connect(
             lambda: spin_smin.setValue(slider_smin.value()))
         spin_smin.valueChanged.connect(changeTileLimits)
         spin_smin.setSuffix(' m')
 
         for wdgt in [slider_smax, spin_smax]:
-            wdgt.setValue(self.quadtree.tile_size_lim[0])
+            wdgt.setValue(self.quadtree.tile_size_lim[1])
         slider_smax.valueChanged.connect(
             lambda: spin_smax.setValue(slider_smax.value()))
         spin_smax.valueChanged.connect(changeTileLimits)
@@ -321,14 +321,14 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(QtGui.QLabel('Min',
                                       toolTip='Minimum tile size in meter'),
                          1, 1)
-        layout.addWidget(spin_smax, 1, 2)
-        layout.addWidget(slider_smax, 1, 3)
+        layout.addWidget(spin_smin, 1, 2)
+        layout.addWidget(slider_smin, 1, 3)
 
         layout.addWidget(QtGui.QLabel('Max',
                                       toolTip='Maximum tile size in meter'),
                          2, 1)
-        layout.addWidget(spin_smin, 2, 2)
-        layout.addWidget(slider_smin, 2, 3)
+        layout.addWidget(spin_smax, 2, 2)
+        layout.addWidget(slider_smax, 2, 3)
 
         group = QtGui.QGroupBox('Tile Size Limits')
         group.setToolTip('''<p>Tile size limits
