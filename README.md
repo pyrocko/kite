@@ -17,7 +17,7 @@ sudo pip install .
 ```python
 from kite import Scene
 
-scene = Scene.load('dataset.mat')  # load data from .mat file
+scene = Scene.import_file('dataset.mat')  # load data from .mat file
 scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 
 # Inspection of covariance matrices for the quadtree
