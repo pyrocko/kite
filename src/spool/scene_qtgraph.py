@@ -318,14 +318,14 @@ class QKiteToolQuadtree(QtGui.QWidget):
         spin_smax.valueChanged.connect(changeTileLimits)
         spin_smax.setSuffix(' m')
 
-        layout.addWidget(QtGui.QLabel('Max',
+        layout.addWidget(QtGui.QLabel('Min',
                                       toolTip='Minimum tile size in meter'),
                          1, 1)
         layout.addWidget(spin_smax, 1, 2)
         layout.addWidget(slider_smax, 1, 3)
 
-        layout.addWidget(QtGui.QLabel('Min',
-                                      toolTip='Minimum tile size in meter'),
+        layout.addWidget(QtGui.QLabel('Max',
+                                      toolTip='Maximum tile size in meter'),
                          2, 1)
         layout.addWidget(spin_smin, 2, 2)
         layout.addWidget(slider_smin, 2, 3)
