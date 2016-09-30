@@ -295,13 +295,16 @@ class QKiteToolQuadtree(QtGui.QWidget):
         spin_smax = QtGui.QSpinBox()
 
         def changeTileLimits():
-            self.quadtree.tile_size_lim = (spin_smin.value(),
-                                           spin_smax.value())
+            smin, smax = spin_smin.value(), spin_smax.value()
+            if smax == spin_smax.maximum() or smax == 0.:
+                smax = -9999.
+
+            self.quadtree.tile_size_lim = (smin, smax)
             slider_smin.setValue(spin_smin.value())
             slider_smax.setValue(spin_smax.value())
 
         for wdgt in [slider_smax, slider_smin, spin_smax, spin_smin]:
-            wdgt.setRange(0, 10000)
+            wdgt.setRange(0, 25000)
             wdgt.setSingleStep(50)
 
         for wdgt in [slider_smin, spin_smin]:
@@ -316,6 +319,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         slider_smax.valueChanged.connect(
             lambda: spin_smax.setValue(slider_smax.value()))
         spin_smax.valueChanged.connect(changeTileLimits)
+        spin_smax.setSpecialValueText('inf')
         spin_smax.setSuffix(' m')
 
         layout.addWidget(QtGui.QLabel('Min',
@@ -368,9 +372,11 @@ class QKiteToolQuadtree(QtGui.QWidget):
                 ('Epsilon current', '%0.3f' % self.quadtree.epsilon),
                 ('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
                 ('Allowed NaN fraction',
-                 '%d%%' % int((self.quadtree.nan_allowed or 1.) * 100)),
+                    '%d%%' % int(self.quadtree.nan_allowed * 100)
+                    if self.quadtree.nan_allowed != -9999. else 'inf'),
                 ('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
-                ('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]),
+                ('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
+                    if self.quadtree.tile_size_lim[1] != -9999. else 'inf'),
             ]
             _text = '<table>'
             for (param, value) in infos:

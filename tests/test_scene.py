@@ -2,12 +2,12 @@
 import unittest
 import os.path
 import numpy as num
-from kite.scene import Scene, SceneSynTest
+from kite import Scene, SceneTest
 
 
 class TestGaussScene(unittest.TestCase):
     def setUp(self):
-        self.sc = SceneSynTest()
+        self.sc = SceneTest()
 
     def test_quadtree(self):
         qt = self.sc.quadtree

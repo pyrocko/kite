@@ -1,2 +1,2 @@
 #!/bin/python
-from kite.scene import Scene
+from kite.scene import Scene, SceneTest

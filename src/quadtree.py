@@ -134,8 +134,8 @@ class QuadNode(object):
             yield n
 
     def createTree(self, eval_func, epsilon_limit):
-        if eval_func(self) > epsilon_limit or\
-           self.length > self._tree._tile_size_lim_p[1]:  # or\
+        if (eval_func(self) > epsilon_limit or self.length >= 64)\
+           and not self.length < 16:
             # self.length > .1 * max(self._tree._data.shape): !! Very Expensive
             self.children = [c for c in self._iterSplitNode()]
             for c in self.children:
@@ -164,15 +164,15 @@ class QuadtreeConfig(guts.Object):
         help='Tile split method, available methods '
              ' [\'mean_std\' \'median_std\' \'std\']')
     epsilon = guts.Float.T(
-        default=9999.,
+        default=-9999.,
         help='Threshold for tile splitting, measure for '
              'quadtree nodes\' variance')
     nan_allowed = guts.Float.T(
-        default=9999.,
+        default=-9999.,
         help='Allowed NaN fraction per tile')
     tile_size_lim = guts.Tuple.T(
         2, guts.Float.T(),
-        default=(250, 5000),
+        default=(250, -9999.),
         help='Minimum and maximum allowed tile size')
     covariance = CovarianceConfig.T(default=CovarianceConfig())
 
@@ -226,7 +226,7 @@ class Quadtree(object):
     def parseConfig(self, config):
         self.config = config
         self.setSplitMethod(self.config.split_method)
-        if not self.config.epsilon == 9999.:
+        if not self.config.epsilon == -9999.:
             self.epsilon = self.config.epsilon
         self.nan_allowed = self.config.nan_allowed
         self.tile_size_lim = self.config.tile_size_lim
@@ -314,10 +314,10 @@ class Quadtree(object):
 
     @nan_allowed.setter
     def nan_allowed(self, value):
-        if (value > 1. or value < 0.) and value != 9999.:
+        if (value > 1. or value < 0.) and value != -9999.:
             raise AttributeError('NaN fraction must be 0 <= nan_allowed <=1')
         if value == 1.:
-            value = 9999.
+            value = -9999.
 
         self.leafs = None
         self.config.nan_allowed = value
@@ -330,7 +330,7 @@ class Quadtree(object):
     @tile_size_lim.setter
     def tile_size_lim(self, value):
         tile_size_min, tile_size_max = value
-        if tile_size_min > tile_size_max:
+        if tile_size_min > tile_size_max and tile_size_max != -9999.:
             self._log.info('tile_size_min > tile_size_max is required')
             return
         self.config.tile_size_lim = (tile_size_min, tile_size_max)
@@ -359,7 +359,7 @@ class Quadtree(object):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval()])
-        if self.nan_allowed != 9999.:
+        if self.nan_allowed != -9999.:
             leafs[:] = [l for l in leafs if l.nan_fraction < self.nan_allowed]
         self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                        (len(leafs), self.epsilon, time.time()-t0))

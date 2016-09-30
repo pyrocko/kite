@@ -424,41 +424,47 @@ class LOSUnitVectors(object):
         return num.rad2deg(self._scene.phi)
 
 
-class SceneSynTest(Scene):
+class SceneTest(Scene):
     """Test scenes for synthetic displacements """
-    def __init__(self):
-        Scene.__init__(self)
-        self.createGauss()
 
-    def createGauss(self, nx=500, ny=500, **kwargs):
-        scene = self
+    @classmethod
+    def createGauss(cls, nx=500, ny=500, **kwargs):
+        scene = cls()
         scene.meta.scene_title = 'Synthetic Displacement | Gaussian'
-        cls_dim = (nx, ny)
-
-        scene.utm.x = num.linspace(2455, 3845, cls_dim[0])
-        scene.utm.y = num.linspace(1045, 2403, cls_dim[1])
-        scene.theta = num.repeat(
-            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]).reshape(cls_dim)
-        scene.phi = num.rot90(scene.theta)
+        scene = cls._prepareSceneTest(scene, nx, ny)
 
         scene.displacement = scene._gaussAnomaly(scene.utm.x, scene.utm.y,
                                                  **kwargs)
         return scene
 
     @classmethod
+    def createRandom(cls, nx=500, ny=500, **kwargs):
+        scene = cls()
+        scene.meta.title = 'Synthetic Displacement | Uniform Random'
+        scene = cls._prepareSceneTest(scene, nx, ny)
+
+        rand_state = num.random.RandomState(seed=1010)
+        scene.displacement = (rand_state.rand(nx, ny)-.5)*2
+
+        return scene
+
+    @classmethod
     def createSine(cls, nx=500, ny=500, **kwargs):
         scene = cls()
         scene.meta.title = 'Synthetic Displacement | Sine'
-        cls_dim = (nx, ny)
-
-        scene.utm.x = num.linspace(2455, 3845, cls_dim[0])
-        scene.utm.y = num.linspace(1045, 2403, cls_dim[1])
-        scene.theta = num.repeat(
-            num.linspace(0.8, 0.85, cls_dim[0]), cls_dim[1]).reshape(cls_dim)
-        scene.phi = num.rot90(scene.theta)
+        scene = cls._prepareSceneTest(scene, nx, ny)
 
         scene.displacement = scene._sineAnomaly(scene.utm.x, scene.utm.y,
                                                 **kwargs)
+        return scene
+
+    @staticmethod
+    def _prepareSceneTest(scene, nx=500, ny=500):
+        scene.utm.x = num.linspace(0, nx, nx)
+        scene.utm.y = num.linspace(0, ny, ny)
+        scene.theta = num.repeat(
+            num.linspace(0.8, 0.85, nx), ny).reshape((nx, ny))
+        scene.phi = num.rot90(scene.theta)
         return scene
 
     @staticmethod
@@ -485,4 +491,4 @@ __all__ = ['Scene', 'SceneConfig']
 
 
 if __name__ == '__main__':
-    testScene = SceneSynTest.createGauss()
+    testScene = SceneTest.createGauss()
