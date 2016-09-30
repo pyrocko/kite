@@ -1,4 +1,6 @@
 import numpy as num
+import scipy.stats as stats
+
 import logging
 from pyrocko import guts
 from kite.meta import Subject, property_cached
@@ -65,8 +67,8 @@ def _workerNodeVariance(args):
      node1_data, node1_utm_grid_x, node1_utm_grid_y,
      node2_data, node2_utm_grid_x, node2_utm_grid_y) = args
 
-    n1_tu = num.triu_indices_from(node1_utm_grid_x)
-    n2_tu = num.triu_indices_from(node2_utm_grid_x)
+    # n1_tu = num.triu_indices_from(node1_utm_grid_x)
+    # n2_tu = num.triu_indices_from(node2_utm_grid_x)
 
     d = num.sqrt(
         (node1_utm_grid_x.compressed()[::subsmpl][:, num.newaxis] -
@@ -74,10 +76,22 @@ def _workerNodeVariance(args):
         (node1_utm_grid_y.compressed()[::subsmpl][:, num.newaxis] -
          node2_utm_grid_y.compressed()[::subsmpl][num.newaxis, :])**2)
 
-    var = (node1_data.compressed()[::subsmpl][:, num.newaxis] -
-           node2_data.compressed()[::subsmpl][num.newaxis, :])**2
-    cov = (node1_data.compressed()[::subsmpl][:, num.newaxis] *
-           node2_data.compressed()[::subsmpl][num.newaxis, :])
+    # node1_data = sps.detrend(node1_data, type='linear', axis=0)
+    # node1_data = sps.detrend(node1_data, type='linear', axis=1)
+
+    # node2_data = sps.detrend(node2_data, type='linear', axis=0)
+    # node2_data = sps.detrend(node2_data, type='linear', axis=1)
+
+    node1_data = node1_data.compressed()[::subsmpl]*1e3
+    node2_data = node2_data.compressed()[::subsmpl]*1e3
+
+    node1_data -= num.mean(node1_data)
+    node2_data -= num.mean(node2_data)
+
+    var = num.sqrt(num.abs(node1_data[:, num.newaxis] -
+                           node2_data[num.newaxis, :]))
+    cov = (node1_data[:, num.newaxis] *
+           node2_data[num.newaxis, :])
 
     return d, var, cov
 
@@ -290,8 +304,23 @@ class Covariance(guts.Object):
             cov.append(c.flatten())
             pbar.update(i+1)
         pool.join()
-        return (num.concatenate(dist),
-                num.concatenate(var), num.concatenate(cov))
+        dist = num.concatenate(dist)
+        var = num.concatenate(var)
+        cov = num.concatenate(cov)
+
+        def meanVariance(data):
+                # Formular for variance
+                # (mean(sqrt(|d1-d2|))**4 / (.457+.0494/nsamples_p_bin))/2
+                return (num.mean(data)**4 / (.457 + .494/data.size)) / 2
+
+        var, xedg, _ = stats.binned_statistic(dist, var,
+                                              statistic=meanVariance,
+                                              bins=100)
+        cov, xedg, _ = stats.binned_statistic(dist, cov,
+                                              statistic='mean',
+                                              bins=100)
+        dist = xedg[:-1]
+        return (dist, var, cov)
 
     def parameterAnalysisAuto(self, nnodes=5, **kwargs):
         nodes = sorted(self._quadtree.leafs, key=lambda n: n.length)

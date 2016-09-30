@@ -9,10 +9,10 @@ from kite.quadtree_covariance import CovarianceConfig
 
 
 class QuadNode(object):
-    """A Node in the Quadtree
-    """
+    """A Node in the Quadtree """
     def __init__(self, tree, llx, lly, length):
         self.llx = int(llx)
+
         self.lly = int(lly)
         self.length = int(length)
 
