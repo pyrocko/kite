@@ -214,9 +214,6 @@ class QKiteToolQuadtree(QtGui.QWidget):
         self.layout.addWidget(self.getInfoPanel())
         self.layout.addStretch(3)
 
-        self.scroll_area = QtGui.QScrollArea()
-        self.scroll_area.setWidget(self)
-
     def getEpsilonChanger(self):
         layout = QtGui.QHBoxLayout()
 

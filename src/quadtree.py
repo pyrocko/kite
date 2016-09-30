@@ -9,10 +9,10 @@ from kite.quadtree_covariance import CovarianceConfig
 
 
 class QuadNode(object):
-    """A Node in the Quadtree
-    """
+    """A Node in the Quadtree """
     def __init__(self, tree, llx, lly, length):
         self.llx = int(llx)
+
         self.lly = int(lly)
         self.length = int(length)
 
@@ -172,7 +172,7 @@ class QuadtreeConfig(guts.Object):
         help='Allowed NaN fraction per tile')
     tile_size_lim = guts.Tuple.T(
         2, guts.Float.T(),
-        default=(250, 5000),
+        default=(250, 10000),
         help='Minimum and maximum allowed tile size')
     covariance = CovarianceConfig.T(default=CovarianceConfig())
 
