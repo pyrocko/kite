@@ -8,7 +8,7 @@ def main(args=None):
     '''
     Spool app deployed through setuptools
     '''
-    usage = 'Spool is part of the kite InSAR framework'
+    usage = 'Spool is part of the Kite InSAR framework'
     desc = 'Quickly inspect deformation data and manipulate its quadtree'
     parser = ap.ArgumentParser(
         prog='spool',
@@ -27,9 +27,6 @@ def main(args=None):
                         help='Import Matlab/Gamma filename', default=None)
     ns = parser.parse_args(args)
 
-    if ns.file is None:
-        parser.print_help()
-        sys.exit(status=1)
-
+    print 'Importing file %s' % ns.file[0]
     sc = Scene.import_file(ns.file[0])
     sc.spool()
