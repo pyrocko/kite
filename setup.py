@@ -1,15 +1,19 @@
 #!/bin/python
 from setuptools import setup
-from setuptools import find_packages
+import time
 
 setup(
     name='kite',
-    version='0.0.1',
+    version='0.0.2-%s' % time.strftime('%Y%m%d'),
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken',
     author_email='misken@geophysik.uni-kiel.de',
-    install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'pyyaml', 'progressbar'],
+    install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'pyyaml',
+                      'progressbar'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
-    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui'])]
+    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui'])],
+    entry_points={
+        'console_scripts': ['spool = kite.spool.__main__:main'],
+    }
 )
