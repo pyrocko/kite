@@ -84,6 +84,7 @@ class UTMFrame(object):
     def x(self, value):
         if isinstance(value, float):
             value = num.repeat(value, 100)  # Fix this!
+        value = num.array(value, dtype=num.float32)
         self._x = num.sort(value)
         self._updateExtent()
 
@@ -95,6 +96,7 @@ class UTMFrame(object):
     def y(self, value):
         if isinstance(value, float):
             value = num.repeat(value, 100)
+        value = num.array(value, dtype=num.float32)
         self._y = num.sort(value)
         self._updateExtent()
 
@@ -114,12 +116,20 @@ class UTMFrame(object):
                             axis=0)
         return num.ma.masked_array(grid_y, valid_data, fill_value=num.nan)
 
+    @property
+    def dx(self):
+        return self.config.dx
+
+    @property
+    def dy(self):
+        return self.config.dy
+
     @property_cached
     def _extent(self):
         urx, ury = self.x.max(), self.y.max()
 
         return (self.config.llx, self.config.lly, urx, ury,
-                self.config.dx, self.config.dy)
+                self.dx, self.dy)
 
     def extent(self):
         """Get the UTM extent and pixel spacing of the LOS Displacement grid
@@ -428,13 +438,15 @@ class SceneTest(Scene):
     """Test scenes for synthetic displacements """
 
     @classmethod
-    def createGauss(cls, nx=500, ny=500, **kwargs):
+    def createGauss(cls, nx=500, ny=500, noise=None, **kwargs):
         scene = cls()
         scene.meta.scene_title = 'Synthetic Displacement | Gaussian'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
         scene.displacement = scene._gaussAnomaly(scene.utm.x, scene.utm.y,
                                                  **kwargs)
+        if noise is not None:
+            cls._addNoise(scene, noise)
         return scene
 
     @classmethod
@@ -449,13 +461,15 @@ class SceneTest(Scene):
         return scene
 
     @classmethod
-    def createSine(cls, nx=500, ny=500, **kwargs):
+    def createSine(cls, nx=500, ny=500, noise=None, **kwargs):
         scene = cls()
         scene.meta.title = 'Synthetic Displacement | Sine'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
         scene.displacement = scene._sineAnomaly(scene.utm.x, scene.utm.y,
                                                 **kwargs)
+        if noise is not None:
+            cls._addNoise(scene, noise)
         return scene
 
     @staticmethod
@@ -466,6 +480,13 @@ class SceneTest(Scene):
             num.linspace(0.8, 0.85, nx), ny).reshape((nx, ny))
         scene.phi = num.rot90(scene.theta)
         return scene
+
+    @staticmethod
+    def _addNoise(scene, noise_amplitude):
+        rand = num.random.RandomState()
+        noise = rand.rand(*scene.displacement.shape) *\
+            num.max(scene.displacement) * noise_amplitude
+        scene.displacement += noise
 
     @staticmethod
     def _sineAnomaly(x, y, k1=.01, k2=.01, amplitude=3.):

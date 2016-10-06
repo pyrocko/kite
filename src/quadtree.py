@@ -71,7 +71,6 @@ class QuadNode(object):
 
     @property_cached
     def focal_point_utm(self):
-        self._scene.utm._mapGridXY(*self._focal_point)
         x = num.median(self.utm_grid_x.compressed())
         y = num.median(self.utm_grid_y.compressed())
         return x, y
@@ -110,7 +109,8 @@ class QuadNode(object):
 
     def iterLeafsEval(self):
         if (self._tree._split_func(self) < self._tree.epsilon and
-            not self.length > self._tree._tile_size_lim_p[1])\
+            (self._tree._tile_size_lim_p[1] is None or
+             not self.length > self._tree._tile_size_lim_p[1]))\
            or self.children is None:
             yield self
         elif self.children[0].length < self._tree._tile_size_lim_p[0]:
@@ -342,6 +342,9 @@ class Quadtree(object):
     @property_cached
     def _tile_size_lim_p(self):
         dp = self._scene.utm.extent()[-1]
+        if self.tile_size_lim[1] == -9999.:
+            return (int(self.tile_size_lim[0] / dp),
+                    None)
         return (int(self.tile_size_lim[0] / dp),
                 int(self.tile_size_lim[1] / dp))
 

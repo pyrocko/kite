@@ -1,5 +1,5 @@
 import numpy as num
-import scipy.stats as stats
+import scipy as sp
 
 import logging
 from pyrocko import guts
@@ -23,11 +23,34 @@ class CovarianceConfig(guts.Object):
                      help='Weight factor c - covariance scaling')
     variance = guts.Float.T(default=9999.,
                             help='Node variance')
-    distance_cutoff = guts.Int.T(default=-9999,
+    distance_cutoff = guts.Int.T(default=35e3,
                                  help='Cutoff distance for covariance weight '
                                       'matrix -> cov(d>distance_cutoff)=0')
     subsampling = guts.Int.T(default=8,
                              help='Subsampling of distance matrices')
+
+
+def deramp(data):
+    """ Deramp through fitting a bilinear plane
+    """
+    mx = num.nanmean(data, axis=0)
+    my = num.nanmean(data, axis=1)
+    cx = num.nanmean(mx)
+    cy = num.nanmean(my)
+    mx -= cx
+    my -= cy
+    mx[num.isnan(mx)] = 0.
+    my[num.isnan(my)] = 0.
+
+    ix = num.arange(mx.size)
+    iy = num.arange(my.size)
+    dx, _, _, _, _ = sp.stats.linregress(ix, mx)
+    dy, _, _, _, _ = sp.stats.linregress(iy, my)
+
+    rx = (ix * dx + cx)
+    ry = (iy * dy + cy)
+
+    return data - rx[num.newaxis, :] - ry[:, num.newaxis]
 
 
 def _workerLeafMatrixCovariance(args):
@@ -63,10 +86,11 @@ def _workerLeafMatrixCovariance(args):
 
 
 def _workerNodeVariance(args):
-    (subsmpl,
+    (subsmpl, d_cutoff,
      node1_data, node1_utm_grid_x, node1_utm_grid_y,
      node2_data, node2_utm_grid_x, node2_utm_grid_y) = args
 
+    nbins = 500
     # n1_tu = num.triu_indices_from(node1_utm_grid_x)
     # n2_tu = num.triu_indices_from(node2_utm_grid_x)
 
@@ -75,6 +99,11 @@ def _workerNodeVariance(args):
          node2_utm_grid_x.compressed()[::subsmpl][num.newaxis, :])**2 +
         (node1_utm_grid_y.compressed()[::subsmpl][:, num.newaxis] -
          node2_utm_grid_y.compressed()[::subsmpl][num.newaxis, :])**2)
+    ind = num.triu_indices_from(d, k=0)
+
+    d = d[ind]
+    if d.min() > d_cutoff:
+        return None, None, None
 
     # node1_data = sps.detrend(node1_data, type='linear', axis=0)
     # node1_data = sps.detrend(node1_data, type='linear', axis=1)
@@ -82,17 +111,38 @@ def _workerNodeVariance(args):
     # node2_data = sps.detrend(node2_data, type='linear', axis=0)
     # node2_data = sps.detrend(node2_data, type='linear', axis=1)
 
-    node1_data = node1_data.compressed()[::subsmpl]*1e3
-    node2_data = node2_data.compressed()[::subsmpl]*1e3
-
-    node1_data -= num.mean(node1_data)
-    node2_data -= num.mean(node2_data)
+    node1_data = deramp(node1_data)
+    node2_data = deramp(node2_data)
+    node1_data = node1_data.compressed()[::subsmpl]
+    node2_data = node2_data.compressed()[::subsmpl]
 
     var = num.sqrt(num.abs(node1_data[:, num.newaxis] -
-                           node2_data[num.newaxis, :]))
-    cov = (node1_data[:, num.newaxis] *
-           node2_data[num.newaxis, :])
+                           node2_data[num.newaxis, :]))[ind]
+    cov = node1_data[:, num.newaxis] * node2_data[num.newaxis, :]
+    print cov.shape
+    cov = cov[ind]
 
+    var = var[d <= d_cutoff]
+    cov = cov[d <= d_cutoff]
+    d = d[d <= d_cutoff]
+    '''
+    Binning the results
+    '''
+    def meanVariance(data):
+        # Formular for variance
+        # (mean(sqrt(|d1-d2|))**4 / (.457+.0494/nsamples_p_bin))/2
+        return (num.mean(data)**4 / (.457 + .494/data.size)) / 2
+
+    def meanCovariance(data):
+        return 1./(2*data.size) * num.nansum(data)
+
+    # var, xedg, _ = sp.stats.binned_statistic(d, var,
+                                             # statistic=meanVariance,
+                                             # bins=nbins)
+    # cov, xedg, _ = sp.stats.binned_statistic(d, cov,
+                                             # statistic='mean',
+                                             # bins=nbins)
+    # dist = xedg[:-1] + (xedg[1]-xedg[2])/2
     return d, var, cov
 
 
@@ -198,7 +248,7 @@ class Covariance(guts.Object):
 
         elif method == 'matrix':
             self._log.info('Preprocessing covariance matrix'
-                           ' - subsampling %dx on %d cpus' %
+                           ' - subsampling %dx on %d cpus...' %
                            (self.config.subsampling, cpu_count()))
             worker_chunksize = 24 * self.config.subsampling
 
@@ -211,7 +261,7 @@ class Covariance(guts.Object):
                              leaf2.utm_grid_x, leaf2.utm_grid_y))
             pool = Pool(maxtasksperchild=worker_chunksize)
             results = pool.imap_unordered(_workerLeafMatrixCovariance, tasks,
-                                          chunksize=worker_chunksize)
+                                          chunksize=1)
             pool.close()
 
             pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
@@ -258,10 +308,10 @@ class Covariance(guts.Object):
         """
         return self.matrix[self._getMapping(leaf1, leaf2)]
 
-    def parameterAnalysis(self, nodes, subsampling=16):
+    def analysisCovariance(self, nodes, subsampling=8):
         """Analyse covariance parameters from list of *noisy* quadtree nodes
 
-        as described by Sudhaus, H. and Jónsson, S. (2009),
+          as described by Sudhaus, H. and Jónsson, S. (2009),
           Improved source modelling through combined use of InSAR and GPS under
           consideration of correlated data errors: application to
           the June 2000 Kleifarvatn earthquake,
@@ -274,57 +324,69 @@ class Covariance(guts.Object):
         :param subsampling: Subsampling factor for node variance analysis
         :type subsampling: int
         """
-        self._log.info('Analysing variance parameters...')
-
-        dist = []
-        var = []
-        cov = []
 
         nnodes = len(nodes)
+        self._log.info('Analysing variance parameters from %d nodes - '
+                       '%d pixel, subsampling %dx on %d cpus...'
+                       % (nnodes, sum(n.data.size for n in nodes), subsampling,
+                          cpu_count()))
         tasks = []
         for n1, node1 in enumerate(nodes):
-            for n2 in xrange(nnodes):
-                node2 = nodes[n2]
-                tasks.append((subsampling,
-                              node1.data_masked,
-                              node1.utm_grid_x, node1.utm_grid_y,
-                              node2.data_masked,
-                              node2.utm_grid_x, node2.utm_grid_y))
+            for n2 in xrange(nnodes-n1):
+                node2 = nodes[n1+n2]
+                self._log.info('Correlating node %d - %d' % (n1, n1+n2))
+                tasks.append((subsampling, self.config.distance_cutoff,
+                              node1.data_masked.copy(),
+                              node1.utm_grid_x.copy(),
+                              node1.utm_grid_y.copy(),
+                              node2.data_masked.copy(),
+                              node2.utm_grid_x.copy(),
+                              node2.utm_grid_y.copy()))
 
         pool = Pool(maxtasksperchild=32)
-        results = pool.imap_unordered(_workerNodeVariance, tasks, chunksize=16)
+        results = pool.imap_unordered(_workerNodeVariance, tasks, chunksize=1)
         pool.close()
 
+        var = []
+        cov = []
+        dist = []
         pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
                                                        ETA()]).start()
         for i, r in enumerate(results):
             d, v, c = r
-            dist.append(d.flatten())
+            if d is None:
+                continue
             var.append(v.flatten())
             cov.append(c.flatten())
+            dist.append(d.flatten())
             pbar.update(i+1)
+
         pool.join()
-        dist = num.concatenate(dist)
         var = num.concatenate(var)
         cov = num.concatenate(cov)
+        dist = num.concatenate(dist)
+        mean_var = num.nanmean(var, axis=0)
+        mean_cov = num.nanmean(cov, axis=0)
 
-        def meanVariance(data):
-                # Formular for variance
-                # (mean(sqrt(|d1-d2|))**4 / (.457+.0494/nsamples_p_bin))/2
-                return (num.mean(data)**4 / (.457 + .494/data.size)) / 2
+        # self._log.info('Optimizing covariance function...')
+        # weights = num.linspace(1, 1e-2, d.size)
+        # (a, b), pcov = \
+        #     sp.optimize.curve_fit(self.covarianceFunction,
+        #                           d[~num.isnan(mean_cov)],
+        #                           mean_cov[~num.isnan(mean_cov)],
+        #                           p0=None,
+        #                           check_finite=False,
+        #                           method=None, jac=None)
 
-        var, xedg, _ = stats.binned_statistic(dist, var,
-                                              statistic=meanVariance,
-                                              bins=100)
-        cov, xedg, _ = stats.binned_statistic(dist, cov,
-                                              statistic='mean',
-                                              bins=100)
-        dist = xedg[:-1]
-        return (dist, var, cov)
+        return dist, mean_var, mean_cov, var, cov, (1., 1.)
 
-    def parameterAnalysisAuto(self, nnodes=5, **kwargs):
+    @staticmethod
+    def covarianceFunction(dist, a, b):
+        return b * num.exp(-dist/a)
+
+    def analysisCovarianceAuto(self, nnodes=5, **kwargs):
         nodes = sorted(self._quadtree.leafs, key=lambda n: n.length)
-        return self.parameterAnalysis(nodes[-nnodes:], **kwargs)
+        return self.analysisCovariance(nodes[-nnodes:], **kwargs)
 
 
 __all__ = ['Covariance', 'CovarianceConfig']
