@@ -19,15 +19,26 @@ def property_cached(func):
 
 
 class Subject(object):
-    '''Subject - Obsever model realization '''
+    """
+    Subject - Obsever model realization
+    """
     def __init__(self):
         self._listeners = list()
 
     def subscribe(self, listener):
+        """
+        Subscribe a listening callback to this subject
+        """
         self._listeners.append(listener)
 
     def unsubscribe(self, listener):
-        self._listeners.remove(listener)
+        """
+        Unsubscribe a listening callback from this subject
+        """
+        try:
+            self._listeners.remove(listener)
+        except:
+            raise AttributeError('%s was not subscribed to ')
 
     def _notify(self, msg=''):
         for l in self._listeners:
