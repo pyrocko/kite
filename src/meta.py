@@ -4,17 +4,18 @@
 def property_cached(func):
     var_name = '_cached_' + func.__name__
 
-    @property
     def cache_return(instance, *args, **kwargs):
+        cache_return.__doc__ = func.__doc__
         if instance.__dict__.get(var_name, None) is None:
             instance.__dict__[var_name] = func(instance)
         return instance.__dict__[var_name]
 
-    @cache_return.setter
-    def cache_return(instance, value):
+    def cache_return_setter(instance, value):
         instance.__dict__[var_name] = value
 
-    return cache_return
+    return property(fget=cache_return,
+                    fset=cache_return_setter,
+                    doc=func.__doc__)
 
 
 class Subject(object):
