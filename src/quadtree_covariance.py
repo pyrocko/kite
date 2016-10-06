@@ -261,13 +261,6 @@ class Covariance(guts.Object):
     def parameterAnalysis(self, nodes, subsampling=16):
         """Analyse covariance parameters from list of *noisy* quadtree nodes
 
-        as described by Sudhaus, H. and Jónsson, S. (2009),
-          Improved source modelling through combined use of InSAR and GPS under
-          consideration of correlated data errors: application to
-          the June 2000 Kleifarvatn earthquake,
-          Iceland. Geophysical Journal International,
-          176: 389–404. doi:10.1111/j.1365-246X.2008.03989.x
-
         :param nodes: List of :python:`kite.quadtree.QuadNode`
             for variance calculation
         :type nodes: list
