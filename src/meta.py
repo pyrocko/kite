@@ -3,6 +3,11 @@
 
 def property_cached(func):
     var_name = '_cached_' + func.__name__
+    func_doc = "**Property:** "
+    if func.__doc__ is not None:
+        func_doc += func.__doc__
+    else:
+        func_doc += "Undocumented"
 
     def cache_return(instance, *args, **kwargs):
         cache_return.__doc__ = func.__doc__
@@ -15,7 +20,7 @@ def property_cached(func):
 
     return property(fget=cache_return,
                     fset=cache_return_setter,
-                    doc=func.__doc__)
+                    doc=func_doc)
 
 
 class Subject(object):

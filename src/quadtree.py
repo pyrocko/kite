@@ -176,13 +176,14 @@ class QuadtreeConfig(guts.Object):
         2, guts.Float.T(),
         default=(250, -9999.),
         help='Minimum and maximum allowed tile size')
-    covariance = CovarianceConfig.T(default=CovarianceConfig,
-        help='Covariance config for the quadtree')
+    covariance =\
+        CovarianceConfig.T(default=CovarianceConfig(),
+                           help='Covariance config for the quadtree')
 
 
 class Quadtree(object):
     """Quadtree for simplifying InSAR displacement data held in
-    :python:`kite.Scene`
+    :py:class:`kite.scene.Scene`
 
     Post-earthquake InSAR displacement scenes can hold a vast amount of data,
     which is unsuiteable for use with modelling code. By simplifying the data
@@ -225,13 +226,14 @@ class Quadtree(object):
     def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
 
-        * `mean_std` tiles standard deviation from tile's mean is evaluated
-        * `median_std` tiles standard deviation from tile's median is evaluated
-        * `std` tiles standard deviation is evaluated
+        * ``mean_std`` tiles standard deviation from tile's mean is evaluated
+        * ``median_std`` tiles standard deviation from tile's median is
+        evaluated
+        * ``std`` tiles standard deviation is evaluated
 
         :param split_method: Choose from methods
-                             `['mean_std', 'median_std', 'std']`
-        :type split_method: string
+        ``['mean_std', 'median_std', 'std']``
+        :type split_method: {str}
         :raises: AttributeError
         """
         if split_method not in self._split_methods.keys():
@@ -249,31 +251,17 @@ class Quadtree(object):
         self._initTree(parallel)
         self.splitMethodChanged._notify()
 
-    def _initTree(self, parallel):
+    def _initTree(self):
         t0 = time.time()
-        if parallel:
-            from pathos.pools import ProcessPool as Pool
-            # Pathos uses dill instead of pickle, this works w lambdas
-
-            pool = Pool()
-            self._log.info('Utilizing %d cpu cores' % pool.nodes)
-            res = pool.map(createTreeParallel, [(b,
-                                                 self._split_func,
-                                                 self._epsilon_limit)
-                                                for b in self._base_nodes])
-            self._base_nodes = [r for r in res]
-
-        else:
-            for b in self._base_nodes:
-                b.createTree(self._split_func, self._epsilon_limit)
+        for b in self._base_nodes:
+            b.createTree(self._split_func, self._epsilon_limit)
 
         self._log.info('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                              time.time()-t0))
 
     @property
     def epsilon(self):
-        """
-        Threshold for node splitting a `QuadNode`
+        """ Threshold for quadtree splitting its ``QuadNode``
         """
         return self.config.epsilon
 
@@ -304,8 +292,8 @@ class Quadtree(object):
 
     @property
     def nan_allowed(self):
-        """
-        Fraction of allowed `numpy.nan` values in quadtree leafs.
+        """Fraction of allowed ``NaN`` values allwed in quadtree leafs, if
+        value is exceeded the leaf is kicked out.
         """
         return self.config.nan_allowed
 
@@ -322,10 +310,9 @@ class Quadtree(object):
 
     @property
     def tile_size_lim(self):
-        '''
-        Limiting tile size - smaller tiles are joined, bigger tiles
-        split. Takes `tuple(min, max)` in `m`
-        '''
+        """Limiting tile size - smaller tiles are joined, bigger tiles
+        split. Takes ``tuple(min, max)`` in **meter**.
+        """
         return self.config.tile_size_lim
 
     @tile_size_lim.setter
@@ -348,8 +335,7 @@ class Quadtree(object):
 
     @property
     def nnodes(self):
-        """
-        Property holding number of nodes
+        """Number of nodes in the quadtree instance.
         """
         nnodes = 0
         for b in self._base_nodes:
@@ -359,8 +345,7 @@ class Quadtree(object):
 
     @property_cached
     def leafs(self):
-        """
-        List of current quadtrees leafs
+        """ Holds a list of current quadtrees leafs.
         """
         t0 = time.time()
         leafs = []
@@ -374,15 +359,15 @@ class Quadtree(object):
 
     @property
     def leaf_means(self):
-        """
-        :python:`numpy.array` holding leafs mean displacement, size `(N)`.
+        """Vector holding leafs mean displacement -
+        :py:class:`numpy.ndarray`, size ``N``.
         """
         return num.array([l.mean for l in self.leafs])
 
     @property
     def leaf_medians(self):
-        """
-        :python:`numpy.array` holding leafs median displacement, size `(N)`.
+        """Vector holding leafs median displacement -
+        :py:class:`numpy.ndarray`, size ``N``.
         """
         return num.array([l.median for l in self.leafs])
 
@@ -392,22 +377,22 @@ class Quadtree(object):
 
     @property
     def leaf_focal_points_utm(self):
-        """
-        :python:`numpy.array` holding leafs mean displacement, size `(N, 2)`.
+        """ Matrix holding leafs mean displacement -
+        :py:class:`numpy.ndarray`, size ``(N, 2)``.
         """
         return num.array([l.focal_point_utm for l in self.leafs])
 
     @property
     def leaf_matrix_means(self):
-        """
-        Matrix holding leafs mean values, size same as `Scene.displacement`.
+        """Matrix holding leafs mean values  -
+        ``(N,M)`` like `Scene.displacement`.
         """
         return self._getLeafsNormMatrix(method='mean')
 
     @property
     def leaf_matrix_medians(self):
-        """
-        Matrix holding leafs median values, size same as `Scene.displacement`.
+        """Matrix holding leafs median values -
+        ``(N,M)`` like `Scene.displacement`.
         """
         return self._getLeafsNormMatrix(method='median')
 
@@ -443,25 +428,22 @@ class Quadtree(object):
 
     @property_cached
     def plot(self):
-        """
-        Simple `matplotlib` illustration of
-        :python:`Quadtree.leaf_matrix_means`.
+        """Simple `matplotlib` illustration of
+        :py:class:`Quadtree.leaf_matrix_means`.
         """
         from kite.plot2d import PlotQuadTree2D
         return PlotQuadTree2D(self)
 
     @property_cached
     def covariance(self):
-        """
-        Holds a :python:`kite.covariance.Covariance` for the
+        """Holds a reference to :py:class:`kite.covariance.Covariance` for the
         `Quadtree` instance
         """
         from kite.quadtree_covariance import Covariance
         return Covariance(quadtree=self, config=self.config.covariance)
 
     def getStaticTarget(self):
-        """
-        Not Implemented
+        """Not Implemented
         """
         raise NotImplementedError
 

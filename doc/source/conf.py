@@ -353,7 +353,4 @@ def process_signature(app, what, name, obj, options, signature, return_annotatio
         if obj.dummy_for is not None:
             return ('(dummy)', '%s' % obj.dummy_for.__name__)
 
-    if what == 'class' and isinstance(obj, guts.T):
-        return 'asdasd'
-
     return

@@ -1,74 +1,63 @@
-Kite package
-============
+Kite InSAR Tools
+================
 
 .. automodule:: kite
-    :members:
-    :undoc-members:
+    :members:   
 
-Subpackages
------------
+Subpackage Spool GUI
+--------------------
 
 .. toctree::
 
     kite.spool
 
-Submodules
-----------
+Modules
+=======
 
-kite.dem module
+kite.Scene module
+-----------------
+
+.. automodule:: kite.scene
+    :members:
+
+Quadtree module
 ---------------
-
-.. automodule:: kite.dem
-    :members:
-    :undoc-members:
-
-kite.meta module
-----------------
-
-.. automodule:: kite.meta
-    :members:
-    :undoc-members:
-
-kite.plot2d module
-------------------
-
-.. automodule:: kite.plot2d
-    :members:
-    :undoc-members:
-
-kite.quadtree module
---------------------
 
 .. automodule:: kite.quadtree
     :members:
-    :undoc-members:
 
 kite.quadtree_covariance module
 -------------------------------
 
 .. automodule:: kite.quadtree_covariance
     :members:
-    :undoc-members:
 
-kite.scene module
------------------
+kite.Meta module
+----------------
 
-.. automodule:: kite.scene
+.. automodule:: kite.meta
     :members:
-    :undoc-members:
 
 kite.scene_io module
 --------------------
 
 .. automodule:: kite.scene_io
     :members:
-    :undoc-members:
 
 kite.scene_processing module
 ----------------------------
 
 .. automodule:: kite.scene_processing
     :members:
-    :undoc-members:
 
 
+Configuration Objects
+=====================
+
+.. autoclass:: kite.scene.SceneConfiguration
+
+.. autoclass:: kite.scene.UTMFrameConfiguration
+
+.. autoclass:: kite.quadtree.QuadtreeConfiguration
+
+.. autoclass:: kite.quadtree_covariance.CovarianceConfiguration

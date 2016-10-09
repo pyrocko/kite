@@ -25,6 +25,9 @@ class SceneError(Exception):
 
 
 class UTMFrameConfig(guts.Object):
+    """
+    Config object holding :py:class:`kite.scene.Scene` cobfiguration
+    """
     zone = guts.String.T(default='None',
                          help='UTM zone of scene')
     llx = guts.Float.T(default=0.,
@@ -38,7 +41,8 @@ class UTMFrameConfig(guts.Object):
 
 
 class UTMFrame(object):
-    """UTM frame holding geographical references for :python:`kite.Scene`
+    """UTM frame holding geographical references for
+    :py:class:`kite.scene.Scene`
     """
     def __init__(self, scene, config=UTMFrameConfig()):
         self._scene = scene
@@ -78,6 +82,9 @@ class UTMFrame(object):
 
     @property
     def x(self):
+        """
+        UTM x-vector, same size as ``Nx`` of ``Scene.displacement``.
+        """
         return self._x
 
     @x.setter
@@ -89,6 +96,9 @@ class UTMFrame(object):
 
     @property
     def y(self):
+        """
+        UTM y-vector, same size as ``xM`` of ``Scene.displacement``.
+        """
         return self._y
 
     @y.setter
@@ -100,6 +110,10 @@ class UTMFrame(object):
 
     @property_cached
     def grid_x(self):
+        """
+        UTM grid holding x coordinates of all pixels in ``NxM`` matrix
+        of ``Scene.displacement``.
+        """
         valid_data = num.isnan(self._scene.displacement)
         grid_x = num.repeat(self.x[:, num.newaxis],
                             self._scene.displacement.shape[1],
@@ -108,6 +122,10 @@ class UTMFrame(object):
 
     @property_cached
     def grid_y(self):
+        """
+        UTM grid holding y coordinates of all pixels in ``NxM`` matrix
+        of ``Scene.displacement``.
+        """
         valid_data = num.isnan(self._scene.displacement)
         grid_y = num.repeat(self.y[num.newaxis, :],
                             self._scene.displacement.shape[0],
@@ -124,7 +142,8 @@ class UTMFrame(object):
     def extent(self):
         """Get the UTM extent and pixel spacing of the LOS Displacement grid
 
-        :returns: ll_x, ll_y, ur_x, ur_y, dx, dy
+        :returns: Corner coordinates and spatial deltas
+        ll_x, ll_y, ur_x, ur_y, dx, dy
         :rtype: {tuple}
         """
         # Funny construction but we want to avoid unnecessary computation
@@ -137,6 +156,8 @@ class UTMFrame(object):
 
 
 class Meta(guts.Object):
+    """Meta configuration for ``Scene``.
+    """
     scene_title = guts.String.T(default='Unnamed Scene')
     scene_id = guts.String.T(default='INSAR')
     scene_view = guts.String.T(default='ASCENDING')
@@ -146,47 +167,36 @@ class Meta(guts.Object):
 
 
 class SceneConfig(guts.Object):
-    meta = Meta.T(default=Meta())
-    utm = UTMFrameConfig.T(default=UTMFrameConfig())
-    quadtree = QuadtreeConfig.T(default=QuadtreeConfig())
+    """ Configuration object, gathering ``kite.Scene`` and
+    sub-objects configuration.
+    """
+    meta = Meta.T(default=Meta(),
+                  help='Scene metainformation.')
+    utm = UTMFrameConfig.T(default=UTMFrameConfig(),
+                           help='Scene UTMFrame configuration.')
+    quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
+                                help='Quadtree configuration.')
 
 
 class Scene(object):
     """Scene holding satellite LOS ground dispacements measurements
 
-    :param displacement: NxM matrix of displacement in LOS
+    :param displacement: ``NxM`` matrix of displacement in LOS
     :type displacement: :py:class:`numpy.ndrray`
-    :param theta: NxM matrix of theta towards LOS.
+    :param theta: ``NxM`` matrix of theta towards LOS.
         Theta is look vector elevation angle towards satellite from horizon
-        in radians. (pi/2: up; -pi/2: down)
+        in radians - ``pi/2: up; -pi/2: down``
     :type theta: :py:class:`numpy.ndarray`
-    :param phi: NxM matrix of phi towards LOS.
+    :param phi: ``NxM`` matrix of phi towards LOS.
         Phi look vector orientation angle towards satellite in radians.
         (0: east, pi/2 north)
     :type phi: :py:class:`numpy.ndarray`
-    :param utm_x: UTM latitudal reference vector for
-        displacement, theta, phi ndarrays (N)
-    :type utm_x: :py:class:`numpy.ndarray`
-    :param utm_y: UTM longitudal reference vector for
-        displacement, theta, phi ndarrays (N)
-    :type utm_y: :py:class:`numpy.ndarray`
-    :param X: Derived meshed utm_y
-    :type X: :py:class:`numpy.ndarray`
-    :param X: Derived meshed utm_x
-    :type Y: :py:class:`numpy.ndarray`
-
     :param meta: Meta information for the scene
     :type meta: :py:class:`kite.scene.Meta`
 
     :param los: Displacement measurements (displacement, theta, phi) from
         satellite measurements
     :type los: :py:class:`kite.scene.DisplacementLOS`
-
-    :param cartesian: Derived cartesian displacements, derived from los
-    :type cartesian: :py:class:`kite.scene.DisplacementCartesian`
-
-    :param quadtree: Quadtree for the scene
-    :type quadtree: :py:class:`kite.quadtree.Quadtree`
     """
     def __init__(self, config=SceneConfig()):
         self.config = config
@@ -202,6 +212,9 @@ class Scene(object):
 
     @property
     def displacement(self):
+        """InSAR scene displacement ``NxM`` matrix of type
+        :py:class:`numpy:ndarray`
+        """
         return self._displacement
 
     @displacement.setter
@@ -211,6 +224,10 @@ class Scene(object):
 
     @property
     def phi(self):
+        """``NxM`` matrix of phi towards satellite' line of sight.
+        Phi look vector orientation angle towards satellite in radians.
+        (0: east, pi/2 north)
+        """
         return self._phi
 
     @phi.setter
@@ -232,6 +249,10 @@ class Scene(object):
 
     @property
     def theta(self):
+        """``NxM`` matrix of theta towards satellite' line of sight.
+        Theta is look vector elevation angle towards satellite from horizon
+        in radians - ``pi/2: up; -pi/2: down``
+        """
         return self._theta
 
     @theta.setter
@@ -253,6 +274,8 @@ class Scene(object):
 
     @property_cached
     def quadtree(self):
+        """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
+        """
         from kite.quadtree import Quadtree
         return Quadtree(scene=self, config=self.config.quadtree)
 
@@ -262,6 +285,9 @@ class Scene(object):
         return PlotDisplacement2D(self)
 
     def spool(self):
+        """Start the spool GUI :py:class:`kite.spool.Spool` to inspect
+        the scene.
+        """
         if self.displacement is None:
             raise SceneError('Can not display an empty scene.')
         from kite.spool import Spool
@@ -270,33 +296,33 @@ class Scene(object):
     @classmethod
     def import_file(cls, filename, **kwargs):
         """Import displacement data from foreign file format.
-        Supported formats are `Matlab` and `Gamma`
+        Supported formats are `Matlab` and `Gamma` Remote Sensing Software.
 
-        Matlab
-        ======
-        Variable naming conventions in Matlab variables in `.mat` file
-        ============ ==================
-        Property     .mat name contains
-        ============ ==================
-        Displacement `ig_`
-        Phi          `phi`
-        Theta        `theta`
-        UTM_X        `xx`
-        UTM_Y        `yy`
-        ============ ==================
+        **Matlab**
 
-        Gamma
-        =====
+        Variable naming conventions for variables in Matlab ``.mat`` file:
+
+        ================== ====================
+        Property           Matlab ``.mat`` name
+        ================== ====================
+        Scene.displacement ``ig_``
+        Scene.phi          ``phi``
+        Scene.theta        ``theta``
+        Scene.utm.x        ``xx``
+        Scene.utm.x        ``yy``
+        ================== ====================
+
+        **Gamma**
+
         Support for GAMMA Remote Sensing binary files
-
-        A `.par` file is expected in the import folder
+        A ``.par`` file is expected in the import folder
 
         :param filename: Filename of resource to import
         :type filename: str
         :param **kwargs: keyword arguments passed to import function
         :type **kwargs: dict
         :returns: Scene from filename
-        :rtype: {:python:`kite.Scene`}
+        :rtype: {:py:class:`kite.Scene`}
         :raises: TypeError
         """
         from kite import scene_io
@@ -323,15 +349,15 @@ class Scene(object):
         return scene
 
     def save(self, scene_name=None):
-        """Save kite scene to file structure named `scene_name`
+        """Save kite scene to kite file structure
 
         Saves the current scene meta information and UTM frame to a YAML
-        (`.yml`) file. Numerical data (`Scene.displacement`,
-        `Scene.theta` and `Scene.phi`) are saved as binary files from
-        :python:`numpy.ndarray`.
+        (``.yml``) file. Numerical data (``Scene.displacement``,
+        ``Scene.theta`` and ``Scene.phi``) are saved as binary files from
+        :py:class:`numpy.ndarray`.
         :param scene_name: Filenames to save scene to, defaults to
-        `Scene.meta.scene_id + _ + Scene.meta.scene_view`
-        :type scene_name: str, optional
+        ``Scene.meta.scene_id + _ + Scene.meta.scene_view``
+        :type scene_name: {str}, optional
         """
         filename = scene_name or '%s_%s' % (self.meta.scene_id,
                                             self.meta.scene_view)
@@ -353,12 +379,13 @@ class Scene(object):
 
     @classmethod
     def load(cls, scene_name):
-        """Load a kite scene from `scene_name.[yml,dsp,tht,phi]` structure
+        """Load a kite scene from file ``scene_name.[yml,dsp,tht,phi]``
+        structure
 
         :param scene_name: Filenames the scene data is saved under
-        :type scene_name: str
+        :type scene_name: {str}
         :returns: Scene object from data resources
-        :rtype: {:python:`kite.Scene`}
+        :rtype: {:py:class:`kite.Scene`}
         """
 
         success = False
@@ -394,6 +421,9 @@ class Scene(object):
 
 
 class LOSUnitVectors(object):
+    """Decomposed Line Of Sight vectors (LOS) derived from
+    ``Scene.displacement``.
+    """
     def __init__(self, scene):
         self._scene = scene
         self._scene.sceneChanged.subscribe(self._flush_vectors)
@@ -405,22 +435,32 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitE(self):
+        """Unit vector in East, ``NxM`` matrix like ``Scene.displacement``
+        """
         return num.cos(self._scene.phi) * num.cos(self._scene.theta)
 
     @property_cached
     def unitN(self):
+        """Unit vector in North, ``NxM`` matrix like ``Scene.displacement``
+        """
         return num.sin(self._scene.phi) * num.cos(self._scene.theta)
 
     @property_cached
     def unitU(self):
+        """Unit vector Up, ``NxM`` matrix like ``Scene.displacement``
+        """
         return num.sin(self._scene.theta)
 
     @property_cached
     def degTheta(self):
+        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.theta``
+        """
         return num.rad2deg(self._scene.theta)
 
     @property_cached
     def degPhi(self):
+        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.phi``
+        """
         return num.rad2deg(self._scene.phi)
 
 
