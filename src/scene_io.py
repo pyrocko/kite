@@ -48,16 +48,19 @@ class SceneIO(object):
 class Matlab(SceneIO):
     """Reads Matlab .mat files into :py:class:`kite.scene.Scene`
 
-    Variable naming conventions in .mat variables
-    ============ ==================
-    Property     .mat name contains
-    ============ ==================
-    Displacement `ig_`
-    Phi          `phi`
-    Theta        `theta`
-    UTM_X        `xx`
-    UTM_Y        `yy`
-    ============ ==================
+    **Matlab**
+
+    Variable naming conventions for variables in Matlab ``.mat`` file:
+
+    ================== ====================
+    Property           Matlab ``.mat`` name
+    ================== ====================
+    Scene.displacement ``ig_``
+    Scene.phi          ``phi``
+    Scene.theta        ``theta``
+    Scene.utm.x        ``xx``
+    Scene.utm.x        ``yy``
+    ================== ====================
     """
     def __init__(self):
         self.io = importlib.import_module('scipy.io')
@@ -90,7 +93,7 @@ class Matlab(SceneIO):
 class Gamma(SceneIO):
     """Reads Gamma binary files
 
-    A `.par` file is expected in the import folder
+    A ``.par`` file is expected in the import folder
     """
     def _getParameterFile(self, filename):
         import os
