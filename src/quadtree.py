@@ -4,7 +4,7 @@ import time
 from pyrocko import guts
 
 from kite.meta import Subject, property_cached
-from kite.quadtree_covariance import CovarianceConfig
+from kite.covariance import CovarianceConfig
 # from pyrock.util import clock
 
 
@@ -248,7 +248,7 @@ class Quadtree(object):
         self._epsilon_limit = None
         self.epsilon = self._epsilon_init
 
-        self._initTree(parallel)
+        self._initTree()
         self.splitMethodChanged._notify()
 
     def _initTree(self):
@@ -442,7 +442,7 @@ class Quadtree(object):
         """Holds a reference to :py:class:`kite.covariance.Covariance` for the
         `Quadtree` instance
         """
-        from kite.quadtree_covariance import Covariance
+        from kite.covariance import Covariance
         return Covariance(quadtree=self, config=self.config.covariance)
 
     def getStaticTarget(self):
