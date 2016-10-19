@@ -3,15 +3,12 @@ import scipy as sp
 
 import logging
 from pyrocko import guts
-from kite.meta import Subject, property_cached
+from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
 
 from multiprocessing import Pool, cpu_count
 from progressbar import ProgressBar, ETA, Bar
 
-try:
-    import arrayfire as af
-except:
-    af = None
+__all__ = ['Covariance', 'CovarianceConfig']
 
 
 class CovarianceConfig(guts.Object):
@@ -146,44 +143,9 @@ def _workerCovariance(args):
     dist = xedg[:-1] + (xedg[1]-xedg[2])/2
     return dist, var, cov
 
-def _workerCovarianceSimple(args):
-    (subsmpl, d_cutoff,
-     node1_data, node1_utm_grid_x, node1_utm_grid_y,
-     node2_data, node2_utm_grid_x, node2_utm_grid_y) = args
 
-    n = 7500
-    node1_data = deramp(node1_data)
-    node2_data = deramp(node2_data)
-    
-    d = []
-    cov = []
-    var = []
-    rand_coord = num.random.RandomState(seed=1001230)
-    while len(d) < n:
-        n11, n12 = [rand_coord.randint(0, node1_data.shape[0]),
-                    rand_coord.randint(0, node1_data.shape[1])]
-        n21, n22 = [rand_coord.randint(0, node2_data.shape[0]),
-                    rand_coord.randint(0, node2_data.shape[1])]
-
-        if (node1_utm_grid_x.mask[n11, n12] or
-            node2_utm_grid_x.mask[n21, n22]):
-            continue
-        _d = (node1_utm_grid_x[n11, n12] - node2_utm_grid_x[n21, n22])**2 +\
-             (node1_utm_grid_y[n11, n12] - node2_utm_grid_y[n21, n22])**2
-        _d = num.sqrt(_d)
-
-        _var = num.sqrt(num.abs(node1_data[n11, n12] - node2_data[n21, n22]))
-        _cov = node1_data[n11, n12] * node2_data[n21, n22]
-
-        d.append(_d)
-        cov.append(_cov)
-        var.append(_var)
-
-    d = num.array(d)
-    cov = num.array(cov)
-    var = num.array(var)
-
-    return d, cov, var
+def covarianceFunction(distance, a, b):
+        return b * num.exp(-distance/a)
 
 
 class Covariance(guts.Object):
@@ -207,8 +169,10 @@ class Covariance(guts.Object):
     def __init__(self, quadtree, config=CovarianceConfig()):
         self.covarianceUpdate = Subject()
         self.covarianceUpdate.subscribe(self._clearCovariance)
+
         self.config = config
         self._quadtree = quadtree
+        self._noise_data = None
 
         self._log = logging.getLogger('Covariance')
 
@@ -218,6 +182,27 @@ class Covariance(guts.Object):
     def _clearCovariance(self):
         self.matrix = None
         self.matrix_focal_points = None
+        self.covariance_func = None
+
+    @property
+    def noise_data(self, data):
+        return self._noise_data
+
+    @noise_data.getter
+    def noise_data(self):
+        if self._noise_data is not None:
+            return self._noise_data
+        nodes = sorted(self._quadtree.leafs,
+                       key=lambda n: n.length/(n.nan_fraction+1))
+        self._noise_data = nodes[-1].data
+        return self.noise_data
+
+    @noise_data.setter
+    def noise_data(self, data):
+        self._noise_data = data
+
+    def setNoiseData(self, data):
+        self.noise_data = data
 
     @property
     def subsampling(self):
@@ -348,80 +333,61 @@ class Covariance(guts.Object):
         """
         return self.matrix[self._getMapping(leaf1, leaf2)]
 
-    def analysisCovariance(self, nodes, subsampling=8):
-        """Analyse covariance parameters from list of *noisy* quadtree nodes
+    def covariance_analytical(self, distance):
+        '''Retrieve analytical covariance fitted from
+        Covariance.covariance_func
+        '''
+        return covarianceFunction(distance, *self.covariance_coeff)
 
-        :param nodes: List of :python:`kite.quadtree.QuadNode`
-            for variance calculation
-        :type nodes: list
-        :param subsampling: Subsampling factor for node variance analysis
-        :type subsampling: int
-        """
+    @property_cached
+    def covariance_coeff(self):
+        weights = num.linspace(0., 1., self.covariance_func[1].size)
+        p, cov = sp.optimize.curve_fit(covarianceFunction,
+                                       self.covariance_func[1],
+                                       self.covariance_func[0],
+                                       p0=None,
+                                       sigma=weights,
+                                       check_finite=True,
+                                       method=None, jac=None)
+        return p
 
-        nnodes = len(nodes)
-        self._log.info('Analysing variance parameters from %d nodes - '
-                       '%d pixel, subsampling %dx on %d cpus...'
-                       % (nnodes, sum(n.data.size for n in nodes), subsampling,
-                          cpu_count()))
-        tasks = []
-        for n1, node1 in enumerate(nodes):
-            for n2 in xrange(nnodes-n1):
-                node2 = nodes[n1+n2]
-                self._log.info('Correlating node %d - %d' % (n1, n1+n2))
-                tasks.append((subsampling, self.config.distance_cutoff,
-                              node1.data_masked.copy(),
-                              node1.utm_grid_x.copy(),
-                              node1.utm_grid_y.copy(),
-                              node2.data_masked.copy(),
-                              node2.utm_grid_x.copy(),
-                              node2.utm_grid_y.copy()))
+    @property_cached
+    def covariance_func(self):
+        ''' Covariance function derived from displacement noise patch
+        '''
+        def powerspecDisplacement(displacement, dx, dy):
+            displacement[num.isnan(displacement)] = 0.
 
-        pool = Pool(maxtasksperchild=32)
-        results = pool.imap_unordered(_workerCovarianceSimple, tasks,
-                                      chunksize=1)
-        pool.close()
+            f_spec = num.fft.fft2(displacement, axes=(-2, -1), norm=None)
+            p_spec = num.abs(f_spec) / f_spec.size
 
-        var = []
-        cov = []
-        dist = []
-        # pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
-        #                                                ETA()]).start()
-        for i, r in enumerate(results):
-            d, v, c = r
-            if d is None:
-                continue
-            var.append(v.flatten())
-            cov.append(c.flatten())
-            dist.append(d.flatten())
-            # pbar.update(i+1)
+            p_spec_x = num.mean(p_spec, axis=0)
+            p_spec_y = num.mean(p_spec, axis=1)
 
-        pool.join()
-        var = num.concatenate(var)
-        cov = num.concatenate(cov)
-        dist = num.concatenate(dist)
-        mean_var = num.nanmean(var, axis=0)
-        mean_cov = num.nanmean(cov, axis=0)
+            w_x = num.fft.fftfreq(p_spec_x.size, d=dx)
+            w_y = num.fft.fftfreq(p_spec_y.size, d=dy)
 
-        # self._log.info('Optimizing covariance function...')
-        # weights = num.linspace(1, 1e-2, d.size)
-        # (a, b), pcov = \
-        #     sp.optimize.curve_fit(self.covarianceFunction,
-        #                           d[~num.isnan(mean_cov)],
-        #                           mean_cov[~num.isnan(mean_cov)],
-        #                           p0=None,
-        #                           check_finite=False,
-        #                           method=None, jac=None)
+            return p_spec_x, w_x, p_spec_y, w_y
 
-        return dist, mean_var, mean_cov, var, cov, (1., 1.)
+        def covarianceCosine(p_spec, w):
+            p_spec = p_spec[w > 0]
+            w = w[w > 0]
+            p_spec[num.isnan(p_spec)] = 0.
+            cos = sp.fftpack.dct(p_spec, type=2, n=None, norm='ortho')
+            return cos, w
 
-    @staticmethod
-    def covarianceFunction(dist, a, b):
-        return b * num.exp(-dist/a)
+        displacement = self.noise_data.copy()
+        displacement = trimMatrix(displacement)  # removes nans or 0.
+        displacement = derampMatrix(displacement)
 
-    def analysisCovarianceAuto(self, nnodes=5, **kwargs):
-        nodes = sorted(self._quadtree.leafs, key=lambda n: n.length)
-        return self.analysisCovariance(nodes[-nnodes:], **kwargs)
+        ps_x, w_x, ps_y, w_y = powerspecDisplacement(displacement,
+                                                     self._quadtree.utm.dx,
+                                                     self._quadtree.utm.dy)
 
+        cov_x, _ = covarianceCosine(ps_x, w_x)
+        cov_y, _ = covarianceCosine(ps_y, w_y)
 
-__all__ = ['Covariance', 'CovarianceConfig']
+        s_x = num.arange(cov_x.size) * self._quadtree.utm.dx
+        s_y = num.arange(cov_y.size) * self._quadtree.utm.dy
 
+        return cov_x, s_x, cov_y, s_y
