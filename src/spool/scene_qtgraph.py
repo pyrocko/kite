@@ -180,8 +180,8 @@ class QKiteToolComponents(QtGui.QWidget):
                 ('Mean value', '%0.4f' % num.nanmean(self.plot.data)),
                 ('Resolution px', '%d x %d' % (self.plot.data.shape[0],
                                                self.plot.data.shape[1])),
-                ('dx', '%d m' % self.plot.container.utm.extent()[-2]),
-                ('dy', '%d m' % self.plot.container.utm.extent()[-1]),
+                ('dx', '%.2f m' % self.plot.container.utm.extent()[-2]),
+                ('dy', '%.2f m' % self.plot.container.utm.extent()[-1]),
                 ]
             rstr = '<table>'
             for (metric, value) in table_content:

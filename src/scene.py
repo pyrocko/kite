@@ -70,9 +70,9 @@ class UTMFrame(object):
         urx, ury = self.x.max(), self.y.max()
 
         self.config.llx = llx
-        self.config.dx = abs(urx - llx)/self.x.size
+        self.config.dx = abs(urx - llx)/(self.x.size+1)
         self.config.lly = lly
-        self.config.dy = abs(ury - lly)/self.y.size
+        self.config.dy = abs(ury - lly)/(self.y.size+1)
         self.config.regularize()
 
         self.grid_x = None
@@ -336,6 +336,10 @@ class Scene(object):
         :raises: TypeError
         """
         from kite import scene_io
+        import os
+
+        if not os.path.isfile(filename):
+            raise ImportError('File %s does not exist!' % filename)
 
         scene = cls()
         data = None
@@ -343,12 +347,15 @@ class Scene(object):
         for mod in scene_io.__all__:
             module = eval('scene_io.%s()' % mod)
             if module.validate(filename, **kwargs):
-                data = module.read(filename, **kwargs)
+                try:
+                    data = module.read(filename, **kwargs)
+                except ImportError:
+                    pass
                 scene._log.debug('Recognized format %s for file %s' %
                                  (mod, filename))
                 break
         if data is None:
-            raise TypeError('Could not recognize format for %s' % filename)
+            raise ImportError('Could not recognize format for %s' % filename)
 
         scene.theta = data['theta']
         scene.phi = data['phi']
@@ -356,7 +363,24 @@ class Scene(object):
         scene.utm.x = data['utm_x']
         scene.utm.y = data['utm_y']
 
+        scene._testImport()
         return scene
+
+    def _testImport(self):
+        try:
+            self.utm.x
+            self.utm.y
+            self.utm.grid_x
+            self.utm.grid_y
+            self.utm.dx
+            self.utm.dy
+            self.displacement
+            self.theta
+            self.phi
+        except Exception as e:
+            print e
+            raise ImportError('Something went wrong during import - '
+                              'see Exception!')
 
     def save(self, scene_name=None):
         """Save kite scene to kite file structure
@@ -397,7 +421,6 @@ class Scene(object):
         :returns: Scene object from data resources
         :rtype: {:py:class:`kite.Scene`}
         """
-
         success = False
         components = {
             'displacement': 'dsp',
@@ -422,8 +445,10 @@ class Scene(object):
                               % (comp.title(), scene_name, ext),
                               UserIOWarning)
         if not success:
-            raise IOError('Could not load kite scene container %s'
-                          % scene_name)
+            raise ImportError('Could not load kite scene container %s'
+                              % scene_name)
+
+        scene._testImport()
         return scene
 
     def __str__(self):

@@ -2,6 +2,7 @@ import numpy as num
 import matplotlib.pyplot as plt
 from kite.meta import Subject
 from matplotlib.image import AxesImage
+from matplotlib.figure import Figure
 import logging
 import time
 
@@ -352,7 +353,7 @@ class PlotQuadTree2D(Plot2D):
             self._quadtree.epsilon = e
 
         def close_figure(*args):
-            self._quadtree.unsubscribe(self._update)
+            self._quadtree.treeUpdate.unsubscribe(self._update)
 
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
@@ -369,10 +370,45 @@ class PlotQuadTree2D(Plot2D):
 
         # Catch events
         epsilon.on_changed(change_epsilon)
-        self._quadtree.subscribe(self._update)
+        self._quadtree.treeUpdate.subscribe(self._update)
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
         plt.show()
+
+
+class PlotCovariance(Figure):
+    def __init__(self, covariance):
+        matplotlib.Figure.__init__(self)
+        self._covariance = covariance
+
+        self.ax_cov = self.add_axes()
+        self.ax_pow = self.add_axes()
+
+        self._plotCovariance()
+
+    def __call__(self):
+        self.show()
+
+    def _plotCovariance(self):
+        self.ax_cov.plot(self._covariance.covariance_func[1],
+                         self._covariance.covariance_func[0],
+                         label='k_x')
+        self.ax_cov.plot(self._covariance.covariance_func[-1],
+                         self._covariance.covariance_func[-2],
+                         label='k_y')
+
+    def _plotPowerspec(self):
+        p_spec_x, w_x, p_spec_y, w_y = self._covariance.powerspecNoise()
+
+        self.ax_pow.plot(w_x[w_x > 0], p_spec_x[w_x > 0], label='$k_x$')
+        self.ax_pow.plot(w_y[w_y > 0], p_spec_y[w_y > 0], label='$k_y$')
+        self.ax_pow.legend(loc=1)
+        self.ax_pow.grid(alpha=.4)
+
+        self.ax_pow.set_xlabel('Wavenumber [$cycles/m$]')
+        self.ax_pow.set_xscale('log')
+        self.ax_pow.set_ylabel('Power [$m^2$]')
+        self.ax_pow.set_yscale('log')
 
 
 __all__ = """

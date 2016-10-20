@@ -1,5 +1,5 @@
 import importlib
-
+import numpy as num
 
 class SceneIO(object):
     """ Prototype class for SARIO objects """
@@ -87,7 +87,24 @@ class Matlab(SceneIO):
                 elif 'yy' in mat_k:
                     self.data_items['utm_y'] = mat[mat_k].flatten()
 
+        self._fixUTMVectors(self.data_items)
         return self.data_items
+
+    @staticmethod
+    def _fixUTMVectors(data_items):
+        def getUTMVector(exp_size, broken_vec):
+            ds = broken_vec[1]-broken_vec[0]
+            return num.arange(exp_size) * ds + num.nanmin(broken_vec)
+
+        if (data_items['displacement'].shape[0] != data_items['utm_x'].size):
+            data_items['utm_x'] =\
+                getUTMVector(data_items['displacement'].shape[0],
+                             data_items['utm_x'])
+
+        if (data_items['displacement'].shape[1] != data_items['utm_y'].size):
+            data_items['utm_y'] =\
+                getUTMVector(data_items['displacement'].shape[1],
+                             data_items['utm_y'])
 
 
 class Gamma(SceneIO):

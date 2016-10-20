@@ -333,6 +333,27 @@ class Covariance(guts.Object):
         """
         return self.matrix[self._getMapping(leaf1, leaf2)]
 
+    def powerspecNoise(self, data=None):
+        if data is None:
+            noise = self.noise_data.copy()
+        else:
+            noise = data.copy()
+
+        noise = trimMatrix(noise)  # removes nans or 0.
+        noise = derampMatrix(noise)
+        noise[num.isnan(noise)] = 0.
+
+        f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
+        p_spec = num.abs(f_spec)  # / f_spec.size
+
+        p_spec_x = num.mean(p_spec, axis=0)
+        p_spec_y = num.mean(p_spec, axis=1)
+
+        k_x = num.fft.fftfreq(p_spec_x.size, d=self._quadtree.utm.dx)
+        k_y = num.fft.fftfreq(p_spec_y.size, d=self._quadtree.utm.dy)
+
+        return p_spec_x, k_x, p_spec_y, k_y
+
     def covariance_analytical(self, distance):
         '''Retrieve analytical covariance fitted from
         Covariance.covariance_func
@@ -355,20 +376,6 @@ class Covariance(guts.Object):
     def covariance_func(self):
         ''' Covariance function derived from displacement noise patch
         '''
-        def powerspecDisplacement(displacement, dx, dy):
-            displacement[num.isnan(displacement)] = 0.
-
-            f_spec = num.fft.fft2(displacement, axes=(-2, -1), norm=None)
-            p_spec = num.abs(f_spec) / f_spec.size
-
-            p_spec_x = num.mean(p_spec, axis=0)
-            p_spec_y = num.mean(p_spec, axis=1)
-
-            w_x = num.fft.fftfreq(p_spec_x.size, d=dx)
-            w_y = num.fft.fftfreq(p_spec_y.size, d=dy)
-
-            return p_spec_x, w_x, p_spec_y, w_y
-
         def covarianceCosine(p_spec, w):
             p_spec = p_spec[w > 0]
             w = w[w > 0]
@@ -376,18 +383,24 @@ class Covariance(guts.Object):
             cos = sp.fftpack.dct(p_spec, type=2, n=None, norm='ortho')
             return cos, w
 
-        displacement = self.noise_data.copy()
-        displacement = trimMatrix(displacement)  # removes nans or 0.
-        displacement = derampMatrix(displacement)
+        ps_x, k_x, ps_y, k_y = self.powerspecNoise()
 
-        ps_x, w_x, ps_y, w_y = powerspecDisplacement(displacement,
-                                                     self._quadtree.utm.dx,
-                                                     self._quadtree.utm.dy)
+        cov_x, _ = covarianceCosine(ps_x, k_x)
+        cov_y, _ = covarianceCosine(ps_y, k_y)
 
-        cov_x, _ = covarianceCosine(ps_x, w_x)
-        cov_y, _ = covarianceCosine(ps_y, w_y)
+        d_x = num.arange(1, cov_x.size+1) * self._quadtree.utm.dx
+        d_y = num.arange(1, cov_y.size+1) * self._quadtree.utm.dy
 
-        s_x = num.arange(cov_x.size) * self._quadtree.utm.dx
-        s_y = num.arange(cov_y.size) * self._quadtree.utm.dy
+        return cov_x, d_x, cov_y, d_y
 
-        return cov_x, s_x, cov_y, s_y
+    @property_cached
+    def structure_func(self):
+        # from http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
+        cov_x, d_x, cov_y, d_y = self.covariance_func
+        p_spec_x, k_x, p_spec_y, k_y = self.powerspecNoise()
+
+        struc_func = num.zeros_like(cov_x)
+        for i, d in enumerate(d_x):
+            for ik, k in enumerate(k_x[k_x>0.]):
+                struc_func[i] += 1. - num.cos(-k*d)*cov_x[ik]
+        return struc_func, d_x
