@@ -84,7 +84,10 @@ class Subject(object):
         """
         Subscribe a listening callback to this subject
         """
-        self._listeners.append(listener)
+        if len(self._listeners) > 0:
+            self._listeners.insert(0, listener)
+        else:
+            self._listeners.append(listener)
 
     def unsubscribe(self, listener):
         """
