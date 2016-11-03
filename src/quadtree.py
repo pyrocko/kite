@@ -66,6 +66,7 @@ class QuadNode(object):
 
     @property_cached
     def _focal_point(self):
+        return self.focal_point_utm()
         w_x = num.linspace(0, 1., self.data.shape[0], endpoint=True)
         w_y = num.linspace(0, 1., self.data.shape[1], endpoint=True)
         w_X, w_Y = num.meshgrid(w_x, w_y, sparse=False, copy=False)
@@ -263,6 +264,7 @@ class Quadtree(object):
 
         self._log.info('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                              time.time()-t0))
+        self.treeUpdate._notify()
 
     @property
     def epsilon(self):
@@ -421,6 +423,7 @@ class Quadtree(object):
         for l in self.leafs:
             leaf_matrix[l.llx:l.llx+l.length, l.lly:l.lly+l.length] = \
                 self._norm_methods[method](l)
+        leaf_matrix[num.isnan(self._data)] = num.nan
         return leaf_matrix
 
     @property_cached
