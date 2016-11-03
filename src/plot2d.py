@@ -2,9 +2,10 @@ import numpy as num
 import matplotlib.pyplot as plt
 from kite.meta import Subject
 from matplotlib.image import AxesImage
-from matplotlib.figure import Figure
 import logging
 import time
+
+__all__ = ['ScenePlot', 'QuadtreePlot', 'CovariancePlot']
 
 _DEFAULT_IMSHOW = {
     'cmap': 'RdBu',
@@ -110,6 +111,7 @@ class Plot2D(Subject):
             self.ax = None
         try:
             self.fig.canvas.mpl_connect('close_event', close_figure)
+        # specify!
         except:
             pass
 
@@ -201,7 +203,7 @@ class Plot2D(Subject):
                 ]
 
 
-class PlotDisplacement2D(Plot2D):
+class ScenePlot(Plot2D):
     """Plotting 2D displacements though Matplotlib
     """
     def __init__(self, scene, **kwargs):
@@ -273,7 +275,7 @@ class PlotDisplacement2D(Plot2D):
             raise AttributeError('Could not access component %s' % component)
 
 
-class PlotQuadTree2D(Plot2D):
+class QuadtreePlot(Plot2D):
     """Plotting 2D Quadtrees though Matplotlib
     """
     def __init__(self, quadtree, **kwargs):
@@ -345,6 +347,8 @@ class PlotQuadTree2D(Plot2D):
 
     def interactive(self):
         """Simple interactive quadtree plot with matplot
+
+        This is a relictic function
         """
         from matplotlib.widgets import Slider
         self._initImagePlot()
@@ -376,44 +380,142 @@ class PlotQuadTree2D(Plot2D):
         plt.show()
 
 
-class PlotCovariance(Figure):
-    def __init__(self, covariance):
-        matplotlib.Figure.__init__(self)
+class CovariancePlot(object):
+    def __init__(self, covariance, *args, **kwargs):
         self._covariance = covariance
+        self._quadtree = covariance._quadtree
+        self._scene = covariance._quadtree._scene
+        self.fig = plt.figure(figsize=(11.692, 8.267))
 
-        self.ax_cov = self.add_axes()
-        self.ax_pow = self.add_axes()
+        self.ax_noi = self.fig.add_subplot(321)
+        self.ax_cov = self.fig.add_subplot(322)
+        self.ax_stc = self.fig.add_subplot(324)
+        self.ax_pow = self.fig.add_subplot(323)
+        self.ax_qud = self.fig.add_subplot(325)
 
-        self._plotCovariance()
+        self.plotCovariance(self.ax_cov)
+        self.plotStructure(self.ax_stc)
+        self.plotPowerspec(self.ax_pow)
+        self.plotNoise(self.ax_noi)
+        self.plotQuadtreeWeight(self.ax_qud)
+
+        # self.plotPowerfit()
+
+        self.fig.subplots_adjust(
+                left=.05, bottom=.075, right=.95, top=.95,
+                wspace=.2, hspace=.25)
 
     def __call__(self):
-        self.show()
+        self.fig.show()
 
-    def _plotCovariance(self):
-        self.ax_cov.plot(self._covariance.covariance_func[1],
-                         self._covariance.covariance_func[0],
-                         label='k_x')
-        self.ax_cov.plot(self._covariance.covariance_func[-1],
-                         self._covariance.covariance_func[-2],
-                         label='k_y')
+    def show(self):
+        from matplotlib.pyplot import figure
+        fig = figure(FigureClass=self)
+        fig.show()
 
-    def _plotPowerspec(self):
-        p_spec_x, w_x, p_spec_y, w_y = self._covariance.powerspecNoise()
+    def plotCovariance(self, ax):
+        cov, d = self._covariance.covariance_func
+        ax.plot(d, cov)
 
-        self.ax_pow.plot(w_x[w_x > 0], p_spec_x[w_x > 0], label='$k_x$')
-        self.ax_pow.plot(w_y[w_y > 0], p_spec_y[w_y > 0], label='$k_y$')
+        d_interp = num.linspace(d.min(), d.max()+10000., num=50)
+        ax.plot(d_interp, self._covariance.covariance(d_interp),
+                label='Interpolated', ls='--')
+
+        ax.legend(loc=1)
+        ax.grid(alpha=.4)
+        ax.set_title('Covariogram')
+        ax.set_xlabel('Distance [$m$]')
+        ax.set_ylabel('Covariance [$m^2$]')
+
+    def plotNoise(self, ax):
+        noise_data = self._covariance.noise_data
+        ax.imshow(noise_data, aspect='equal',
+                  extent=(0, noise_data.shape[0]*self._scene.utm.dx,
+                          0, noise_data.shape[1]*self._scene.utm.dy))
+
+        ax.set_title('Noise Data')
+        ax.set_xlabel('X [$m$]')
+        ax.set_ylabel('Y [$m$]')
+
+    def plotStructure(self, ax):
+        struc_func, d = self._covariance.structure_func
+        ax.plot(d, struc_func)
+
+        ax.legend(loc=4)
+        ax.grid(alpha=.4)
+        ax.set_title('Structure Function')
+        ax.set_xlabel('Distance [$m$]')
+        ax.set_ylabel('Variance [$m^2$]')
+
+    def plotPowerspec(self, ax):
+        power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
+
+        power_spec_x = num.mean(f_spec, axis=1)
+        power_spec_y = num.mean(f_spec, axis=0)
+
+        ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
+        ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
+        ax.plot(k, power_spec, label='$k_{total}$')
+
+        ax.legend(loc=1)
+        ax.grid(alpha=.4, which='both')
+        ax.set_title('Power Spectrum')
+        ax.set_xlabel('Wavenumber [$cycles/m$]')
+        ax.set_xscale('log')
+        ax.set_ylabel('Power [$m^2$]')
+        ax.set_yscale('log')
+
+    def plotQuadtreeWeight(self, ax):
+        extent = self._quadtree.utm.extent()[:-2]
+        cb = ax.imshow(self._quadtree.leaf_matrix_weights, aspect='equal',
+                       extent=extent)
+        ax.set_xlabel('UTM X [$m$]')
+        ax.set_ylabel('UTM Y [$m$]')
+
+    def plotPowerfit(self):
+        import scipy as sp
+
+        def behaviour(k, a, b):
+            return (k**a)/b
+
+        def selectRegime(k, d1, d2):
+            return num.logical_and(((1.)/k) > d1, ((1.)/k) < d2)
+
+        def curve_fit(k, p_spec):
+            return sp.optimize.curve_fit(behaviour, k, p_spec,
+                                         p0=None, sigma=None,
+                                         absolute_sigma=False,
+                                         check_finite=True,
+                                         bounds=(-num.inf, num.inf),
+                                         method=None,
+                                         jac=None)
+
+        def covar_analyt(p, k):
+            ps = behaviour(k[k > 0], *p)
+            cov = sp.fftpack.dct(ps, type=2, n=None, axis=-1, norm='ortho')
+            d = num.arange(1, k[k > 0].size+1) * self._scene.utm.dx
+            return cov, d
+
+        power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
+        # Regimes accord. to Hanssen, 2001
+        reg1 = selectRegime(k_x, 2000., num.inf)
+        reg2 = selectRegime(k_x, 500., 2000.)
+        reg3 = selectRegime(k_x, 10., 500.)
+
+        for i, r in enumerate([reg1, reg2, reg3]):
+            p, cov = curve_fit(k[r], power_spec[r])
+            self.ax_pow.plot(k[r], behaviour(k[r], *p),
+                             ls='--', lw=1.5, alpha=.8,
+                             label='Fit regime %d' % (i+1))
+
+            cov, d = covar_analyt(p, k)
+            self.ax_cov.plot(d, cov,
+                             ls='--', lw=1.5, alpha=.8,
+                             label='Fit regime %d' % (i+1))
+
+        self.ax_cov.legend(loc=1)
         self.ax_pow.legend(loc=1)
-        self.ax_pow.grid(alpha=.4)
 
-        self.ax_pow.set_xlabel('Wavenumber [$cycles/m$]')
-        self.ax_pow.set_xscale('log')
-        self.ax_pow.set_ylabel('Power [$m^2$]')
-        self.ax_pow.set_yscale('log')
-
-
-__all__ = """
-Plot2D
-""".split()
 
 if __name__ == '__main__':
     from kite.scene import SceneSynTest
