@@ -102,13 +102,15 @@ class QKiteQuadtreePlot(_QKitePlot):
                      lambda qt: qt.leaf_matrix_means],
             'median': ['Median Displacement',
                        lambda qt: qt.leaf_matrix_medians],
+            'weight': ['Absolute Weight',
+                       lambda qt: qt.leaf_matrix_weights],
         }
         self._component = 'median'
 
         _QKitePlot.__init__(self, container=quadtree)
         self.quadtree = self.container
 
-        _focalp_color = (0, 0, 0, 100)
+        _focalp_color = (255, 23, 68, 255)
         self.focal_points = pg.ScatterPlotItem(size=1.5,
                                                pen=pg.mkPen(_focalp_color,
                                                             width=1),
