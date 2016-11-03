@@ -12,14 +12,14 @@ class QuadNode(object):
     """
     A node (Syn. tile) in the Quadtree.
     """
-    def __init__(self, tree, llx, lly, length):
+    def __init__(self, quadtree, llx, lly, length):
         self.llx = int(llx)
 
         self.lly = int(lly)
         self.length = int(length)
 
-        self._tree = tree
-        self._scene = self._tree._scene
+        self._quadtree = quadtree
+        self._scene = self._quadtree._scene
         self._slice_x = slice(self.llx, self.llx+self.length)
         self._slice_y = slice(self.lly, self.lly+self.length)
 
@@ -55,6 +55,10 @@ class QuadNode(object):
     def mean_std(self):
         '''Standard deviation from mean'''
         return num.nanstd(self.data - self.mean)
+
+    @property_cached
+    def weight(self):
+        return self._quadtree.covariance.getWeight(self)
 
     @property_cached
     def bilinear_std(self):
@@ -110,12 +114,12 @@ class QuadNode(object):
                     yield q
 
     def iterLeafsEval(self):
-        if (self._tree._split_func(self) < self._tree.epsilon and
-            (self._tree._tile_size_lim_p[1] is None or
-             not self.length > self._tree._tile_size_lim_p[1]))\
+        if (self._quadtree._split_func(self) < self._quadtree.epsilon and
+            (self._quadtree._tile_size_lim_p[1] is None or
+             not self.length > self._quadtree._tile_size_lim_p[1]))\
            or self.children is None:
             yield self
-        elif self.children[0].length < self._tree._tile_size_lim_p[0]:
+        elif self.children[0].length < self._quadtree._tile_size_lim_p[0]:
             yield self
         else:
             for c in self.children:
@@ -126,7 +130,7 @@ class QuadNode(object):
         if self.length == 1:
             yield None
         for _nx, _ny in ((0, 0), (0, 1), (1, 0), (1, 1)):
-            n = QuadNode(self._tree,
+            n = QuadNode(self._quadtree,
                          self.llx + self.length/2 * _nx,
                          self.lly + self.length/2 * _ny,
                          self.length/2)
@@ -138,7 +142,7 @@ class QuadNode(object):
     def createTree(self, eval_func, epsilon_limit):
         if (eval_func(self) > epsilon_limit or self.length >= 64)\
            and not self.length < 16:
-            # self.length > .1 * max(self._tree._data.shape): !! Very Expensive
+            # self.length > .1 * max(self._quadtree._data.shape): !! Expensive
             self.children = [c for c in self._iterSplitNode()]
             for c in self.children:
                 c.createTree(eval_func, epsilon_limit)
@@ -147,11 +151,11 @@ class QuadNode(object):
 
     def __getstate__(self):
         return self.llx, self.lly, self.length,\
-               self.children, self._tree
+               self.children, self._quadtree
 
     def __setstate__(self, state):
         self.llx, self.lly, self.length,\
-            self.children, self._tree = state
+            self.children, self._quadtree = state
 
 
 def _createTreeParallel(args):
@@ -200,6 +204,7 @@ class Quadtree(object):
         self._norm_methods = {
             'mean': lambda node: node.mean,
             'median': lambda node: node.median,
+            'weight': lambda node: node.weight,
         }
 
         self.treeUpdate = Subject()
@@ -399,6 +404,13 @@ class Quadtree(object):
         """
         return self._getLeafsNormMatrix(method='median')
 
+    @property
+    def leaf_matrix_weights(self):
+        """Matrix holding leaf weights  -
+        ``(N,M)`` like `Scene.displacement`.
+        """
+        return self._getLeafsNormMatrix(method='weight')
+
     def _getLeafsNormMatrix(self, method='median'):
         if method not in self._norm_methods.keys():
             raise AttributeError('Method %s is not in %s' % (method,
@@ -434,8 +446,8 @@ class Quadtree(object):
         """Simple `matplotlib` illustration of
         :py:class:`Quadtree.leaf_matrix_means`.
         """
-        from kite.plot2d import PlotQuadTree2D
-        return PlotQuadTree2D(self)
+        from kite.plot2d import QuadtreePlot
+        return QuadtreePlot(self)
 
     @property_cached
     def covariance(self):
