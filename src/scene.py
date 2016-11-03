@@ -291,8 +291,8 @@ class Scene(object):
 
     @property_cached
     def plot(self):
-        from kite.plot2d import PlotDisplacement2D
-        return PlotDisplacement2D(self)
+        from kite.plot2d import ScenePlot
+        return ScenePlot(self)
 
     def spool(self):
         """Start the spool GUI :py:class:`kite.spool.Spool` to inspect
