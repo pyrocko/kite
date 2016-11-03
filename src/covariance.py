@@ -105,22 +105,28 @@ class Covariance(object):
    """
     def __init__(self, quadtree, config=CovarianceConfig()):
         self.covarianceUpdate = Subject()
-        self.covarianceUpdate.subscribe(self._clearCovariance)
 
         self.config = config
         self._quadtree = quadtree
         self._noise_data = None
         self._covariance_interp = None
+        self._initialized = False
 
         self._log = logging.getLogger('Covariance')
+        self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
         return self.getDistance(*args, **kwargs)
 
-    def _clearCovariance(self):
+    def _clear(self):
+        print 'Clearing!'
         self.covariance_matrix = None
+        self.covariance_matrix_focal = None
         self.covariance_matrix_focal_points = None
+        self.weight_matrix = None
+        self.weight_matrix_focal = None
         self.covariance_func = None
+        self._initialized = False
 
     @property
     def noise_data(self, data):
@@ -152,7 +158,7 @@ class Covariance(object):
 
     @subsampling.setter
     def subsampling(self, value):
-        self._clearCovariance()
+        self._clear()
         self.config.subsampling = value
 
     def _mapLeafs(self, nx, ny):
@@ -189,16 +195,16 @@ class Covariance(object):
         return self._calcDistanceMatrix(method='focal')
 
     @property_cached
-    def weight_matrix_focal(self):
-        """ Weight matrix \sqrt(covariance_matrix_focal^-1)
-        """
-        return num.linalg.inv(self.covariance_matrix_focal)
-
-    @property_cached
     def weight_matrix(self):
-        """ Weight matrix \sqrt(covariance_matrix^-1)
+        """ Weight matrix \sqrt{covariance_matrix^-1}
         """
         return num.linalg.inv(self.covariance_matrix)
+
+    @property_cached
+    def weight_matrix_focal(self):
+        """ Weight matrix \sqrt{covariance_matrix_focal^-1}
+        """
+        return num.linalg.inv(self.covariance_matrix_focal)
 
     def _calcDistanceMatrix(self, method='focal'):
         """Calculates the covariance matrix
@@ -212,6 +218,9 @@ class Covariance(object):
         :returns: Covariance matrix
         :rtype: {:python:numpy.ndarray}
         """
+        self._initialized = True
+        print 'Initializing!'
+
         nl = len(self._quadtree.leafs)
         dist_matrix = num.zeros((nl, nl))
         dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
@@ -272,7 +281,8 @@ class Covariance(object):
             leaf1 = leaf1.id
         if not isinstance(leaf2, str):
             leaf2 = leaf2.id
-        self.covariance_matrix_focal
+        if not self._initialized:
+            self.covariance_matrix_focal
         try:
             return self._leaf_mapping[leaf1], self._leaf_mapping[leaf2]
         except KeyError as e:
@@ -293,7 +303,7 @@ class Covariance(object):
     def getWeight(self, leaf1):
         (nl, _) = self._getMapping(leaf1, leaf1)
         weight_mat = self.weight_matrix_focal
-        return num.nanmean(weight_mat, axis=0)[nl]
+        return num.mean(weight_mat, axis=0)[nl]
 
     def noiseSpectrum(self, data=None):
         if data is None:
