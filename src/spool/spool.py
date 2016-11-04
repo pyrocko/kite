@@ -1,12 +1,9 @@
-#!/bin/python
-
+#!/usr/bin/python2
 from PySide import QtGui
-# from PySide import QtCore
-
-import scene_qtgraph
+from .tab_scene import QKiteSceneDock
+from .tab_quadtree import QKiteQuadtreeDock
 from os import path
-
-import qtutils
+from qt_utils import loadUi
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
@@ -20,9 +17,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def addScene(self, scene):
         self.scenes.append(scene)
         self.tabs.setMovable(True)
-        self.tabs.addTab(scene_qtgraph.QKiteDisplacementDock(scene),
+        self.tabs.addTab(QKiteSceneDock(scene),
                          'Displacement')
-        self.tabs.addTab(scene_qtgraph.QKiteQuadtreeDock(scene.quadtree),
+        self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
                          'Quadtree')
 
     def exit(self):
@@ -31,7 +28,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def loadUi(self):
         ui_file = path.join(path.dirname(path.realpath(__file__)),
                             'ui/spool.ui')
-        qtutils.loadUi(ui_file, baseinstance=self)
+        loadUi(ui_file, baseinstance=self)
         return
 
 

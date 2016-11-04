@@ -8,8 +8,8 @@ def main(args=None):
     '''
     Spool app deployed through setuptools
     '''
-    usage = 'Spool is part of the Kite InSAR framework'
-    desc = 'Quickly inspect deformation data and manipulate its quadtree'
+    usage = 'Spool is part of the kite InSAR framework'
+    desc = 'Quickly inspect deformation data, quadtree and covariance'
     parser = ap.ArgumentParser(
         prog='spool',
         usage=usage,
