@@ -56,7 +56,7 @@ class QuadNode(object):
         '''Standard deviation from mean'''
         return num.nanstd(self.data - self.mean)
 
-    @property_cached
+    @property
     def weight(self):
         return self._quadtree.covariance.getWeight(self)
 
