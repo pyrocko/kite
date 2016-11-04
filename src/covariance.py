@@ -1,5 +1,6 @@
 import numpy as num
 import scipy as sp
+import time
 
 import logging
 from pyrocko import guts
@@ -119,7 +120,6 @@ class Covariance(object):
         return self.getDistance(*args, **kwargs)
 
     def _clear(self):
-        print 'Clearing!'
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_matrix_focal_points = None
@@ -219,7 +219,6 @@ class Covariance(object):
         :rtype: {:python:numpy.ndarray}
         """
         self._initialized = True
-        print 'Initializing!'
 
         nl = len(self._quadtree.leafs)
         dist_matrix = num.zeros((nl, nl))
@@ -227,6 +226,7 @@ class Covariance(object):
 
         self._leaf_mapping = {}
 
+        t0 = time.time()
         if method == 'focal':
             for nx, ny in dist_iter:
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
@@ -235,7 +235,7 @@ class Covariance(object):
                 dist_matrix[(nx, ny), (ny, nx)] = dist
 
         elif method == 'matrix':
-            self._log.info('Preprocessing covariance matrix'
+            self._log.info('Preprocessing distance matrix'
                            ' - subsampling %dx on %d cpus...' %
                            (self.config.subsampling, cpu_count()))
             worker_chunksize = 24 * self.config.subsampling
@@ -262,6 +262,8 @@ class Covariance(object):
 
         cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)
+        self._log.info('Created covariance matrix - %s mode [%0.8f s]' %
+                       (method, time.time()-t0))
         return cov_matrix
 
     @staticmethod
@@ -385,11 +387,6 @@ class Covariance(object):
                     struc_func[i] += 1. - num.cos(tk*d)*cov[ik]
             return struc_func
 
-        # struc_func_y = num.zeros_like(cov_y)
-        # for i, d in enumerate(d_y):
-        #     for ik, k in enumerate(k_y[k_y > 0.]):
-        #         struc_func_y[i] += 1. - num.cos(-k*d)*cov_y[ik]
-
         struc_func = structure_func(cov, d, k)
         return struc_func, d
 
@@ -397,7 +394,7 @@ class Covariance(object):
         if self._covariance_interp is None:
             cov, d = self.covariance_func
             func = sp.interpolate.interp1d(d, cov,
-                                           kind='linear', copy=True,
+                                           kind='nearest', copy=True,
                                            bounds_error=False,
                                            fill_value=0., assume_sorted=True)
             self._covariance_interp = func
