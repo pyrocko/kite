@@ -1,6 +1,9 @@
 import importlib
 import numpy as num
 
+__all__ = ['Matlab', 'Gamma']
+
+
 class SceneIO(object):
     """ Prototype class for SARIO objects """
 
@@ -70,7 +73,7 @@ class Matlab(SceneIO):
         try:
             self.io.loadmat(filename)
             return True
-        except:
+        except ValueError:
             return False
 
     def read(self, filename):
@@ -198,9 +201,3 @@ class Gamma(SceneIO):
         # raise DeprecationWarning('Set Scene.phi and Scene.theta manually!')
 
         return self.data_items
-
-
-__all__ = """
-Matlab
-Gamma
-""".split()
