@@ -18,10 +18,10 @@ class SceneIO(object):
             'theta': None,  # Look orientation angle from east; 0deg East,
                             # 90deg North
             'displacement': None,  # Displacement towards LOS
-            'lllon': None,  # Lower left corner latitude
-            'lllat': None,  # Lower left corner londgitude
-            'dlat': None,  # Pixel delta latitude
-            'dlon': None,  # Pixel delta longitude
+            'llLon': None,  # Lower left corner latitude
+            'llLat': None,  # Lower left corner londgitude
+            'dLat': None,  # Pixel delta latitude
+            'dLon': None,  # Pixel delta longitude
         }
 
     def read(self, filename, **kwargs):
@@ -101,20 +101,20 @@ class Matlab(SceneIO):
 
         utm_zone = 32
         utm_zone_letter = 'N'
-        logger.warning('Using UTM Zone %d%s' %
+        logger.warning('Using default UTM Zone %d%s' %
                        (utm_zone, utm_zone_letter))
-        self.container['lllat'], self.container['lllon'] =\
+        self.container['llLat'], self.container['llLon'] =\
             utm.to_latlon(utm_e.min(), utm_n.min(),
                           utm_zone, utm_zone_letter)
 
         urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
                                      utm_zone, utm_zone_letter)
-        self.container['dlat'] =\
-            (urlat - self.container['lllat']) /\
+        self.container['dLat'] =\
+            (urlat - self.container['llLat']) /\
             self.container['displacement'].shape[0]
 
-        self.container['dlon'] =\
-            (urlat - self.container['lllon']) /\
+        self.container['dLon'] =\
+            (urlon - self.container['llLon']) /\
             self.container['displacement'].shape[1]
 
         return self.container
@@ -193,9 +193,9 @@ class Gamma(SceneIO):
                                        == -0.] = num.nan
 
         # LatLon UTM Conversion
-        self.container['lllat'] = par['corner_lat'] +\
+        self.container['llLat'] = par['corner_lat'] +\
             par['post_lat'] * par['width']
-        self.container['lllon'] = par['corner_lon']
+        self.container['llLon'] = par['corner_lon']
 
         # Theta and Phi
         logger.warning('Using static phi and theta!')
@@ -203,11 +203,6 @@ class Gamma(SceneIO):
         self.container['phi'] = 0.
 
         return self.container
-
-
-class GMTSAR(SceneIO):
-    def validate(self, filename, **kwargs):
-        pass
 
 
 class ISCEXMLParser(object):
@@ -239,9 +234,6 @@ class ISCEXMLParser(object):
 
 
 class ISCE(SceneIO):
-    def __init__(self):
-        SceneIO.__init__(self)
-
     def validate(self, filename, **kwargs):
         try:
             self._getDisplacementFile(filename)
@@ -283,14 +275,14 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
-        self.container['dlat'] = num.abs(coord_lat['delta'])
-        self.container['dlon'] = num.abs(coord_lon['delta'])
+        self.container['dLat'] = num.abs(coord_lat['delta'])
+        self.container['dLon'] = num.abs(coord_lon['delta'])
         nlon = coord_lon['size']
         nlat = coord_lat['size']
 
-        self.container['lllat'] = coord_lat['startingvalue'] +\
+        self.container['llLat'] = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
-        self.container['lllon'] = coord_lon['startingvalue']
+        self.container['llLon'] = coord_lon['startingvalue']
 
         displacement = num.fromfile(self._getDisplacementFile(path),
                                     dtype='<f4')\
@@ -302,5 +294,76 @@ class ISCE(SceneIO):
             .reshape(nlat, nlon*2)
         self.container['phi'] = los_data[:, :nlon]
         self.container['theta'] = los_data[:, nlon:] + 90.
+
+        return self.container
+
+
+class GMTSAR(SceneIO):
+    """GMTSAR import to kite
+
+    Withhold two grids:
+
+    * Displacement (``*los_ll.grd``)
+    * LOS grid (see instruction, ``*los.enu``)
+
+    Use gmt5sar SAT_look to calculate the corresponding unit look vectors
+    `gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
+     awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu`
+    """
+    def validate(self, filename, **kwargs):
+        pass
+
+    @staticmethod
+    def _getLOSFile(path):
+        if not os.path.isdir(path):
+            path = os.path.abspath(path)
+        los_files = glob.glob(os.path.join(path, '*.los.*'))
+        if len(los_files) == 0:
+            raise ImportError('Could not find LOS file (*.los.*)')
+        return los_files[0]
+
+    @staticmethod
+    def _getDisplacementFile(path):
+        if os.path.isfile(path):
+            disp_file = path
+        else:
+            files = glob.glob(os.path.join(path, '*los_ll.grd'))
+            if len(files) == 0:
+                raise ImportError('Could not find displacement file '
+                                  '(unwrap_ll.grd) at %s', path)
+            disp_file = files[0]
+        return disp_file
+
+    def read(self, filename, parameter_file=None):
+        from scipy.io import netcdf
+
+        grd = netcdf.netcdf_file(self._getDisplacementFile(filename),
+                                 mode='r', version=2)
+        self.container['displacement'] = grd.variables['z'][:].copy()
+
+        # LatLon
+        self.container['llLat'] = grd.variables['lat'][:].min()
+        self.container['llLon'] = grd.variables['lon'][:].min()
+
+        # Theta and Phi
+        try:
+            los = num.fromfile(self._getLOSFile(filename), dtype='<f4')
+            e = los[3::6].copy()
+            n = los[4::6].copy()
+            u = los[5::6].copy()
+            print e.size, n.size, u.size
+            print self.container['displacement'].size
+            theta = num.rad2deg(num.arctan(n/e))\
+                .reshape(self.container['displacement'].shape)
+            phi = num.rad2deg(num.arccos(u))\
+                .reshape(self.container['displacement'].shape)
+            theta[n<0] += 180.
+            self.container['phi'] = phi
+            self.container['theta'] = theta
+        except ImportError:
+            logger.warning('Could not find LOS file - '
+                           ' Using static phi and theta!')
+            self.container['theta'] = 0.
+            self.container['phi'] = 0.
 
         return self.container

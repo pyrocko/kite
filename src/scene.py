@@ -2,11 +2,23 @@
 import warnings
 import logging
 import numpy as num
+import utm
 
 from pyrocko import guts
 from kite.quadtree import QuadtreeConfig
 from kite.meta import Subject, property_cached
 logging.basicConfig(level=20)
+
+
+def greatCircleDistance(alat, alon, blat, blon):
+    R1 = 6371009.
+    d2r = num.deg2rad
+    sin = num.sin
+    cos = num.cos
+    a = sin(d2r(alat-blat)/2)**2 + cos(d2r(alat)) * cos(d2r(blat))\
+        * sin(d2r(alon-blon)/2)**2
+    c = 2. * num.arctan2(num.sqrt(a), num.sqrt(1.-a))
+    return R1 * c
 
 
 def _setDataNumpy(obj, variable, value):
@@ -24,140 +36,130 @@ class SceneError(Exception):
     pass
 
 
-class UTMFrameConfig(guts.Object):
+class FrameConfig(guts.Object):
     """
     Config object holding :py:class:`kite.scene.Scene` cobfiguration
     """
-    zone = guts.String.T(default='None',
-                         help='UTM zone of scene')
-    llx = guts.Float.T(default=0.,
-                       help='Scene UTM x-coordinate of lower left corner')
-    lly = guts.Float.T(default=0.,
-                       help='Scene UTM y-coordinate of lower left corner')
-    dx = guts.Float.T(default=0.,
-                      help='Scene pixel spacing in x direction (meter)')
-    dy = guts.Float.T(default=0.,
-                      help='Scene pixel spacing in y direction (meter)')
+    llLat = guts.Float.T(default=0.,
+                         help='Scene latitude of lower left corner')
+    llLon = guts.Float.T(default=0.,
+                         help='Scene longitude of lower left corner')
+    dLat = guts.Float.T(default=0.,
+                        help='Scene pixel spacing in x direction (degree)')
+    dLon = guts.Float.T(default=0.,
+                        help='Scene pixel spacing in y direction (degree)')
 
 
-class UTMFrame(object):
+class Frame(object):
     """UTM frame holding geographical references for
     :py:class:`kite.scene.Scene`
     """
-    def __init__(self, scene, config=UTMFrameConfig()):
+    def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
         self.config = config
-        self._scene.sceneChanged.subscribe(self._parseConfig)
+        self._scene.sceneChanged.subscribe(self._updateExtent)
 
-        self._x = None
-        self._y = None
-
-    def _parseConfig(self):
-        if (self.config.llx == 0. and self.config.lly == 0. and
-                self.config.dx == 0. and self.config.dy == 0.) or\
-                self._scene.displacement is None:
-            return
-        self._x = self.config.llx +\
-            num.arange(self._scene.displacement.shape[0]) * self.config.dx
-        self._y = self.config.lly +\
-            num.arange(self._scene.displacement.shape[1]) * self.config.dy
-        return
+        self.extentE = 0.
+        self.extentN = 0.
+        self.spherical_distortion = 0.
+        self.urE = 0.
+        self.urN = 0.
+        self.dN = 0.
+        self.dE = 0.
+        self.llN = None
+        self.llE = None
+        self.N = None
+        self.E = None
 
     def _updateExtent(self):
-        if self.x is None or self.y is None:
+        if self._scene.cols == 0 or self._scene.rows == 0:
             return
-        llx, lly = self.x.min(), self.y.min()
-        urx, ury = self.x.max(), self.y.max()
+        print 'updating Extend!'
+        self.llE, self.llN, self.utm_zone, self.utm_zone_letter =\
+            utm.from_latlon(self.llLat, self.llLon)
 
-        self.config.llx = llx
-        self.config.dx = abs(urx - llx)/(self.x.size+1)
-        self.config.lly = lly
-        self.config.dy = abs(ury - lly)/(self.y.size+1)
+        urlat = self.llLat + self.dLat * self._scene.rows
+        urlon = self.llLon + self.dLon * self._scene.cols
+        self.urE, self.urN, _, _ = utm.from_latlon(urlat, urlon, self.utm_zone)
+
+        # Width at the bottom of the scene
+        self.extentE = greatCircleDistance(self.llLat, self.llLon,
+                                           self.llLat, urlon)
+        self.extentN = greatCircleDistance(self.llLat, self.llLon,
+                                           urlat, self.llLon)
+
+        # Width at the N' top of the scene
+        extentE2 = greatCircleDistance(urlat, self.llLon,
+                                       urlat, urlon)
+        self.spherical_distortion = num.abs(self.extentE - extentE2)
+
+        self.dE = self.extentE / self._scene.cols
+        self.dN = self.extentN / self._scene.rows
+        self.E = num.arange(self._scene.cols) * self.dE
+        self.N = num.arange(self._scene.rows) * self.dN
         self.config.regularize()
 
-        self.grid_x = None
-        self.grid_y = None
-        self._extent = None
+        self.gridE = None
+        self.gridN = None
         return
 
     @property
-    def x(self):
-        """
-        UTM x-vector, same size as ``Nx`` of ``Scene.displacement``.
-        """
-        return self._x
+    def llLat(self):
+        return self.config.llLat
 
-    @x.setter
-    def x(self, value):
-        if isinstance(value, float):
-            value = num.repeat(value, 100)  # Fix this!
-        value = num.array(value, dtype=num.float32)
-        self._x = num.sort(value)
+    @llLat.setter
+    def llLat(self, llLat):
+        self.config.llLat = llLat
         self._updateExtent()
 
     @property
-    def y(self):
-        """
-        UTM y-vector, same size as ``xM`` of ``Scene.displacement``.
-        """
-        return self._y
+    def llLon(self):
+        return self.config.llLon
 
-    @y.setter
-    def y(self, value):
-        if isinstance(value, float):
-            value = num.repeat(value, 100)
-        value = num.array(value, dtype=num.float32)
-        self._y = num.sort(value)
+    @llLon.setter
+    def llLon(self, llLon):
+        self.config.llLon = llLon
+        self._updateExtent()
+
+    @property
+    def dLat(self):
+        return self.config.dLat
+
+    @dLat.setter
+    def dLat(self, dLat):
+        self.config.dLat = dLat
+        self._updateExtent()
+
+    @property
+    def dLon(self):
+        return self.config.dLon
+
+    @dLon.setter
+    def dLon(self, dLon):
+        self.config.dLon = dLon
         self._updateExtent()
 
     @property_cached
-    def grid_x(self):
+    def gridN(self):
         """
         UTM grid holding x coordinates of all pixels in ``NxM`` matrix
         of ``Scene.displacement``.
         """
         valid_data = num.isnan(self._scene.displacement)
-        grid_x = num.repeat(self.x[:, num.newaxis],
-                            self._scene.displacement.shape[1],
-                            axis=1)
-        return num.ma.masked_array(grid_x, valid_data, fill_value=num.nan)
+        gridN = num.repeat(self.N[:, num.newaxis],
+                           self._scene.rows, axis=1)
+        return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
     @property_cached
-    def grid_y(self):
+    def gridE(self):
         """
         UTM grid holding y coordinates of all pixels in ``NxM`` matrix
         of ``Scene.displacement``.
         """
         valid_data = num.isnan(self._scene.displacement)
-        grid_y = num.repeat(self.y[num.newaxis, :],
-                            self._scene.displacement.shape[0],
-                            axis=0)
-        return num.ma.masked_array(grid_y, valid_data, fill_value=num.nan)
-
-    @property
-    def dx(self):
-        return self.config.dx
-
-    @property
-    def dy(self):
-        return self.config.dy
-
-    @property_cached
-    def _extent(self):
-        urx, ury = self.x.max(), self.y.max()
-
-        return (self.config.llx, self.config.lly, urx, ury,
-                self.dx, self.dy)
-
-    def extent(self):
-        """Get the UTM extent and pixel spacing of the LOS Displacement grid
-
-        :returns: Corner coordinates and spatial deltas
-        ll_x, ll_y, ur_x, ur_y, dx, dy
-        :rtype: {tuple}
-        """
-        # Funny construction but we want to avoid unnecessary computation
-        return self._extent
+        gridE = num.repeat(self.E[num.newaxis, :],
+                           self._scene.cols, axis=0)
+        return num.ma.masked_array(gridE, valid_data, fill_value=num.nan)
 
     def _mapGridXY(self, x, y):
         ll_x, ll_y, ur_x, ur_y, dx, dy = self.extent()
@@ -182,8 +184,8 @@ class SceneConfig(guts.Object):
     """
     meta = Meta.T(default=Meta(),
                   help='Scene metainformation.')
-    utm = UTMFrameConfig.T(default=UTMFrameConfig(),
-                           help='Scene UTMFrame configuration.')
+    utm = FrameConfig.T(default=FrameConfig(),
+                        help='Scene Frame configuration.')
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
                                 help='Quadtree configuration.')
 
@@ -217,8 +219,10 @@ class Scene(object):
         self._displacement = None
         self._phi = None
         self._theta = None
+        self.cols = 0
+        self.rows = 0
         self.los = LOSUnitVectors(scene=self)
-        self.utm = UTMFrame(scene=self, config=self.config.utm)
+        self.frame = Frame(scene=self, config=self.config.utm)
 
     @property
     def displacement(self):
@@ -230,6 +234,7 @@ class Scene(object):
     @displacement.setter
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
+        self.cols, self.rows = self._displacement.shape
         self.sceneChanged._notify()
 
     @property
@@ -338,7 +343,7 @@ class Scene(object):
         from kite import scene_io
         import os
 
-        if not os.path.isfile(filename):
+        if not os.path.isfile(filename) or os.path.isdir(filename):
             raise ImportError('File %s does not exist!' % filename)
 
         scene = cls()
@@ -360,20 +365,31 @@ class Scene(object):
         scene.theta = data['theta']
         scene.phi = data['phi']
         scene.displacement = data['displacement']
-        scene.utm.x = data['utm_x']
-        scene.utm.y = data['utm_y']
+        scene.frame.llLat = data['llLat']
+        scene.frame.llLon = data['llLon']
+        scene.frame.dLat = data['dLat']
+        scene.frame.dLon = data['dLon']
 
         scene._testImport()
         return scene
 
     def _testImport(self):
+        self.frame.E
+        self.frame.N
+        self.frame.gridE
+        self.frame.gridN
+        self.frame.dE
+        self.frame.dN
+        self.displacement
+        self.theta
+        self.phi
         try:
-            self.utm.x
-            self.utm.y
-            self.utm.grid_x
-            self.utm.grid_y
-            self.utm.dx
-            self.utm.dy
+            self.frame.E
+            self.frame.N
+            self.frame.gridE
+            self.frame.gridN
+            self.frame.dE
+            self.frame.dN
             self.displacement
             self.theta
             self.phi

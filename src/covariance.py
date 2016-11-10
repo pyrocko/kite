@@ -314,10 +314,11 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
+        f_spec /= f_spec.size
         f_spec = num.abs(f_spec)
 
-        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.utm.dx)
-        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.utm.dy)
+        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dx)
+        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dy)
 
         k_rad = num.sqrt(k_x[:, num.newaxis]**2 + k_y[num.newaxis, :]**2)
 
@@ -355,7 +356,8 @@ class Covariance(object):
             p_spec = p_spec[k > 0]
             k = k[k > 0]
             p_spec[num.isnan(p_spec)] = 0.
-            cos = sp.fftpack.dct(p_spec, type=2, n=None, norm='ortho')
+            cos = sp.fftpack.dct(p_spec, type=2, n=None, norm=None)
+            cos *= 2./cos.size
 
             # Normieren über n_k?
             return cos, k
@@ -366,10 +368,10 @@ class Covariance(object):
         cov, _ = covarianceCosine(power_spec, k)
         # cov_x, _ = covarianceCosine(ps_x, k_x)
 
-        # d_x = num.arange(1, cov_x.size+1) * self._quadtree.utm.dx
-        # d_y = num.arange(1, cov_y.size+1) * self._quadtree.utm.dy
-        dk = self._quadtree.utm.dx if k_x.size > k_y.size\
-            else self._quadtree.utm.dx
+        # d_x = num.arange(1, cov_x.size+1) * self._quadtree.frame.dx
+        # d_y = num.arange(1, cov_y.size+1) * self._quadtree.frame.dy
+        dk = self._quadtree.frame.dx if k_x.size > k_y.size\
+            else self._quadtree.frame.dx
         d = num.arange(1, cov.size+1) * dk
 
         return cov, d
@@ -384,7 +386,8 @@ class Covariance(object):
             struc_func = num.zeros_like(cov)
             for i, d in enumerate(d):
                 for ik, tk in enumerate(k):
-                    struc_func[i] += 1. - num.cos(tk*d)*cov[ik]
+                    struc_func[i] += 1. - num.cos(-tk*d)*power_spec[ik]
+                # struc_func[i] /= k.size
             return struc_func
 
         struc_func = structure_func(cov, d, k)

@@ -47,12 +47,21 @@ class QKitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
+        self.setLabels(bottom={'UTM East', 'm'},
+                       left={'UTM North', 'm'},)
 
+        self.mouse_text = pg.LabelItem(text='East %d m | North %d m | %s %.4f'
+                                       % (0, 0, self.component.title(), 0),
+                                       justify='left',
+                                       parent=self.plotItem)
+        self.mouse_text.anchor(itemPos=(1, 0), parentPos=(1, 1))
         self.addItem(self.image)
         self.update()
 
         self.transformToUTM()
-
+        self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
+                                        rateLimit=30, slot=self.mouseMoved)
+        # self.scene().sigMouseMoved.connect(self.mouseMoved)
         # self.addIsocurve()
         # self.scalebar()
 
@@ -100,6 +109,19 @@ class QKitePlot(pg.PlotWidget):
         iso.setParentItem(self.image)
 
         self.iso = iso
+
+    def mouseMoved(self, event):
+        pos = event[0]
+        if self.image.sceneBoundingRect().contains(pos):
+            map_pos = self.plotItem.vb.mapSceneToView(pos)
+            if map_pos.isNull():
+                return
+            img_pos = self.image.mapFromScene(event).data
+            self.mouse_text.setText('East %d m | North %d m | %s %.4f'
+                                    % (map_pos.x(), map_pos.y(),
+                                       self.component.title(),
+                                       self.image.image[int(img_pos().x()),
+                                                        int(img_pos().y())]))
 
 
 class QKiteToolComponents(QtGui.QWidget):

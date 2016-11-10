@@ -66,21 +66,13 @@ class QuadNode(object):
 
     @property_cached
     def _focal_point(self):
-        return self.focal_point_utm()
-        w_x = num.linspace(0, 1., self.data.shape[0], endpoint=True)
-        w_y = num.linspace(0, 1., self.data.shape[1], endpoint=True)
-        w_X, w_Y = num.meshgrid(w_x, w_y, sparse=False, copy=False)
-
-        nan = num.isnan(self.data)
-        x = num.median(w_X.T[~nan])*self.data.shape[0] + self.llx
-        y = num.median(w_Y.T[~nan])*self.data.shape[1] + self.lly
-        return x, y
+        return self.focal_point()
 
     @property_cached
-    def focal_point_utm(self):
-        x = num.median(self.utm_grid_x.compressed())
-        y = num.median(self.utm_grid_y.compressed())
-        return x, y
+    def focal_point(self):
+        E = num.median(self.gridE.compressed())
+        N = num.median(self.gridN.compressed())
+        return E, N
 
     @property_cached
     def data(self):
@@ -92,12 +84,12 @@ class QuadNode(object):
         return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
 
     @property_cached
-    def utm_grid_x(self):
-        return self._scene.utm.grid_x[self._slice_x, self._slice_y]
+    def gridE(self):
+        return self._scene.frame.gridE[self._slice_x, self._slice_y]
 
     @property_cached
-    def utm_grid_y(self):
-        return self._scene.utm.grid_y[self._slice_x, self._slice_y]
+    def gridN(self):
+        return self._scene.frame.gridN[self._slice_x, self._slice_y]
 
     def iterTree(self):
         yield self
@@ -219,7 +211,7 @@ class Quadtree(object):
     def setScene(self, scene):
         self._scene = scene
         self._data = self._scene.displacement
-        self.utm = self._scene.utm
+        self.frame = self._scene.frame
 
     def parseConfig(self, config):
         self.config = config
@@ -336,12 +328,12 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_p(self):
-        dp = self._scene.utm.extent()[-1]
+        dpx = self._scene.frame.dE
         if self.tile_size_lim[1] == -9999.:
-            return (int(self.tile_size_lim[0] / dp),
+            return (int(self.tile_size_lim[0] / dpx),
                     None)
-        return (int(self.tile_size_lim[0] / dp),
-                int(self.tile_size_lim[1] / dp))
+        return (int(self.tile_size_lim[0] / dpx),
+                int(self.tile_size_lim[1] / dpx))
 
     @property
     def nnodes(self):
@@ -386,11 +378,11 @@ class Quadtree(object):
         return num.array([l._focal_point for l in self.leafs])
 
     @property
-    def leaf_focal_points_utm(self):
+    def leaf_focal_points(self):
         """ Matrix holding leafs mean displacement -
         :py:class:`numpy.ndarray`, size ``(N, 2)``.
         """
-        return num.array([l.focal_point_utm for l in self.leafs])
+        return num.array([l.focal_point for l in self.leafs])
 
     @property
     def leaf_matrix_means(self):

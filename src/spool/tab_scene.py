@@ -49,8 +49,9 @@ class QKiteToolTransect(QtGui.QWidget):
                                           fillBrush=pg.mkBrush(0, 127, 0,
                                                                150))
 
-        self.plt_wdgt = pg.PlotWidget(labels={'bottom': 'Distance / m',
-                                              'left': 'Displacement / m'})
+        self.plt_wdgt = pg.PlotWidget()
+        self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
+                                left={'Displacement', 'm'})
         self.plt_wdgt.showGrid(True, True, alpha=.5)
         self.plt_wdgt.addItem(self.trans_plot)
         self.plt_wdgt.enableAutoRange()
