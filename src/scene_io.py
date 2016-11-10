@@ -1,19 +1,26 @@
 import importlib
 import numpy as num
+import os
+import glob
+import logging
 
-__all__ = ['Matlab', 'Gamma']
+
+__all__ = ['Matlab', 'Gamma', 'ISCE']
+
+logger = logging.getLogger(name='SceneIO')
 
 
 class SceneIO(object):
     """ Prototype class for SARIO objects """
-
     def __init__(self):
-        self.data_items = {
+        self.container = {
             'phi': None,
             'theta': None,
             'displacement': None,
-            'utm_x': None,
-            'utm_y': None
+            'lllon': None,
+            'lllat': None,
+            'dlat': None,
+            'dlon': None
         }
 
     def read(self, filename, **kwargs):
@@ -77,37 +84,36 @@ class Matlab(SceneIO):
             return False
 
     def read(self, filename):
+        import utm
+
         mat = self.io.loadmat(filename)
-
         for mat_k, v in mat.iteritems():
-            for io_k in self.data_items.iterkeys():
+            for io_k in self.container.iterkeys():
                 if io_k in mat_k:
-                    self.data_items[io_k] = mat[mat_k]
+                    self.container[io_k] = mat[mat_k]
                 elif 'ig_' in mat_k:
-                    self.data_items['displacement'] = mat[mat_k]
+                    self.container['displacement'] = mat[mat_k]
                 elif 'xx' in mat_k:
-                    self.data_items['utm_x'] = mat[mat_k].flatten()
+                    utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
-                    self.data_items['utm_y'] = mat[mat_k].flatten()
+                    utm_n = mat[mat_k].flatten()
 
-        self._fixUTMVectors(self.data_items)
-        return self.data_items
+        utm_zone = 32
+        logger.warning('UTM zone for easting/northing not defined, using %d' %
+                       utm_zone)
+        self.container['lllat'], self.container['lllat'] =\
+            utm.to_latlon(utm_e.min(), utm_n.min(), utm_zone)
 
-    @staticmethod
-    def _fixUTMVectors(data_items):
-        def getUTMVector(exp_size, broken_vec):
-            ds = broken_vec[1]-broken_vec[0]
-            return num.arange(exp_size) * ds + num.nanmin(broken_vec)
+        urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(), utm_zone)
+        self.container['dlat'] =\
+            (urlat - self.container['lllat']) /\
+                self.container['displacement'].shape[0]
 
-        if (data_items['displacement'].shape[0] != data_items['utm_x'].size):
-            data_items['utm_x'] =\
-                getUTMVector(data_items['displacement'].shape[0],
-                             data_items['utm_x'])
+        self.container['dlon'] =\
+            (urlat - self.container['lllon']) /\
+                self.container['displacement'].shape[1]
 
-        if (data_items['displacement'].shape[1] != data_items['utm_y'].size):
-            data_items['utm_y'] =\
-                getUTMVector(data_items['displacement'].shape[1],
-                             data_items['utm_y'])
+        return self.container
 
 
 class Gamma(SceneIO):
@@ -115,17 +121,16 @@ class Gamma(SceneIO):
 
     A ``.par`` file is expected in the import folder
     """
-    def _getParameterFile(self, filename):
-        import os
-        import glob
-
+    @staticmethod
+    def _getParameterFile(filename):
         path = os.path.dirname(os.path.realpath(filename))
         try:
             return glob.glob('%s/*.gc_par' % path)[0]
         except IndexError:
             raise ImportError('Could not find Gamma parameter file (.gc_par)')
 
-    def _parseParameterFile(self, parameter_file):
+    @staticmethod
+    def _parseParameterFile(parameter_file):
         import re
 
         parameters = {}
@@ -156,9 +161,7 @@ class Gamma(SceneIO):
         return True
 
     def read(self, filename, parameter_file=None):
-        import numpy as num
-        import utm
-
+        logger.info('')
         if parameter_file is None:
             parameter_file = self._getParameterFile(filename)
         par = self._parseParameterFile(parameter_file)
@@ -170,34 +173,115 @@ class Gamma(SceneIO):
             raise ValueError('Error parsing width and nlines from %s' %
                              parameter_file)
 
-        self.data_items['displacement'] = num.fromfile(filename, dtype='>f4')
+        self.container['displacement'] = num.fromfile(filename, dtype='>f4')
 
         # Resize array last line is not scanned completely
         _fill = num.empty(par['width'] -
-                          self.data_items['displacement'].size % par['width'])
+                          self.container['displacement'].size % par['width'])
         _fill.fill(num.nan)
-        self.data_items['displacement'] = num.append(
-                          self.data_items['displacement'], _fill)
+        self.container['displacement'] = num.append(
+                          self.container['displacement'], _fill)
 
-        # Cast vector
-        self.data_items['displacement'] = \
-            self.data_items['displacement'].reshape(par['nlines'],
-                                                    par['width'])
-        self.data_items['displacement'][self.data_items['displacement']
+        # Reshape displacement vector
+        self.container['displacement'] = \
+            self.container['displacement'].reshape(par['nlines'], par['width'])
+        self.container['displacement'][self.container['displacement']
                                         == -0.] = num.nan
 
         # LatLon UTM Conversion
-        utm_x, utm_y, utm_zone, _ = utm.from_latlon(par['corner_lat'],
-                                                    par['corner_lon'])
-        last_x, last_y, _, _ = utm.from_latlon(
-                            par['corner_lat'] + par['post_lat']*par['width'],
-                            par['corner_lon'] + par['post_lon']*par['nlines'])
-        self.data_items['utm_x'] = num.linspace(utm_x, last_x, par['width'])
-        self.data_items['utm_y'] = num.linspace(utm_y, last_y, par['nlines'])
+        self.container['lllat'] = par['corner_lat'] +\
+                                    par['post_lat'] * par['width']
+        self.container['lllon'] = par['corner_lon']
 
         # Theta and Phi
-        self.data_items['theta'] = 0.
-        self.data_items['phi'] = 0.
-        # raise DeprecationWarning('Set Scene.phi and Scene.theta manually!')
+        logger.warning('Using static phi and theta!')
+        self.container['theta'] = 0.
+        self.container['phi'] = 0.
 
-        return self.data_items
+        return self.container
+
+
+class GMTSAR(SceneIO):
+    def validate(self, filename, **kwargs):
+        pass
+
+
+class ISCEXMLParser(object):
+    def __init__(self, filename):
+        import xml.etree.ElementTree as ET
+        self.root = ET.parse(filename).getroot()
+
+    @staticmethod
+    def type_convert(value):
+        for t in (float, int, str):
+            try:
+                return t(value)
+            except ValueError:
+                continue
+        raise ValueError('Could not convert value')
+
+    def getProperty(self, name):
+        for child in self.root.iter():
+            if child.get('name') == name:
+                if child.tag == 'property':
+                    return self.type_convert(child.find('value').text)
+                elif child.tag == 'component':
+                    values = {}
+                    for prop in child.iter('property'):
+                        values[prop.get('name')] =\
+                            self.type_convert(prop.find('value').text)
+                    return values
+        return None
+
+
+class ISCE(SceneIO):
+    def __init__(self):
+        SceneIO.__init__(self)
+
+    def validate(self, filename, **kwargs):
+        try:
+            self._getDisplacementFile(filename)
+            self._getLOSFile(filename)
+            return True
+        except ImportError:
+            return False
+
+    @staticmethod
+    def _getLOSFile(path):
+        if not os.path.isdir(path):
+            path = os.path.abspath(path)
+        rdr_files = glob.glob(os.path.join(path, '*.rdr.geo'))
+
+        if len(rdr_files) == 0:
+            raise ImportError('Could not find LOS file (.rdr.geo)')
+        if not os.path.isfile('%s.xml' % rdr_files[0]):
+            raise ImportError('Could not find LOS XML file (.rdr.geo.xml)')
+        return rdr_files[0]
+
+    @staticmethod
+    def _getDisplacementFile(path):
+        if os.path.isfile(path):
+            disp_file = path
+        else:
+            files = glob.glob(os.path.join(path, '*.unw.geo'))
+            if len(files) == 0:
+                raise ImportError('Could not find displacement file '
+                                  '(.unw.geo) at %s', path)
+            disp_file = files[0]
+
+        if not os.path.isfile('%s.xml' % disp_file):
+            raise ImportError('Could not find displacement XML file '
+                              '(%s.unw.geo.xml)' % os.path.basename(disp_file))
+        return disp_file
+
+    def read(self, filename, **kwargs):
+        isce_xml = ISCEXMLParser(self._getDisplacementFile() + '.xml')
+
+        coordinate1 = isce_xml.getProperty('coordinate1')
+        coordinate2 = isce_xml.getProperty('coordinate2')
+
+        self.displacement = num.fromfile(self._getDisplacementFile(filename),
+                                         dtype='<f4')
+        los_data = num.fromfile(self._getLOSFile(filename), dtype='<f4')
+
+
