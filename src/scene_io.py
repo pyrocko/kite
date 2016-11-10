@@ -14,13 +14,14 @@ class SceneIO(object):
     """ Prototype class for SARIO objects """
     def __init__(self):
         self.container = {
-            'phi': None,
-            'theta': None,
-            'displacement': None,
-            'lllon': None,
-            'lllat': None,
-            'dlat': None,
-            'dlon': None
+            'phi': None,  # Look incident angle from vertical in degree
+            'theta': None,  # Look orientation angle from east; 0deg East,
+                            # 90deg North
+            'displacement': None,  # Displacement towards LOS
+            'lllon': None,  # Lower left corner latitude
+            'lllat': None,  # Lower left corner londgitude
+            'dlat': None,  # Pixel delta latitude
+            'dlon': None,  # Pixel delta longitude
         }
 
     def read(self, filename, **kwargs):
@@ -99,19 +100,22 @@ class Matlab(SceneIO):
                     utm_n = mat[mat_k].flatten()
 
         utm_zone = 32
-        logger.warning('UTM zone for easting/northing not defined, using %d' %
-                       utm_zone)
-        self.container['lllat'], self.container['lllat'] =\
-            utm.to_latlon(utm_e.min(), utm_n.min(), utm_zone)
+        utm_zone_letter = 'N'
+        logger.warning('Using UTM Zone %d%s' %
+                       (utm_zone, utm_zone_letter))
+        self.container['lllat'], self.container['lllon'] =\
+            utm.to_latlon(utm_e.min(), utm_n.min(),
+                          utm_zone, utm_zone_letter)
 
-        urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(), utm_zone)
+        urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
+                                     utm_zone, utm_zone_letter)
         self.container['dlat'] =\
             (urlat - self.container['lllat']) /\
-                self.container['displacement'].shape[0]
+            self.container['displacement'].shape[0]
 
         self.container['dlon'] =\
             (urlat - self.container['lllon']) /\
-                self.container['displacement'].shape[1]
+            self.container['displacement'].shape[1]
 
         return self.container
 
@@ -176,21 +180,21 @@ class Gamma(SceneIO):
         self.container['displacement'] = num.fromfile(filename, dtype='>f4')
 
         # Resize array last line is not scanned completely
-        _fill = num.empty(par['width'] -
-                          self.container['displacement'].size % par['width'])
-        _fill.fill(num.nan)
+        fill = num.empty(par['width'] -
+                         self.container['displacement'].size % par['width'])
+        fill.fill(num.nan)
         self.container['displacement'] = num.append(
-                          self.container['displacement'], _fill)
+                          self.container['displacement'], fill)
 
         # Reshape displacement vector
         self.container['displacement'] = \
             self.container['displacement'].reshape(par['nlines'], par['width'])
         self.container['displacement'][self.container['displacement']
-                                        == -0.] = num.nan
+                                       == -0.] = num.nan
 
         # LatLon UTM Conversion
         self.container['lllat'] = par['corner_lat'] +\
-                                    par['post_lat'] * par['width']
+            par['post_lat'] * par['width']
         self.container['lllon'] = par['corner_lon']
 
         # Theta and Phi
@@ -274,14 +278,29 @@ class ISCE(SceneIO):
                               '(%s.unw.geo.xml)' % os.path.basename(disp_file))
         return disp_file
 
-    def read(self, filename, **kwargs):
-        isce_xml = ISCEXMLParser(self._getDisplacementFile() + '.xml')
+    def read(self, path, **kwargs):
+        isce_xml = ISCEXMLParser(self._getDisplacementFile(path) + '.xml')
 
-        coordinate1 = isce_xml.getProperty('coordinate1')
-        coordinate2 = isce_xml.getProperty('coordinate2')
+        coord_lon = isce_xml.getProperty('coordinate1')
+        coord_lat = isce_xml.getProperty('coordinate2')
+        self.container['dlat'] = num.abs(coord_lat['delta'])
+        self.container['dlon'] = num.abs(coord_lon['delta'])
+        nlon = coord_lon['size']
+        nlat = coord_lat['size']
 
-        self.displacement = num.fromfile(self._getDisplacementFile(filename),
-                                         dtype='<f4')
-        los_data = num.fromfile(self._getLOSFile(filename), dtype='<f4')
+        self.container['lllat'] = coord_lat['startingvalue'] +\
+            (nlat * coord_lat['delta'])
+        self.container['lllon'] = coord_lon['startingvalue']
 
+        displacement = num.fromfile(self._getDisplacementFile(path),
+                                    dtype='<f4')\
+            .reshape(nlat, nlon*2)[:, nlon:]
+        displacement[displacement == 0.] = num.nan
+        self.container['displacement'] = displacement
 
+        los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
+            .reshape(nlat, nlon*2)
+        self.container['phi'] = los_data[:, :nlon]
+        self.container['theta'] = los_data[:, nlon:] + 90.
+
+        return self.container
