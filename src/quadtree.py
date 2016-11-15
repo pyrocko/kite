@@ -1,5 +1,4 @@
 import numpy as num
-import logging
 import time
 from pyrocko import guts
 
@@ -202,7 +201,7 @@ class Quadtree(object):
 
         self.treeUpdate = Subject()
         self.splitMethodChanged = Subject()
-        self._log = logging.getLogger('Quadtree')
+        self._log = scene._log.getChild('Quadtree')
         self.setScene(scene)
         self.parseConfig(config)
 

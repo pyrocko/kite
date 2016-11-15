@@ -235,7 +235,7 @@ class Scene(object):
     def __init__(self, config=SceneConfig()):
         self.config = config
         self.meta = self.config.meta
-        self._log = logging.getLogger('Scene/%s' % self.meta.scene_title)
+        self._log = logging.getLogger('Scene')
         self.sceneChanged = Subject()
 
         self._displacement = None

@@ -1,4 +1,5 @@
 #!/usr/bin/python2
+import logging
 from PySide import QtGui
 from .tab_scene import QKiteSceneDock
 from .tab_quadtree import QKiteQuadtreeDock
@@ -38,7 +39,6 @@ class Spool(QtGui.QApplication):
         # self.setStyle('plastique')
 
         self.spool_win = SpoolMainWindow()
-
         self.aboutToQuit.connect(self.deleteLater)
         self.spool_win.actionExit.triggered.connect(self.exit)
 

@@ -3,7 +3,6 @@ import scipy as sp
 import time
 
 import covariance_ext
-import logging
 from pyrocko import guts
 from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
 
@@ -114,7 +113,7 @@ class Covariance(object):
         self._covariance_interp = None
         self._initialized = False
 
-        self._log = logging.getLogger('Covariance')
+        self._log = quadtree._scene._log.getChild('Covariance')
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
