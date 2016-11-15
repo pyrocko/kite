@@ -67,7 +67,10 @@ class QKitePlot(pg.PlotWidget):
 
     def transformToUTM(self):
         padding = 100
-        ll_x, ll_y, ur_x, ur_y, dx, dy = self.container.utm.extent()
+        ll_x, ll_y, ur_x, ur_y, dx, dy = \
+            (self.container.frame.llE, self.container.frame.llN,
+             self.container.frame.urE, self.container.frame.urN,
+             self.container.frame.dE, self.container.frame.dN)
 
         self.image.translate(ll_x, ll_y)
         self.image.scale(dx, dy)
@@ -180,8 +183,8 @@ class QKiteToolComponents(QtGui.QWidget):
                 ('Mean value', '%0.4f' % num.nanmean(self.plot.data)),
                 ('Resolution px', '%d x %d' % (self.plot.data.shape[0],
                                                self.plot.data.shape[1])),
-                ('dx', '%.2f m' % self.plot.container.utm.extent()[-2]),
-                ('dy', '%.2f m' % self.plot.container.utm.extent()[-1]),
+                ('dx', '%.2f m' % self.plot.container.frame.dE),
+                ('dy', '%.2f m' % self.plot.container.frame.dN),
                 ]
             rstr = '<table>'
             for (metric, value) in table_content:

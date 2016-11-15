@@ -78,8 +78,14 @@ class Matlab(SceneIO):
         SceneIO.__init__(self)
 
     def validate(self, filename):
+        if filename[-4:] == '.mat':
+            return True
+        else:
+            return False
         try:
-            self.io.loadmat(filename)
+            variables = self.io.whosmat(filename)
+            if len(variables) > 50:
+                return False
             return True
         except ValueError:
             return False
@@ -99,6 +105,9 @@ class Matlab(SceneIO):
                 elif 'yy' in mat_k:
                     utm_n = mat[mat_k].flatten()
 
+        if utm_e.min() < 1e5 or utm_n.min() < 1e5:
+            utm_e *= 1e3
+            utm_n *= 1e3
         utm_zone = 32
         utm_zone_letter = 'N'
         logger.warning('Using default UTM Zone %d%s' %
@@ -128,10 +137,10 @@ class Gamma(SceneIO):
     @staticmethod
     def _getParameterFile(filename):
         path = os.path.dirname(os.path.realpath(filename))
-        try:
-            return glob.glob('%s/*.gc_par' % path)[0]
-        except IndexError:
-            raise ImportError('Could not find Gamma parameter file (.gc_par)')
+        par_files = glob.glob('%s/*.gc_par' % path)
+        if len(par_files) == 0:
+            raise ImportError('Could not find Gamma parameter file (*.gc_par)')
+        return par_files[0]
 
     @staticmethod
     def _parseParameterFile(parameter_file):
@@ -153,16 +162,12 @@ class Gamma(SceneIO):
                     parameters[groups[0]] = groups[1].strip()
         return parameters or None
 
-    def validate(self, filename, parameter_file=None):
-        if parameter_file is None:
-            parameter_file = self._getParameterFile(filename)
-        par = self._parseParameterFile(parameter_file)
-
-        if par is None:
+    def validate(self, filename):
+        try:
+            self._getParameterFile(filename)
+            return True
+        except ImportError:
             return False
-            raise ValueError('Parameter file %s is empty' % parameter_file)
-
-        return True
 
     def read(self, filename, parameter_file=None):
         logger.info('')
@@ -245,7 +250,7 @@ class ISCE(SceneIO):
     @staticmethod
     def _getLOSFile(path):
         if not os.path.isdir(path):
-            path = os.path.abspath(path)
+            path = os.path.dirname(path)
         rdr_files = glob.glob(os.path.join(path, '*.rdr.geo'))
 
         if len(rdr_files) == 0:
@@ -271,21 +276,22 @@ class ISCE(SceneIO):
         return disp_file
 
     def read(self, path, **kwargs):
+        path = os.path.abspath(path)
         isce_xml = ISCEXMLParser(self._getDisplacementFile(path) + '.xml')
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
         self.container['dLat'] = num.abs(coord_lat['delta'])
         self.container['dLon'] = num.abs(coord_lon['delta'])
-        nlon = coord_lon['size']
-        nlat = coord_lat['size']
+        nlon = int(coord_lon['size'])
+        nlat = int(coord_lat['size'])
 
         self.container['llLat'] = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
         self.container['llLon'] = coord_lon['startingvalue']
 
-        displacement = num.fromfile(self._getDisplacementFile(path),
-                                    dtype='<f4')\
+        displacement = num.memmap(self._getDisplacementFile(path),
+                                  dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
         displacement[displacement == 0.] = num.nan
         self.container['displacement'] = displacement
@@ -311,12 +317,17 @@ class GMTSAR(SceneIO):
      awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu`
     """
     def validate(self, filename, **kwargs):
-        pass
+        try:
+            self._getDisplacementFile(filename)
+            self._getLOSFile(filename)
+            return True
+        except ImportError:
+            return False
 
     @staticmethod
     def _getLOSFile(path):
         if not os.path.isdir(path):
-            path = os.path.abspath(path)
+            path = os.path.dirname(path)
         los_files = glob.glob(os.path.join(path, '*.los.*'))
         if len(los_files) == 0:
             raise ImportError('Could not find LOS file (*.los.*)')
@@ -334,10 +345,11 @@ class GMTSAR(SceneIO):
             disp_file = files[0]
         return disp_file
 
-    def read(self, filename, parameter_file=None):
+    def read(self, path, parameter_file=None):
         from scipy.io import netcdf
+        path = os.path.abspath(path)
 
-        grd = netcdf.netcdf_file(self._getDisplacementFile(filename),
+        grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
         self.container['displacement'] = grd.variables['z'][:].copy()
 
@@ -347,7 +359,7 @@ class GMTSAR(SceneIO):
 
         # Theta and Phi
         try:
-            los = num.fromfile(self._getLOSFile(filename), dtype='<f4')
+            los = num.memmap(self._getLOSFile(path), dtype='<f4')
             e = los[3::6].copy()
             n = los[4::6].copy()
             u = los[5::6].copy()
@@ -357,7 +369,7 @@ class GMTSAR(SceneIO):
                 .reshape(self.container['displacement'].shape)
             phi = num.rad2deg(num.arccos(u))\
                 .reshape(self.container['displacement'].shape)
-            theta[n<0] += 180.
+            theta[n < 0] += 180.
             self.container['phi'] = phi
             self.container['theta'] = theta
         except ImportError:

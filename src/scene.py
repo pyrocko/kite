@@ -44,9 +44,9 @@ class FrameConfig(guts.Object):
                          help='Scene latitude of lower left corner')
     llLon = guts.Float.T(default=0.,
                          help='Scene longitude of lower left corner')
-    dLat = guts.Float.T(default=0.,
+    dLat = guts.Float.T(default=1.e-3,
                         help='Scene pixel spacing in x direction (degree)')
-    dLon = guts.Float.T(default=0.,
+    dLon = guts.Float.T(default=1.e-3,
                         help='Scene pixel spacing in y direction (degree)')
 
 
@@ -74,12 +74,14 @@ class Frame(object):
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
-        print 'updating Extend!'
         self.llE, self.llN, self.utm_zone, self.utm_zone_letter =\
             utm.from_latlon(self.llLat, self.llLon)
 
-        urlat = self.llLat + self.dLat * self._scene.rows
-        urlon = self.llLon + self.dLon * self._scene.cols
+        self.cols = self._scene.cols
+        self.rows = self._scene.rows
+
+        urlat = self.llLat + self.dLat * self.rows
+        urlon = self.llLon + self.dLon * self.cols
         self.urE, self.urN, _, _ = utm.from_latlon(urlat, urlon, self.utm_zone)
 
         # Width at the bottom of the scene
@@ -93,10 +95,10 @@ class Frame(object):
                                        urlat, urlon)
         self.spherical_distortion = num.abs(self.extentE - extentE2)
 
-        self.dE = self.extentE / self._scene.cols
-        self.dN = self.extentN / self._scene.rows
-        self.E = num.arange(self._scene.cols) * self.dE
-        self.N = num.arange(self._scene.rows) * self.dN
+        self.dE = self.extentE / self.cols
+        self.dN = self.extentN / self.rows
+        self.E = num.arange(self.cols) * self.dE
+        self.N = num.arange(self.rows) * self.dN
         self.config.regularize()
 
         self.gridE = None
@@ -110,6 +112,7 @@ class Frame(object):
     @llLat.setter
     def llLat(self, llLat):
         self.config.llLat = llLat
+        self._llLat = llLat
         self._updateExtent()
 
     @property
@@ -119,6 +122,7 @@ class Frame(object):
     @llLon.setter
     def llLon(self, llLon):
         self.config.llLon = llLon
+        self._llLon = llLon
         self._updateExtent()
 
     @property
@@ -147,7 +151,7 @@ class Frame(object):
         """
         valid_data = num.isnan(self._scene.displacement)
         gridN = num.repeat(self.N[:, num.newaxis],
-                           self._scene.rows, axis=1)
+                           self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
     @property_cached
@@ -158,13 +162,30 @@ class Frame(object):
         """
         valid_data = num.isnan(self._scene.displacement)
         gridE = num.repeat(self.E[num.newaxis, :],
-                           self._scene.cols, axis=0)
+                           self.rows, axis=0)
         return num.ma.masked_array(gridE, valid_data, fill_value=num.nan)
 
     def _mapGridXY(self, x, y):
         ll_x, ll_y, ur_x, ur_y, dx, dy = self.extent()
         return (ll_x + (x * dx),
                 ll_y + (y * dy))
+
+    def __str__(self):
+        return (
+            'Lower right latitude:  {frame.llLat:.4f} N\n'
+            'Lower right longitude: {frame.llLon:.4f} E\n'
+            '\n\n'
+            'UTM Zone:              {frame.utm_zone}{frame.utm_zone_letter}'
+            'Lower right easting:   {frame.llE:.4f} m\n'
+            'Lower right northing:  {frame.llN:.4f} m'
+            '\n\n'
+            'Pixel spacing east:    {frame.dE:.4f} m\n'
+            'Pixel spacing north:   {frame.dN:.4f} m\n'
+            'Extent east:           {frame.extentE:.4f} m\n'
+            'Extent north:          {frame.extentN:.4f} m\n'
+            'Dimensions:            {frame.cols} x {frame.rows} px\n'
+            'Spherical distortion:  {frame.spherical_distortion:.4f} m\n'
+        ).format(frame=self)
 
 
 class Meta(guts.Object):
@@ -196,12 +217,13 @@ class Scene(object):
     :param displacement: ``NxM`` matrix of displacement in LOS
     :type displacement: :py:class:`numpy.ndrray`
     :param theta: ``NxM`` matrix of theta towards LOS.
-        Theta is look vector elevation angle towards satellite from horizon
+        Theta is look vector elevation angle towards satellite from vertical
         in radians - ``pi/2: up; -pi/2: down``
     :type theta: :py:class:`numpy.ndarray`
     :param phi: ``NxM`` matrix of phi towards LOS.
-        Phi look vector orientation angle towards satellite in radians.
-        (0: east, pi/2 north)
+        Phi look vector orientation angle towards satellite from East
+        in radians.
+        ``(0: east, pi/2 north)``
     :type phi: :py:class:`numpy.ndarray`
     :param meta: Meta information for the scene
     :type meta: :py:class:`kite.scene.Meta`
@@ -309,7 +331,7 @@ class Scene(object):
         return Spool(scene=self)
 
     @classmethod
-    def import_file(cls, filename, **kwargs):
+    def import_file(cls, path, **kwargs):
         """Import displacement data from foreign file format.
         Supported formats are `Matlab` and `Gamma` Remote Sensing Software.
 
@@ -323,8 +345,8 @@ class Scene(object):
         Scene.displacement ``ig_``
         Scene.phi          ``phi``
         Scene.theta        ``theta``
-        Scene.utm.x        ``xx``
-        Scene.utm.x        ``yy``
+        Scene.frame.E        ``xx``
+        Scene.frame.N        ``yy``
         ================== ====================
 
         **Gamma**
@@ -332,36 +354,32 @@ class Scene(object):
         Support for GAMMA Remote Sensing binary files
         A ``.par`` file is expected in the import folder
 
-        :param filename: Filename of resource to import
-        :type filename: str
+        :param path: Filename of resource to import
+        :type path: str
         :param **kwargs: keyword arguments passed to import function
         :type **kwargs: dict
-        :returns: Scene from filename
+        :returns: Scene from path
         :rtype: {:py:class:`kite.Scene`}
         :raises: TypeError
         """
         from kite import scene_io
         import os
 
-        if not os.path.isfile(filename) or os.path.isdir(filename):
-            raise ImportError('File %s does not exist!' % filename)
+        if not os.path.isfile(path) or os.path.isdir(path):
+            raise ImportError('File %s does not exist!' % path)
 
         scene = cls()
         data = None
 
         for mod in scene_io.__all__:
             module = eval('scene_io.%s()' % mod)
-            if module.validate(filename, **kwargs):
-                try:
-                    data = module.read(filename, **kwargs)
-                except ImportError:
-                    pass
-                scene._log.debug('Recognized format %s for file %s' %
-                                 (mod, filename))
+            if module.validate(path, **kwargs):
+                scene._log.info('Loading %s using %s' %
+                                (path, mod))
+                data = module.read(path, **kwargs)
                 break
         if data is None:
-            raise ImportError('Could not recognize format for %s' % filename)
-
+            raise ImportError('Could not recognize format for %s' % path)
         scene.theta = data['theta']
         scene.phi = data['phi']
         scene.displacement = data['displacement']
@@ -488,19 +506,19 @@ class LOSUnitVectors(object):
     def unitE(self):
         """Unit vector in East, ``NxM`` matrix like ``Scene.displacement``
         """
-        return num.cos(self._scene.phi) * num.cos(self._scene.theta)
+        return num.cos(self._scene.phi) * num.sin(self._scene.theta)
 
     @property_cached
     def unitN(self):
         """Unit vector in North, ``NxM`` matrix like ``Scene.displacement``
         """
-        return num.sin(self._scene.phi) * num.cos(self._scene.theta)
+        return num.sin(self._scene.phi) * num.sin(self._scene.theta)
 
     @property_cached
     def unitU(self):
         """Unit vector Up, ``NxM`` matrix like ``Scene.displacement``
         """
-        return num.sin(self._scene.theta)
+        return num.cos(self._scene.theta)
 
     @property_cached
     def degTheta(self):
@@ -524,7 +542,7 @@ class SceneTest(Scene):
         scene.meta.scene_title = 'Synthetic Displacement | Gaussian'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        scene.displacement = scene._gaussAnomaly(scene.utm.x, scene.utm.y,
+        scene.displacement = scene._gaussAnomaly(scene.frame.E, scene.frame.N,
                                                  **kwargs)
         if noise is not None:
             cls._addNoise(scene, noise)
@@ -547,7 +565,7 @@ class SceneTest(Scene):
         scene.meta.title = 'Synthetic Displacement | Sine'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        scene.displacement = scene._sineAnomaly(scene.utm.x, scene.utm.y,
+        scene.displacement = scene._sineAnomaly(scene.frame.E, scene.frame.N,
                                                 **kwargs)
         if noise is not None:
             cls._addNoise(scene, noise)
@@ -555,8 +573,10 @@ class SceneTest(Scene):
 
     @staticmethod
     def _prepareSceneTest(scene, nx=500, ny=500):
-        scene.utm.x = num.linspace(0, nx, nx)
-        scene.utm.y = num.linspace(0, ny, ny)
+        scene.frame.dLat = 1e-4
+        scene.frame.dLon = 1e-4
+        scene.frame.E = num.arange(nx) * 50.
+        scene.frame.N = num.arange(ny) * 50.
         scene.theta = num.repeat(
             num.linspace(0.8, 0.85, nx), ny).reshape((nx, ny))
         scene.phi = num.rot90(scene.theta)

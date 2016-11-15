@@ -2,6 +2,7 @@ import numpy as num
 import scipy as sp
 import time
 
+import covariance_ext
 import logging
 from pyrocko import guts
 from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
@@ -55,8 +56,8 @@ def _workerLeafDistanceMatrix(args):
     """Worker function serving :python:`multiprocessing.Pool`
 
     :param args:
-        `(ind, subsampl, leaf1_utm_grid_x, leaf1_utm_grid_y,
-          leaf2_utm_grid_x, leaf2_utm_grid_y)`
+        `(ind, subsampl, leaf1_gridE, leaf1_gridN,
+          leaf2_gridE, leaf2_gridN)`
         Where `ind` is tuple of matrix indices `(nx, ny)`, `subsampl`
         subsampling factor `leaf?_utm?` are 2-dim masekd arrays holding UTM
         data from :python:`kite.quadtree.QuadNode`.
@@ -65,19 +66,19 @@ def _workerLeafDistanceMatrix(args):
     :rtype: {[tuple]}
     """
     (ind, subsampl,
-     leaf1_utm_grid_x, leaf1_utm_grid_y,
-     leaf2_utm_grid_x, leaf2_utm_grid_y) = args
-    leaf1_subsmpl = subsampl if not float(leaf1_utm_grid_x.size)/subsampl < 1.\
-        else int(num.floor(float(leaf1_utm_grid_x.size)*subsampl))
-    leaf2_subsmpl = subsampl if not float(leaf2_utm_grid_x.size)/subsampl < 1.\
-        else int(num.floor(float(leaf2_utm_grid_x.size)*subsampl))
+     leaf1_gridE, leaf1_gridN,
+     leaf2_gridE, leaf2_gridN) = args
+    leaf1_subsmpl = subsampl if not float(leaf1_gridE.size)/subsampl < 1.\
+        else int(num.floor(float(leaf1_gridE.size)*subsampl))
+    leaf2_subsmpl = subsampl if not float(leaf2_gridE.size)/subsampl < 1.\
+        else int(num.floor(float(leaf2_gridE.size)*subsampl))
 
     # Looks ugly but re we want to conserve memory
     d = num.median(num.sqrt(
-        (leaf1_utm_grid_x.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_utm_grid_x.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
-        (leaf1_utm_grid_y.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_utm_grid_y.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
+        (leaf1_gridE.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_gridE.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
+        (leaf1_gridN.compressed()[::leaf1_subsmpl][:, num.newaxis] -
+         leaf2_gridN.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
     # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
     return ind, d
 
@@ -245,8 +246,8 @@ class Covariance(object):
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
 
                 tasks.append(((nx, ny), self.config.subsampling,
-                             leaf1.utm_grid_x, leaf1.utm_grid_y,
-                             leaf2.utm_grid_x, leaf2.utm_grid_y))
+                             leaf1.gridE, leaf1.gridN,
+                             leaf2.gridE, leaf2.gridN))
             pool = Pool(maxtasksperchild=worker_chunksize)
             results = pool.imap_unordered(_workerLeafDistanceMatrix, tasks,
                                           chunksize=1)
@@ -260,6 +261,20 @@ class Covariance(object):
                 pbar.update(i+1)
             pool.join()
 
+        elif method == 'matrix_c':
+            imatrix = num.empty((len(dist_iter.shape[0], 6)), dtype=num.int32)
+            for nc, (nx, ny) in enumerate(dist_iter):
+                leaf1, leaf2 = self._mapLeafs(nx, ny)
+                imatrix[nc, 0] = nx
+                imatrix[nc, 1] = ny
+                imatrix[nc, 2], imatrix[nc, 3] = (leaf1.slice_x.start,
+                                                  leaf1.slice_x.stop)
+                imatrix[nc, 4], imatrix[nc, 5] = (leaf1.slice_x.start,
+                                                  leaf1.slice_x.stop)
+
+            covariance_ext.calculate_distance(self._scene.displacement,
+                                              imatrix)
+
         cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)
         self._log.info('Created covariance matrix - %s mode [%0.8f s]' %
@@ -268,10 +283,10 @@ class Covariance(object):
 
     @staticmethod
     def _leafFocalDistance(leaf1, leaf2):
-        return num.sqrt((leaf1.focal_point_utm[0]
-                         - leaf2.focal_point_utm[0])**2 +
-                        (leaf1.focal_point_utm[1]
-                         - leaf2.focal_point_utm[1])**2)
+        return num.sqrt((leaf1.focal_point[0]
+                         - leaf2.focal_point[0])**2 +
+                        (leaf1.focal_point[1]
+                         - leaf2.focal_point[1])**2)
 
     # def _leafFocalDistance(self, leaf1, leaf2):
     #     d = self._leafFocalDistance(leaf1, leaf2)
@@ -317,8 +332,8 @@ class Covariance(object):
         f_spec /= f_spec.size
         f_spec = num.abs(f_spec)
 
-        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dx)
-        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dy)
+        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dE)
+        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dN)
 
         k_rad = num.sqrt(k_x[:, num.newaxis]**2 + k_y[num.newaxis, :]**2)
 
@@ -368,10 +383,10 @@ class Covariance(object):
         cov, _ = covarianceCosine(power_spec, k)
         # cov_x, _ = covarianceCosine(ps_x, k_x)
 
-        # d_x = num.arange(1, cov_x.size+1) * self._quadtree.frame.dx
-        # d_y = num.arange(1, cov_y.size+1) * self._quadtree.frame.dy
-        dk = self._quadtree.frame.dx if k_x.size > k_y.size\
-            else self._quadtree.frame.dx
+        # d_x = num.arange(1, cov_x.size+1) * self._quadtree.frame.dE
+        # d_y = num.arange(1, cov_y.size+1) * self._quadtree.frame.dN
+        dk = self._quadtree.frame.dE if k_x.size > k_y.size\
+            else self._quadtree.frame.dE
         d = num.arange(1, cov.size+1) * dk
 
         return cov, d

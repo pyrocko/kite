@@ -99,8 +99,8 @@ class Plot2D(Subject):
         self.setColormap(kwargs.get('cmap', 'RdBu'))
         self.colormapAdjust()
 
-        self.ax.set_xlim((0, self._scene.utm.x.size))
-        self.ax.set_ylim((0, self._scene.utm.y.size))
+        self.ax.set_xlim((0, self._scene.frame.E.size))
+        self.ax.set_ylim((0, self._scene.frame.N.size))
         self.ax.set_aspect('equal')
         self.ax.invert_yaxis()
 
@@ -430,8 +430,8 @@ class CovariancePlot(object):
     def plotNoise(self, ax):
         noise_data = self._covariance.noise_data
         ax.imshow(noise_data, aspect='equal',
-                  extent=(0, noise_data.shape[0]*self._scene.utm.dx,
-                          0, noise_data.shape[1]*self._scene.utm.dy))
+                  extent=(0, noise_data.shape[0]*self._scene.frame.dE,
+                          0, noise_data.shape[1]*self._scene.frame.dN))
 
         ax.set_title('Noise Data')
         ax.set_xlabel('X [$m$]')
@@ -466,7 +466,8 @@ class CovariancePlot(object):
         ax.set_yscale('log')
 
     def plotQuadtreeWeight(self, ax):
-        extent = self._quadtree.utm.extent()[:-2]
+        extent = (self._quadtree.frame.llE, self._quadtree.frame.urE,
+                  self._quadtree.frame.llN, self._quadtree.frame.urN)
         cb = ax.imshow(self._quadtree.leaf_matrix_weights, aspect='equal',
                        extent=extent)
         ax.set_xlabel('UTM X [$m$]')
@@ -493,7 +494,7 @@ class CovariancePlot(object):
         def covar_analyt(p, k):
             ps = behaviour(k[k > 0], *p)
             cov = sp.fftpack.dct(ps, type=2, n=None, axis=-1, norm='ortho')
-            d = num.arange(1, k[k > 0].size+1) * self._scene.utm.dx
+            d = num.arange(1, k[k > 0].size+1) * self._scene.frame.dE
             return cov, d
 
         power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
