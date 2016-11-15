@@ -7,9 +7,9 @@ from kite import Scene, SceneTest
 
 class TestGaussScene(unittest.TestCase):
     def setUp(self):
-        self.sc = SceneTest()
+        self.sc = SceneTest.createGauss()
 
-    def test_quadtree(self):
+    def testQuadtree(self):
         qt = self.sc.quadtree
         for e in num.linspace(0.118, .2, num=30):
             qt.epsilon = e
@@ -23,17 +23,17 @@ class TestGaussScene(unittest.TestCase):
         for s in num.linspace(200, 4000, num=30):
             qt.tile_size_lim = (0, 5000)
 
-    def test_covariance(self):
+    def testCovariance(self):
         self.sc.quadtree.epsilon = .118
         self.sc.quadtree.covariance.subsampling = 24
         cov = self.sc.quadtree.covariance
 
-        matrix_focal = cov.matrix_focal
-        matrix = cov.matrix
+        matrix_focal = cov.covariance_matrix
+        matrix = cov.covariance_matrix_focal
         num.testing.assert_allclose(matrix, matrix_focal,
                                     rtol=1e-7, atol=2e3, verbose=True)
 
-    def test_io(self):
+    def testIO(self):
         import tempfile
         import shutil
 
@@ -57,11 +57,9 @@ class TestMatlabScene(unittest.TestCase):
          'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
 
         self.sc = Scene.import_file(file)
-        self.sc.utm.x *= 1000
-        self.sc.utm.y *= 1000
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
 
-    def test_quadtree(self):
+    def testQuadtree(self):
         qt = self.sc.quadtree
         for e in num.linspace(0.118, .3, num=30):
             qt.epsilon = e
