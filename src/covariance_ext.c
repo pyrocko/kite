@@ -14,7 +14,7 @@ typedef npy_uint32 uint32_t;
 
 static PyObject *CovarianceExtError;
 
-int good_array(PyObject* o, int typenum, ssize_t size_want, int ndim_want, npy_intp* shape_want) {
+int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_intp* shape_want) {
     int i;
 
     if (!PyArray_Check(o)) {
@@ -36,12 +36,14 @@ int good_array(PyObject* o, int typenum, ssize_t size_want, int ndim_want, npy_i
         PyErr_SetString(CovarianceExtError, "array is of unexpected size");
         return 0;
     }
+
+
     if (ndim_want != -1 && ndim_want != PyArray_NDIM((PyArrayObject*)o)) {
         PyErr_SetString(CovarianceExtError, "array is of unexpected ndim");
         return 0;
     }
 
-    if (ndim_want != -1) {
+    if (ndim_want != -1 && shape_want != NULL) {
         for (i=0; i<ndim_want; i++) {
             if (shape_want[i] != -1 && shape_want[i] != PyArray_DIMS((PyArrayObject*)o)[i]) {
                 PyErr_SetString(CovarianceExtError, "array is of unexpected shape");
@@ -56,19 +58,54 @@ static float64_t sqr(float64_t x) {
     return x*x;
 }
 
+static void calc_distances(float64_t *X, float64_t *Y, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, uint32_t subsampling, float64_t *dists) {
+    uint32_t il1, il2;
+    uint32_t l1x_beg, l1x_end, l1y_beg, l1y_end, il1x, il1y;
+    uint32_t l2x_beg, l2x_end, l2y_beg, l2y_end, il2x, il2y;
+    float64_t dist;
+    npy_intp icl1, icl2, idist, coord_rows, coord_cols;
 
-npy_intp get_nleafs(uint32_t *map, npy_intp ncombinations) {
-    npy_intp i;
-    uint32_t max = 0;
-    for (i=0; i < ncombinations; i++) {
-        if (map[i+6] < max) max = map[i+6];
+    coord_rows = shape_coord[0]-1;
+    coord_cols = shape_coord[1]-1;
+
+    for (il1=0; il1<nleafs; il1++) {
+        l1x_beg = map[il1*4+0];
+        l1x_end = map[il1*4+1];
+        l1y_beg = map[il1*4+2];
+        l1y_end = map[il1*4+3];
+        for (il2=il1; il2<nleafs; il2++) {
+            l2x_beg = map[il2*4+0];
+            l2x_end = map[il2*4+1];
+            l2y_beg = map[il2*4+2];
+            l2y_end = map[il2*4+3];
+
+            dist = 0.;
+            printf("Calculating for %dx%d (%d)\n", il1, il2, idist);
+
+            for (il1x=l1x_beg; il1x<l1x_end; il1x++) {
+                if (il1x > coord_cols) continue;
+                for (il1y=l1y_beg; il1y<l1y_end; il1y+=subsampling) {
+                    if (il1y > coord_rows) continue;
+                    icl1 = il1x*coord_cols + il1y;
+
+                    for (il2x=l2x_beg; il2x<l2x_end; il2x++) {
+                        if (il2x > coord_cols) continue;
+                        for (il2y=l2y_beg; il2y<l2y_end; il2y+=subsampling) {
+                            if (il2y > coord_rows) continue;
+                            icl2 = il2x*coord_cols + il2y;
+                            if (dist != 0.)
+                                dist = sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]))/2.;
+                            else
+                                dist = sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]));
+                            // dist = X[icl1];
+                        }
+                    }
+                }
+            }
+            dists[il1*nleafs+il2] = dist;
+            dists[il2*nleafs+il1] = dist;
+        }
     }
-    return max;
-}
-
-static void calc_distances(float64_t *X, float64_t *Y, npy_intp *shape, uint32_t *map, float64_t *distances) {
-    (void) sqr;
-    printf("%lu\n", shape[0]);
 }
 
 static PyObject* w_distances(PyObject *dummy, PyObject *args) {
@@ -76,45 +113,52 @@ static PyObject* w_distances(PyObject *dummy, PyObject *args) {
     PyArrayObject *c_x_arr, *c_y_arr, *c_map_arr, *dists_arr;
 
     float64_t *x, *y, *dists;
-    uint32_t *map;
-    npy_intp shape_coord[2], shape_dist[2], nleafs;
+    uint32_t *map, subsampling;
+    npy_intp *shape_coord[2], shape_dist[2], nleafs, ncomb;
+    npy_intp shape_want_map[2] = {-1, 4};
 
-    npy_intp shape_want_map[2] = {-1, 6};
-
-    if (! PyArg_ParseTuple(args, "OOO", &x_arr, &y_arr, &map_arr)) {
-        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map");
+    if (! PyArg_ParseTuple(args, "OOOI", &x_arr, &y_arr, &map_arr, &subsampling)) {
+        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, subsampling)");
         return NULL;
     }
 
-    if (! good_array(x_arr, NPY_FLOAT64, -1, 2, NULL)) return NULL;
-    if (! good_array(y_arr, NPY_FLOAT64, -1, 2, NULL)) return NULL;
-    if (! good_array(map_arr, NPY_UINT32, -1, 2, shape_want_map)) return NULL;
+    if (! good_array(x_arr, NPY_FLOAT64, -1, 2, NULL))
+        return NULL;
+    if (! good_array(y_arr, NPY_FLOAT64, -1, 2, NULL))
+        return NULL;
+    if (! good_array(map_arr, NPY_UINT32, -1, 2, shape_want_map))
+        return NULL;
 
     c_x_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) x_arr);
     c_y_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) y_arr);
     c_map_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) map_arr);
 
-    if (PyArray_SHAPE(c_x_arr) != PyArray_SHAPE(c_y_arr)) {
-        PyErr_SetString(CovarianceExtError, "X and Y must have the same shape!");
+
+    if (PyArray_SIZE(c_x_arr) != PyArray_SIZE(c_y_arr)) {
+        PyErr_SetString(CovarianceExtError, "X and Y must have the same size!");
         return NULL;
     }
+
+    //printf("Here!\n");
 
     x = PyArray_DATA(c_x_arr);
     y = PyArray_DATA(c_y_arr);
     map = PyArray_DATA(c_map_arr);
+    nleafs = PyArray_SIZE(c_map_arr)/4;
 
-    printf("shape: %lu\n", PyArray_SHAPE(c_map_arr)[0]);
-
-    nleafs = get_nleafs(map, PyArray_SHAPE(c_map_arr)[0]);
+    shape_coord[0] = PyArray_SHAPE(c_x_arr)[0];
+    shape_coord[1] = PyArray_SHAPE(c_x_arr)[1];
     shape_dist[0] = nleafs;
     shape_dist[1] = nleafs;
-    //shape_coord = PyArray_SHAPE(c_x_arr);
+    printf("nleafs: %d\n", nleafs);
 
-    dists_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
+    dists_arr = (PyArrayObject*) PyArray_ZEROS(2, shape_dist, NPY_FLOAT64, 0);
+    printf("size distance matrix: %d\n", PyArray_SIZE(dists_arr));
+    printf("size coord matrix: %d\n", PyArray_SIZE(x_arr));
     dists = PyArray_DATA(dists_arr);
 
-    calc_distances(x, y, shape_coord, map, dists);
-    return args;
+    calc_distances(x, y, shape_coord, map, nleafs, subsampling, dists);
+    return (PyObject*) dists_arr;
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
