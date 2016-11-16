@@ -13,14 +13,13 @@ class QuadNode(object):
     """
     def __init__(self, quadtree, llx, lly, length):
         self.llx = int(llx)
-
         self.lly = int(lly)
         self.length = int(length)
 
         self._quadtree = quadtree
         self._scene = self._quadtree._scene
-        self._slice_x = slice(self.llx, self.llx+self.length)
-        self._slice_y = slice(self.lly, self.lly+self.length)
+        self._slice_rows = slice(self.llx, self.llx+self.length)
+        self._slice_cols = slice(self.lly, self.lly+self.length)
 
         self.id = 'node_%d-%d_%d' % (self.llx, self.lly, self.length)
         self.children = None
@@ -75,20 +74,20 @@ class QuadNode(object):
 
     @property_cached
     def data(self):
-        return self._scene.displacement[self._slice_x, self._slice_y]
+        return self._scene.displacement[self._slice_rows, self._slice_cols]
 
     @property_cached
     def data_masked(self):
-        d = self._scene.displacement[self._slice_x, self._slice_y]
+        d = self._scene.displacement[self._slice_rows, self._slice_cols]
         return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
 
     @property_cached
     def gridE(self):
-        return self._scene.frame.gridE[self._slice_x, self._slice_y]
+        return self._scene.frame.gridE[self._slice_rows, self._slice_cols]
 
     @property_cached
     def gridN(self):
-        return self._scene.frame.gridN[self._slice_x, self._slice_y]
+        return self._scene.frame.gridN[self._slice_rows, self._slice_cols]
 
     def iterTree(self):
         yield self
@@ -412,7 +411,7 @@ class Quadtree(object):
         leaf_matrix = num.empty_like(self._data)
         leaf_matrix.fill(num.nan)
         for l in self.leafs:
-            leaf_matrix[l.llx:l.llx+l.length, l.lly:l.lly+l.length] = \
+            leaf_matrix[l._slice_rows, l._slice_cols] = \
                 self._norm_methods[method](l)
         leaf_matrix[num.isnan(self._data)] = num.nan
         return leaf_matrix

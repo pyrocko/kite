@@ -203,7 +203,7 @@ class Covariance(object):
         """
         return num.linalg.inv(self.covariance_matrix_focal)
 
-    def _calcDistanceMatrix(self, method='focal'):
+    def _calcDistanceMatrix(self, method='focal', nthreads=4):
         """Calculates the covariance matrix
 
         :param method: Either `'focal'` point distances are used - this is
@@ -264,15 +264,15 @@ class Covariance(object):
                                  dtype=num.uint32)
             for nl, leaf in enumerate(self._quadtree.leafs):
                 leaf, _ = self._mapLeafs(nl, nl)
-                leaf_map[nl, 0], leaf_map[nl, 1] = (leaf._slice_x.start,
-                                                    leaf._slice_x.stop)
-                leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_y.start,
-                                                    leaf._slice_y.stop)
+                leaf_map[nl, 0], leaf_map[nl, 1] = (leaf._slice_rows.start,
+                                                    leaf._slice_rows.stop)
+                leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
+                                                    leaf._slice_cols.stop)
 
             dist_matrix = covariance_ext.leaf_distances(
                             self._scene.frame.gridE.filled(),
                             self._scene.frame.gridN.filled(),
-                            leaf_map, self.subsampling)
+                            leaf_map, self.subsampling, nthreads)
         return dist_matrix
 
         cov_matrix = self.covariance(dist_matrix)
