@@ -24,7 +24,7 @@ class CovarianceConfig(guts.Object):
     distance_cutoff = guts.Int.T(default=35e3,
                                  help='Cutoff distance for covariance weight '
                                       'matrix -> cov(d>distance_cutoff)=0')
-    subsampling = guts.Int.T(default=8,
+    subsampling = guts.Int.T(default=23,
                              help='Subsampling of distance matrices')
 
 
@@ -67,17 +67,13 @@ def _workerLeafDistanceMatrix(args):
     (ind, subsampl,
      leaf1_gridE, leaf1_gridN,
      leaf2_gridE, leaf2_gridN) = args
-    leaf1_subsmpl = subsampl if not float(leaf1_gridE.size)/subsampl < 1.\
-        else int(num.floor(float(leaf1_gridE.size)*subsampl))
-    leaf2_subsmpl = subsampl if not float(leaf2_gridE.size)/subsampl < 1.\
-        else int(num.floor(float(leaf2_gridE.size)*subsampl))
 
     # Looks ugly but re we want to conserve memory
     d = num.median(num.sqrt(
-        (leaf1_gridE.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_gridE.compressed()[::leaf2_subsmpl][num.newaxis, :])**2 +
-        (leaf1_gridN.compressed()[::leaf1_subsmpl][:, num.newaxis] -
-         leaf2_gridN.compressed()[::leaf2_subsmpl][num.newaxis, :])**2))
+        (leaf1_gridE.compressed()[::subsampl][:, num.newaxis] -
+         leaf2_gridE.compressed()[::subsampl][num.newaxis, :])**2 +
+        (leaf1_gridN.compressed()[::subsampl][:, num.newaxis] -
+         leaf2_gridN.compressed()[::subsampl][num.newaxis, :])**2))
     # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
     return ind, d
 
@@ -109,6 +105,7 @@ class Covariance(object):
 
         self.config = config
         self._quadtree = quadtree
+        self._scene = quadtree._scene
         self._noise_data = None
         self._covariance_interp = None
         self._initialized = False
@@ -221,18 +218,20 @@ class Covariance(object):
         self._initialized = True
 
         nl = len(self._quadtree.leafs)
-        dist_matrix = num.zeros((nl, nl))
-        dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
-
         self._leaf_mapping = {}
+
+        if method in ['focal', 'matrix']:
+            dist_matrix = num.zeros((nl, nl))
+            dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
 
         t0 = time.time()
         if method == 'focal':
             for nx, ny in dist_iter:
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
-
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
+            print 'Grid shape', self._scene.frame.gridE.shape
+            print 'Displacement shape', self._scene.displacement.shape
 
         elif method == 'matrix':
             self._log.info('Preprocessing distance matrix'
@@ -244,7 +243,7 @@ class Covariance(object):
             for nx, ny in dist_iter:
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
 
-                tasks.append(((nx, ny), self.config.subsampling,
+                tasks.append(((nx, ny), self.subsampling,
                              leaf1.gridE, leaf1.gridN,
                              leaf2.gridE, leaf2.gridN))
             pool = Pool(maxtasksperchild=worker_chunksize)
@@ -261,18 +260,20 @@ class Covariance(object):
             pool.join()
 
         elif method == 'matrix_c':
-            imatrix = num.empty((len(dist_iter.shape[0], 6)), dtype=num.int32)
-            for nc, (nx, ny) in enumerate(dist_iter):
-                leaf1, leaf2 = self._mapLeafs(nx, ny)
-                imatrix[nc, 0] = nx
-                imatrix[nc, 1] = ny
-                imatrix[nc, 2], imatrix[nc, 3] = (leaf1.slice_x.start,
-                                                  leaf1.slice_x.stop)
-                imatrix[nc, 4], imatrix[nc, 5] = (leaf1.slice_x.start,
-                                                  leaf1.slice_x.stop)
+            leaf_map = num.empty((len(self._quadtree.leafs), 4),
+                                 dtype=num.uint32)
+            for nl, leaf in enumerate(self._quadtree.leafs):
+                leaf, _ = self._mapLeafs(nl, nl)
+                leaf_map[nl, 0], leaf_map[nl, 1] = (leaf._slice_x.start,
+                                                    leaf._slice_x.stop)
+                leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_y.start,
+                                                    leaf._slice_y.stop)
 
-            covariance_ext.calculate_distance(self._scene.displacement,
-                                              imatrix)
+            dist_matrix = covariance_ext.leaf_distances(
+                            self._scene.frame.gridE.filled(),
+                            self._scene.frame.gridN.filled(),
+                            leaf_map, self.subsampling)
+        return dist_matrix
 
         cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)

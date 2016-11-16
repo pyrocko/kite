@@ -47,8 +47,8 @@ class QKitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(bottom={'UTM East', 'm'},
-                       left={'UTM North', 'm'},)
+        self.setLabels(bottom={'East', 'm'},
+                       left={'North', 'm'},)
 
         self.mouse_text = pg.LabelItem(text='East %d m | North %d m | %s %.4f'
                                        % (0, 0, self.component.title(), 0),
@@ -61,7 +61,6 @@ class QKitePlot(pg.PlotWidget):
         self.transformToUTM()
         self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
                                         rateLimit=30, slot=self.mouseMoved)
-        # self.scene().sigMouseMoved.connect(self.mouseMoved)
         # self.addIsocurve()
         # self.scalebar()
 
@@ -102,7 +101,7 @@ class QKitePlot(pg.PlotWidget):
         return _data  # num.nan_to_num(_data)
 
     def update(self):
-        self.image.updateImage(self.data, autoDownsample=True)
+        self.image.updateImage(self.data.T, autoDownsample=True)
         # self.addIsocurves()
 
     def addIsocurve(self, level=0.):

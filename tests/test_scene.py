@@ -8,6 +8,7 @@ from kite import Scene, SceneTest
 class TestGaussScene(unittest.TestCase):
     def setUp(self):
         self.sc = SceneTest.createGauss()
+        self.sc._log.setLevel('INFO')
 
     def testQuadtree(self):
         qt = self.sc.quadtree
@@ -24,7 +25,7 @@ class TestGaussScene(unittest.TestCase):
             qt.tile_size_lim = (0, 5000)
 
     def testCovariance(self):
-        self.sc.quadtree.epsilon = .118
+        self.sc.quadtree.epsilon = .02
         self.sc.quadtree.covariance.subsampling = 24
         cov = self.sc.quadtree.covariance
 

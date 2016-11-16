@@ -60,10 +60,10 @@ static float64_t sqr(float64_t x) {
     return x*x;
 }
 
-static void calc_distances(float64_t *X, float64_t *Y, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, uint32_t subsampling, float64_t *dists) {
+static void calc_distances(float64_t *E, float64_t *Y, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, uint32_t subsampling, float64_t *dists) {
     uint32_t il1, il2, ndist;
-    uint32_t l1x_beg, l1x_end, l1y_beg, l1y_end, il1x, il1y;
-    uint32_t l2x_beg, l2x_end, l2y_beg, l2y_end, il2x, il2y;
+    uint32_t l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
+    uint32_t l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
     float64_t dist;
     npy_intp icl1, icl2, idist, coord_rows, coord_cols;
 
@@ -72,46 +72,49 @@ static void calc_distances(float64_t *X, float64_t *Y, npy_intp *shape_coord, ui
     coord_cols = shape_coord[1];
     printf("coord_matrix: %dx%d\n", coord_rows, coord_cols);
     printf("subsampling: %d\n", subsampling);
+    //#pragma omp parallel default(shared)
+    {
+        //#pragma omp for private(il1, il1row, il1col, il2, il2row, il2col)
+        for (il1=0; il1<nleafs; il1++) {
+            l1row_beg = map[il1*4+0];
+            l1row_end = map[il1*4+1];
+            l1col_beg = map[il1*4+2];
+            l1col_end = map[il1*4+3];
+            printf("l(%d): %d-%d:%d-%d\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end);
 
-    for (il1=0; il1<nleafs; il1++) {
-        l1y_beg = map[il1*4+0];
-        l1y_end = map[il1*4+1];
-        l1x_beg = map[il1*4+2];
-        l1x_end = map[il1*4+3];
-        printf("l(%d): %d-%d:%d-%d\n", il1, l1x_beg, l1x_end, l1y_beg, l1y_end);
+            for (il2=il1; il2<nleafs; il2++) {
+                l2row_beg = map[il2*4+0];
+                l2row_end = map[il2*4+1];
+                l2col_beg = map[il2*4+2];
+                l2col_end = map[il2*4+3];
 
-        for (il2=il1; il2<nleafs; il2++) {
-            l2y_beg = map[il2*4+0];
-            l2y_end = map[il2*4+1];
-            l2x_beg = map[il2*4+2];
-            l2x_end = map[il2*4+3];
+                dist = 0.;
+                ndist = 0;
+                // printf("Calculating for %dx%d (%d)\n", il1, il2, idist);
+                for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
+                    if (il1row > coord_rows) continue;
+                    for (il1col=l1col_beg; il1col<l1col_end; il1col+=subsampling) {
+                        if (il1col > coord_cols) continue;
+                        icl1 = il1row * coord_cols + il1col;
+                        if (npy_isnan(E[icl1])) continue;
 
-            dist = 0.;
-            ndist = 0;
-            // printf("Calculating for %dx%d (%d)\n", il1, il2, idist);
-            for (il1x=l1x_beg; il1x<l1x_end; il1x++) {
-                if (il1x > coord_cols) continue;
-                for (il1y=l1y_beg; il1y<l1y_end; il1y+=subsampling) {
-                    if (il1y > coord_rows) continue;
-                    icl1 = il1x + coord_cols*il1y;
-                    if (npy_isnan(X[icl1])) continue;
+                        for (il2row=l2row_beg; il2row<l2row_end; il2row++) {
+                            if (il2row > coord_rows) continue;
+                            for (il2col=l2col_beg; il2col<l2col_end; il2col+=subsampling) {
+                                if (il2col > coord_cols) continue;
+                                icl2 = il2row * coord_cols + il2col;
+                                if (npy_isnan(E[icl2])) continue;
 
-                    for (il2x=l2x_beg; il2x<l2x_end; il2x++) {
-                        if (il2x > coord_cols) continue;
-                        for (il2y=l2y_beg; il2y<l2y_end; il2y+=subsampling) {
-                            if (il2y > coord_rows) continue;
-                            icl2 = il2x + coord_cols*il2y;
-                            if (npy_isnan(X[icl2])) continue;
-
-                            dist += sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]));
-                            ndist++;
+                                dist += sqrt(sqr(E[icl1] - E[icl2]) + sqr(Y[icl1] - Y[icl2]));
+                                ndist++;
+                            }
                         }
                     }
                 }
+                dists[il1*(nleafs)+il2] = dist/ndist;
+                dists[il2*(nleafs)+il1] = dist/ndist;
+                // printf("l%d-l%d: %f\n", il1, il2, dist);
             }
-            dists[il1*(nleafs)+il2] = dist/ndist;
-            dists[il2*(nleafs)+il1] = dist/ndist;
-            // printf("l%d-l%d: %f\n", il1, il2, dist);
         }
     }
 }

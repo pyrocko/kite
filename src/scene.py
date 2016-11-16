@@ -74,7 +74,7 @@ class Frame(object):
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
-        self.llE, self.llN, self.utm_zone, self.utm_zone_letter =\
+        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter =\
             utm.from_latlon(self.llLat, self.llLon)
 
         self.cols = self._scene.cols
@@ -82,7 +82,8 @@ class Frame(object):
 
         urlat = self.llLat + self.dLat * self.rows
         urlon = self.llLon + self.dLon * self.cols
-        self.urE, self.urN, _, _ = utm.from_latlon(urlat, urlon, self.utm_zone)
+        self.urEutm, self.urNutm, _, _ = utm.from_latlon(urlat, urlon,
+                                                         self.utm_zone)
 
         # Width at the bottom of the scene
         self.extentE = greatCircleDistance(self.llLat, self.llLon,
@@ -91,14 +92,20 @@ class Frame(object):
                                            urlat, self.llLon)
 
         # Width at the N' top of the scene
-        extentE2 = greatCircleDistance(urlat, self.llLon,
-                                       urlat, urlon)
-        self.spherical_distortion = num.abs(self.extentE - extentE2)
+        extentE_top = greatCircleDistance(urlat, self.llLon,
+                                          urlat, urlon)
+        self.spherical_distortion = num.abs(self.extentE - extentE_top)
 
-        self.dE = self.extentE / self.cols
+        self.dE = (self.extentE + extentE_top) / (2*self.cols)
         self.dN = self.extentN / self.rows
         self.E = num.arange(self.cols) * self.dE
         self.N = num.arange(self.rows) * self.dN
+
+        self.llE = 0
+        self.llN = 0
+        self.urE = self.E.max()
+        self.urN = self.N.max()
+
         self.config.regularize()
 
         self.gridE = None
@@ -144,17 +151,6 @@ class Frame(object):
         self._updateExtent()
 
     @property_cached
-    def gridN(self):
-        """
-        UTM grid holding x coordinates of all pixels in ``NxM`` matrix
-        of ``Scene.displacement``.
-        """
-        valid_data = num.isnan(self._scene.displacement)
-        gridN = num.repeat(self.N[:, num.newaxis],
-                           self.cols, axis=1)
-        return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
-
-    @property_cached
     def gridE(self):
         """
         UTM grid holding y coordinates of all pixels in ``NxM`` matrix
@@ -164,6 +160,17 @@ class Frame(object):
         gridE = num.repeat(self.E[num.newaxis, :],
                            self.rows, axis=0)
         return num.ma.masked_array(gridE, valid_data, fill_value=num.nan)
+
+    @property_cached
+    def gridN(self):
+        """
+        UTM grid holding x coordinates of all pixels in ``NxM`` matrix
+        of ``Scene.displacement``.
+        """
+        valid_data = num.isnan(self._scene.displacement)
+        gridN = num.repeat(self.N[:, num.newaxis],
+                           self.cols, axis=1)
+        return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
     def _mapGridXY(self, x, y):
         ll_x, ll_y, ur_x, ur_y, dx, dy = self.extent()
@@ -256,7 +263,7 @@ class Scene(object):
     @displacement.setter
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
-        self.cols, self.rows = self._displacement.shape
+        self.rows, self.cols = self._displacement.shape
         self.sceneChanged._notify()
 
     @property
@@ -605,6 +612,7 @@ class SceneTest(Scene):
 
         gauss_anomaly = amplitude * \
             num.exp(-(((X-x0)**2/2*sigma_x**2)+(Y-y0)**2/2*sigma_y**2))
+        print gauss_anomaly.shape
 
         return gauss_anomaly
 

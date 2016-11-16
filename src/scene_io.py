@@ -4,8 +4,7 @@ import os
 import glob
 import logging
 
-
-__all__ = ['Matlab', 'Gamma', 'ISCE']
+__all__ = ['Matlab', 'Gamma', 'ISCE', 'GMTSAR']
 
 logger = logging.getLogger(name='SceneIO')
 
@@ -318,11 +317,11 @@ class GMTSAR(SceneIO):
     """
     def validate(self, filename, **kwargs):
         try:
-            self._getDisplacementFile(filename)
-            self._getLOSFile(filename)
-            return True
+            if self._getDisplacementFile(filename)[-4:] == '.grd':
+                return True
         except ImportError:
             return False
+        return False
 
     @staticmethod
     def _getLOSFile(path):
@@ -336,9 +335,9 @@ class GMTSAR(SceneIO):
     @staticmethod
     def _getDisplacementFile(path):
         if os.path.isfile(path):
-            disp_file = path
+            return path
         else:
-            files = glob.glob(os.path.join(path, '*los_ll.grd'))
+            files = glob.glob(os.path.join(path, '*.grd'))
             if len(files) == 0:
                 raise ImportError('Could not find displacement file '
                                   '(unwrap_ll.grd) at %s', path)
@@ -352,24 +351,28 @@ class GMTSAR(SceneIO):
         grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
         self.container['displacement'] = grd.variables['z'][:].copy()
+        shape = self.container['displacement'].shape
 
         # LatLon
         self.container['llLat'] = grd.variables['lat'][:].min()
         self.container['llLon'] = grd.variables['lon'][:].min()
 
+        self.container['dLat'] = (grd.variables['lat'][:].max() -
+                                  self.container['llLat'])/shape[1]
+        self.container['dLon'] = (grd.variables['lon'][:].max() -
+                                  self.container['llLon'])/shape[0]
+
         # Theta and Phi
         try:
             los = num.memmap(self._getLOSFile(path), dtype='<f4')
-            e = los[3::6].copy()
-            n = los[4::6].copy()
-            u = los[5::6].copy()
-            print e.size, n.size, u.size
-            print self.container['displacement'].size
-            theta = num.rad2deg(num.arctan(n/e))\
-                .reshape(self.container['displacement'].shape)
-            phi = num.rad2deg(num.arccos(u))\
-                .reshape(self.container['displacement'].shape)
+            e = los[3::6].copy().reshape(shape)
+            n = los[4::6].copy().reshape(shape)
+            u = los[5::6].copy().reshape(shape)
+
+            theta = num.rad2deg(num.arctan(n/e))
+            phi = num.rad2deg(num.arccos(u))
             theta[n < 0] += 180.
+
             self.container['phi'] = phi
             self.container['theta'] = theta
         except ImportError:
@@ -378,4 +381,5 @@ class GMTSAR(SceneIO):
             self.container['theta'] = 0.
             self.container['phi'] = 0.
 
+        print self.container
         return self.container

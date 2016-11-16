@@ -53,6 +53,7 @@ class QKiteQuadtreePlot(QKitePlot):
     def updateFocalPoints(self):
         self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
                                   pxMode=True)
+        print self.quadtree.leaf_focal_points
 
 
 class QKiteToolQuadtree(QtGui.QWidget):
