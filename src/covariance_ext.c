@@ -2,11 +2,13 @@
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
+#include <numpy/npy_math.h>
 
 #include <sys/types.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <omp.h>
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
@@ -59,51 +61,57 @@ static float64_t sqr(float64_t x) {
 }
 
 static void calc_distances(float64_t *X, float64_t *Y, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, uint32_t subsampling, float64_t *dists) {
-    uint32_t il1, il2;
+    uint32_t il1, il2, ndist;
     uint32_t l1x_beg, l1x_end, l1y_beg, l1y_end, il1x, il1y;
     uint32_t l2x_beg, l2x_end, l2y_beg, l2y_end, il2x, il2y;
     float64_t dist;
     npy_intp icl1, icl2, idist, coord_rows, coord_cols;
 
-    coord_rows = shape_coord[0]-1;
-    coord_cols = shape_coord[1]-1;
+
+    coord_rows = shape_coord[0];
+    coord_cols = shape_coord[1];
+    printf("coord_matrix: %dx%d\n", coord_rows, coord_cols);
+    printf("subsampling: %d\n", subsampling);
 
     for (il1=0; il1<nleafs; il1++) {
-        l1x_beg = map[il1*4+0];
-        l1x_end = map[il1*4+1];
-        l1y_beg = map[il1*4+2];
-        l1y_end = map[il1*4+3];
+        l1y_beg = map[il1*4+0];
+        l1y_end = map[il1*4+1];
+        l1x_beg = map[il1*4+2];
+        l1x_end = map[il1*4+3];
+        printf("l(%d): %d-%d:%d-%d\n", il1, l1x_beg, l1x_end, l1y_beg, l1y_end);
+
         for (il2=il1; il2<nleafs; il2++) {
-            l2x_beg = map[il2*4+0];
-            l2x_end = map[il2*4+1];
-            l2y_beg = map[il2*4+2];
-            l2y_end = map[il2*4+3];
+            l2y_beg = map[il2*4+0];
+            l2y_end = map[il2*4+1];
+            l2x_beg = map[il2*4+2];
+            l2x_end = map[il2*4+3];
 
             dist = 0.;
-            printf("Calculating for %dx%d (%d)\n", il1, il2, idist);
-
+            ndist = 0;
+            // printf("Calculating for %dx%d (%d)\n", il1, il2, idist);
             for (il1x=l1x_beg; il1x<l1x_end; il1x++) {
                 if (il1x > coord_cols) continue;
                 for (il1y=l1y_beg; il1y<l1y_end; il1y+=subsampling) {
                     if (il1y > coord_rows) continue;
-                    icl1 = il1x*coord_cols + il1y;
+                    icl1 = il1x + coord_cols*il1y;
+                    if (npy_isnan(X[icl1])) continue;
 
                     for (il2x=l2x_beg; il2x<l2x_end; il2x++) {
                         if (il2x > coord_cols) continue;
                         for (il2y=l2y_beg; il2y<l2y_end; il2y+=subsampling) {
                             if (il2y > coord_rows) continue;
-                            icl2 = il2x*coord_cols + il2y;
-                            if (dist != 0.)
-                                dist = sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]))/2.;
-                            else
-                                dist = sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]));
-                            // dist = X[icl1];
+                            icl2 = il2x + coord_cols*il2y;
+                            if (npy_isnan(X[icl2])) continue;
+
+                            dist += sqrt(sqr(X[icl1] - X[icl2]) + sqr(Y[icl1] - Y[icl2]));
+                            ndist++;
                         }
                     }
                 }
             }
-            dists[il1*nleafs+il2] = dist;
-            dists[il2*nleafs+il1] = dist;
+            dists[il1*(nleafs)+il2] = dist/ndist;
+            dists[il2*(nleafs)+il1] = dist/ndist;
+            // printf("l%d-l%d: %f\n", il1, il2, dist);
         }
     }
 }
@@ -139,20 +147,18 @@ static PyObject* w_distances(PyObject *dummy, PyObject *args) {
         return NULL;
     }
 
-    //printf("Here!\n");
-
     x = PyArray_DATA(c_x_arr);
     y = PyArray_DATA(c_y_arr);
     map = PyArray_DATA(c_map_arr);
     nleafs = PyArray_SIZE(c_map_arr)/4;
 
-    shape_coord[0] = PyArray_SHAPE(c_x_arr)[0];
-    shape_coord[1] = PyArray_SHAPE(c_x_arr)[1];
+    shape_coord[0] = PyArray_DIMS(c_x_arr)[0];
+    shape_coord[1] = PyArray_DIMS(c_x_arr)[1];
     shape_dist[0] = nleafs;
     shape_dist[1] = nleafs;
     printf("nleafs: %d\n", nleafs);
 
-    dists_arr = (PyArrayObject*) PyArray_ZEROS(2, shape_dist, NPY_FLOAT64, 0);
+    dists_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
     printf("size distance matrix: %d\n", PyArray_SIZE(dists_arr));
     printf("size coord matrix: %d\n", PyArray_SIZE(x_arr));
     dists = PyArray_DATA(dists_arr);
