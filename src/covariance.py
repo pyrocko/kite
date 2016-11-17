@@ -7,7 +7,6 @@ from pyrocko import guts
 from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
 
 from multiprocessing import Pool, cpu_count
-from progressbar import ProgressBar, ETA, Bar
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
@@ -135,7 +134,7 @@ class Covariance(object):
             return self._noise_data
         nodes = sorted(self._quadtree.leafs,
                        key=lambda n: n.length/(n.nan_fraction+1))
-        self.noise_data = nodes[-1].data
+        self.noise_data = nodes[-1].displacement
         return self.noise_data
 
     @noise_data.setter
@@ -182,7 +181,7 @@ class Covariance(object):
         """ Covariance matrix calculated from sub-distances pairs from quadtree
         node-to-node, subsampled by `Covariance.config.subsampling`
         """
-        return self._calcDistanceMatrix(method='matrix')
+        return self._calcDistanceMatrix(method='matrix_c')
 
     @property_cached
     def covariance_matrix_focal(self):
@@ -203,15 +202,18 @@ class Covariance(object):
         """
         return num.linalg.inv(self.covariance_matrix_focal)
 
-    def _calcDistanceMatrix(self, method='focal', nthreads=4):
+    def _calcDistanceMatrix(self, method='focal', nthreads=0):
         """Calculates the covariance matrix
 
         :param method: Either `'focal'` point distances are used - this is
-        quick but statistically not reliable.
-        Or `'matrix'`, where the full quadtree pixel distances matrices are
-        calculated, subsampled as set in `Covariance.config.subsampling`.
-        , defaults to 'focal'
+            quick but statistically not reliable.
+            Or `'matrix'`, where the full quadtree pixel distances matrices are
+            calculated, subsampled as set in `Covariance.config.subsampling`.
+            , defaults to 'focal'
         :type method: str, optional
+        :param nthreads: Number of threads to use, ``0`` will use all
+            available processors
+        :ttype nthreads: int
         :returns: Covariance matrix
         :rtype: {:python:numpy.ndarray}
         """
@@ -230,8 +232,6 @@ class Covariance(object):
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
-            print 'Grid shape', self._scene.frame.gridE.shape
-            print 'Displacement shape', self._scene.displacement.shape
 
         elif method == 'matrix':
             self._log.info('Preprocessing distance matrix'
@@ -251,12 +251,9 @@ class Covariance(object):
                                           chunksize=1)
             pool.close()
 
-            pbar = ProgressBar(maxval=len(tasks), widgets=[Bar(),
-                                                           ETA()]).start()
             for i, result in enumerate(results):
                 (nx, ny), dist = result
                 dist_matrix[(nx, ny), (ny, nx)] = dist
-                pbar.update(i+1)
             pool.join()
 
         elif method == 'matrix_c':
@@ -272,8 +269,7 @@ class Covariance(object):
             dist_matrix = covariance_ext.leaf_distances(
                             self._scene.frame.gridE.filled(),
                             self._scene.frame.gridN.filled(),
-                            leaf_map, self.subsampling, nthreads)
-        return dist_matrix
+                            leaf_map, nthreads)
 
         cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)

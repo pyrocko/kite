@@ -6,8 +6,6 @@ import logging
 
 __all__ = ['Matlab', 'Gamma', 'ISCE', 'GMTSAR']
 
-logger = logging.getLogger(name='SceneIO')
-
 
 class SceneIO(object):
     """ Prototype class for SARIO objects """
@@ -109,8 +107,6 @@ class Matlab(SceneIO):
             utm_n *= 1e3
         utm_zone = 32
         utm_zone_letter = 'N'
-        logger.warning('Using default UTM Zone %d%s' %
-                       (utm_zone, utm_zone_letter))
         self.container['llLat'], self.container['llLon'] =\
             utm.to_latlon(utm_e.min(), utm_n.min(),
                           utm_zone, utm_zone_letter)
@@ -169,7 +165,6 @@ class Gamma(SceneIO):
             return False
 
     def read(self, filename, parameter_file=None):
-        logger.info('')
         if parameter_file is None:
             parameter_file = self._getParameterFile(filename)
         par = self._parseParameterFile(parameter_file)
@@ -381,5 +376,4 @@ class GMTSAR(SceneIO):
             self.container['theta'] = 0.
             self.container['phi'] = 0.
 
-        print self.container
         return self.container

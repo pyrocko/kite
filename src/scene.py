@@ -399,15 +399,6 @@ class Scene(object):
         return scene
 
     def _testImport(self):
-        self.frame.E
-        self.frame.N
-        self.frame.gridE
-        self.frame.gridN
-        self.frame.dE
-        self.frame.dN
-        self.displacement
-        self.theta
-        self.phi
         try:
             self.frame.E
             self.frame.N

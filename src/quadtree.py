@@ -26,33 +26,34 @@ class QuadNode(object):
 
     @property_cached
     def nan_fraction(self):
-        return float(num.sum(num.isnan(self.data)))/self.data.size
+        return float(num.sum(num.isnan(self.displacement))) / \
+            self.displacement.size
 
     @property_cached
     def mean(self):
-        return num.nanmean(self.data)
+        return num.nanmean(self.displacement)
 
     @property_cached
     def median(self):
-        return num.nanmedian(self.data)
+        return num.nanmedian(self.displacement)
 
     @property_cached
     def std(self):
-        return num.nanstd(self.data)
+        return num.nanstd(self.displacement)
 
     @property_cached
     def var(self):
-        return num.nanvar(self.data)
+        return num.nanvar(self.displacement)
 
     @property_cached
     def median_std(self):
         '''Standard deviation from median'''
-        return num.nanstd(self.data - self.median)
+        return num.nanstd(self.displacement - self.median)
 
     @property_cached
     def mean_std(self):
         '''Standard deviation from mean'''
-        return num.nanstd(self.data - self.mean)
+        return num.nanstd(self.displacement - self.mean)
 
     @property
     def weight(self):
@@ -63,21 +64,17 @@ class QuadNode(object):
         raise NotImplementedError('Bilinear fit not implemented')
 
     @property_cached
-    def _focal_point(self):
-        return self.focal_point()
-
-    @property_cached
     def focal_point(self):
         E = num.median(self.gridE.compressed())
         N = num.median(self.gridN.compressed())
         return E, N
 
     @property_cached
-    def data(self):
+    def displacement(self):
         return self._scene.displacement[self._slice_rows, self._slice_cols]
 
     @property_cached
-    def data_masked(self):
+    def displacement_masked(self):
         d = self._scene.displacement[self._slice_rows, self._slice_cols]
         return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
 
@@ -125,7 +122,7 @@ class QuadNode(object):
                          self.llx + self.length/2 * _nx,
                          self.lly + self.length/2 * _ny,
                          self.length/2)
-            if n.data.size == 0 or num.all(num.isnan(n.data)):
+            if n.displacement.size == 0 or num.all(num.isnan(n.displacement)):
                 n = None
                 continue
             yield n
@@ -208,7 +205,7 @@ class Quadtree(object):
 
     def setScene(self, scene):
         self._scene = scene
-        self._data = self._scene.displacement
+        self._displacement = self._scene.displacement
         self.frame = self._scene.frame
 
     def parseConfig(self, config):
@@ -280,7 +277,7 @@ class Quadtree(object):
 
     @property_cached
     def _epsilon_init(self):
-        return num.nanstd(self._data)
+        return num.nanstd(self._displacement)
         # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
@@ -408,21 +405,21 @@ class Quadtree(object):
             raise AttributeError('Method %s is not in %s' % (method,
                                  self._norm_methods.keys()))
 
-        leaf_matrix = num.empty_like(self._data)
+        leaf_matrix = num.empty_like(self._displacement)
         leaf_matrix.fill(num.nan)
         for l in self.leafs:
             leaf_matrix[l._slice_rows, l._slice_cols] = \
                 self._norm_methods[method](l)
-        leaf_matrix[num.isnan(self._data)] = num.nan
+        leaf_matrix[num.isnan(self._displacement)] = num.nan
         return leaf_matrix
 
     @property_cached
     def _base_nodes(self):
         self._base_nodes = []
-        init_length = num.power(2,
-                                num.ceil(num.log(num.min(self._data.shape)) /
-                                         num.log(2)))
-        nx, ny = num.ceil(num.array(self._data.shape)/init_length)
+        init_length = num.power(
+            2, num.ceil(num.log(num.min(self._displacement.shape))
+                        / num.log(2)))
+        nx, ny = num.ceil(num.array(self._displacement.shape)/init_length)
 
         for ix in xrange(int(nx)):
             for iy in xrange(int(ny)):
