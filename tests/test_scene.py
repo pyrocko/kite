@@ -8,7 +8,7 @@ from kite import Scene, SceneTest
 class TestGaussScene(unittest.TestCase):
     def setUp(self):
         self.sc = SceneTest.createGauss()
-        self.sc._log.setLevel('INFO')
+        self.sc._log.setLevel('CRITICAL')
 
     def testQuadtree(self):
         qt = self.sc.quadtree
