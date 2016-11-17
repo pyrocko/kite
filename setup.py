@@ -49,7 +49,7 @@ setup(
 
     ext_modules=[
         Extension('covariance_ext',
-                  sources=[pjoin('src', 'covariance_ext.c')],
+                  sources=[pjoin('src/ext', 'covariance_ext.c')],
                   include_dirs=[numpy.get_include()],
                   define_macros=None,
                   undef_macros=None,
