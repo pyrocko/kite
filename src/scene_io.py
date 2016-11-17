@@ -2,9 +2,8 @@ import importlib
 import numpy as num
 import os
 import glob
-import logging
 
-__all__ = ['Matlab', 'Gamma', 'ISCE', 'GMTSAR']
+__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR']
 
 
 class SceneIO(object):
@@ -54,21 +53,19 @@ class SceneIO(object):
 
 
 class Matlab(SceneIO):
-    """Reads Matlab .mat files into :py:class:`kite.scene.Scene`
+    """Reads Matlab files
 
-    **Matlab**
+    Variable naming conventions within Matlab ``.mat`` container:
 
-    Variable naming conventions for variables in Matlab ``.mat`` file:
-
-    ================== ====================
-    Property           Matlab ``.mat`` name
-    ================== ====================
-    Scene.displacement ``ig_``
-    Scene.phi          ``phi``
-    Scene.theta        ``theta``
-    Scene.utm.x        ``xx``
-    Scene.utm.x        ``yy``
-    ================== ====================
+        ================== ====================
+        Property           Matlab ``.mat`` name
+        ================== ====================
+        Scene.displacement ``ig_``
+        Scene.phi          ``phi``
+        Scene.theta        ``theta``
+        Scene.frame.x      ``xx``
+        Scene.frame.y      ``yy``
+        ================== ====================
     """
     def __init__(self):
         self.io = importlib.import_module('scipy.io')
@@ -125,9 +122,12 @@ class Matlab(SceneIO):
 
 
 class Gamma(SceneIO):
-    """Reads Gamma binary files
+    """Reads in binary files processed with GAMMA
 
-    A ``.par`` file is expected in the import folder
+    Expects two files in the same folder:
+
+        * Binary file from gamma (``*``)
+        * Parameter file (``*.par``)
     """
     @staticmethod
     def _getParameterFile(filename):
@@ -197,7 +197,6 @@ class Gamma(SceneIO):
         self.container['llLon'] = par['corner_lon']
 
         # Theta and Phi
-        logger.warning('Using static phi and theta!')
         self.container['theta'] = 0.
         self.container['phi'] = 0.
 
@@ -233,6 +232,14 @@ class ISCEXMLParser(object):
 
 
 class ISCE(SceneIO):
+    """Read in files processed with ISCE
+
+    Expects three files in the same folder:
+
+        * Unwrapped displacement (``*.unw.geo``)
+        * Metadata XML (``*.unw.geo.xml``)
+        * LOS binary data (``*.rdr.geo``)
+    """
     def validate(self, filename, **kwargs):
         try:
             self._getDisplacementFile(filename)
@@ -249,8 +256,6 @@ class ISCE(SceneIO):
 
         if len(rdr_files) == 0:
             raise ImportError('Could not find LOS file (.rdr.geo)')
-        if not os.path.isfile('%s.xml' % rdr_files[0]):
-            raise ImportError('Could not find LOS XML file (.rdr.geo.xml)')
         return rdr_files[0]
 
     @staticmethod
@@ -288,7 +293,7 @@ class ISCE(SceneIO):
                                   dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
         displacement[displacement == 0.] = num.nan
-        self.container['displacement'] = displacement
+        self.container['displacement'] = displacement*1e-2
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
@@ -299,16 +304,16 @@ class ISCE(SceneIO):
 
 
 class GMTSAR(SceneIO):
-    """GMTSAR import to kite
+    """Reads in data processed with GMT5SAR
 
-    Withhold two grids:
+    Expects two binary files:
 
-    * Displacement (``*los_ll.grd``)
-    * LOS grid (see instruction, ``*los.enu``)
+        * Displacement grid (NetCDF, ``*los_ll.grd``)
+        * LOS binary data (see instruction, ``*los.enu``)
 
-    Use gmt5sar SAT_look to calculate the corresponding unit look vectors
-    `gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
-     awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu`
+    Use gmt5sar ``SAT_look`` to calculate the corresponding unit look vectors:
+    ``gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
+    awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu``
     """
     def validate(self, filename, **kwargs):
         try:
@@ -324,6 +329,7 @@ class GMTSAR(SceneIO):
             path = os.path.dirname(path)
         los_files = glob.glob(os.path.join(path, '*.los.*'))
         if len(los_files) == 0:
+            print GMTSAR.__doc__
             raise ImportError('Could not find LOS file (*.los.*)')
         return los_files[0]
 
@@ -371,8 +377,6 @@ class GMTSAR(SceneIO):
             self.container['phi'] = phi
             self.container['theta'] = theta
         except ImportError:
-            logger.warning('Could not find LOS file - '
-                           ' Using static phi and theta!')
             self.container['theta'] = 0.
             self.container['phi'] = 0.
 

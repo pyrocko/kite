@@ -50,11 +50,13 @@ class QKitePlot(pg.PlotWidget):
         self.setLabels(bottom={'East', 'm'},
                        left={'North', 'm'},)
 
-        self.mouse_text = pg.LabelItem(text='East %d m | North %d m | %s %.4f'
-                                       % (0, 0, self.component.title(), 0),
-                                       justify='left',
-                                       parent=self.plotItem)
-        self.mouse_text.anchor(itemPos=(1, 0), parentPos=(1, 1))
+        self.hint_text = pg.LabelItem(text='East %d m | North %d m | %s %.2f'
+                                      % (0, 0, self.component.title(), 0),
+                                      justify='right', size='8pt',
+                                      parent=self.plotItem)
+        self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1, 0))
+        font = self.hint_text.font()
+        font.setBold(True)
         self.addItem(self.image)
         self.update()
 
@@ -102,6 +104,7 @@ class QKitePlot(pg.PlotWidget):
 
     def update(self):
         self.image.updateImage(self.data.T, autoDownsample=True)
+        self.mouseMoved()
         # self.addIsocurves()
 
     def addIsocurve(self, level=0.):
@@ -112,18 +115,26 @@ class QKitePlot(pg.PlotWidget):
 
         self.iso = iso
 
-    def mouseMoved(self, event):
+    def mouseMoved(self, event=None):
+        if event is None:
+            self.hint_text.setText('East %d m | North %d m | %s %.2f'
+                                   % (0, 0, self.component.title(), 0))
+            return
         pos = event[0]
         if self.image.sceneBoundingRect().contains(pos):
             map_pos = self.plotItem.vb.mapSceneToView(pos)
             if map_pos.isNull():
                 return
             img_pos = self.image.mapFromScene(event).data
-            self.mouse_text.setText('East %d m | North %d m | %s %.4f'
-                                    % (map_pos.x(), map_pos.y(),
-                                       self.component.title(),
-                                       self.image.image[int(img_pos().x()),
-                                                        int(img_pos().y())]))
+            text = '<span style="font-family: monospace; color: #fff">' \
+                'East {east:08.2f} m | North {north:08.2f} m | '\
+                '{measure} {z:06.2f}</span>'.format(
+                    north=map_pos.x(), east=map_pos.y(),
+                    measure=self.component.title(),
+                    z=self.image.image[int(img_pos().x()),
+                                       int(img_pos().y())])
+            self.hint_text.setText(text)
+            return
 
 
 class QKiteToolComponents(QtGui.QWidget):
@@ -228,6 +239,12 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
                          [1e-3, (106, 0, 31, 255)],
                          [.5, (255, 255, 255, 255)],
                          [1., (8, 54, 104, 255)]],
+                        'mode': 'rgb'}
+        default_cmap = {'ticks':
+                        [[0., (0, 0, 0, 255)],
+                         [1e-3, (51, 53, 120)],
+                         [.5, (255, 255, 255, 255)],
+                         [1., (172, 56, 56)]],
                         'mode': 'rgb'}
         lvl_min = num.nanmin(self._plot.data)
         lvl_max = num.nanmax(self._plot.data)

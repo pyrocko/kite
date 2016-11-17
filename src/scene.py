@@ -7,6 +7,7 @@ import utm
 from pyrocko import guts
 from kite.quadtree import QuadtreeConfig
 from kite.meta import Subject, property_cached
+from kite import scene_io
 logging.basicConfig(level=20)
 
 
@@ -340,26 +341,6 @@ class Scene(object):
     @classmethod
     def import_file(cls, path, **kwargs):
         """Import displacement data from foreign file format.
-        Supported formats are `Matlab` and `Gamma` Remote Sensing Software.
-
-        **Matlab**
-
-        Variable naming conventions for variables in Matlab ``.mat`` file:
-
-        ================== ====================
-        Property           Matlab ``.mat`` name
-        ================== ====================
-        Scene.displacement ``ig_``
-        Scene.phi          ``phi``
-        Scene.theta        ``theta``
-        Scene.frame.E        ``xx``
-        Scene.frame.N        ``yy``
-        ================== ====================
-
-        **Gamma**
-
-        Support for GAMMA Remote Sensing binary files
-        A ``.par`` file is expected in the import folder
 
         :param path: Filename of resource to import
         :type path: str
@@ -369,7 +350,6 @@ class Scene(object):
         :rtype: {:py:class:`kite.Scene`}
         :raises: TypeError
         """
-        from kite import scene_io
         import os
 
         if not os.path.isfile(path) or os.path.isdir(path):
@@ -381,7 +361,7 @@ class Scene(object):
         for mod in scene_io.__all__:
             module = eval('scene_io.%s()' % mod)
             if module.validate(path, **kwargs):
-                scene._log.info('Loading %s using %s' %
+                scene._log.info('Importing %s using %s' %
                                 (path, mod))
                 data = module.read(path, **kwargs)
                 break
@@ -397,6 +377,12 @@ class Scene(object):
 
         scene._testImport()
         return scene
+
+    import_file.__func__.__doc__ += \
+        '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
+    for mod in scene_io.__all__:
+        import_file.__func__.__doc__ += '\n**%s**\n\n' % mod
+        import_file.__func__.__doc__ += eval('scene_io.%s.__doc__' % mod)
 
     def _testImport(self):
         try:
