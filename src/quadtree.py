@@ -162,7 +162,7 @@ class QuadtreeConfig(guts.Object):
         help='Threshold for tile splitting, measure for '
              'quadtree nodes\' variance')
     nan_allowed = guts.Float.T(
-        default=-9999.,
+        default=0.9,
         help='Allowed NaN fraction per tile')
     tile_size_lim = guts.Tuple.T(
         2, guts.Float.T(),

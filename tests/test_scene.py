@@ -51,7 +51,6 @@ class TestGaussScene(unittest.TestCase):
 
 
 class TestMatlabScene(unittest.TestCase):
-
     def setUp(self):
         file = os.path.join(
          os.path.abspath(os.path.dirname(__file__)),

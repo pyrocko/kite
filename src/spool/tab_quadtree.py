@@ -36,8 +36,10 @@ class QKiteQuadtreePlot(QKitePlot):
         QKitePlot.__init__(self, container=quadtree)
         self.quadtree = self.container
 
-        focalpoint_color = (255, 23, 68, 255)
-        focalpoint_outline_color = (255, 255, 255, 200)
+        # http://paletton.com
+        focalpoint_color = (45, 136, 45)
+        # focalpoint_outline_color = (255, 255, 255, 200)
+        focalpoint_outline_color = (3, 212, 3)
         self.focal_points = pg.ScatterPlotItem(
                                 size=3.,
                                 pen=pg.mkPen(focalpoint_outline_color,
@@ -53,6 +55,7 @@ class QKiteQuadtreePlot(QKitePlot):
     def updateFocalPoints(self):
         self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
                                   pxMode=True)
+
 
 class QKiteToolQuadtree(QtGui.QWidget):
     def __init__(self, plot=None):
