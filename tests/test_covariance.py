@@ -25,16 +25,21 @@ class TestCovariance(unittest.TestCase):
         self.sc = SceneTest.createGauss()
         # self.sc._log.setLevel('CRITICAL')
 
-    @unittest.skip('Skip!')
     def testCovariance(self):
         self.sc.quadtree.epsilon = .02
         self.sc.quadtree.covariance.subsampling = 24
         cov = self.sc.quadtree.covariance
 
-        matrix_focal = cov.covariance_matrix
-        matrix = cov.covariance_matrix_focal
-        num.testing.assert_allclose(matrix, matrix_focal,
-                                    rtol=1e-7, atol=2e3, verbose=True)
+        d = []
+        d.append(('Matrix - Pool', cov._calcDistanceMatrix(method='matrix')))
+        d.append(('Matrix - C', cov._calcDistanceMatrix(method='matrix_c',
+                 nthreads=0)))
+        d.append(('Matrix - Focal', cov._calcDistanceMatrix(method='focal')))
+
+        for _, c1 in d:
+            for _, c2 in d:
+                num.testing.assert_allclose(c1, c2,
+                                            rtol=200, atol=2e3, verbose=True)
 
     @benchmark
     @unittest.skip('Skip!')

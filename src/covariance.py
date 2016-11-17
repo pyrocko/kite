@@ -109,7 +109,7 @@ class Covariance(object):
         self._covariance_interp = None
         self._initialized = False
 
-        self._log = quadtree._quadtree._log.getChild('Covariance')
+        self._log = quadtree._log.getChild('Covariance')
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
