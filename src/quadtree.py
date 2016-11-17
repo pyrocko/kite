@@ -249,8 +249,8 @@ class Quadtree(object):
         for b in self._base_nodes:
             b.createTree(self._split_func, self._epsilon_limit)
 
-        self._log.info('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
-                                                             time.time()-t0))
+        self._log.debug('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
+                                                              time.time()-t0))
         self.treeUpdate._notify()
 
     @property
@@ -265,7 +265,7 @@ class Quadtree(object):
         if self.config.epsilon == value:
             return
         if value < self._epsilon_limit:
-            self._log.info(
+            self._log.warning(
                 'Epsilon is out of bounds [%0.3f], epsilon_limit %0.3f' %
                 (value, self._epsilon_limit))
             return
@@ -313,7 +313,7 @@ class Quadtree(object):
     def tile_size_lim(self, value):
         tile_size_min, tile_size_max = value
         if tile_size_min > tile_size_max and tile_size_max != -9999.:
-            self._log.info('tile_size_min > tile_size_max is required')
+            self._log.warning('tile_size_min > tile_size_max is required')
             return
         self.config.tile_size_lim = (tile_size_min, tile_size_max)
 
@@ -350,8 +350,8 @@ class Quadtree(object):
             leafs.extend([l for l in b.iterLeafsEval()])
         if self.nan_allowed != -9999.:
             leafs[:] = [l for l in leafs if l.nan_fraction < self.nan_allowed]
-        self._log.info('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
-                       (len(leafs), self.epsilon, time.time()-t0))
+        self._log.debug('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
+                        (len(leafs), self.epsilon, time.time()-t0))
         return leafs
 
     @property

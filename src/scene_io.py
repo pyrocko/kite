@@ -335,7 +335,7 @@ class GMTSAR(SceneIO):
             files = glob.glob(os.path.join(path, '*.grd'))
             if len(files) == 0:
                 raise ImportError('Could not find displacement file '
-                                  '(unwrap_ll.grd) at %s', path)
+                                  '(*.grd) at %s', path)
             disp_file = files[0]
         return disp_file
 

@@ -109,7 +109,7 @@ class Covariance(object):
         self._covariance_interp = None
         self._initialized = False
 
-        self._log = quadtree._scene._log.getChild('Covariance')
+        self._log = quadtree._quadtree._log.getChild('Covariance')
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
@@ -234,9 +234,9 @@ class Covariance(object):
                 dist_matrix[(nx, ny), (ny, nx)] = dist
 
         elif method == 'matrix':
-            self._log.info('Preprocessing distance matrix'
-                           ' - subsampling %dx on %d cpus...' %
-                           (self.config.subsampling, cpu_count()))
+            self._log.debug('Preprocessing distance matrix'
+                            ' - subsampling %dx on %d cpus...' %
+                            (self.config.subsampling, cpu_count()))
             worker_chunksize = 24 * self.config.subsampling
 
             tasks = []
@@ -273,8 +273,8 @@ class Covariance(object):
 
         cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)
-        self._log.info('Created covariance matrix - %s mode [%0.8f s]' %
-                       (method, time.time()-t0))
+        self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
+                        (method, time.time()-t0))
         return cov_matrix
 
     @staticmethod

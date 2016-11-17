@@ -17,16 +17,27 @@ def main(args=None):
         epilog='http://gitext.gfz-potsdam.de - misken@geophysik.uni-kiel.de',
         version='0.0.1',
         parents=[],
-        # formatter_class=HelpFormatter,
+        formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',
         fromfile_prefix_chars=None,
         argument_default=None,
         conflict_handler='resolve',
         add_help=True)
     parser.add_argument('file', nargs=1, type=str,
-                        help='Import Matlab/Gamma filename', default=None)
+                        help='''Import filename or directory
+Supported formats are:
+ * Matlab (*.mat)
+ * GAMMA  (*.* and *.par in same directory)
+ * GMTSAR (*.grd and binary *.los.* file)
+ * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data''',
+                        default=None)
+    parser.add_argument('--debug', type=str, help='Debug level (CRITICAL,'
+                        'ERROR, WARNING, INFO, DEBUG)',
+                        default='INFO')
     ns = parser.parse_args(args)
-
-    print 'Importing file %s' % ns.file[0]
+    if ns.file[0] is None:
+        parser.print_help()
+        sys.exit(0)
     sc = Scene.import_file(ns.file[0])
+    sc._log.setLevel(ns.debug)
     sc.spool()
