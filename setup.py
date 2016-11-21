@@ -39,10 +39,11 @@ setup(
     keywords=['insar satellite radar earthquake optimization'],
 
     install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'pyyaml',
-                      'progressbar'],
+                      'progressbar', 'utm'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
-    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui'])],
+    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui', 
+                                    'src/spool/ui/boxkite-sketch.jpg'])],
     entry_points={
         'console_scripts': ['spool = kite.spool.__main__:main'],
     },

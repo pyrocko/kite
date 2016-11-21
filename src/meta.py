@@ -100,7 +100,11 @@ class Subject(object):
 
     def _notify(self, msg=''):
         for l in self._listeners:
-            l()
+            if 'msg' in l.__code__.co_varnames:
+                l(msg)
+            else:
+                l()
+
 
 __all__ = '''
 Subject

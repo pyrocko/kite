@@ -108,7 +108,7 @@ class QKiteToolTransect(QtGui.QWidget):
         length = 0
         for line in self.poly_line.segments:
             transect = num.append(transect,
-                                  line.getArrayRegion(self.plot.data,
+                                  line.getArrayRegion(self.plot.image.image,
                                                       self.plot.image))
             p1, p2 = line.listPoints()
             length += (p2-p1).length()
