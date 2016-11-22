@@ -57,7 +57,7 @@ class QuadNode(object):
 
     @property
     def weight(self):
-        return self._quadtree.covariance.getWeight(self)
+        return self._quadtree.covariance.getLeafWeight(self)
 
     @property_cached
     def bilinear_std(self):
@@ -85,6 +85,28 @@ class QuadNode(object):
     @property_cached
     def gridN(self):
         return self._scene.frame.gridN[self._slice_rows, self._slice_cols]
+
+    @property
+    def llE(self):
+        return self._scene.frame.E[self.llx]
+
+    @property
+    def llN(self):
+        return self._scene.frame.N[self.lly]
+
+    @property
+    def sizeE(self):
+        sizeE = self.length * self._scene.frame.dE
+        if (self.llE + sizeE) > self._scene.frame.E.max():
+            sizeE = self._scene.frame.E.max() - self.llE
+        return sizeE
+
+    @property
+    def sizeN(self):
+        sizeN = self.length * self._scene.frame.dN
+        if (self.llN + sizeN) > self._scene.frame.N.max():
+            sizeN = self._scene.frame.N.max() - self.llN
+        return sizeN
 
     def iterTree(self):
         yield self

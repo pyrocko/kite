@@ -13,32 +13,33 @@ __all__ = ['QKiteDock', 'QKitePlot',
 class QKiteDock(dockarea.DockArea):
     def __init__(self, container):
         dockarea.DockArea.__init__(self)
+        self.tool_docks = []
 
         main_widget = self.main_widget(container)
         main_dock = dockarea.Dock(self.title,
                                   autoOrientation=False,
                                   widget=main_widget)
 
-        histogram_dock = dockarea.Dock('Colormap',
-                                       autoOrientation=False,
-                                       widget=QKiteToolColormap(main_widget))
-        histogram_dock.setStretch(.3, None)
+        colormap = dockarea.Dock('Colormap',
+                                 autoOrientation=False,
+                                 widget=QKiteToolColormap(main_widget))
+        colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
-            tool_dock = dockarea.Dock(name, widget=tool(main_widget),
-                                      size=(2, 3),
-                                      autoOrientation=False)
-
-            self.addDock(tool_dock, position='bottom')
+            self.tool_docks.append(
+                dockarea.Dock(name,
+                              widget=tool(main_widget),
+                              size=(2, 3),
+                              autoOrientation=False))
+            self.addDock(self.tool_docks[-1], position='bottom')
 
         self.addDock(main_dock, position='left')
-        self.addDock(histogram_dock, position='left')
+        self.addDock(colormap, position='left')
 
 
 class QKitePlot(pg.PlotWidget):
     def __init__(self, container):
         pg.PlotWidget.__init__(self)
-
         self.container = container
 
         self.image = pg.ImageItem(None)
@@ -244,9 +245,9 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
                         'mode': 'rgb'}
         default_cmap = {'ticks':
                         [[0., (0, 0, 0, 255)],
-                         [1e-3, (51, 53, 120)],
+                         [1e-3, (172, 56, 56)],
                          [.5, (255, 255, 255, 255)],
-                         [1., (172, 56, 56)]],
+                         [1., (51, 53, 120)]],
                         'mode': 'rgb'}
         lvl_min = num.nanmin(self._plot.data)
         lvl_max = num.nanmax(self._plot.data)

@@ -3,6 +3,7 @@
 from PySide import QtGui, QtCore
 from .tab_scene import QKiteSceneDock
 from .tab_quadtree import QKiteQuadtreeDock
+from .tab_covariance import QKiteCovarianceDock
 from os import path
 from utils_qt import loadUi
 from ..meta import Subject
@@ -24,6 +25,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.loadingModule._notify('Scene.quadtree')
         self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
                          'Quadtree')
+        self.loadingModule._notify('Scene.quadtree.covariance')
+        self.tabs.addTab(QKiteCovarianceDock(scene.quadtree.covariance),
+                         'Covariance')
 
     def exit(self):
         pass

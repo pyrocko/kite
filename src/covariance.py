@@ -10,6 +10,11 @@ from multiprocessing import Pool, cpu_count
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
+noise_regimes = [
+    (1./2000, num.inf),
+    (1./2000, 1./500),
+    (1./500, 1./10)]
+
 
 class CovarianceConfig(guts.Object):
     a = guts.Float.T(default=1.,
@@ -25,29 +30,6 @@ class CovarianceConfig(guts.Object):
                                       'matrix -> cov(d>distance_cutoff)=0')
     subsampling = guts.Int.T(default=23,
                              help='Subsampling of distance matrices')
-
-
-def deramp(data):
-    """ Deramp through fitting a bilinear plane
-    """
-    mx = num.nanmean(data, axis=0)
-    my = num.nanmean(data, axis=1)
-    cx = num.nanmean(mx)
-    cy = num.nanmean(my)
-    mx -= cx
-    my -= cy
-    mx[num.isnan(mx)] = 0.
-    my[num.isnan(my)] = 0.
-
-    ix = num.arange(mx.size)
-    iy = num.arange(my.size)
-    dx, _, _, _, _ = sp.stats.linregress(ix, mx)
-    dy, _, _, _, _ = sp.stats.linregress(iy, my)
-
-    rx = (ix * dx + cx)
-    ry = (iy * dy + cy)
-
-    return data - rx[num.newaxis, :] - ry[:, num.newaxis]
 
 
 def _workerLeafDistanceMatrix(args):
@@ -81,6 +63,10 @@ def covarianceFunction(distance, a, b):
         return b * num.exp(-distance/a)
 
 
+def powerspecBehaviour(k, a, b):
+            return (k**a)/b
+
+
 class Covariance(object):
     """Analytical covariance used for weighting of quadtree.
 
@@ -103,9 +89,11 @@ class Covariance(object):
         self.covarianceUpdate = Subject()
 
         self.config = config
+        self.frame = quadtree._scene.frame
         self._quadtree = quadtree
         self._scene = quadtree._scene
         self._noise_data = None
+        self._noise_coord = None
         self._covariance_interp = None
         self._initialized = False
 
@@ -113,7 +101,7 @@ class Covariance(object):
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
-        return self.getDistance(*args, **kwargs)
+        return self.getLeafCovariance(*args, **kwargs)
 
     def _clear(self):
         self.covariance_matrix = None
@@ -122,7 +110,18 @@ class Covariance(object):
         self.weight_matrix = None
         self.weight_matrix_focal = None
         self.covariance_func = None
+        self._covariance_interp = None
         self._initialized = False
+
+    @property
+    def noise_coord(self):
+        """Noise coordinates
+        :returns: ((llE, llN), (sizeE, sizeN))
+        :rtype: {tuple, float}
+        """
+        if self._noise_coord is None:
+            self.noise_data
+        return self._noise_coord
 
     @property
     def noise_data(self, data):
@@ -134,16 +133,19 @@ class Covariance(object):
             return self._noise_data
         nodes = sorted(self._quadtree.leafs,
                        key=lambda n: n.length/(n.nan_fraction+1))
-        self.noise_data = nodes[-1].displacement
+        n = nodes[-1]
+        self.noise_data = n.displacement
+        self._noise_coord = ((n.llE, n.llN), (n.sizeE, n.sizeN))
         return self.noise_data
 
     @noise_data.setter
     def noise_data(self, data):
         data = data.copy()
-        data = trimMatrix(data)  # removes nans or 0.
-        data = derampMatrix(data)
+        data = derampMatrix(trimMatrix(data))  # removes nans or 0.
         data[num.isnan(data)] = 0.
         self._noise_data = data
+        self._clear()
+        self.covarianceUpdate._notify()
 
     def setNoiseData(self, data):
         self.noise_data = data
@@ -301,8 +303,8 @@ class Covariance(object):
         except KeyError as e:
             raise KeyError('Unknown quadtree leaf with id %s' % e)
 
-    def getCovariance(self, leaf1, leaf2):
-        """Get the distances between `leaf1` and `leaf2` in `m`
+    def getLeafCovariance(self, leaf1, leaf2):
+        """Get the distances between ``leaf1`` and ``leaf2`` in ``m``
 
         :param leaf1: Leaf 1
         :type leaf1: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
@@ -313,19 +315,26 @@ class Covariance(object):
         """
         return self.covariance_matrix[self._getMapping(leaf1, leaf2)]
 
-    def getWeight(self, leaf1):
+    def getLeafWeight(self, leaf1):
         (nl, _) = self._getMapping(leaf1, leaf1)
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
     def noiseSpectrum(self, data=None):
+        """Get the noise spectrum from Covariance.noise_data
+
+        :param data: Overwrite Covariance.noise_data, defaults to None
+        :type data: :py:class:`numpy.ndarray`, optional
+        :returns: *(power_spec, k, f_spectrum, k_x, k_y)*
+        :rtype: {tuple}
+        """
         if data is None:
             noise = self.noise_data
         else:
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec /= f_spec.size
+        f_spec /= noise.size
         f_spec = num.abs(f_spec)
 
         k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dE)
@@ -341,7 +350,32 @@ class Covariance(object):
 
         return power_spec, k[:-1], f_spec, k_x, k_y
 
-    def covariance_analytical(self, distance):
+    def getPowerspecFit(self, regime=0):
+        power_spec, k, _, _, _ = self.noiseSpectrum()
+
+        def selectRegime(k, k1, k2):
+            return num.logical_and(k > k1, k < k2)
+
+        regime = selectRegime(k, *noise_regimes[regime])
+        return sp.optimize.curve_fit(powerspecBehaviour,
+                                     k[regime], power_spec[regime],
+                                     p0=None, sigma=None,
+                                     absolute_sigma=False,
+                                     check_finite=True,
+                                     bounds=(-num.inf, num.inf),
+                                     method=None,
+                                     jac=None)
+
+    def powerspecAnalytical(self, k, regime=0):
+        p, _ = self.getPowerspecFit(regime)
+        return powerspecBehaviour(k, *p)
+
+    def covarianceAnalytical(self, regime=0):
+        _, k, _, _, _ = self.noiseSpectrum()
+        (a, b), _ = self.getPowerspecFit(regime)
+        return -((k**a) * num.cos(2*num.pi*k))/(b * num.log(k))
+
+    def covarianceAnalytical1(self, distance):
         '''Retrieve analytical covariance fitted from
         Covariance.covariance_func
         '''
@@ -349,14 +383,12 @@ class Covariance(object):
 
     @property_cached
     def covariance_coeff(self):
-        weights = num.linspace(0., 1., self.covariance_func[1].size)
-        p, cov = sp.optimize.curve_fit(covarianceFunction,
-                                       self.covariance_func[1],
-                                       self.covariance_func[0],
-                                       p0=None,
-                                       sigma=weights,
-                                       check_finite=True,
-                                       method=None, jac=None)
+        cov, d = self.covariance_func
+        p, _ = sp.optimize.curve_fit(covarianceFunction,
+                                     d, cov,
+                                     p0=None,
+                                     check_finite=True,
+                                     method=None, jac=None)
         return p
 
     @property_cached
@@ -382,7 +414,7 @@ class Covariance(object):
         # d_x = num.arange(1, cov_x.size+1) * self._quadtree.frame.dE
         # d_y = num.arange(1, cov_y.size+1) * self._quadtree.frame.dN
         dk = self._quadtree.frame.dE if k_x.size > k_y.size\
-            else self._quadtree.frame.dE
+            else self._quadtree.frame.dN
         d = num.arange(1, cov.size+1) * dk
 
         return cov, d
