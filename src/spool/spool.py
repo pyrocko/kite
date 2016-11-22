@@ -4,7 +4,7 @@ from PySide import QtGui, QtCore
 from .tab_scene import QKiteSceneDock
 from .tab_quadtree import QKiteQuadtreeDock
 from os import path
-from qt_utils import loadUi
+from utils_qt import loadUi
 from ..meta import Subject
 
 

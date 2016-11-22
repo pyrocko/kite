@@ -1,7 +1,6 @@
 #!/usr/bin/python2
 from PySide import QtGui
 from PySide import QtCore
-
 import numpy as num
 
 import pyqtgraph as pg
