@@ -318,6 +318,18 @@ class Scene(object):
             return self._theta
 
     @property_cached
+    def thetaDeg(self):
+        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.theta``
+        """
+        return num.rad2deg(self.theta)
+
+    @property_cached
+    def phiDeg(self):
+        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.phi``
+        """
+        return num.rad2deg(self.phi)
+
+    @property_cached
     def quadtree(self):
         """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
         """
@@ -503,18 +515,6 @@ class LOSUnitVectors(object):
         """Unit vector Up, ``NxM`` matrix like ``Scene.displacement``
         """
         return num.cos(self._scene.theta)
-
-    @property_cached
-    def degTheta(self):
-        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.theta``
-        """
-        return num.rad2deg(self._scene.theta)
-
-    @property_cached
-    def degPhi(self):
-        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.phi``
-        """
-        return num.rad2deg(self._scene.phi)
 
 
 class SceneTest(Scene):

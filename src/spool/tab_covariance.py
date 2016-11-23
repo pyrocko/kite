@@ -3,10 +3,15 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 import numpy as num
 
-from PySide import QtGui
-import pyqtgraph as pg  # noqa
-import numpy as num  # noqa
+from PySide import QtGui, QtCore
+import pyqtgraph as pg
 from .tab import QKiteDock, QKitePlot
+
+plot_padding = .1
+
+analy_pen0 = pg.mkPen((170, 57, 57, 0), width=1.5)
+analy_pen1 = pg.mkPen((51, 53, 119, 200), width=1.5, style=QtCore.Qt.DotLine)
+analy_pen2 = pg.mkPen((45, 136, 45), width=2.5, style=QtCore.Qt.DashLine)
 
 
 class QKiteCovarianceDock(QKiteDock):
@@ -54,10 +59,6 @@ class QKiteNoisePowerspec(QtGui.QWidget):
         QtGui.QWidget.__init__(self)
         self.plot = plot
 
-        analy_pen0 = pg.mkPen((170, 57, 57), width=2.4)
-        analy_pen1 = pg.mkPen((51, 53, 119), width=2.4)
-        analy_pen2 = pg.mkPen((45, 136, 45), width=2.4)
-
         self.power_plot = pg.PlotDataItem(antialias=True)
         self.power_analy0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
         self.power_analy1 = pg.PlotDataItem(antialias=True, pen=analy_pen1)
@@ -93,24 +94,21 @@ class QKiteNoisePowerspec(QtGui.QWidget):
         self.power_analy1.setData(
             k, self.plot.covariance.powerspecAnalytical(k, 1))
         self.power_analy2.setData(
-            k, self.plot.covariance.powerspecAnalytical(k, 2))
-        # self.plt_wdgt.setLimits(xMin=k.min(), xMax=k.max(),
-        #                         yMin=spec.min(), yMax=spec.max())
+            k, self.plot.covariance.powerspecAnalytical(k, 3))
 
 
 class QKiteCovariogram(QtGui.QWidget):
     def __init__(self, plot):
         QtGui.QWidget.__init__(self)
         self.plot = plot
-        analy_pen0 = pg.mkPen((170, 57, 57), width=2.4)
-        analy_pen1 = pg.mkPen((51, 53, 119), width=2.4)
-        analy_pen2 = pg.mkPen((45, 136, 45), width=2.4)
 
         self.covariogram = pg.PlotDataItem(antialias=True)
         self.covariogram.setZValue(10)
         self.cov_analytical0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
-        self.cov_analytical1 = pg.PlotDataItem(antialias=True, pen=analy_pen1)
-        self.cov_analytical2 = pg.PlotDataItem(antialias=True, pen=analy_pen2)
+        self.cov_analytical1 = pg.PlotDataItem(antialias=True, pen=analy_pen1,
+                                               name='Exp. Fit - Linear Power')
+        self.cov_analytical2 = pg.PlotDataItem(antialias=True, pen=analy_pen2,
+                                               name='Linear Power')
 
         self.plt_wdgt = pg.PlotWidget(background='default')
         self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
@@ -124,6 +122,11 @@ class QKiteCovariogram(QtGui.QWidget):
         self.plt_wdgt.addItem(self.cov_analytical1)
         self.plt_wdgt.addItem(self.cov_analytical2)
 
+        self.legend = pg.LegendItem(offset=(.5, .5))
+        self.legend.setParentItem(self.plt_wdgt.graphicsItem())
+        self.legend.addItem(self.cov_analytical1, 'Exp. Fit - Linear Power')
+        self.legend.addItem(self.cov_analytical2, 'Linear Power')
+
         self.plot.covariance.covarianceUpdate.subscribe(
             self.updateCovariancePlot)
 
@@ -133,20 +136,26 @@ class QKiteCovariogram(QtGui.QWidget):
         self.updateCovariancePlot()
 
     def updateCovariancePlot(self):
-        # padding = 20
+
+        def f(d, a, b):
+            return a * num.exp(-b/d)
 
         cov, dist = self.plot.covariance.covariance_func
+
         self.covariogram.setData(dist, cov)
         self.cov_analytical0.setData(
             dist, self.plot.covariance.covarianceAnalytical(0)[0])
         self.cov_analytical1.setData(
-            dist, self.plot.covariance.covarianceAnalytical(1)[0])
+            dist, f(dist, *self.plot.covariance.covarianceAnalyticalFit(3)))
         self.cov_analytical2.setData(
-            dist, self.plot.covariance.covarianceAnalytical(2)[0])
-#        self.plt_wdgt.setLimits(xMin=dist.min()+padding,
-#                                xMax=dist.max()+padding,
-#                                yMin=cov.min()+padding,
-#                                yMax=cov.max()+padding)
+            dist, self.plot.covariance.covarianceAnalytical(3)[0])
+
+        padx = (dist.max()-dist.min()) * plot_padding
+        pady = (cov.max()-cov.min()) * plot_padding
+        self.plt_wdgt.setLimits(xMin=dist.min()-padx,
+                                xMax=dist.max()+padx,
+                                yMin=cov.min()-pady,
+                                yMax=cov.max()+pady)
 
 
 class QKiteStructureFunction(QtGui.QWidget):
@@ -174,3 +183,10 @@ class QKiteStructureFunction(QtGui.QWidget):
     def updateStructurePlot(self):
         struc, dist = self.plot.covariance.structure_func
         self.structure.setData(dist, struc)
+
+        padx = (dist.max()-dist.min()) * plot_padding
+        pady = (struc.max()-struc.min()) * plot_padding
+        self.plt_wdgt.setLimits(xMin=dist.min()-padx,
+                                xMax=dist.max()+padx,
+                                yMin=struc.min()-pady,
+                                yMax=struc.max()+pady)

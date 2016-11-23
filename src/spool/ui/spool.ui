@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1108</width>
-    <height>654</height>
+    <height>655</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -72,11 +72,6 @@
     </property>
     <addaction name="actionExit"/>
    </widget>
-   <widget class="QMenu" name="menuWindows">
-    <property name="title">
-     <string>Windows</string>
-    </property>
-   </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
      <string>About</string>
@@ -85,7 +80,6 @@
     <addaction name="actionAbout_Spool"/>
    </widget>
    <addaction name="menuActions"/>
-   <addaction name="menuWindows"/>
    <addaction name="menuAbout"/>
   </widget>
   <action name="actionExit">
