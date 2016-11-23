@@ -88,11 +88,11 @@ class QuadNode(object):
 
     @property
     def llE(self):
-        return self._scene.frame.E[self.llx]
+        return self._scene.frame.E[self.lly]
 
     @property
     def llN(self):
-        return self._scene.frame.N[self.lly]
+        return self._scene.frame.N[self.llx]
 
     @property
     def sizeE(self):
