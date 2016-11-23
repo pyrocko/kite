@@ -312,8 +312,11 @@ class GMTSAR(SceneIO):
         * LOS binary data (see instruction, ``*los.enu``)
 
     Use gmt5sar ``SAT_look`` to calculate the corresponding unit look vectors:
-    ``gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
-    awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu``
+
+    ``sh
+    gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd | \
+    awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu
+    ``
     """
     def validate(self, filename, **kwargs):
         try:

@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 from PySide import QtGui
 from PySide import QtCore
-from qt_utils import QDoubleSlider
+from utils_qt import QDoubleSlider
 from .tab import QKiteDock, QKiteToolComponents, QKitePlot
 
 import pyqtgraph as pg

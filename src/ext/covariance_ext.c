@@ -74,13 +74,15 @@ static void calc_distances(float64_t *E, float64_t *N, npy_intp *shape_coord, ui
     // Defining adaptive subsampling
     for (il1=0; il1<nleafs; il1++) {
         l_length = map[il1*4+1] - map[il1*4+0];
-        leaf_subsampling[il1] = floor(sqrt(l_length)/2);
+        leaf_subsampling[il1] = floor(sqrt(l_length)/4);
+        leaf_subsampling[il1] = 1;
     }
     if (nthreads == 0)
         nthreads = omp_get_num_procs();
 
-    //printf("coord_matrix: %ldx%ld\n", coord_rows, coord_cols);
-    //printf("subsampling: %d\n", subsampling);
+    // printf("coord_matrix: %ldx%ld\n", coord_rows, coord_cols);
+    // printf("subsampling: %d\n", subsampling);
+    // printf("nthreads: %d\n", nthreads);
     #pragma omp parallel \
         shared (E, N, map, dists, coord_rows, coord_cols, nleafs, leaf_subsampling) \
         private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
@@ -125,7 +127,7 @@ static void calc_distances(float64_t *E, float64_t *N, npy_intp *shape_coord, ui
                                     if (npy_isnan(E[icl2]) || npy_isnan(N[icl2])) continue;
                                     l2hit = 1;
 
-                                    dist += sqrt(sqr(E[icl1]-E[icl2]) + sqr(N[icl1]-N[icl2]));
+                                    dist += exp(-12./sqrt(sqr(E[icl1]-E[icl2]) + sqr(N[icl1]-N[icl2])));
                                     // dist += (N[icl1]-N[icl2]);
                                     ndist++;
                                 }

@@ -6,9 +6,12 @@ import covariance_ext
 from pyrocko import guts
 from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
 
-from multiprocessing import Pool, cpu_count
-
 __all__ = ['Covariance', 'CovarianceConfig']
+
+noise_regimes = [
+    (1./2000, num.inf),
+    (1./2000, 1./500),
+    (1./500, 1./10)]
 
 
 class CovarianceConfig(guts.Object):
@@ -27,58 +30,12 @@ class CovarianceConfig(guts.Object):
                              help='Subsampling of distance matrices')
 
 
-def deramp(data):
-    """ Deramp through fitting a bilinear plane
-    """
-    mx = num.nanmean(data, axis=0)
-    my = num.nanmean(data, axis=1)
-    cx = num.nanmean(mx)
-    cy = num.nanmean(my)
-    mx -= cx
-    my -= cy
-    mx[num.isnan(mx)] = 0.
-    my[num.isnan(my)] = 0.
-
-    ix = num.arange(mx.size)
-    iy = num.arange(my.size)
-    dx, _, _, _, _ = sp.stats.linregress(ix, mx)
-    dy, _, _, _, _ = sp.stats.linregress(iy, my)
-
-    rx = (ix * dx + cx)
-    ry = (iy * dy + cy)
-
-    return data - rx[num.newaxis, :] - ry[:, num.newaxis]
-
-
-def _workerLeafDistanceMatrix(args):
-    """Worker function serving :python:`multiprocessing.Pool`
-
-    :param args:
-        `(ind, subsampl, leaf1_gridE, leaf1_gridN,
-          leaf2_gridE, leaf2_gridN)`
-        Where `ind` is tuple of matrix indices `(nx, ny)`, `subsampl`
-        subsampling factor `leaf?_utm?` are 2-dim masekd arrays holding UTM
-        data from :python:`kite.quadtree.QuadNode`.
-    :type args: [tuple]
-    :returns: ((nx, ny), covariance)
-    :rtype: {[tuple]}
-    """
-    (ind, subsampl,
-     leaf1_gridE, leaf1_gridN,
-     leaf2_gridE, leaf2_gridN) = args
-
-    # Looks ugly but re we want to conserve memory
-    d = num.median(num.sqrt(
-        (leaf1_gridE.compressed()[::subsampl][:, num.newaxis] -
-         leaf2_gridE.compressed()[::subsampl][num.newaxis, :])**2 +
-        (leaf1_gridN.compressed()[::subsampl][:, num.newaxis] -
-         leaf2_gridN.compressed()[::subsampl][num.newaxis, :])**2))
-    # cov = self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
-    return ind, d
-
-
 def covarianceFunction(distance, a, b):
         return b * num.exp(-distance/a)
+
+
+def powerspecBehaviour(k, a, b):
+            return (k**a)/b
 
 
 class Covariance(object):
@@ -103,9 +60,11 @@ class Covariance(object):
         self.covarianceUpdate = Subject()
 
         self.config = config
+        self.frame = quadtree._scene.frame
         self._quadtree = quadtree
         self._scene = quadtree._scene
         self._noise_data = None
+        self._noise_coord = None
         self._covariance_interp = None
         self._initialized = False
 
@@ -113,7 +72,7 @@ class Covariance(object):
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
-        return self.getDistance(*args, **kwargs)
+        return self.getLeafCovariance(*args, **kwargs)
 
     def _clear(self):
         self.covariance_matrix = None
@@ -122,7 +81,18 @@ class Covariance(object):
         self.weight_matrix = None
         self.weight_matrix_focal = None
         self.covariance_func = None
+        self.structure_func = None
         self._initialized = False
+
+    @property
+    def noise_coord(self):
+        """Noise coordinates
+        :returns: ((llE, llN), (sizeE, sizeN))
+        :rtype: {tuple, float}
+        """
+        if self._noise_coord is None:
+            self.noise_data
+        return self._noise_coord
 
     @property
     def noise_data(self, data):
@@ -134,16 +104,19 @@ class Covariance(object):
             return self._noise_data
         nodes = sorted(self._quadtree.leafs,
                        key=lambda n: n.length/(n.nan_fraction+1))
-        self.noise_data = nodes[-1].displacement
+        n = nodes[-1]
+        self.noise_data = n.displacement
+        self._noise_coord = ((n.llE, n.llN), (n.sizeE, n.sizeN))
         return self.noise_data
 
     @noise_data.setter
     def noise_data(self, data):
         data = data.copy()
-        data = trimMatrix(data)  # removes nans or 0.
-        data = derampMatrix(data)
+        data = derampMatrix(trimMatrix(data))  # removes nans or 0.
         data[num.isnan(data)] = 0.
         self._noise_data = data
+        self._clear()
+        self.covarianceUpdate._notify()
 
     def setNoiseData(self, data):
         self.noise_data = data
@@ -181,7 +154,7 @@ class Covariance(object):
         """ Covariance matrix calculated from sub-distances pairs from quadtree
         node-to-node, subsampled by `Covariance.config.subsampling`
         """
-        return self._calcDistanceMatrix(method='matrix_c')
+        return self._calcDistanceMatrix(method='full')
 
     @property_cached
     def covariance_matrix_focal(self):
@@ -205,9 +178,9 @@ class Covariance(object):
     def _calcDistanceMatrix(self, method='focal', nthreads=0):
         """Calculates the covariance matrix
 
-        :param method: Either `'focal'` point distances are used - this is
+        :param method: Either ``focal`` point distances are used - this is
             quick but statistically not reliable.
-            Or `'matrix'`, where the full quadtree pixel distances matrices are
+            Or ``full``, where the full quadtree pixel distances matrices are
             calculated, subsampled as set in `Covariance.config.subsampling`.
             , defaults to 'focal'
         :type method: str, optional
@@ -222,41 +195,17 @@ class Covariance(object):
         nl = len(self._quadtree.leafs)
         self._leaf_mapping = {}
 
-        if method in ['focal', 'matrix']:
+        t0 = time.time()
+        if method == 'focal':
             dist_matrix = num.zeros((nl, nl))
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
 
-        t0 = time.time()
-        if method == 'focal':
             for nx, ny in dist_iter:
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
 
-        elif method == 'matrix':
-            self._log.debug('Preprocessing distance matrix'
-                            ' - subsampling %dx on %d cpus...' %
-                            (self.config.subsampling, cpu_count()))
-            worker_chunksize = 24 * self.config.subsampling
-
-            tasks = []
-            for nx, ny in dist_iter:
-                leaf1, leaf2 = self._mapLeafs(nx, ny)
-
-                tasks.append(((nx, ny), self.subsampling,
-                             leaf1.gridE, leaf1.gridN,
-                             leaf2.gridE, leaf2.gridN))
-            pool = Pool(maxtasksperchild=worker_chunksize)
-            results = pool.imap_unordered(_workerLeafDistanceMatrix, tasks,
-                                          chunksize=1)
-            pool.close()
-
-            for i, result in enumerate(results):
-                (nx, ny), dist = result
-                dist_matrix[(nx, ny), (ny, nx)] = dist
-            pool.join()
-
-        elif method == 'matrix_c':
+        elif method == 'full':
             leaf_map = num.empty((len(self._quadtree.leafs), 4),
                                  dtype=num.uint32)
             for nl, leaf in enumerate(self._quadtree.leafs):
@@ -284,11 +233,6 @@ class Covariance(object):
                         (leaf1.focal_point[1]
                          - leaf2.focal_point[1])**2)
 
-    # def _leafFocalDistance(self, leaf1, leaf2):
-    #     d = self._leafFocalDistance(leaf1, leaf2)
-    #     return d
-    #     return self.b * num.exp(-d/self.a)  # * num.cos(d/self.c)
-
     def _getMapping(self, leaf1, leaf2):
         if not isinstance(leaf1, str):
             leaf1 = leaf1.id
@@ -301,8 +245,8 @@ class Covariance(object):
         except KeyError as e:
             raise KeyError('Unknown quadtree leaf with id %s' % e)
 
-    def getCovariance(self, leaf1, leaf2):
-        """Get the distances between `leaf1` and `leaf2` in `m`
+    def getLeafCovariance(self, leaf1, leaf2):
+        """Get the distances between ``leaf1`` and ``leaf2`` in ``m``
 
         :param leaf1: Leaf 1
         :type leaf1: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
@@ -313,23 +257,30 @@ class Covariance(object):
         """
         return self.covariance_matrix[self._getMapping(leaf1, leaf2)]
 
-    def getWeight(self, leaf1):
+    def getLeafWeight(self, leaf1):
         (nl, _) = self._getMapping(leaf1, leaf1)
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
     def noiseSpectrum(self, data=None):
+        """Get the noise spectrum from Covariance.noise_data
+
+        :param data: Overwrite Covariance.noise_data, defaults to None
+        :type data: :py:class:`numpy.ndarray`, optional
+        :returns: *(power_spec, k, f_spectrum, k_x, k_y)*
+        :rtype: {tuple}
+        """
         if data is None:
             noise = self.noise_data
         else:
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec /= f_spec.size
+        f_spec /= noise.size
         f_spec = num.abs(f_spec)
 
-        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dE)
-        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dN)
+        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
+        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
 
         k_rad = num.sqrt(k_x[:, num.newaxis]**2 + k_y[num.newaxis, :]**2)
 
@@ -341,29 +292,28 @@ class Covariance(object):
 
         return power_spec, k[:-1], f_spec, k_x, k_y
 
-    def covariance_analytical(self, distance):
-        '''Retrieve analytical covariance fitted from
-        Covariance.covariance_func
-        '''
-        return covarianceFunction(distance, *self.covariance_coeff)
+    def _powerspecFit(self, regime=0):
+        power_spec, k, _, _, _ = self.noiseSpectrum()
 
-    @property_cached
-    def covariance_coeff(self):
-        weights = num.linspace(0., 1., self.covariance_func[1].size)
-        p, cov = sp.optimize.curve_fit(covarianceFunction,
-                                       self.covariance_func[1],
-                                       self.covariance_func[0],
-                                       p0=None,
-                                       sigma=weights,
-                                       check_finite=True,
-                                       method=None, jac=None)
-        return p
+        def selectRegime(k, k1, k2):
+            return num.logical_and(k > k1, k < k2)
 
-    @property_cached
-    def covariance_func(self):
-        ''' Covariance function derived from displacement noise patch
-        '''
-        def covarianceCosine(p_spec, k):
+        regime = selectRegime(k, *noise_regimes[regime])
+        return sp.optimize.curve_fit(powerspecBehaviour,
+                                     k[regime], power_spec[regime],
+                                     p0=None, sigma=None,
+                                     absolute_sigma=False,
+                                     check_finite=True,
+                                     bounds=(-num.inf, num.inf),
+                                     method=None,
+                                     jac=None)
+
+    def powerspecAnalytical(self, k, regime=0):
+        p, _ = self._powerspecFit(regime)
+        return powerspecBehaviour(k, *p)
+
+    @staticmethod
+    def _powerspecCosineTransform(p_spec, k):
             p_spec = p_spec[k > 0]
             k = k[k > 0]
             p_spec[num.isnan(p_spec)] = 0.
@@ -373,17 +323,37 @@ class Covariance(object):
             # Normieren über n_k?
             return cos, k
 
-        power_spec, k, p_spec, k_x, k_y = self.noiseSpectrum()
-        # ps_x = num.mean(p_spec, axis=0)
-
-        cov, _ = covarianceCosine(power_spec, k)
-        # cov_x, _ = covarianceCosine(ps_x, k_x)
-
-        # d_x = num.arange(1, cov_x.size+1) * self._quadtree.frame.dE
-        # d_y = num.arange(1, cov_y.size+1) * self._quadtree.frame.dN
-        dk = self._quadtree.frame.dE if k_x.size > k_y.size\
+    def covarianceAnalytical(self, regime=0):
+        _, k, _, k_x, k_y = self.noiseSpectrum()
+        (a, b), _ = self._powerspecFit(regime)
+        dk = self._quadtree.frame.dN if k_x.size > k_y.size\
             else self._quadtree.frame.dE
-        d = num.arange(1, cov.size+1) * dk
+
+        spec = powerspecBehaviour(k, a, b)
+        d = num.arange(1, spec.size+1) * dk
+
+        cos, _ = self._powerspecCosineTransform(spec, k)
+        return cos, d
+
+    @property_cached
+    def covariance_coeff(self):
+        cov, d = self.covariance_func
+        p, _ = sp.optimize.curve_fit(covarianceFunction,
+                                     d, cov,
+                                     p0=None,
+                                     check_finite=True,
+                                     method=None, jac=None)
+        return p
+
+    @property_cached
+    def covariance_func(self):
+        ''' Covariance function derived from displacement noise patch
+        '''
+        power_spec, k, p_spec, k_x, k_y = self.noiseSpectrum()
+        dk = self._quadtree.frame.dN if k_x.size > k_y.size\
+            else self._quadtree.frame.dE
+        d = num.arange(1, power_spec.size+1) * dk
+        cov, _ = self._powerspecCosineTransform(power_spec, k)
 
         return cov, d
 
@@ -399,6 +369,7 @@ class Covariance(object):
                 for ik, tk in enumerate(k):
                     struc_func[i] += 1. - num.cos(-tk*d)*power_spec[ik]
                 # struc_func[i] /= k.size
+            struc_func /= struc_func.size
             return struc_func
 
         struc_func = structure_func(cov, d, k)

@@ -9,7 +9,7 @@ __all__ = ['QKiteSceneDock']
 
 class QKiteSceneDock(QKiteDock):
     def __init__(self, scene):
-        self.title = 'Displacement Scene'
+        self.title = 'Scene Displacement'
         self.main_widget = QKiteScenePlot
         self.tools = {
             'Components': QKiteToolComponents,
@@ -43,6 +43,7 @@ class QKiteToolTransect(QtGui.QWidget):
     def __init__(self, plot):
         QtGui.QWidget.__init__(self)
         self.plot = plot
+        self.poly_line = None
 
         self.trans_plot = pg.PlotDataItem(antialias=True,
                                           fillLevel=0.,
@@ -53,10 +54,8 @@ class QKiteToolTransect(QtGui.QWidget):
         self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
                                 left={'Displacement', 'm'})
         self.plt_wdgt.showGrid(True, True, alpha=.5)
-        self.plt_wdgt.addItem(self.trans_plot)
         self.plt_wdgt.enableAutoRange()
-
-        self.poly_line = None
+        self.plt_wdgt.addItem(self.trans_plot)
 
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.plt_wdgt)
@@ -108,7 +107,7 @@ class QKiteToolTransect(QtGui.QWidget):
         length = 0
         for line in self.poly_line.segments:
             transect = num.append(transect,
-                                  line.getArrayRegion(self.plot.data,
+                                  line.getArrayRegion(self.plot.image.image,
                                                       self.plot.image))
             p1, p2 = line.listPoints()
             length += (p2-p1).length()

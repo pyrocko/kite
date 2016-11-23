@@ -25,6 +25,7 @@ class TestCovariance(unittest.TestCase):
         self.sc = SceneTest.createGauss()
         # self.sc._log.setLevel('CRITICAL')
 
+    @unittest.skip('Skipped')
     def testCovariance(self):
         self.sc.quadtree.epsilon = .02
         self.sc.quadtree.covariance.subsampling = 24
@@ -66,7 +67,6 @@ class TestCovariance(unittest.TestCase):
         cov = self.sc.quadtree.covariance
         cov._calcDistanceMatrix(method='focal')
 
-    @unittest.skip('Skip!')
     def testCovarianceVisual(self):
         self.sc.quadtree.epsilon = .02
         cov = self.sc.quadtree.covariance

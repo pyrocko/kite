@@ -54,10 +54,10 @@ kite.scene_processing module
 Configuration Objects
 =====================
 
-.. autoclass:: kite.scene.SceneConfiguration
+.. autoclass:: kite.scene.SceneConfig
 
-.. autoclass:: kite.scene.UTMFrameConfiguration
+.. autoclass:: kite.scene.FrameConfig
 
-.. autoclass:: kite.quadtree.QuadtreeConfiguration
+.. autoclass:: kite.quadtree.QuadtreeConfig
 
-.. autoclass:: kite.quadtree_covariance.CovarianceConfiguration
+.. autoclass:: kite.quadtree_covariance.CovarianceConfig
