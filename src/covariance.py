@@ -345,7 +345,7 @@ class Covariance(object):
 
         def f(d, a, b):
             return a * num.exp(-b/d)
-        
+
         p, _ = sp.optimize.curve_fit(f, d, cos)
         return p
 
@@ -383,7 +383,7 @@ class Covariance(object):
                 for ik, tk in enumerate(k):
                     struc_func[i] += (1. - num.cos(tk*d))*power_spec[ik]
                     # struc_func[i] += (1. - num.i0(tk*d))*power_spec[ik]
-            struc_func *= 2.
+            # struc_func *= 1./power_spec.size
             return struc_func
 
         struc_func = structure_func(power_spec, d, k)
