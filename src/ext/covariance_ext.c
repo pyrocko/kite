@@ -60,36 +60,37 @@ static float64_t sqr(float64_t x) {
     return x*x;
 }
 
-static void calc_distances(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, uint32_t nthreads, float64_t *dists) {
+static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, float64_t *cov_arr) {
     npy_intp l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
-    npy_intp icl1, icl2, coord_rows, coord_cols;
-    npy_intp il1, il2, ndist, l_length;
-    uint32_t leaf_subsampling[nleafs], l1hit, l2hit;
-    float64_t dist;
+    npy_intp icl1, icl2, nrows, ncols;
+    npy_intp il1, il2, npx, l_length;
+    uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
+    float64_t cov;
 
-    coord_rows = (npy_intp) shape_coord[0];
-    coord_cols = (npy_intp) shape_coord[1];
+    nrows = (npy_intp) shape_coord[0];
+    ncols = (npy_intp) shape_coord[1];
 
     // Defining adaptive subsampling
     for (il1=0; il1<nleafs; il1++) {
         l_length = map[il1*4+1] - map[il1*4+0];
-        leaf_subsampling[il1] = floor(sqrt(l_length)/4);
+        leaf_subsampling[il1] = ceil(sqrt(l_length)/4);
         leaf_subsampling[il1] = 1;
     }
     if (nthreads == 0)
         nthreads = omp_get_num_procs();
 
-    // printf("coord_matrix: %ldx%ld\n", coord_rows, coord_cols);
+    // printf("coord_matrix: %ldx%ld\n", nrows, ncols);
     // printf("subsampling: %d\n", subsampling);
     // printf("nthreads: %d\n", nthreads);
     #pragma omp parallel \
-        shared (E, N, map, dists, coord_rows, coord_cols, nleafs, leaf_subsampling) \
+        shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
         private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
                  l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
-                 ndist, dist, l1hit, l2hit) \
+                 npx, cov, l1hit, l2hit, tid) \
         num_threads (nthreads)
     {
+        tid = omp_get_thread_num();
         #pragma omp for schedule (dynamic)
         for (il1=0; il1<nleafs; il1++) {
             l1row_beg = map[il1*4+0];
@@ -97,7 +98,6 @@ static void calc_distances(float64_t *E, float64_t *N, npy_intp *shape_coord, ui
             l1col_beg = map[il1*4+2];
             l1col_end = map[il1*4+3];
             // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
-
             for (il2=il1; il2<nleafs; il2++) {
                 l2row_beg = map[il2*4+0];
                 l2row_end = map[il2*4+1];
@@ -107,59 +107,62 @@ static void calc_distances(float64_t *E, float64_t *N, npy_intp *shape_coord, ui
                 l1hit = 0;
                 l2hit = 0;
 
-                dist = 0.;
-                ndist = 0;
-
+                cov = 0.;
+                npx = 0;
+                // printf("tid %d :: l(%lu-%lu) :: %lu-%lu:%lu-%lu (ss %d) %lu-%lu:%lu-%lu (ss %d)\n", tid, il1, il2, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1], l2row_beg, l2row_end, l2col_beg, l2col_end, leaf_subsampling[il2]);
                 while(! (l1hit && l2hit)) {
                     for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
-                        if (il1row > coord_rows) continue;
+                        if (il1row > nrows) continue;
                         for (il1col=l1col_beg; il1col<l1col_end; il1col+=leaf_subsampling[il1]) {
-                            if (il1col > coord_cols) continue;
-                            icl1 = il1row*coord_cols + il1col;
+                            if (il1col > ncols) continue;
+                            icl1 = il1row*ncols + il1col;
                             if (npy_isnan(E[icl1]) || npy_isnan(N[icl1])) continue;
                             l1hit = 1;
 
                             for (il2row=l2row_beg; il2row<l2row_end; il2row++) {
-                                if (il2row > coord_rows) continue;
+                                if (il2row > nrows) continue;
                                 for (il2col=l2col_beg; il2col<l2col_end; il2col+=leaf_subsampling[il2]) {
-                                    if (il2col > coord_cols) continue;
-                                    icl2 = il2row*coord_cols + il2col;
+                                    if (il2col > ncols) continue;
+                                    icl2 = il2row*ncols + il2col;
                                     if (npy_isnan(E[icl2]) || npy_isnan(N[icl2])) continue;
                                     l2hit = 1;
 
-                                    dist += exp(-12./sqrt(sqr(E[icl1]-E[icl2]) + sqr(N[icl1]-N[icl2])));
-                                    // dist += (N[icl1]-N[icl2]);
-                                    ndist++;
+                                    cov += exp(-sqrt(sqr(E[icl1]-E[icl2]) + sqr(N[icl1]-N[icl2])) / mb);
+                                    npx++;
                                 }
                             }
                         }
                     }
                     #pragma omp critical
                     {
-                        if (! l1hit)
+                        if (! l1hit) {
                             leaf_subsampling[il1] = floor(leaf_subsampling[il1]/2);
-                        if (! l2hit)
+                            printf("no hit!\n");
+                        }
+                        if (! l2hit) {
                             leaf_subsampling[il2] = floor(leaf_subsampling[il2]/2);
+                            printf("no hit!\n");
+                        }
                     }
                 }
-                dists[il1*(nleafs)+il2] = dist/ndist;
-                dists[il2*(nleafs)+il1] = dist/ndist;
+                cov_arr[il1*(nleafs)+il2] = ma * (cov/npx);
+                cov_arr[il2*(nleafs)+il1] = cov_arr[il1*(nleafs)+il2];
             }
         }
     }
 }
 
-static PyObject* w_distances(PyObject *dummy, PyObject *args) {
+static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     PyObject *x_arr, *y_arr, *map_arr;
-    PyArrayObject *c_x_arr, *c_y_arr, *c_map_arr, *dists_arr;
+    PyArrayObject *c_x_arr, *c_y_arr, *c_map_arr, *cov_arr;
 
-    float64_t *x, *y, *dists;
+    float64_t *x, *y, *covs, ma, mb;
     uint32_t *map, nthreads;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
 
-    if (! PyArg_ParseTuple(args, "OOOI", &x_arr, &y_arr, &map_arr, &nthreads)) {
-        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, nthreads)");
+    if (! PyArg_ParseTuple(args, "OOOddI", &x_arr, &y_arr, &map_arr, &ma, &mb, &nthreads)) {
+        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads)");
         return NULL;
     }
 
@@ -190,17 +193,17 @@ static PyObject* w_distances(PyObject *dummy, PyObject *args) {
     shape_dist[0] = nleafs;
     shape_dist[1] = nleafs;
 
-    dists_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
-    // printf("size distance matrix: %lu\n", PyArray_SIZE(dists_arr));
+    cov_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
+    // printf("size distance matrix: %lu\n", PyArray_SIZE(cov_arr));
     // printf("size coord matrix: %lu\n", PyArray_SIZE(x_arr));
-    dists = PyArray_DATA(dists_arr);
+    covs = PyArray_DATA(cov_arr);
 
-    calc_distances(x, y, shape_coord, map, nleafs, nthreads, dists);
-    return (PyObject*) dists_arr;
+    calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, covs);
+    return (PyObject*) cov_arr;
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
-    {"leaf_distances", w_distances, METH_VARARGS,
+    {"leaf_distances", w_calc_covariance_matrix, METH_VARARGS,
      "Calculates mean distances between quadtree leafs." },
 
     {NULL, NULL, 0, NULL}         /* Sentinel */

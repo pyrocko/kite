@@ -245,9 +245,9 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
                          [1., (8, 54, 104, 255)]],
                         'mode': 'rgb'}
         default_cmap = {'ticks':
-                        [[0., (0, 0, 0, 255)],
+                        [[0., (0, 0, 0)],
                          [1e-3, (172, 56, 56)],
-                         [.5, (255, 255, 255, 255)],
+                         [.5, (255, 255, 255)],
                          [1., (51, 53, 120)]],
                         'mode': 'rgb'}
         lvl_min = num.nanmin(self._plot.data)

@@ -19,6 +19,9 @@ class TestCovariance(unittest.TestCase):
         self.sc = Scene.import_file(file)
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
         self.sc._log.setLevel('CRITICAL')
+
+        self.sc.quadtree.epsilon = .05
+        self.sc.quadtree.tile_size_limit = (250, 12e3)
         # self.sc = SceneTest.createGauss(ny=250)
 
     def __setUp(self):
@@ -32,10 +35,9 @@ class TestCovariance(unittest.TestCase):
         cov = self.sc.quadtree.covariance
 
         d = []
-        d.append(('Matrix - Pool', cov._calcDistanceMatrix(method='matrix')))
-        d.append(('Matrix - C', cov._calcDistanceMatrix(method='matrix_c',
+        d.append(('Full', cov._calcDistanceMatrix(method='full',
                  nthreads=0)))
-        d.append(('Matrix - Focal', cov._calcDistanceMatrix(method='focal')))
+        d.append(('Focal', cov._calcDistanceMatrix(method='focal')))
 
         for _, c1 in d:
             for _, c2 in d:
@@ -43,40 +45,33 @@ class TestCovariance(unittest.TestCase):
                                             rtol=200, atol=2e3, verbose=True)
 
     @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancPool(self):
-        cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='matrix', nthreads=4)
-
-    @benchmark
     # @unittest.skip('Skip!')
     def testCovariancParallel(self):
         cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='matrix_c', nthreads=12)
+        cov._calcDistanceMatrix(method='full', nthreads=12)
 
     @benchmark
-    # @unittest.skip('Skip!')
+    @unittest.skip('Skip!')
     def testCovariancSingle(self):
         cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='matrix_c', nthreads=1)
+        cov._calcDistanceMatrix(method='full', nthreads=1)
 
     @benchmark
     # @unittest.skip('Skip!')
     def testCovariancFocal(self):
-        self.sc.quadtree.covariance.subsampling = 8
         cov = self.sc.quadtree.covariance
         cov._calcDistanceMatrix(method='focal')
 
+    @unittest.skip('Skip!')
     def testCovarianceVisual(self):
         self.sc.quadtree.epsilon = .02
         cov = self.sc.quadtree.covariance
         cov.subsampling = 10
         # l = self.sc.quadtree.leafs[0]
         d = []
-        d.append(('Matrix - Pool', cov._calcDistanceMatrix(method='matrix')))
-        d.append(('Matrix - C', cov._calcDistanceMatrix(method='matrix_c',
+        d.append(('Full', cov._calcDistanceMatrix(method='full',
                  nthreads=0)))
-        d.append(('Matrix - Focal', cov._calcDistanceMatrix(method='focal')))
+        d.append(('Focal', cov._calcDistanceMatrix(method='focal')))
 
         fig, _ = plt.subplots(1, len(d))
         for i, (title, mat) in enumerate(d):

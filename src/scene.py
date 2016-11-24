@@ -371,7 +371,7 @@ class Scene(object):
         data = None
 
         for mod in scene_io.__all__:
-            module = eval('scene_io.%s()' % mod)
+            module = eval('scene_io.%s(scene)' % mod)
             if module.validate(path, **kwargs):
                 scene._log.info('Importing %s using %s' %
                                 (path, mod))

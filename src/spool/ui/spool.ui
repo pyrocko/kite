@@ -71,6 +71,7 @@
      <string>Actions</string>
     </property>
     <addaction name="actionExit"/>
+    <addaction name="actionSave_Scene"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -101,6 +102,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionSave_Scene">
+   <property name="text">
+    <string>Save Scene</string>
    </property>
   </action>
  </widget>

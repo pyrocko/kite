@@ -6,6 +6,7 @@ import numpy as num
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
 from .tab import QKiteDock, QKitePlot
+from ..covariance import modelCovariance
 
 plot_padding = .1
 
@@ -136,17 +137,15 @@ class QKiteCovariogram(QtGui.QWidget):
         self.updateCovariancePlot()
 
     def updateCovariancePlot(self):
-
-        def f(d, a, b):
-            return a * num.exp(-b/d)
-
         cov, dist = self.plot.covariance.covariance_func
 
         self.covariogram.setData(dist, cov)
         self.cov_analytical0.setData(
             dist, self.plot.covariance.covarianceAnalytical(0)[0])
         self.cov_analytical1.setData(
-            dist, f(dist, *self.plot.covariance.covarianceExpFit(3)))
+            dist,
+            modelCovariance(dist,
+                            *self.plot.covariance.covarianceModelFit(3)))
         self.cov_analytical2.setData(
             dist, self.plot.covariance.covarianceAnalytical(3)[0])
 
