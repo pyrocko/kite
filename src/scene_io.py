@@ -1,14 +1,20 @@
-import importlib
-import numpy as num
 import os
 import glob
+import scipy.io
+import numpy as num
 
 __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR']
 
 
 class SceneIO(object):
     """ Prototype class for SARIO objects """
-    def __init__(self):
+    def __init__(self, scene=None):
+        if scene is not None:
+            self._log = scene._log.getChild('IO/%s' % self.__class__.__name__)
+        else:
+            import logging
+            self._log = logging.logger('SceneIO/%s' % self.__class__.__name__)
+
         self.container = {
             'phi': None,  # Look incident angle from vertical in degree
             'theta': None,  # Look orientation angle from east; 0deg East,
@@ -67,10 +73,6 @@ class Matlab(SceneIO):
         Scene.frame.y      ``yy``
         ================== ====================
     """
-    def __init__(self):
-        self.io = importlib.import_module('scipy.io')
-        SceneIO.__init__(self)
-
     def validate(self, filename):
         if filename[-4:] == '.mat':
             return True
@@ -87,7 +89,7 @@ class Matlab(SceneIO):
     def read(self, filename):
         import utm
 
-        mat = self.io.loadmat(filename)
+        mat = scipy.io.loadmat(filename)
         for mat_k, v in mat.iteritems():
             for io_k in self.container.iterkeys():
                 if io_k in mat_k:
@@ -99,25 +101,30 @@ class Matlab(SceneIO):
                 elif 'yy' in mat_k:
                     utm_n = mat[mat_k].flatten()
 
-        if utm_e.min() < 1e5 or utm_n.min() < 1e5:
+        if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
         utm_zone = 32
         utm_zone_letter = 'N'
-        self.container['llLat'], self.container['llLon'] =\
-            utm.to_latlon(utm_e.min(), utm_n.min(),
-                          utm_zone, utm_zone_letter)
+        try:
+            self.container['llLat'], self.container['llLon'] =\
+                utm.to_latlon(utm_e.min(), utm_n.min(),
+                              utm_zone, utm_zone_letter)
+            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
+                                         utm_zone, utm_zone_letter)
+            self.container['dLat'] =\
+                (urlat - self.container['llLat']) /\
+                self.container['displacement'].shape[0]
 
-        urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
-                                     utm_zone, utm_zone_letter)
-        self.container['dLat'] =\
-            (urlat - self.container['llLat']) /\
-            self.container['displacement'].shape[0]
-
-        self.container['dLon'] =\
-            (urlon - self.container['llLon']) /\
-            self.container['displacement'].shape[1]
-
+            self.container['dLon'] =\
+                (urlon - self.container['llLon']) /\
+                self.container['displacement'].shape[1]
+        except utm.error.OutOfRangeError:
+            self.container['llLat'], self.container['llLon'] = (0., 0.)
+            self.container['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
+            self.container['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
+            self._log.warning('Could not interpret spatial vectors, '
+                              'referencing to 0, 0 (lat, lon)')
         return self.container
 
 
@@ -326,13 +333,12 @@ class GMTSAR(SceneIO):
             return False
         return False
 
-    @staticmethod
-    def _getLOSFile(path):
+    def _getLOSFile(self, path):
         if not os.path.isdir(path):
             path = os.path.dirname(path)
         los_files = glob.glob(os.path.join(path, '*.los.*'))
         if len(los_files) == 0:
-            print GMTSAR.__doc__
+            self._log.warning(GMTSAR.__doc__)
             raise ImportError('Could not find LOS file (*.los.*)')
         return los_files[0]
 
@@ -380,6 +386,7 @@ class GMTSAR(SceneIO):
             self.container['phi'] = phi
             self.container['theta'] = theta
         except ImportError:
+            self._log.warning('Defaulting theta and phi to 0')
             self.container['theta'] = 0.
             self.container['phi'] = 0.
 
