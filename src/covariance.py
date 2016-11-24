@@ -340,7 +340,7 @@ class Covariance(object):
         cos, _ = self._powerspecCosineTransform(spec, k)
         return cos, d
 
-    def covarianceAnalyticalFit(self, regime=0):
+    def covarianceExpFit(self, regime=0):
         cos, d = self.covarianceAnalytical(regime)
 
         def f(d, a, b):

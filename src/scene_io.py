@@ -355,8 +355,8 @@ class GMTSAR(SceneIO):
         grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
         self.container['displacement'] = grd.variables['z'][:].copy()
+        self.container['displacement'] *= 1e-2
         shape = self.container['displacement'].shape
-
         # LatLon
         self.container['llLat'] = grd.variables['lat'][:].min()
         self.container['llLon'] = grd.variables['lon'][:].min()

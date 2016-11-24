@@ -130,12 +130,13 @@ class QKitePlot(pg.PlotWidget):
                                  int(img_pos().y())]
             if self.component == 'displacement':
                 z *= 1e2
+
             text = '<span style="font-family: monospace; color: #fff">' \
                 'East {east:08.2f} m | North {north:08.2f} m | '\
-                '{measure} {z:05.1f}</span>'.format(
+                '{measure} {z:{spaces}.1f}</span>'.format(
                     north=map_pos.x(), east=map_pos.y(),
                     measure=self.component.title(),
-                    z=z)
+                    z=z, spaces='05' if not num.isnan(z) else '03')
             self.hint_text.setText(text)
             return
 

@@ -9,8 +9,8 @@ from .tab import QKiteDock, QKitePlot
 
 plot_padding = .1
 
-analy_pen0 = pg.mkPen((170, 57, 57, 0), width=1.5)
-analy_pen1 = pg.mkPen((51, 53, 119, 200), width=1.5, style=QtCore.Qt.DotLine)
+analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
+analy_pen1 = pg.mkPen((170, 57, 57, 200), width=1.5, style=QtCore.Qt.DotLine)
 analy_pen2 = pg.mkPen((45, 136, 45), width=2.5, style=QtCore.Qt.DashLine)
 
 
@@ -89,10 +89,10 @@ class QKiteNoisePowerspec(QtGui.QWidget):
     def updatePowerPlot(self):
         spec, k, _, _, _ = self.plot.covariance.noiseSpectrum()
         self.power_plot.setData(k, spec)
-        self.power_analy0.setData(
-            k, self.plot.covariance.powerspecAnalytical(k, 0))
-        self.power_analy1.setData(
-            k, self.plot.covariance.powerspecAnalytical(k, 1))
+        # self.power_analy0.setData(
+        #     k, self.plot.covariance.powerspecAnalytical(k, 0))
+        # self.power_analy1.setData(
+        #     k, self.plot.covariance.powerspecAnalytical(k, 1))
         self.power_analy2.setData(
             k, self.plot.covariance.powerspecAnalytical(k, 3))
 
@@ -146,7 +146,7 @@ class QKiteCovariogram(QtGui.QWidget):
         self.cov_analytical0.setData(
             dist, self.plot.covariance.covarianceAnalytical(0)[0])
         self.cov_analytical1.setData(
-            dist, f(dist, *self.plot.covariance.covarianceAnalyticalFit(3)))
+            dist, f(dist, *self.plot.covariance.covarianceExpFit(3)))
         self.cov_analytical2.setData(
             dist, self.plot.covariance.covarianceAnalytical(3)[0])
 
