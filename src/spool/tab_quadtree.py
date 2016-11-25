@@ -9,10 +9,10 @@ import pyqtgraph as pg
 
 class QKiteQuadtreeDock(QKiteDock):
     def __init__(self, quadtree):
-        self.title = 'Quadtree'
+        self.title = 'Scene.quadtree'
         self.main_widget = QKiteQuadtreePlot
         self.tools = {
-            'Quadtree Control': QKiteToolQuadtree,
+            'Quadtree Parameters': QKiteToolQuadtree,
             'Components': QKiteToolComponents,
             # 'Histogram': QKiteToolHistogram,
         }
@@ -24,11 +24,11 @@ class QKiteQuadtreePlot(QKitePlot):
     def __init__(self, quadtree):
 
         self.components_available = {
-            'mean': ['Mean Displacement',
+            'mean': ['Node.mean displacement',
                      lambda qt: qt.leaf_matrix_means],
-            'median': ['Median Displacement',
+            'median': ['Node.median displacement',
                        lambda qt: qt.leaf_matrix_medians],
-            'weight': ['Absolute Weight',
+            'weight': ['Node.weight covariance',
                        lambda qt: qt.leaf_matrix_weights],
         }
         self._component = 'median'
@@ -100,7 +100,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(spin)
         layout.addWidget(slider)
 
-        group = QtGui.QGroupBox('Epsilon')
+        group = QtGui.QGroupBox('Scene.quadtree.epsilon')
         group.setToolTip('''<p>Standard deviation/split
                         method of each tile is >= epsilon</p>''')
         group.setLayout(layout)
@@ -132,7 +132,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(spin)
         layout.addWidget(slider)
 
-        group = QtGui.QGroupBox('Allowed NaN Fraction')
+        group = QtGui.QGroupBox('Scene.quadtree.nan_allowed (NaN as fraction)')
         group.setToolTip('''<p>Maximum <b>NaN pixel
             fraction allowed</b> per tile</p>''')
         group.setLayout(layout)
@@ -187,9 +187,9 @@ class QKiteToolQuadtree(QtGui.QWidget):
         layout.addWidget(spin_smax, 2, 2)
         layout.addWidget(slider_smax, 2, 3)
 
-        group = QtGui.QGroupBox('Tile Size Limits')
-        group.setToolTip('''<p>Tile size limits
-                         overwrite the desired epsilon parameter</p>''')
+        group = QtGui.QGroupBox('Scene.quadtree.tile_size_lim')
+        group.setToolTip('<p>Tile size limits, '
+                         'overwrites the desired epsilon parameter</p>')
         group.setLayout(layout)
 
         return group
@@ -210,7 +210,7 @@ class QKiteToolQuadtree(QtGui.QWidget):
 
             layout.addWidget(btn)
 
-        group = QtGui.QGroupBox('Tile Split Criteria')
+        group = QtGui.QGroupBox('Scene.quadtree.setSplitMethod')
         group.setLayout(layout)
 
         return group

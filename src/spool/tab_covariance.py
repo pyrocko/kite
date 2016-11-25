@@ -8,21 +8,22 @@ import pyqtgraph as pg
 from .tab import QKiteDock, QKitePlot
 from ..covariance import modelCovariance
 
-plot_padding = .1
-
 analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
-analy_pen1 = pg.mkPen((170, 57, 57, 200), width=1.5, style=QtCore.Qt.DotLine)
-analy_pen2 = pg.mkPen((45, 136, 45), width=2.5, style=QtCore.Qt.DashLine)
+analy_pen1 = pg.mkPen((170, 57, 57, 255), width=2.5, style=QtCore.Qt.DotLine)
+analy_pen2 = pg.mkPen((45, 136, 45, 200), width=2.5, style=QtCore.Qt.DashLine)
 
 
 class QKiteCovarianceDock(QKiteDock):
     def __init__(self, covariance):
-        self.title = 'Scene Covariance'
+        self.title = 'Scene.displacement'
         self.main_widget = QKiteNoisePlot
         self.tools = {
-            'Powerspectrum': QKiteNoisePowerspec,
-            'Covariogram': QKiteCovariogram,
-            'Structure Function': QKiteStructureFunction,
+            'Covariance.noiseSpectrum':
+                QKiteNoisePowerspec,
+            'Covariance.covariance_func':
+                QKiteCovariogram,
+            'Covariance.structure_func':
+                QKiteStructureFunction,
         }
 
         QKiteDock.__init__(self, covariance)
@@ -55,10 +56,27 @@ class QKiteNoisePlot(QKitePlot):
         self.covariance.noise_data = data
 
 
-class QKiteNoisePowerspec(QtGui.QWidget):
-    def __init__(self, plot):
+class _QKiteCovariancePlot(QtGui.QWidget):
+    def __init__(self, parent_plot):
         QtGui.QWidget.__init__(self)
-        self.plot = plot
+        self.parent_plot = parent_plot
+        self.covariance = parent_plot.covariance
+
+        self.plot = pg.PlotWidget(background='default')
+        self.plot.showGrid(True, True, alpha=.5)
+        self.plot.setMenuEnabled(False)
+        self.plot.enableAutoRange()
+
+        self.layout = QtGui.QVBoxLayout(self)
+        self.layout.addWidget(self.plot)
+
+    def addItem(self, *args, **kwargs):
+        self.plot.addItem(*args, **kwargs)
+
+
+class QKiteNoisePowerspec(_QKiteCovariancePlot):
+    def __init__(self, parent_plot):
+        _QKiteCovariancePlot.__init__(self, parent_plot)
 
         self.power_plot = pg.PlotDataItem(antialias=True)
         self.power_analy0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
@@ -66,126 +84,105 @@ class QKiteNoisePowerspec(QtGui.QWidget):
         self.power_analy2 = pg.PlotDataItem(antialias=True, pen=analy_pen2)
 
         self.power_plot.setZValue(10)
-        self.plt_wdgt = pg.PlotWidget(background='default')
-        self.plt_wdgt.setLabels(bottom='Wavenumber (cycles/m)',
-                                left='Power (m<sup>2</sup>)')
-        self.plt_wdgt.setLogMode(x=True, y=True)
-        self.plt_wdgt.setMenuEnabled(False)
-        self.plt_wdgt.showGrid(True, True, alpha=.5)
-        self.plt_wdgt.enableAutoRange()
+        self.plot.setLabels(bottom='Wavenumber (cycles/m)',
+                            left='Power (m<sup>2</sup>)')
+        self.plot.setLogMode(x=True, y=True)
 
-        self.plt_wdgt.addItem(self.power_plot)
+        self.legend = pg.LegendItem(offset=(0., .5))
+        self.legend.setParentItem(self.plot.graphicsItem())
+        self.legend.addItem(self.power_analy2, 'Log Linear Model')
 
-        self.plt_wdgt.addItem(self.power_analy0)
-        self.plt_wdgt.addItem(self.power_analy1)
-        self.plt_wdgt.addItem(self.power_analy2)
+        self.addItem(self.power_plot)
+        self.addItem(self.power_analy0)
+        self.addItem(self.power_analy1)
+        self.addItem(self.power_analy2)
 
-        self.plot.covariance.covarianceUpdate.subscribe(self.updatePowerPlot)
-
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.plt_wdgt)
-
+        self.covariance.covarianceUpdate.subscribe(self.updatePowerPlot)
         self.updatePowerPlot()
 
     def updatePowerPlot(self):
-        spec, k, _, _, _ = self.plot.covariance.noiseSpectrum()
+        spec, k, _, _, _ = self.covariance.noiseSpectrum()
         self.power_plot.setData(k, spec)
         # self.power_analy0.setData(
         #     k, self.plot.covariance.powerspecAnalytical(k, 0))
         # self.power_analy1.setData(
         #     k, self.plot.covariance.powerspecAnalytical(k, 1))
         self.power_analy2.setData(
-            k, self.plot.covariance.powerspecAnalytical(k, 3))
+            k, self.covariance.powerspecAnalytical(k, 3))
 
 
-class QKiteCovariogram(QtGui.QWidget):
-    def __init__(self, plot):
-        QtGui.QWidget.__init__(self)
-        self.plot = plot
+class QKiteCovariogram(_QKiteCovariancePlot):
+    def __init__(self, parent_plot):
+        _QKiteCovariancePlot.__init__(self, parent_plot)
+        self.plot.setLabels(bottom={'Distance', 'm'},
+                            left='Covariance (m<sup>2</sup>)')
 
         self.covariogram = pg.PlotDataItem(antialias=True)
         self.covariogram.setZValue(10)
         self.cov_analytical0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
-        self.cov_analytical1 = pg.PlotDataItem(antialias=True, pen=analy_pen1,
-                                               name='Exp. Fit - Linear Power')
-        self.cov_analytical2 = pg.PlotDataItem(antialias=True, pen=analy_pen2,
-                                               name='Linear Power')
+        self.cov_analytical1 = pg.PlotDataItem(antialias=True, pen=analy_pen1)
+        self.cov_analytical2 = pg.PlotDataItem(antialias=True, pen=analy_pen2)
 
-        self.plt_wdgt = pg.PlotWidget(background='default')
-        self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
-                                left='Covariance (m<sup>2</sup>)')
-        self.plt_wdgt.setMenuEnabled(False)
-        self.plt_wdgt.showGrid(True, True, alpha=.5)
-        self.plt_wdgt.enableAutoRange()
+        self.addItem(self.covariogram)
+        self.addItem(self.cov_analytical0)
+        self.addItem(self.cov_analytical1)
+        self.addItem(self.cov_analytical2)
 
-        self.plt_wdgt.addItem(self.covariogram)
-        self.plt_wdgt.addItem(self.cov_analytical0)
-        self.plt_wdgt.addItem(self.cov_analytical1)
-        self.plt_wdgt.addItem(self.cov_analytical2)
+        self.legend = pg.LegendItem(offset=(0., .5))
+        self.legend.setParentItem(self.plot.graphicsItem())
+        self.legend.addItem(self.cov_analytical1, '')
+        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
 
-        self.legend = pg.LegendItem(offset=(.5, .5))
-        self.legend.setParentItem(self.plt_wdgt.graphicsItem())
-        self.legend.addItem(self.cov_analytical1, 'Exp. Fit - Linear Power')
-        self.legend.addItem(self.cov_analytical2, 'Linear Power')
-
-        self.plot.covariance.covarianceUpdate.subscribe(
+        self.covariance.covarianceUpdate.subscribe(
             self.updateCovariancePlot)
-
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.plt_wdgt)
 
         self.updateCovariancePlot()
 
     def updateCovariancePlot(self):
-        cov, dist = self.plot.covariance.covariance_func
+        cov, dist = self.covariance.covariance_func
 
         self.covariogram.setData(dist, cov)
         self.cov_analytical0.setData(
-            dist, self.plot.covariance.covarianceAnalytical(0)[0])
+            dist, self.covariance.covarianceAnalytical(0)[0])
         self.cov_analytical1.setData(
             dist,
             modelCovariance(dist,
-                            *self.plot.covariance.covarianceModelFit(3)))
+                            *self.covariance.covarianceModelFit(3)))
         self.cov_analytical2.setData(
-            dist, self.plot.covariance.covarianceAnalytical(3)[0])
+            dist, self.covariance.covarianceAnalytical(3)[0])
 
-        padx = (dist.max()-dist.min()) * plot_padding
-        pady = (cov.max()-cov.min()) * plot_padding
-        self.plt_wdgt.setLimits(xMin=dist.min()-padx,
-                                xMax=dist.max()+padx,
-                                yMin=cov.min()-pady,
-                                yMax=cov.max()+pady)
+        self.legend.items[-1][1].setText(
+            self.legend.template.format(
+                *self.covariance.covarianceModelFit(3)))
 
 
-class QKiteStructureFunction(QtGui.QWidget):
-    def __init__(self, plot):
-        QtGui.QWidget.__init__(self)
-        self.plot = plot
+class QKiteStructureFunction(_QKiteCovariancePlot):
+    def __init__(self, parent_plot):
+        _QKiteCovariancePlot.__init__(self, parent_plot)
+
         self.structure = pg.PlotDataItem(antialias=True)
+        self.variance = pg.InfiniteLine(
+            pen=analy_pen1,
+            angle=0, movable=True, hoverPen=None,
+            label='Variance: {value:.5f}',
+            labelOpts={'position': .975,
+                       'anchors': ((1., 0.), (1., 1.))})
+        self.plot.setLabels(bottom={'Distance', 'm'},
+                            left='Covariance (m<sup>2</sup>)')
 
-        self.plt_wdgt = pg.PlotWidget(background='default')
-        self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
-                                left='Covariance (m<sup>2</sup>)')
-        self.plt_wdgt.setMenuEnabled(False)
-        self.plt_wdgt.showGrid(True, True, alpha=.5)
-        self.plt_wdgt.enableAutoRange()
-
-        self.plt_wdgt.addItem(self.structure)
-        self.plot.covariance.covarianceUpdate.subscribe(
+        self.addItem(self.structure)
+        self.addItem(self.variance)
+        self.covariance.covarianceUpdate.subscribe(
             self.updateStructurePlot)
-
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.plt_wdgt)
+        self.variance.sigPositionChanged.connect(
+            self.changeVariance)
 
         self.updateStructurePlot()
 
     def updateStructurePlot(self):
-        struc, dist = self.plot.covariance.structure_func
+        struc, dist = self.covariance.structure_func
         self.structure.setData(dist, struc)
+        self.variance.setValue(self.covariance.variance)
 
-        padx = (dist.max()-dist.min()) * plot_padding
-        pady = (struc.max()-struc.min()) * plot_padding
-        self.plt_wdgt.setLimits(xMin=dist.min()-padx,
-                                xMax=dist.max()+padx,
-                                yMin=struc.min()-pady,
-                                yMax=struc.max()+pady)
+    def changeVariance(self, inf_line):
+        self.covariance.variance = inf_line.getYPos()

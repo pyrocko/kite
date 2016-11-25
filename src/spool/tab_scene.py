@@ -9,12 +9,12 @@ __all__ = ['QKiteSceneDock']
 
 class QKiteSceneDock(QKiteDock):
     def __init__(self, scene):
-        self.title = 'Scene Displacement'
+        self.title = 'Scene.displacement'
         self.main_widget = QKiteScenePlot
         self.tools = {
             'Components': QKiteToolComponents,
             # 'Colormap': QKiteToolGradient,
-            'Transect': QKiteToolTransect,
+            'Displacement Transect': QKiteToolTransect,
             # 'Histogram': QKiteToolHistogram,
         }
 
@@ -25,14 +25,14 @@ class QKiteScenePlot(QKitePlot):
     def __init__(self, scene):
 
         self.components_available = {
-            'displacement': ['LOS Displacement', lambda sc: sc.displacement],
-            'theta': ['LOS Theta', lambda sc: sc.theta],
-            'phi': ['LOS Phi', lambda sc: sc.phi],
-            'thetaDeg': ['LOS Theta degree', lambda sc: sc.thetaDeg],
-            'phiDeg': ['LOS Phi degree', lambda sc: sc.phiDeg],
-            'unitE': ['LOS unitE', lambda sc: sc.los.unitE],
-            'unitN': ['LOS unitN', lambda sc: sc.los.unitN],
-            'unitU': ['LOS unitU', lambda sc: sc.los.unitU],
+            'displacement': ['Scene.displacement', lambda sc: sc.displacement],
+            'theta': ['Scene.theta', lambda sc: sc.theta],
+            'phi': ['Scene.phi', lambda sc: sc.phi],
+            'thetaDeg': ['Scene.thetaDeg', lambda sc: sc.thetaDeg],
+            'phiDeg': ['Scene.phiDeg', lambda sc: sc.phiDeg],
+            'unitE': ['Scene.los.unitE', lambda sc: sc.los.unitE],
+            'unitN': ['Scene.los.unitN', lambda sc: sc.los.unitN],
+            'unitU': ['Scene.los.unitU', lambda sc: sc.los.unitU],
         }
         self._component = 'displacement'
 

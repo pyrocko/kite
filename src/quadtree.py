@@ -188,7 +188,7 @@ class QuadtreeConfig(guts.Object):
         help='Allowed NaN fraction per tile')
     tile_size_lim = guts.Tuple.T(
         2, guts.Float.T(),
-        default=(250, -9999.),
+        default=(250, 999999.),
         help='Minimum and maximum allowed tile size')
     covariance =\
         CovarianceConfig.T(default=CovarianceConfig(),
@@ -334,7 +334,7 @@ class Quadtree(object):
     @tile_size_lim.setter
     def tile_size_lim(self, value):
         tile_size_min, tile_size_max = value
-        if tile_size_min > tile_size_max and tile_size_max != -9999.:
+        if tile_size_min > tile_size_max and tile_size_max != 999999.:
             self._log.warning('tile_size_min > tile_size_max is required')
             return
         self.config.tile_size_lim = (tile_size_min, tile_size_max)
@@ -346,7 +346,7 @@ class Quadtree(object):
     @property_cached
     def _tile_size_lim_p(self):
         dpx = self._scene.frame.dE
-        if self.tile_size_lim[1] == -9999.:
+        if self.tile_size_lim[1] == 999999.:
             return (int(self.tile_size_lim[0] / dpx),
                     None)
         return (int(self.tile_size_lim[0] / dpx),

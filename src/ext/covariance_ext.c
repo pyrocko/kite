@@ -74,8 +74,8 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
     // Defining adaptive subsampling
     for (il1=0; il1<nleafs; il1++) {
         l_length = map[il1*4+1] - map[il1*4+0];
-        leaf_subsampling[il1] = ceil(sqrt(l_length)/4);
-        leaf_subsampling[il1] = 1;
+        leaf_subsampling[il1] = ceil(sqrt(l_length)/2);
+        // leaf_subsampling[il1] = 1;
     }
     if (nthreads == 0)
         nthreads = omp_get_num_procs();

@@ -22,8 +22,8 @@ class CovarianceConfig(guts.Object):
                      help='Weight factor b - exponential decay')
     c = guts.Float.T(default=1.,
                      help='Weight factor c - covariance scaling')
-    variance = guts.Float.T(default=9999.,
-                            help='Node variance')
+    variance = guts.Float.T(default=-9999.,
+                            help='Scene variance')
     distance_cutoff = guts.Int.T(default=35e3,
                                  help='Cutoff distance for covariance weight '
                                       'matrix -> cov(d>distance_cutoff)=0')
@@ -76,6 +76,7 @@ class Covariance(object):
         return self.getLeafCovariance(*args, **kwargs)
 
     def _clear(self):
+        self.config.variance = -9999.
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_matrix_focal_points = None
@@ -226,7 +227,7 @@ class Covariance(object):
         else:
             raise ValueError('%s method not defined!' % method)
 
-        # num.fill_diagonal(cov_matrix, self.variance)
+        num.fill_diagonal(cov_matrix, self.variance)
         self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
                         (method, time.time()-t0))
         return cov_matrix
@@ -349,7 +350,7 @@ class Covariance(object):
         def f(dist, a, b):
             return a * num.exp(-dist/b)
 
-        p, _ = sp.optimize.curve_fit(f, d, cov, p0=(.02, 3000))
+        p, _ = sp.optimize.curve_fit(f, d, cov, p0=(.001, 1000.))
         return p
 
     @property_cached
@@ -382,19 +383,20 @@ class Covariance(object):
         struc_func = structure_func(power_spec, d, k)
         return struc_func, d
 
-    def covariance(self, distance):
-        if self._covariance_interp is None:
-            cov, d = self.covariance_func
-            func = sp.interpolate.interp1d(d, cov,
-                                           kind='nearest', copy=True,
-                                           bounds_error=False,
-                                           fill_value=0., assume_sorted=True)
-            self._covariance_interp = func
-        return self._covariance_interp(distance)
-
     @property
     def variance(self):
-        return num.max(self.covariance_func[0])
+        return self.config.variance
+
+    @variance.setter
+    def variance(self, value):
+        self._clear()
+        self.config.variance = value
+
+    @variance.getter
+    def variance(self):
+        if self.config.variance == -9999.:
+            self.config.variance = num.mean(self.structure_func[0])
+        return self.config.variance
 
     @property_cached
     def plot(self):
