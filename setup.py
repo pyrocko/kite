@@ -39,7 +39,7 @@ setup(
     keywords=['insar satellite radar earthquake optimization'],
 
     install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'pyyaml',
-                      'progressbar', 'utm'],
+                      'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
     data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui', 

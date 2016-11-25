@@ -1,6 +1,7 @@
 #!/usr/bin/python2
 from PySide import QtGui
 from PySide import QtCore
+from .utils_qt import _viridis_data
 import numpy as num
 
 import pyqtgraph as pg
@@ -50,13 +51,15 @@ class QKitePlot(pg.PlotWidget):
         self.setLabels(bottom={'East', 'm'},
                        left={'North', 'm'},)
 
-        self.hint_text = pg.LabelItem(text='East %d m | North %d m | %s %.2f'
-                                      % (0, 0, self.component.title(), 0),
+        self.hint_text = pg.LabelItem(text='',
                                       justify='right', size='8pt',
                                       parent=self.plotItem)
-        self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1, 0))
-        font = self.hint_text.font()
-        font.setBold(True)
+        self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
+        self.hint_text.template =\
+            '<span style="font-family: monospace; color: #fff">' \
+            'East {east:08.2f} m | North {north:08.2f} m | '\
+            '{measure} {z:{spaces}.1f}</span>'
+
         self.addItem(self.image)
         self.update()
 
@@ -130,13 +133,12 @@ class QKitePlot(pg.PlotWidget):
                                  int(img_pos().y())]
             if self.component == 'displacement':
                 z *= 1e2
-            text = '<span style="font-family: monospace; color: #fff">' \
-                'East {east:08.2f} m | North {north:08.2f} m | '\
-                '{measure} {z:05.1f}</span>'.format(
+
+            self.hint_text.setText(
+                self.hint_text.template.format(
                     north=map_pos.x(), east=map_pos.y(),
                     measure=self.component.title(),
-                    z=z)
-            self.hint_text.setText(text)
+                    z=z, spaces='05' if not num.isnan(z) else '03'))
             return
 
 
@@ -233,28 +235,42 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
         # self.layout.rotate(90)
         # self.gradient.setOrientation('bottom')
         self.setSymColormap()
-        self._plot.image.sigImageChanged.connect(self.setSymColormap)
+        self._plot.image.sigImageChanged.connect(self.imageChanged)
         # self.isoCurveControl()
 
+    def imageChanged(self):
+        if self._plot.component == 'weight':
+            self.setQualitativeColormap()
+        else:
+            self.setSymColormap()
+
     def setSymColormap(self):
-        default_cmap = {'ticks':
-                        [[0., (0, 0, 0, 255)],
-                         [1e-3, (106, 0, 31, 255)],
-                         [.5, (255, 255, 255, 255)],
-                         [1., (8, 54, 104, 255)]],
-                        'mode': 'rgb'}
-        default_cmap = {'ticks':
-                        [[0., (0, 0, 0, 255)],
-                         [1e-3, (172, 56, 56)],
-                         [.5, (255, 255, 255, 255)],
-                         [1., (51, 53, 120)]],
-                        'mode': 'rgb'}
+        cmap = {'ticks':
+                [[0., (0, 0, 0, 255)],
+                 [1e-3, (106, 0, 31, 255)],
+                 [.5, (255, 255, 255, 255)],
+                 [1., (8, 54, 104, 255)]],
+                'mode': 'rgb'}
+        cmap = {'ticks':
+                [[0., (0, 0, 0)],
+                 [1e-3, (172, 56, 56)],
+                 [.5, (255, 255, 255)],
+                 [1., (51, 53, 120)]],
+                'mode': 'rgb'}
         lvl_min = num.nanmin(self._plot.data)
         lvl_max = num.nanmax(self._plot.data)
         abs_range = max(abs(lvl_min), abs(lvl_max))
 
-        self.gradient.restoreState(default_cmap)
+        self.gradient.restoreState(cmap)
         self.setLevels(-abs_range, abs_range)
+
+    def setQualitativeColormap(self):
+        l = len(_viridis_data) - 1
+        cmap = {'mode': 'rgb'}
+        cmap['ticks'] = [[float(i)/l, c] for i, c in enumerate(_viridis_data)]
+        self.gradient.restoreState(cmap)
+        self.setLevels(num.nanmin(self._plot.data),
+                       num.nanmax(self._plot.data))
 
     def isoCurveControl(self):
         iso_ctrl = pg.InfiniteLine(pos=0, angle=0, pen='g', movable=True)

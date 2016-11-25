@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1108</width>
-    <height>654</height>
+    <height>655</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -71,11 +71,7 @@
      <string>Actions</string>
     </property>
     <addaction name="actionExit"/>
-   </widget>
-   <widget class="QMenu" name="menuWindows">
-    <property name="title">
-     <string>Windows</string>
-    </property>
+    <addaction name="actionSave_Scene"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -85,7 +81,6 @@
     <addaction name="actionAbout_Spool"/>
    </widget>
    <addaction name="menuActions"/>
-   <addaction name="menuWindows"/>
    <addaction name="menuAbout"/>
   </widget>
   <action name="actionExit">
@@ -107,6 +102,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
+   </property>
+  </action>
+  <action name="actionSave_Scene">
+   <property name="text">
+    <string>Save Scene</string>
    </property>
   </action>
  </widget>

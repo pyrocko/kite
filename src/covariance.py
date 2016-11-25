@@ -11,7 +11,8 @@ __all__ = ['Covariance', 'CovarianceConfig']
 noise_regimes = [
     (1./2000, num.inf),
     (1./2000, 1./500),
-    (1./500, 1./10)]
+    (1./500, 1./10),
+    (0, num.inf)]
 
 
 class CovarianceConfig(guts.Object):
@@ -21,8 +22,8 @@ class CovarianceConfig(guts.Object):
                      help='Weight factor b - exponential decay')
     c = guts.Float.T(default=1.,
                      help='Weight factor c - covariance scaling')
-    variance = guts.Float.T(default=9999.,
-                            help='Node variance')
+    variance = guts.Float.T(default=-9999.,
+                            help='Scene variance')
     distance_cutoff = guts.Int.T(default=35e3,
                                  help='Cutoff distance for covariance weight '
                                       'matrix -> cov(d>distance_cutoff)=0')
@@ -30,11 +31,11 @@ class CovarianceConfig(guts.Object):
                              help='Subsampling of distance matrices')
 
 
-def covarianceFunction(distance, a, b):
-        return b * num.exp(-distance/a)
+def modelCovariance(distance, a, b):
+        return a * num.exp(-distance/b)
 
 
-def powerspecBehaviour(k, a, b):
+def modelPowerspec(k, a, b):
             return (k**a)/b
 
 
@@ -65,7 +66,7 @@ class Covariance(object):
         self._scene = quadtree._scene
         self._noise_data = None
         self._noise_coord = None
-        self._covariance_interp = None
+        self._noise_spectrum_cached = None
         self._initialized = False
 
         self._log = quadtree._log.getChild('Covariance')
@@ -75,6 +76,7 @@ class Covariance(object):
         return self.getLeafCovariance(*args, **kwargs)
 
     def _clear(self):
+        self.config.variance = -9999.
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_matrix_focal_points = None
@@ -82,6 +84,7 @@ class Covariance(object):
         self.weight_matrix_focal = None
         self.covariance_func = None
         self.structure_func = None
+        self._noise_spectrum_cached = None
         self._initialized = False
 
     @property
@@ -204,6 +207,8 @@ class Covariance(object):
                 leaf1, leaf2 = self._mapLeafs(nx, ny)
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
+            cov_matrix = modelCovariance(dist_matrix,
+                                         *self.covarianceModelFit())
 
         elif method == 'full':
             leaf_map = num.empty((len(self._quadtree.leafs), 4),
@@ -214,13 +219,14 @@ class Covariance(object):
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
-
-            dist_matrix = covariance_ext.leaf_distances(
+            ma, mb = self.covarianceModelFit()
+            cov_matrix = covariance_ext.leaf_distances(
                             self._scene.frame.gridE.filled(),
                             self._scene.frame.gridN.filled(),
-                            leaf_map, nthreads)
+                            leaf_map, ma, mb, nthreads)
+        else:
+            raise ValueError('%s method not defined!' % method)
 
-        cov_matrix = self.covariance(dist_matrix)
         num.fill_diagonal(cov_matrix, self.variance)
         self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
                         (method, time.time()-t0))
@@ -267,9 +273,11 @@ class Covariance(object):
 
         :param data: Overwrite Covariance.noise_data, defaults to None
         :type data: :py:class:`numpy.ndarray`, optional
-        :returns: *(power_spec, k, f_spectrum, k_x, k_y)*
+        :returns: *(power_spec, k, f_spectrum, kN, kE)*
         :rtype: {tuple}
         """
+        if self._noise_spectrum_cached is not None:
+            return self._noise_spectrum_cached
         if data is None:
             noise = self.noise_data
         else:
@@ -279,18 +287,19 @@ class Covariance(object):
         f_spec /= noise.size
         f_spec = num.abs(f_spec)
 
-        k_x = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
-        k_y = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
+        kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
+        kN = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
 
-        k_rad = num.sqrt(k_x[:, num.newaxis]**2 + k_y[num.newaxis, :]**2)
+        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
-        k_bin = k_x if k_x.size > k_y.size else k_y
+        k_bin = kN if kN.size > kE.size else kE
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
                                                      statistic='mean',
                                                      bins=k_bin[k_bin > 0])
 
-        return power_spec, k[:-1], f_spec, k_x, k_y
+        self._noise_spectrum_cached = power_spec, k[:-1], f_spec, kN, kE
+        return self._noise_spectrum_cached
 
     def _powerspecFit(self, regime=0):
         power_spec, k, _, _, _ = self.noiseSpectrum()
@@ -299,7 +308,7 @@ class Covariance(object):
             return num.logical_and(k > k1, k < k2)
 
         regime = selectRegime(k, *noise_regimes[regime])
-        return sp.optimize.curve_fit(powerspecBehaviour,
+        return sp.optimize.curve_fit(modelPowerspec,
                                      k[regime], power_spec[regime],
                                      p0=None, sigma=None,
                                      absolute_sigma=False,
@@ -310,7 +319,7 @@ class Covariance(object):
 
     def powerspecAnalytical(self, k, regime=0):
         p, _ = self._powerspecFit(regime)
-        return powerspecBehaviour(k, *p)
+        return modelPowerspec(k, *p)
 
     @staticmethod
     def _powerspecCosineTransform(p_spec, k):
@@ -324,33 +333,32 @@ class Covariance(object):
             return cos, k
 
     def covarianceAnalytical(self, regime=0):
-        _, k, _, k_x, k_y = self.noiseSpectrum()
+        _, k, _, kN, kE = self.noiseSpectrum()
         (a, b), _ = self._powerspecFit(regime)
-        dk = self._quadtree.frame.dN if k_x.size > k_y.size\
+        dk = self._quadtree.frame.dN if kN.size > kE.size\
             else self._quadtree.frame.dE
 
-        spec = powerspecBehaviour(k, a, b)
+        spec = modelPowerspec(k, a, b)
         d = num.arange(1, spec.size+1) * dk
 
         cos, _ = self._powerspecCosineTransform(spec, k)
         return cos, d
 
-    @property_cached
-    def covariance_coeff(self):
-        cov, d = self.covariance_func
-        p, _ = sp.optimize.curve_fit(covarianceFunction,
-                                     d, cov,
-                                     p0=None,
-                                     check_finite=True,
-                                     method=None, jac=None)
+    def covarianceModelFit(self, regime=0):
+        cov, d = self.covarianceAnalytical(regime)
+
+        def f(dist, a, b):
+            return a * num.exp(-dist/b)
+
+        p, _ = sp.optimize.curve_fit(f, d, cov, p0=(.001, 1000.))
         return p
 
     @property_cached
     def covariance_func(self):
         ''' Covariance function derived from displacement noise patch
         '''
-        power_spec, k, p_spec, k_x, k_y = self.noiseSpectrum()
-        dk = self._quadtree.frame.dN if k_x.size > k_y.size\
+        power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
+        dk = self._quadtree.frame.dN if kN.size > kE.size\
             else self._quadtree.frame.dE
         d = num.arange(1, power_spec.size+1) * dk
         cov, _ = self._powerspecCosineTransform(power_spec, k)
@@ -361,33 +369,34 @@ class Covariance(object):
     def structure_func(self):
         # from http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         cov, d = self.covariance_func
-        power_spec, k, f_spec, k_x, k_y = self.noiseSpectrum()
+        power_spec, k, f_spec, kN, kE = self.noiseSpectrum()
 
-        def structure_func(cov, d, k):
+        def structure_func(power_spec, d, k):
             struc_func = num.zeros_like(cov)
             for i, d in enumerate(d):
                 for ik, tk in enumerate(k):
-                    struc_func[i] += 1. - num.cos(-tk*d)*power_spec[ik]
-                # struc_func[i] /= k.size
-            struc_func /= struc_func.size
+                    struc_func[i] += (1. - num.cos(tk*d))*power_spec[ik]
+                    # struc_func[i] += (1. - num.i0(tk*d))*power_spec[ik]
+            # struc_func *= 1./power_spec.size
             return struc_func
 
-        struc_func = structure_func(cov, d, k)
+        struc_func = structure_func(power_spec, d, k)
         return struc_func, d
-
-    def covariance(self, distance):
-        if self._covariance_interp is None:
-            cov, d = self.covariance_func
-            func = sp.interpolate.interp1d(d, cov,
-                                           kind='nearest', copy=True,
-                                           bounds_error=False,
-                                           fill_value=0., assume_sorted=True)
-            self._covariance_interp = func
-        return self._covariance_interp(distance)
 
     @property
     def variance(self):
-        return num.max(self.covariance_func[0])
+        return self.config.variance
+
+    @variance.setter
+    def variance(self, value):
+        self._clear()
+        self.config.variance = value
+
+    @variance.getter
+    def variance(self):
+        if self.config.variance == -9999.:
+            self.config.variance = num.mean(self.structure_func[0])
+        return self.config.variance
 
     @property_cached
     def plot(self):
