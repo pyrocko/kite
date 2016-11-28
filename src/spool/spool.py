@@ -21,13 +21,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.tabs.setMovable(True)
         self.loadingModule._notify('Scene.displacent')
         self.tabs.addTab(QKiteSceneDock(scene),
-                         'Displacement')
+                         'Scene')
         self.loadingModule._notify('Scene.quadtree')
         self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
-                         'Quadtree')
-        self.loadingModule._notify('Scene.quadtree.covariance')
-        self.tabs.addTab(QKiteCovarianceDock(scene.quadtree.covariance),
-                         'Covariance')
+                         'Scene.quadtree')
+        self.loadingModule._notify('Scene.covariance')
+        self.tabs.addTab(QKiteCovarianceDock(scene.covariance),
+                         'Scene.covariance')
 
     def exit(self):
         pass

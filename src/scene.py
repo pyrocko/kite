@@ -5,9 +5,10 @@ import numpy as num
 import utm
 
 from pyrocko import guts
-from kite.quadtree import QuadtreeConfig
-from kite.meta import Subject, property_cached
-from kite import scene_io
+from .quadtree import QuadtreeConfig
+from .covariance import CovarianceConfig
+from .meta import Subject, property_cached
+from . import scene_io
 logging.basicConfig(level=20)
 
 
@@ -67,10 +68,19 @@ class Frame(object):
         self.urN = 0.
         self.dN = 0.
         self.dE = 0.
+        self.llEutm = None
+        self.llNutm = None
+        self.utm_zone = None
         self.llN = None
         self.llE = None
         self.N = None
         self.E = None
+
+        self._parameters = ['cols', 'rows',
+                            'llLat', 'llLon', 'dLat', 'dLon',
+                            'extentE', 'extentN', 'spherical_distortion',
+                            'dN', 'dE', 'llNutm', 'llEutm',
+                            'utm_zone', 'utm_zone_letter']
 
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
@@ -201,7 +211,7 @@ class Meta(guts.Object):
     """
     scene_title = guts.String.T(default='Unnamed Scene')
     scene_id = guts.String.T(default='INSAR')
-    scene_view = guts.String.T(default='ASCENDING')
+    scene_path = guts.String.T(default='ASCENDING')
     date_first_view = guts.Timestamp.T(default=0.0)
     date_second_view = guts.Timestamp.T(default=86400.0)
     satellite_name = guts.String.T(default='Unnamed Satellite')
@@ -217,6 +227,8 @@ class SceneConfig(guts.Object):
                         help='Scene Frame configuration.')
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
                                 help='Quadtree configuration.')
+    covariance = CovarianceConfig.T(default=CovarianceConfig(),
+                                    help='Covariance config for the quadtree')
 
 
 class Scene(object):
@@ -335,6 +347,13 @@ class Scene(object):
         """
         from kite.quadtree import Quadtree
         return Quadtree(scene=self, config=self.config.quadtree)
+
+    @property_cached
+    def covariance(self):
+        """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
+        """
+        from kite.covariance import Covariance
+        return Covariance(scene=self, config=self.config.quadtree)
 
     @property_cached
     def plot(self):
