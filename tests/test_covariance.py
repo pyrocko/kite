@@ -20,8 +20,8 @@ class TestCovariance(unittest.TestCase):
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
         self.sc._log.setLevel('CRITICAL')
 
-        self.sc.quadtree.epsilon = .05
-        self.sc.quadtree.tile_size_limit = (250, 12e3)
+        # self.sc.quadtree.epsilon = .05
+        # self.sc.quadtree.tile_size_limit = (250, 12e3)
         # self.sc = SceneTest.createGauss(ny=250)
 
     def __setUp(self):

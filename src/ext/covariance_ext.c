@@ -1,4 +1,5 @@
 #define NPY_NO_DEPRECATED_API 7
+#define SQR(a)  ( a * a)
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -56,10 +57,6 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
-static float64_t sqr(float64_t x) {
-    return x*x;
-}
-
 static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, float64_t *cov_arr) {
     npy_intp l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
@@ -97,7 +94,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
             l1row_end = map[il1*4+1];
             l1col_beg = map[il1*4+2];
             l1col_end = map[il1*4+3];
-            // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
+            //printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
             for (il2=il1; il2<nleafs; il2++) {
                 l2row_beg = map[il2*4+0];
                 l2row_end = map[il2*4+1];
@@ -109,8 +106,8 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
 
                 cov = 0.;
                 npx = 0;
-                // printf("tid %d :: l(%lu-%lu) :: %lu-%lu:%lu-%lu (ss %d) %lu-%lu:%lu-%lu (ss %d)\n", tid, il1, il2, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1], l2row_beg, l2row_end, l2col_beg, l2col_end, leaf_subsampling[il2]);
                 while(! (l1hit && l2hit)) {
+                    //printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
                     for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
                         if (il1row > nrows) continue;
                         for (il1col=l1col_beg; il1col<l1col_end; il1col+=leaf_subsampling[il1]) {
@@ -127,7 +124,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
                                     if (npy_isnan(E[icl2]) || npy_isnan(N[icl2])) continue;
                                     l2hit = 1;
 
-                                    cov += exp(-sqrt(sqr(E[icl1]-E[icl2]) + sqr(N[icl1]-N[icl2])) / mb);
+                                    cov += exp(-sqrt(SQR(E[icl1]-E[icl2]) + SQR(N[icl1]-N[icl2])) / mb);
                                     npx++;
                                 }
                             }
