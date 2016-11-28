@@ -1,8 +1,9 @@
 #!/usr/bin/python2
 from PySide import QtGui
 import pyqtgraph as pg
+import pyqtgraph.parametertree.parameterTypes as pTypes
 import numpy as num
-from .tab import QKiteDock, QKiteToolComponents, QKitePlot
+from .tab import QKiteDock, QKiteToolComponents, QKitePlot  # noqa
 
 __all__ = ['QKiteSceneDock']
 
@@ -10,13 +11,15 @@ __all__ = ['QKiteSceneDock']
 class QKiteSceneDock(QKiteDock):
     def __init__(self, scene):
         self.title = 'Scene.displacement'
-        self.main_widget = QKiteScenePlot
+        self.main_widget = QKiteScenePlot(scene)
         self.tools = {
-            'Components': QKiteToolComponents,
-            # 'Colormap': QKiteToolGradient,
-            'Displacement Transect': QKiteToolTransect,
-            # 'Histogram': QKiteToolHistogram,
+            # 'Components': QKiteToolComponents(self.main_widget),
+            'Displacement Transect': QKiteToolTransect(self.main_widget),
         }
+
+        self.parameters = [QKiteSceneParam(self.main_widget),
+                           QKiteSceneParamFrame(scene),
+                           QKiteSceneParamMeta(scene)]
 
         QKiteDock.__init__(self, scene)
 
@@ -120,3 +123,72 @@ class QKiteToolTransect(QtGui.QWidget):
         self.plt_wdgt.setLimits(xMin=length.min(), xMax=length.max(),
                                 yMin=transect.min(), yMax=transect.max()*1.1)
         return
+
+
+class QKiteSceneParam(pTypes.GroupParameter):
+    def __init__(self, main_widget, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene'
+        self.plot = main_widget
+        pTypes.GroupParameter.__init__(self, **kwargs)
+
+        opts = {'name': 'component',
+                'values': {
+                    'displacement': 'displacement',
+                    'theta': 'theta',
+                    'phi': 'phi',
+                    'thetaDeg': 'thetaDeg',
+                    'phiDeg': 'phiDeg',
+                    'los.unitE': 'unitE',
+                    'los.unitN': 'unitN',
+                    'los.unitU': 'unitU',
+                    },
+                'value': 'displacement',
+                }
+        component = pTypes.ListParameter(**opts)
+
+        def changeComponent(parameter):
+            self.plot.component = parameter.value()
+
+        component.sigValueChanged.connect(changeComponent)
+        self.addChild(component, autoIncrementName=None)
+
+
+class QKiteSceneParamFrame(pTypes.GroupParameter):
+    def __init__(self, scene, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.frame'
+        self.scene = scene
+        pTypes.GroupParameter.__init__(self, **kwargs)
+
+        for param in self.scene.frame._parameters:
+            value = getattr(self.scene.frame, param)
+            if isinstance(value, float):
+                value = '%.4f' % value
+            else:
+                value = str(value)
+            self.addChild({'name': param,
+                           'value': value,
+                           'type': 'str',
+                           'suffix': 'm',
+                           'readonly': True})
+
+
+class QKiteSceneParamMeta(pTypes.GroupParameter):
+    def __init__(self, scene, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.meta'
+        self.scene = scene
+        pTypes.GroupParameter.__init__(self, **kwargs)
+
+        for param, value in self.scene.meta.T.inamevals_to_save(
+         self.scene.meta):
+            self.addChild({'name': param,
+                           'value': value,
+                           'type': 'str',
+                           'readonly': True})
+
+
+class QKiteSceneParameters(pTypes.GroupParameter):
+    def __init__(self, **kwargs):
+        pass
