@@ -57,19 +57,19 @@ class Covariance(object):
     :param quadtree: Quadtree to work on
     :type quadtree: `:python:kite.quadtree.Quadtree`
    """
-    def __init__(self, quadtree, config=CovarianceConfig()):
+    def __init__(self, scene, config=CovarianceConfig()):
         self.covarianceUpdate = Subject()
 
         self.config = config
-        self.frame = quadtree._scene.frame
-        self._quadtree = quadtree
-        self._scene = quadtree._scene
+        self.frame = scene.frame
+        self._quadtree = scene.quadtree
+        self._scene = scene
         self._noise_data = None
         self._noise_coord = None
         self._noise_spectrum_cached = None
         self._initialized = False
 
-        self._log = quadtree._log.getChild('Covariance')
+        self._log = scene._log.getChild('Covariance')
         self._quadtree.treeUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):

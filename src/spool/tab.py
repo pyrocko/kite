@@ -15,27 +15,37 @@ class QKiteDock(dockarea.DockArea):
     def __init__(self, container):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
+        parameter_tree = QKiteParameterTree()
 
-        main_widget = self.main_widget(container)
-        main_dock = dockarea.Dock(self.title,
+        dock_main = dockarea.Dock(self.title,
                                   autoOrientation=False,
-                                  widget=main_widget)
+                                  widget=self.main_widget)
+        dock_colormap = dockarea.Dock('Colormap',
+                                      autoOrientation=False,
+                                      widget=QKiteToolColormap(
+                                        self.main_widget))
+        dock_parameters = dockarea.Dock('Parameters',
+                                        size=(2, 3),
+                                        autoOrientation=False,
+                                        widget=parameter_tree)
 
-        colormap = dockarea.Dock('Colormap',
-                                 autoOrientation=False,
-                                 widget=QKiteToolColormap(main_widget))
-        colormap.setStretch(1, None)
+        dock_colormap.setStretch(1, None)
+
+        if hasattr(self, 'parameters'):
+            for params in self.parameters:
+                parameter_tree.addParameters(params)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             self.tool_docks.append(
                 dockarea.Dock(name,
-                              widget=tool(main_widget),
-                              size=(2, 3),
+                              widget=tool,
+                              size=(2, 2),
                               autoOrientation=False))
             self.addDock(self.tool_docks[-1], position='bottom')
 
-        self.addDock(main_dock, position='left')
-        self.addDock(colormap, position='left')
+        self.addDock(dock_parameters, position='bottom')
+        self.addDock(dock_main, position='left')
+        self.addDock(dock_colormap, position='left')
 
 
 class QKitePlot(pg.PlotWidget):
@@ -282,3 +292,7 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 
         iso_ctrl.sigDragged.connect(isolineChange)
         self.vb.addItem(iso_ctrl)
+
+
+class QKiteParameterTree(pg.parametertree.ParameterTree):
+    pass

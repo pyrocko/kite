@@ -3,8 +3,6 @@ import time
 from pyrocko import guts
 
 from kite.meta import Subject, property_cached
-from kite.covariance import CovarianceConfig
-# from pyrock.util import clock
 
 
 class QuadNode(object):
@@ -57,7 +55,7 @@ class QuadNode(object):
 
     @property
     def weight(self):
-        return self._quadtree.covariance.getLeafWeight(self)
+        return self._quadtree._scene.covariance.getLeafWeight(self)
 
     @property_cached
     def bilinear_std(self):
@@ -190,9 +188,6 @@ class QuadtreeConfig(guts.Object):
         2, guts.Float.T(),
         default=(250, 999999.),
         help='Minimum and maximum allowed tile size')
-    covariance =\
-        CovarianceConfig.T(default=CovarianceConfig(),
-                           help='Covariance config for the quadtree')
 
 
 class Quadtree(object):
@@ -460,14 +455,6 @@ class Quadtree(object):
         """
         from kite.plot2d import QuadtreePlot
         return QuadtreePlot(self)
-
-    @property_cached
-    def covariance(self):
-        """Holds a reference to :py:class:`kite.covariance.Covariance` for the
-        `Quadtree` instance
-        """
-        from kite.covariance import Covariance
-        return Covariance(quadtree=self, config=self.config.covariance)
 
     def getStaticTarget(self):
         """Not Implemented
