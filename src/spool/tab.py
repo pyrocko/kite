@@ -27,6 +27,7 @@ class QKiteDock(dockarea.DockArea):
         dock_parameters = dockarea.Dock('Parameters',
                                         size=(2, 3),
                                         autoOrientation=False,
+                                   
                                         widget=parameter_tree)
 
         dock_colormap.setStretch(1, None)
@@ -43,9 +44,9 @@ class QKiteDock(dockarea.DockArea):
                               autoOrientation=False))
             self.addDock(self.tool_docks[-1], position='bottom')
 
-        self.addDock(dock_parameters, position='bottom')
         self.addDock(dock_main, position='left')
-        self.addDock(dock_colormap, position='left')
+        self.addDock(dock_colormap, position='bottom')
+        self.addDock(dock_parameters, position='left')
 
 
 class QKitePlot(pg.PlotWidget):

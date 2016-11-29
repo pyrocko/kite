@@ -1,7 +1,11 @@
-kite
-====
+Modules
+=======
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
    kite
+   kite.scene
+   kite.quadtree
+   kite.spool
+

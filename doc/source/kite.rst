@@ -1,63 +1,28 @@
 Kite InSAR Tools
 ================
 
-.. automodule:: kite
-    :members:   
-
-Subpackage Spool GUI
---------------------
-
-.. toctree::
-
-    kite.spool
-
-Modules
-=======
-
-kite.Scene module
+Scene class
 -----------------
 
-.. automodule:: kite.scene
+.. autoclass:: kite.Scene
     :members:
 
-Quadtree module
----------------
+A Scene hold several configuration objects which hold meta information and spatial references of the grids:
 
-.. automodule:: kite.quadtree
-    :members:
-
-kite.quadtree_covariance module
--------------------------------
-
-.. automodule:: kite.quadtree_covariance
-    :members:
-
-kite.Meta module
-----------------
-
-.. automodule:: kite.meta
-    :members:
-
-kite.scene_io module
---------------------
-
-.. automodule:: kite.scene_io
-    :members:
-
-kite.scene_processing module
-----------------------------
-
-.. automodule:: kite.scene_processing
-    :members:
-
-
-Configuration Objects
-=====================
+.. autoclass:: kite.scene.Meta
 
 .. autoclass:: kite.scene.SceneConfig
 
 .. autoclass:: kite.scene.FrameConfig
 
-.. autoclass:: kite.quadtree.QuadtreeConfig
+    :members:
 
-.. autoclass:: kite.quadtree_covariance.CovarianceConfig
+Quadtree class
+---------------
+
+.. autoclass:: kite.quadtree.Quadtree
+    :members:
+
+The ``QuadtreeConfiguration`` hold the necessart configuration to reconstruct and save a Quadtree instance:
+
+.. autoclass:: kite.quadtree.QuadtreeConfig
