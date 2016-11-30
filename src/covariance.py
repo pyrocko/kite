@@ -1,3 +1,5 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 import numpy as num
 import scipy as sp
 import time
@@ -42,7 +44,7 @@ class Covariance(object):
     weighting measure for the optimization process.
 
     We assume the analytical formula
-        `cov(dist) = c * exp(-dist/b) [* cos(dist/a)]`
+        cov(dist) = c * exp(-dist/b) [* cos(dist/a)]
 
     where ``dist`` is
     1) the distance between quadleaf focal points (`Covariance.matrix_focal`)
@@ -131,7 +133,8 @@ class Covariance(object):
         :type nx: int
         :param ny: matrix y position
         :type ny: int
-        :returns: tuple of `:python:kite.quadtree.QuadNode` for nx and ny
+        :returns: tuple of :py:class:`kite.quadtree.QuadNode` for ``nx``
+            and ``ny``
         :rtype: {[tuple]}
         """
         leaf1 = self._quadtree.leafs[nx]
@@ -158,13 +161,13 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix \sqrt{covariance_matrix^-1}
+        """ Weight matrix sqrt{covariance_matrix^-1
         """
         return num.linalg.inv(self.covariance_matrix)
 
     @property_cached
     def weight_matrix_focal(self):
-        """ Weight matrix \sqrt{covariance_matrix_focal^-1}
+        """ Weight matrix sqrt{covariance_matrix_focal^-1
         """
         return num.linalg.inv(self.covariance_matrix_focal)
 
@@ -245,10 +248,10 @@ class Covariance(object):
         """Get the distances between ``leaf1`` and ``leaf2`` in ``m``
 
         :param leaf1: Leaf 1
-        :type leaf1: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
+        :type leaf1: str of `leaf.id` or :py:class:`kite.quadtree.QuadNode`
         :param leaf2: Leaf 2
-        :type leaf2: str of `leaf.id` or :python:`kite.quadtree.QuadNode`
-        :returns: Distance between `leaf1` and `leaf2`
+        :type leaf2: str of `leaf.id` or :py:class:`kite.quadtree.QuadNode`
+        :returns: Covariance between ``leaf1`` and ``leaf2``
         :rtype: {float}
         """
         return self.covariance_matrix[self._getMapping(leaf1, leaf2)]
@@ -261,7 +264,7 @@ class Covariance(object):
     def noiseSpectrum(self, data=None):
         """Get the noise spectrum from Covariance.noise_data
 
-        :param data: Overwrite Covariance.noise_data, defaults to None
+        :param data: Overwrite Covariance.noise_data, defaults to {None}
         :type data: :py:class:`numpy.ndarray`, optional
         :returns: *(power_spec, k, f_spectrum, kN, kE)*
         :rtype: {tuple}
@@ -323,7 +326,7 @@ class Covariance(object):
             cos = sp.fftpack.dct(p_spec, type=2, n=None, norm=None)
             cos *= 2./cos.size
 
-            # Normieren über n_k?
+            # Normieren ueber n_k?
             return cos, k
 
     def covarianceAnalytical(self, regime=0):
