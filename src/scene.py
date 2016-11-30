@@ -353,7 +353,7 @@ class Scene(object):
         """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
         """
         from kite.covariance import Covariance
-        return Covariance(scene=self, config=self.config.quadtree)
+        return Covariance(scene=self, config=self.config.covariance)
 
     @property_cached
     def plot(self):
@@ -445,19 +445,22 @@ class Scene(object):
         filename = scene_name or '%s_%s' % (self.meta.scene_id,
                                             self.meta.scene_view)
 
-        self._log.info('Saving scene to %s.[yml,dsp,tht,phi]' % filename)
+        self._log.info('Saving scene data to %s.[dsp,tht,phi]' % filename)
 
         components = {
             'displacement': 'disp',
             'theta': 'theta',
             'phi': 'phi',
         }
-
-        self.config.dump(filename='%s.yml' % filename,
-                         header='kite.Scene YAML Config')
         for comp, ext in components.iteritems():
             num.save(file='%s.%s' % (filename, ext),
                      arr=self.__getattribute__(comp))
+        self.save_config(filename + '.yml')
+
+    def save_config(self, filename):
+        self._log.info('Saving scene config to %s' % filename)
+        self.config.dump(filename='%s' % filename,
+                         header='kite.Scene YAML Config')
 
     @classmethod
     def load(cls, scene_name):
@@ -498,6 +501,9 @@ class Scene(object):
 
         scene._testImport()
         return scene
+
+    def load_config(self, filename):
+        raise NotImplemented()
 
     def __str__(self):
         return self.config.__str__()

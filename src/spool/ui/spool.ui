@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1108</width>
-    <height>655</height>
+    <width>1145</width>
+    <height>682</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -62,7 +62,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1108</width>
+     <width>1145</width>
      <height>21</height>
     </rect>
    </property>
@@ -70,8 +70,12 @@
     <property name="title">
      <string>Actions</string>
     </property>
-    <addaction name="actionExit"/>
+    <addaction name="actionLoad_scene"/>
+    <addaction name="actionLoad_config"/>
+    <addaction name="actionSave_YAML"/>
     <addaction name="actionSave_Scene"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -106,7 +110,34 @@
   </action>
   <action name="actionSave_Scene">
    <property name="text">
-    <string>Save Scene</string>
+    <string>Save scene</string>
+   </property>
+   <property name="toolTip">
+    <string>Save current scene with numpy data</string>
+   </property>
+  </action>
+  <action name="actionSave_YAML">
+   <property name="text">
+    <string>Save scene config (*.yml)</string>
+   </property>
+   <property name="toolTip">
+    <string>Save scene YAML configuration</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionLoad_scene">
+   <property name="text">
+    <string>Load scene</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionLoad_config">
+   <property name="text">
+    <string>Load scene config (*.yml)</string>
    </property>
   </action>
  </widget>
