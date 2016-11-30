@@ -51,7 +51,8 @@ class QKiteNoisePlot(QKitePlot):
         QKitePlot.__init__(self, container=covariance)
         self.covariance = self.container
 
-        self.roi = pg.RectROI(*self.covariance.noise_coord,
+        llE, llN, sizeE, sizeN = self.covariance.noise_coord
+        self.roi = pg.RectROI((llE, llN), (sizeE, sizeN),
                               sideScalers=True,
                               pen=roi_pen)
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
@@ -60,7 +61,11 @@ class QKiteNoisePlot(QKitePlot):
     def updateNoiseRegion(self):
         data = self.roi.getArrayRegion(self.image.image, self.image)
         data[data == 0.] = num.nan
+        llE, llN = self.roi.pos()
+        sizeE, sizeN = self.roi.size()
+        self.covariance.noise_coord = (llE, llN, sizeE, sizeN)
         self.covariance.noise_data = data
+        print(self.covariance.config)
 
 
 class _QKiteCovariancePlot(QtGui.QWidget):
@@ -154,13 +159,13 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.cov_analytical1.setData(
             dist,
             modelCovariance(dist,
-                            *self.covariance.covarianceModelFit(3)))
+                            *self.covariance.covariance_model))
         self.cov_analytical2.setData(
             dist, self.covariance.covarianceAnalytical(3)[0])
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(
-                *self.covariance.covarianceModelFit(3)))
+                *self.covariance.covariance_model))
 
 
 class QKiteStructureFunction(_QKiteCovariancePlot):

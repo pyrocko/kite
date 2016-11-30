@@ -9,6 +9,8 @@ class TestGaussScene(unittest.TestCase):
     def setUp(self):
         self.sc = SceneTest.createGauss()
         self.sc._log.setLevel('CRITICAL')
+        self.sc.quadtree.epsilon = .02
+        self.sc.covariance.subsampling = 24
 
     def testQuadtree(self):
         qt = self.sc.quadtree
@@ -24,21 +26,12 @@ class TestGaussScene(unittest.TestCase):
         for s in num.linspace(200, 4000, num=30):
             qt.tile_size_lim = (0, 5000)
 
-    def testCovariance(self):
-        self.sc.quadtree.epsilon = .02
-        self.sc.quadtree.covariance.subsampling = 24
-        cov = self.sc.quadtree.covariance
-
-        matrix_focal = cov.covariance_matrix
-        matrix = cov.covariance_matrix_focal
-        num.testing.assert_allclose(matrix, matrix_focal,
-                                    rtol=1e-7, atol=2e3, verbose=True)
-
     def testIO(self):
         import tempfile
         import shutil
 
         tmp_dir = tempfile.mkdtemp()
+        print tmp_dir
         try:
             self.sc.save(os.path.join(tmp_dir,
                          self.__class__.__name__))
@@ -46,7 +39,7 @@ class TestGaussScene(unittest.TestCase):
                                                  self.__class__.__name__))
             del load_scene
         finally:
-            pass
+            return
             shutil.rmtree(tmp_dir)
 
 

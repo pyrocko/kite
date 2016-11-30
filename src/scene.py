@@ -223,8 +223,8 @@ class SceneConfig(guts.Object):
     """
     meta = Meta.T(default=Meta(),
                   help='Scene metainformation.')
-    utm = FrameConfig.T(default=FrameConfig(),
-                        help='Scene Frame configuration.')
+    frame = FrameConfig.T(default=FrameConfig(),
+                          help='Scene Frame configuration.')
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
                                 help='Quadtree configuration.')
     covariance = CovarianceConfig.T(default=CovarianceConfig(),
@@ -264,7 +264,7 @@ class Scene(object):
         self.cols = 0
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
-        self.frame = Frame(scene=self, config=self.config.utm)
+        self.frame = Frame(scene=self, config=self.config.frame)
 
     @property
     def displacement(self):
@@ -353,7 +353,7 @@ class Scene(object):
         """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
         """
         from kite.covariance import Covariance
-        return Covariance(scene=self, config=self.config.quadtree)
+        return Covariance(scene=self, config=self.config.covariance)
 
     @property_cached
     def plot(self):
@@ -445,20 +445,22 @@ class Scene(object):
         filename = scene_name or '%s_%s' % (self.meta.scene_id,
                                             self.meta.scene_view)
 
-        self._log.info('Saving scene to %s.[yml,dsp,tht,phi]' % filename)
+        self._log.info('Saving scene data to %s.[dsp,tht,phi]' % filename)
 
         components = {
-            'displacement': 'dsp',
-            'theta': 'tht',
+            'displacement': 'disp',
+            'theta': 'theta',
             'phi': 'phi',
         }
-
-        self.config.dump(filename='%s.yml' % filename,
-                         header='kite.Scene YAML Config\n'
-                                'values of 9999.0 == NaN')
         for comp, ext in components.iteritems():
             num.save(file='%s.%s' % (filename, ext),
                      arr=self.__getattribute__(comp))
+        self.save_config(filename + '.yml')
+
+    def save_config(self, filename):
+        self._log.info('Saving scene config to %s' % filename)
+        self.config.dump(filename='%s' % filename,
+                         header='kite.Scene YAML Config')
 
     @classmethod
     def load(cls, scene_name):
@@ -472,8 +474,8 @@ class Scene(object):
         """
         success = False
         components = {
-            'displacement': 'dsp',
-            'theta': 'tht',
+            'displacement': 'disp',
+            'theta': 'theta',
             'phi': 'phi',
         }
 
@@ -499,6 +501,9 @@ class Scene(object):
 
         scene._testImport()
         return scene
+
+    def load_config(self, filename):
+        raise NotImplemented()
 
     def __str__(self):
         return self.config.__str__()
@@ -608,7 +613,6 @@ class SceneTest(Scene):
 
         gauss_anomaly = amplitude * \
             num.exp(-(((X-x0)**2/2*sigma_x**2)+(Y-y0)**2/2*sigma_y**2))
-        print gauss_anomaly.shape
 
         return gauss_anomaly
 
