@@ -429,14 +429,13 @@ class Scene(object):
         self._log.info('Saving scene to %s.[yml,dsp,tht,phi]' % filename)
 
         components = {
-            'displacement': 'dsp',
-            'theta': 'tht',
+            'displacement': 'disp',
+            'theta': 'theta',
             'phi': 'phi',
         }
 
         self.config.dump(filename='%s.yml' % filename,
-                         header='kite.Scene YAML Config\n'
-                                'values of 9999.0 == NaN')
+                         header='kite.Scene YAML Config')
         for comp, ext in components.iteritems():
             num.save(file='%s.%s' % (filename, ext),
                      arr=self.__getattribute__(comp))
@@ -453,8 +452,8 @@ class Scene(object):
         """
         success = False
         components = {
-            'displacement': 'dsp',
-            'theta': 'tht',
+            'displacement': 'disp',
+            'theta': 'theta',
             'phi': 'phi',
         }
 
@@ -589,7 +588,6 @@ class SceneTest(Scene):
 
         gauss_anomaly = amplitude * \
             num.exp(-(((X-x0)**2/2*sigma_x**2)+(Y-y0)**2/2*sigma_y**2))
-        print gauss_anomaly.shape
 
         return gauss_anomaly
 
