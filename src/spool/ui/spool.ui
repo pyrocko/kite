@@ -113,7 +113,7 @@
     <string>Save scene</string>
    </property>
    <property name="toolTip">
-    <string>Save current scene with numpy data</string>
+    <string>Scene.save(filename)</string>
    </property>
   </action>
   <action name="actionSave_YAML">
@@ -121,7 +121,7 @@
     <string>Save scene config (*.yml)</string>
    </property>
    <property name="toolTip">
-    <string>Save scene YAML configuration</string>
+    <string>Scene.save_config(filename)</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
