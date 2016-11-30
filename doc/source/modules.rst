@@ -7,5 +7,6 @@ Modules
    kite
    kite.scene
    kite.quadtree
+   kite.covariance
    kite.spool
 

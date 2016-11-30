@@ -1,13 +1,19 @@
-Scene class
------------
+Scene object
+============
 
 .. autoclass:: kite.Scene
     :members:
 
-A Scene hold several configuration objects which hold meta information and spatial references of the grids:
+
+Meta Information
+----------------
+A ``Scene`` holds several configuration objects:
 
 .. autoclass:: kite.scene.Meta
 
+
+Scene Configuration
+-------------------
 .. autoclass:: kite.scene.SceneConfig
 
 .. autoclass:: kite.scene.FrameConfig
