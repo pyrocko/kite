@@ -13,30 +13,50 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
-        self.scenes = []
+
+        self.actionSave_YAML.triggered.connect(self.onSaveYaml)
+        self.actionSave_Scene.triggered.connect(self.onSaveData)
+
+        self.scene = None
+
         self.loadingModule = Subject()
-
-    def addScene(self, scene):
-        self.scenes.append(scene)
-        self.tabs.setMovable(True)
-        self.loadingModule._notify('Scene.displacent')
-        self.tabs.addTab(QKiteSceneDock(scene),
-                         'Displacement')
-        self.loadingModule._notify('Scene.quadtree')
-        self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
-                         'Quadtree')
-        self.loadingModule._notify('Scene.quadtree.covariance')
-        self.tabs.addTab(QKiteCovarianceDock(scene.quadtree.covariance),
-                         'Covariance')
-
-    def exit(self):
-        pass
 
     def loadUi(self):
         ui_file = path.join(path.dirname(path.realpath(__file__)),
                             'ui/spool.ui')
         loadUi(ui_file, baseinstance=self)
         return
+
+    def addScene(self, scene):
+        self.scene = scene
+
+        self.tabs.setMovable(True)
+        self.loadingModule._notify('Scene.displacent')
+        self.tabs.addTab(QKiteSceneDock(scene),
+                         'Scene')
+        self.loadingModule._notify('Scene.quadtree')
+        self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
+                         'Scene.quadtree')
+        self.loadingModule._notify('Scene.covariance')
+        self.tabs.addTab(QKiteCovarianceDock(scene.covariance),
+                         'Scene.covariance')
+
+    def onSaveYaml(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='*.yml', caption='Save scene YAML config')
+        if filename == '':
+            return
+        self.scene.save_config(filename)
+
+    def onSaveData(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='*', caption='Save scene')
+        if filename == '':
+            return
+        self.scene.save(filename)
+
+    def exit(self):
+        pass
 
 
 class Spool(QtGui.QApplication):

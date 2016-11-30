@@ -1,8 +1,16 @@
 # KITE
 ## Introduction
-Purpose of this framework is streamlining of InSAR processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org).
+This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org) and Grond.
 
-## Requirements and Installation
+Kite features simple and efficient handling of displacement data:
+
+* Import InSAR displacement data from GAMMA, ISCE, GMTSAR and Matlab
+* Efficient quadtree implementation
+* Covariance estimation from noise
+* Interactive GUI
+
+
+## Installation and Requirement
 
 ```sh
 sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
@@ -17,13 +25,10 @@ sudo pip install .
 ```python
 from kite import Scene
 
-scene = Scene.import_file('dataset.mat')  # load data from .mat file
+# Import Matlab container to kite
+scene = Scene.import_file('dataset.mat')
 scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 
-# Inspection of covariance matrices for the quadtree
-import matplotlib.pyplot as plt
-cov_fast = scene.quadtree.covariance.matrix_fast
-cov = scene.quadtree.covariance.matrix
-plt.imshow(cov)
-plt.show()
+# Inspection of covariance parameters
+scene.quadtree.covariance.plot()
 ```

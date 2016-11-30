@@ -3,6 +3,8 @@ from PySide import QtGui
 from PySide import QtCore
 from utils_qt import QDoubleSlider
 from .tab import QKiteDock, QKiteToolComponents, QKitePlot
+from .tab_scene import QKiteSceneParamMeta, QKiteSceneParamFrame
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 import pyqtgraph as pg
 
@@ -10,12 +12,17 @@ import pyqtgraph as pg
 class QKiteQuadtreeDock(QKiteDock):
     def __init__(self, quadtree):
         self.title = 'Scene.quadtree'
-        self.main_widget = QKiteQuadtreePlot
+        self.main_widget = QKiteQuadtreePlot(quadtree)
         self.tools = {
-            'Quadtree Parameters': QKiteToolQuadtree,
-            'Components': QKiteToolComponents,
+            'Quadtree Parameters': QKiteToolQuadtree(quadtree),
+            'Components': QKiteToolComponents(self.main_widget),
             # 'Histogram': QKiteToolHistogram,
         }
+
+        self.parameters = [
+            QKiteSceneParamFrame(quadtree._scene, expanded=False),
+            QKiteSceneParamMeta(quadtree._scene, expanded=False),
+        ]
 
         QKiteDock.__init__(self, quadtree)
 
@@ -57,10 +64,27 @@ class QKiteQuadtreePlot(QKitePlot):
                                   pxMode=True)
 
 
+class QKiteQuadtreeParam(pTypes.GroupParameter):
+    def __init__(self, *args, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.quadtree'
+        pTypes.GroupParameter.__init__(self, **kwargs)
+
+        self.addChild('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
+        self.addChild('Epsilon current', '%0.3f' % self.quadtree.epsilon),
+        self.addChild('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
+        self.addChild('Allowed NaN fraction',
+            '%d%%' % int(self.quadtree.nan_allowed * 100)
+            if self.quadtree.nan_allowed != -9999. else 'inf'),
+        self.addChild('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
+        self.addChild('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
+            if self.quadtree.tile_size_lim[1] != -9999. else 'inf')
+
+
 class QKiteToolQuadtree(QtGui.QWidget):
-    def __init__(self, plot=None):
+    def __init__(self, quadtree):
         QtGui.QWidget.__init__(self)
-        self.quadtree = plot.container
+        self.quadtree = quadtree
 
         self.layout = QtGui.QVBoxLayout(self)
         self.layout.addWidget(self.getEpsilonChanger())
