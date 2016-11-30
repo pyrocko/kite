@@ -223,8 +223,8 @@ class SceneConfig(guts.Object):
     """
     meta = Meta.T(default=Meta(),
                   help='Scene metainformation.')
-    utm = FrameConfig.T(default=FrameConfig(),
-                        help='Scene Frame configuration.')
+    frame = FrameConfig.T(default=FrameConfig(),
+                          help='Scene Frame configuration.')
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
                                 help='Quadtree configuration.')
     covariance = CovarianceConfig.T(default=CovarianceConfig(),
@@ -264,7 +264,7 @@ class Scene(object):
         self.cols = 0
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
-        self.frame = Frame(scene=self, config=self.config.utm)
+        self.frame = Frame(scene=self, config=self.config.frame)
 
     @property
     def displacement(self):

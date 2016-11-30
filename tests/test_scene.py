@@ -10,7 +10,7 @@ class TestGaussScene(unittest.TestCase):
         self.sc = SceneTest.createGauss()
         self.sc._log.setLevel('CRITICAL')
         self.sc.quadtree.epsilon = .02
-        self.sc.quadtree.covariance.subsampling = 24
+        self.sc.covariance.subsampling = 24
 
     def testQuadtree(self):
         qt = self.sc.quadtree

@@ -350,7 +350,10 @@ class Covariance(object):
         def f(dist, a, b):
             return a * num.exp(-dist/b)
 
-        p, _ = sp.optimize.curve_fit(f, d, cov, p0=(.001, 1000.))
+        try:
+            p, _ = sp.optimize.curve_fit(f, d, cov, p0=(.001, 1000.))
+        except RuntimeError:
+            pass
         return p
 
     @property_cached
