@@ -77,9 +77,9 @@ class Covariance(object):
         self.config.variance = -9999.
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
+        self.covariance_func = None
         self.weight_matrix = None
         self.weight_matrix_focal = None
-        self.covariance_func = None
         self.structure_func = None
         self._noise_spectrum_cached = None
         self._initialized = False
@@ -192,7 +192,7 @@ class Covariance(object):
         self._leaf_mapping = {}
 
         t0 = time.time()
-        ma, mb = self.covariance_model()
+        ma, mb = self.covariance_model
 
         if method == 'focal':
             dist_matrix = num.zeros((nl, nl))
@@ -277,7 +277,7 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec /= noise.size
+        f_spec /= f_spec.size
         f_spec = num.abs(f_spec)
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
@@ -391,6 +391,7 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
+        self.covarianceUpdate._notify()
 
     @variance.getter
     def variance(self):

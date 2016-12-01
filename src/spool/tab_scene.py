@@ -1,29 +1,33 @@
 #!/usr/bin/python2
 from PySide import QtGui
 import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
 import numpy as num
-from .tab import QKiteDock, QKiteToolComponents, QKitePlot  # noqa
 
-__all__ = ['QKiteSceneDock']
+import pyqtgraph.parametertree.parameterTypes as pTypes
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from collections import OrderedDict
+
+__all__ = ['QKiteScene']
 
 
-class QKiteSceneDock(QKiteDock):
+class QKiteScene(QKiteView):
     def __init__(self, spool):
         scene = spool.scene
 
-        self.title = 'Scene.displacement'
+        self.title = 'Scene'
         self.main_widget = QKiteScenePlot(scene)
         self.tools = {
             # 'Components': QKiteToolComponents(self.main_widget),
-            'Displacement Transect': QKiteToolTransect(self.main_widget),
+            # 'Displacement Transect': QKiteToolTransect(self.main_widget),
         }
 
-        self.parameters = [QKiteSceneParam(self.main_widget),
-                           QKiteSceneParamFrame(scene),
-                           QKiteSceneParamMeta(scene)]
+        self.parameters = [QKiteParamScene(spool, self.main_widget)]
+        self.parameters[-1].addChild(
+            QKiteParamSceneFrame(spool, expanded=False))
+        self.parameters[-1].addChild(
+            QKiteParamSceneMeta(spool, expanded=False))
 
-        QKiteDock.__init__(self, spool)
+        QKiteView.__init__(self)
 
 
 class QKiteScenePlot(QKitePlot):
@@ -105,7 +109,6 @@ class QKiteToolTransect(QtGui.QWidget):
 
     def updateTransPlot(self):
         if self.poly_line is None:
-            self.trans_plot.setData((0))
             return
 
         transect = num.ndarray((0))
@@ -127,70 +130,75 @@ class QKiteToolTransect(QtGui.QWidget):
         return
 
 
-class QKiteSceneParam(pTypes.GroupParameter):
-    def __init__(self, main_widget, **kwargs):
+class QKiteParamScene(QKiteParameterGroup):
+    def __init__(self, spool, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
-        self.plot = main_widget
-        pTypes.GroupParameter.__init__(self, **kwargs)
+        self.scene = spool.scene
+        self.plot = plot
+        self.parameters = {
+            'min value': lambda plot: num.nanmin(plot.data),
+            'max value': lambda plot: num.nanmax(plot.data),
+            'mean value': lambda plot: num.nanmean(plot.data)
+        }
 
-        opts = {'name': 'component',
-                'values': {
-                    'displacement': 'displacement',
-                    'theta': 'theta',
-                    'phi': 'phi',
-                    'thetaDeg': 'thetaDeg',
-                    'phiDeg': 'phiDeg',
-                    'los.unitE': 'unitE',
-                    'los.unitN': 'unitN',
-                    'los.unitU': 'unitU',
-                    },
-                'value': 'displacement',
-                }
-        component = pTypes.ListParameter(**opts)
+        QKiteParameterGroup.__init__(self, self.plot, **kwargs)
+        self.plot.image.sigImageChanged.connect(self.updateValues)
 
         def changeComponent(parameter):
             self.plot.component = parameter.value()
 
+        p = {'name': 'display',
+             'values': {
+                 'displacement': 'displacement',
+                 'theta': 'theta',
+                 'phi': 'phi',
+                 'thetaDeg': 'thetaDeg',
+                 'phiDeg': 'phiDeg',
+                 'los.unitE': 'unitE',
+                 'los.unitN': 'unitN',
+                 'los.unitU': 'unitU',
+                 },
+             'value': 'displacement'}
+        component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
-        self.addChild(component, autoIncrementName=None)
+        self.pushChild(component, autoIncrementName=None)
 
 
-class QKiteSceneParamFrame(pTypes.GroupParameter):
-    def __init__(self, scene, **kwargs):
+class QKiteParamSceneFrame(QKiteParameterGroup):
+    def __init__(self, spool, **kwargs):
         kwargs['type'] = 'group'
-        kwargs['name'] = 'Scene.frame'
-        self.scene = scene
-        pTypes.GroupParameter.__init__(self, **kwargs)
+        kwargs['name'] = '.frame'
+        self.frame = spool.scene.frame
 
-        for param in self.scene.frame._parameters:
-            value = getattr(self.scene.frame, param)
-            if isinstance(value, float):
-                value = '%.4f' % value
-            else:
-                value = str(value)
-            self.addChild({'name': param,
-                           'value': value,
-                           'type': 'str',
-                           'suffix': 'm',
-                           'readonly': True})
+        self.parameters = OrderedDict([
+            ('cols', None),
+            ('rows', None),
+            ('llLat', None),
+            ('llLon', None),
+            ('dLat', None),
+            ('dLon', None),
+            ('extentE', None),
+            ('extentN', None),
+            ('spherical_distortion', None),
+            ('dN', None),
+            ('dE', None),
+            ('llNutm', None),
+            ('llEutm', None),
+            ('utm_zone', None),
+            ('utm_zone_letter', None)])
+
+        QKiteParameterGroup.__init__(self, self.frame, **kwargs)
 
 
-class QKiteSceneParamMeta(pTypes.GroupParameter):
-    def __init__(self, scene, **kwargs):
+class QKiteParamSceneMeta(QKiteParameterGroup):
+    def __init__(self, spool, **kwargs):
         kwargs['type'] = 'group'
-        kwargs['name'] = 'Scene.meta'
-        self.scene = scene
-        pTypes.GroupParameter.__init__(self, **kwargs)
+        kwargs['name'] = '.meta'
+        scene = spool.scene
+        self.meta = scene.meta
+        self.parameters =\
+            [param[0] for param in
+             scene.meta.T.inamevals_to_save(scene.meta)]
 
-        for param, value in self.scene.meta.T.inamevals_to_save(
-         self.scene.meta):
-            self.addChild({'name': param,
-                           'value': value,
-                           'type': 'str',
-                           'readonly': True})
-
-
-class QKiteSceneParameters(pTypes.GroupParameter):
-    def __init__(self, **kwargs):
-        pass
+        QKiteParameterGroup.__init__(self, self.meta, **kwargs)

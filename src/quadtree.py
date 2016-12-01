@@ -123,11 +123,11 @@ class QuadNode(object):
 
     def iterLeafsEval(self):
         if (self._quadtree._split_func(self) < self._quadtree.epsilon and
-            (self._quadtree._tile_size_lim_p[1] is None or
-             not self.length > self._quadtree._tile_size_lim_p[1]))\
+            (self._quadtree._tile_size_lim_px[1] is None or
+             not self.length > self._quadtree._tile_size_lim_px[1]))\
            or self.children is None:
             yield self
-        elif self.children[0].length < self._quadtree._tile_size_lim_p[0]:
+        elif self.children[0].length < self._quadtree._tile_size_lim_px[0]:
             yield self
         else:
             for c in self.children:
@@ -184,10 +184,12 @@ class QuadtreeConfig(guts.Object):
     nan_allowed = guts.Float.T(
         default=0.9,
         help='Allowed NaN fraction per tile')
-    tile_size_lim = guts.Tuple.T(
-        2, guts.Float.T(),
-        default=(250, 999999.),
-        help='Minimum and maximum allowed tile size')
+    tile_size_min = guts.Float.T(
+        default=250.,
+        help='Minimum allowed tile size in meter')
+    tile_size_max = guts.Float.T(
+        default=25e3,
+        help='Maximum allowed tile size in meter')
 
 
 class Quadtree(object):
@@ -231,7 +233,8 @@ class Quadtree(object):
         if not self.config.epsilon == -9999.:
             self.epsilon = self.config.epsilon
         self.nan_allowed = self.config.nan_allowed
-        self.tile_size_lim = self.config.tile_size_lim
+        self.tile_size_min = self.config.tile_size_min
+        self.tile_size_max = self.config.tile_size_max
 
     def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
@@ -255,16 +258,17 @@ class Quadtree(object):
 
         # Clearing cached properties through None
         self._epsilon_init = None
-        self._epsilon_limit = None
+        self.epsilon_limit = None
         self.epsilon = self._epsilon_init
 
         self._initTree()
+        self._log.info('Changed to split method %s' % split_method)
         self.splitMethodChanged._notify()
 
     def _initTree(self):
         t0 = time.time()
         for b in self._base_nodes:
-            b.createTree(self._split_func, self._epsilon_limit)
+            b.createTree(self._split_func, self.epsilon_limit)
 
         self._log.debug('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                               time.time()-t0))
@@ -281,10 +285,10 @@ class Quadtree(object):
         value = float(value)
         if self.config.epsilon == value:
             return
-        if value < self._epsilon_limit:
+        if value < self.epsilon_limit:
             self._log.warning(
                 'Epsilon is out of bounds [%0.3f], epsilon_limit %0.3f' %
-                (value, self._epsilon_limit))
+                (value, self.epsilon_limit))
             return
         self.leafs = None
         self.config.epsilon = value
@@ -298,7 +302,7 @@ class Quadtree(object):
         # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
-    def _epsilon_limit(self):
+    def epsilon_limit(self):
         return self._epsilon_init * .2
 
     @property
@@ -320,32 +324,43 @@ class Quadtree(object):
         self.treeUpdate._notify()
 
     @property
-    def tile_size_lim(self):
-        """Limiting tile size - smaller tiles are joined, bigger tiles
-        split. Takes ``tuple(min, max)`` in **meter**.
+    def tile_size_min(self):
+        """Minimum allowed tile size in ``meter`.
         """
-        return self.config.tile_size_lim
+        return self.config.tile_size_min
 
-    @tile_size_lim.setter
-    def tile_size_lim(self, value):
-        tile_size_min, tile_size_max = value
-        if tile_size_min > tile_size_max and tile_size_max != 999999.:
+    @tile_size_min.setter
+    def tile_size_min(self, value):
+        if value > self.tile_size_max:
             self._log.warning('tile_size_min > tile_size_max is required')
             return
-        self.config.tile_size_lim = (tile_size_min, tile_size_max)
+        self.config.tile_size_min = value
+        self._tileSizeChanged()
 
-        self._tile_size_lim_p = None
+    @property
+    def tile_size_max(self):
+        """Minimum allowed tile size in ``meter`.
+        """
+        return self.config.tile_size_max
+
+    @tile_size_max.setter
+    def tile_size_max(self, value):
+        if value < self.tile_size_min:
+            self._log.warning('tile_size_min > tile_size_max is required')
+            return
+        self.config.tile_size_max = value
+        self._tileSizeChanged()
+
+    def _tileSizeChanged(self):
+        self._tile_size_lim_px = None
         self.leafs = None
         self.treeUpdate._notify()
 
     @property_cached
-    def _tile_size_lim_p(self):
+    def _tile_size_lim_px(self):
         dpx = self._scene.frame.dE
-        if self.tile_size_lim[1] == 999999.:
-            return (int(self.tile_size_lim[0] / dpx),
-                    None)
-        return (int(self.tile_size_lim[0] / dpx),
-                int(self.tile_size_lim[1] / dpx))
+        return (int(self.tile_size_min / dpx),
+                int(self.tile_size_max / dpx))
 
     @property
     def nnodes(self):
@@ -370,6 +385,10 @@ class Quadtree(object):
         self._log.debug('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
                         (len(leafs), self.epsilon, time.time()-t0))
         return leafs
+
+    @property
+    def nleafs(self):
+        return len(self.leafs)
 
     @property
     def leaf_means(self):

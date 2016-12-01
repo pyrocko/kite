@@ -1,9 +1,9 @@
 #!/usr/bin/python2
 # import logging
 from PySide import QtGui, QtCore
-from .tab_scene import QKiteSceneDock
-from .tab_quadtree import QKiteQuadtreeDock
-from .tab_covariance import QKiteCovarianceDock
+from .tab_scene import QKiteScene
+from .tab_quadtree import QKiteQuadtree
+from .tab_covariance import QKiteCovariance
 from os import path
 from utils_qt import loadUi
 import pyqtgraph as pg
@@ -19,7 +19,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionSave_Scene.triggered.connect(self.onSaveData)
 
         self.scene = None
-        self.ptree = QKiteParameterTree()
+        self.views = []
+        self.ptree = QKiteParameterTree(showHeader=True)
 
         self.splitter.insertWidget(0, self.ptree)
 
@@ -34,14 +35,19 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def addScene(self, scene):
         self.scene = scene
 
-        self.tabs.addTab(QKiteSceneDock(self), 'Scene')
-        self.loadingModule._notify('Scene.displacement')
+        for v in [QKiteScene, QKiteQuadtree, QKiteCovariance]:
+            self.addView(v)
 
-        self.tabs.addTab(QKiteQuadtreeDock(self), 'Scene.quadtree')
-        self.loadingModule._notify('Scene.quadtree')
+    def addView(self, view):
+        view = view(self)
+        self.loadingModule._notify(view.title)
 
-        self.tabs.addTab(QKiteCovarianceDock(self), 'Scene.covariance')
-        self.loadingModule._notify('Scene.covariance')
+        self.tabs.addTab(view, view.title)
+
+        if hasattr(view, 'parameters'):
+            for parameter in view.parameters:
+                self.ptree.addParameters(parameter)
+        self.views.append(view)
 
     def onSaveYaml(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(

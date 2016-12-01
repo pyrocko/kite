@@ -1,29 +1,29 @@
 #!/usr/bin/python2
+from __future__ import division, absolute_import, print_function, \
+    unicode_literals
 from PySide import QtGui
 from PySide import QtCore
-from utils_qt import QDoubleSlider
-from .tab import QKiteDock, QKiteToolComponents, QKitePlot
-from .tab_scene import QKiteSceneParamMeta, QKiteSceneParamFrame
-import pyqtgraph.parametertree.parameterTypes as pTypes
+from .utils_qt import QDoubleSlider
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
 
 import pyqtgraph as pg
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
-class QKiteQuadtreeDock(QKiteDock):
+class QKiteQuadtree(QKiteView):
     def __init__(self, spool):
         quadtree = spool.scene.quadtree
         self.title = 'Scene.quadtree'
         self.main_widget = QKiteQuadtreePlot(quadtree)
         self.tools = {
-            'Quadtree Parameters': QKiteToolQuadtree(quadtree),
-            'Components': QKiteToolComponents(self.main_widget),
+            # 'Quadtree Parameters': QKiteToolQuadtree(quadtree),
         }
 
         self.parameters = [
-            QKiteQuadtreeParam(expanded=False)
+            QKiteParamQuadtree(spool, self.main_widget, expanded=True)
         ]
 
-        QKiteDock.__init__(self, spool)
+        QKiteView.__init__(self)
 
 
 class QKiteQuadtreePlot(QKitePlot):
@@ -63,11 +63,101 @@ class QKiteQuadtreePlot(QKitePlot):
                                   pxMode=True)
 
 
-class QKiteQuadtreeParam(pTypes.GroupParameter):
-    def __init__(self, *args, **kwargs):
+class QKiteParamQuadtree(QKiteParameterGroup):
+    def __init__(self, spool, plot, *args, **kwargs):
+        self.quadtree = spool.scene.quadtree
+        self.plot = plot
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
-        pTypes.GroupParameter.__init__(self, **kwargs)
+        self.parameters = ['nleafs', 'nnodes', 'epsilon_limit']
+
+        QKiteParameterGroup.__init__(self, self.quadtree, **kwargs)
+        self.quadtree.treeUpdate.subscribe(self.updateValues)
+
+        # Epsilon control
+        def updateEpsilon():
+            self.quadtree.epsilon = self.epsilon.value()
+
+        p = {'name': 'epsilon',
+             'value': self.quadtree.epsilon,
+             'type': 'float',
+             'min': self.quadtree.epsilon_limit,
+             'max': 3 * self.quadtree.epsilon,
+             'step': round((self.quadtree.epsilon -
+                            self.quadtree.epsilon_limit)*.2, 3),
+             'editable': True}
+        self.epsilon = pTypes.SimpleParameter(**p)
+        self.epsilon.sigValueChanged.connect(updateEpsilon)
+
+        # Epsilon control
+        def updateNanFrac():
+            self.quadtree.nan_allowed = self.nan_allowed.value()
+
+        p = {'name': 'nan_allowed',
+             'value': self.quadtree.nan_allowed,
+             'type': 'float',
+             'min': 0.,
+             'max': 1.,
+             'step': 0.05,
+             'editable': True}
+        self.nan_allowed = pTypes.SimpleParameter(**p)
+        self.nan_allowed.sigValueChanged.connect(updateNanFrac)
+
+        # Tile size controls
+        def updateTileSizeMin():
+            self.quadtree.tile_size_min = self.tile_size_min.value()
+
+        p = {'name': 'tile_size_min',
+             'value': self.quadtree.tile_size_min,
+             'type': 'int',
+             'min': 100,
+             'max': 50000,
+             'step': 250,
+             'editable': True}
+        self.tile_size_min = pTypes.SimpleParameter(**p)
+
+        def updateTileSizeMax():
+            self.quadtree.tile_size_max = self.tile_size_max.value()
+
+        p.update({'name': 'tile_size_max',
+                  'value': self.quadtree.tile_size_max})
+        self.tile_size_max = pTypes.SimpleParameter(**p)
+        self.tile_size_min.sigValueChanged.connect(updateTileSizeMin)
+        self.tile_size_max.sigValueChanged.connect(updateTileSizeMax)
+
+        # Component control
+        def changeComponent():
+            self.plot.component = self.components.value()
+
+        p = {'name': 'display',
+             'values': {
+                'QuadNode.mean': 'mean',
+                'QuadNode.median': 'median',
+                'QuadNode.weight': 'weight',
+             },
+             'value': 'mean'}
+        self.components = pTypes.ListParameter(**p)
+        self.components.sigValueChanged.connect(changeComponent)
+
+        def changeSplitMethod():
+            self.quadtree.setSplitMethod(self.split_method.value())
+
+        p = {'name': 'setSplitMethod',
+             'values': {
+                'Mean Std (Sigurjonson, 2001)': 'mean_std',
+                'Median Std (Sigurjonson, 2001)': 'median_std',
+                'Std (Sigurjonson, 2001)': 'std',
+             },
+             'value': 'mean'}
+        self.split_method = pTypes.ListParameter(**p)
+        self.split_method.sigValueChanged.connect(changeSplitMethod)
+
+        self.pushChild(self.split_method)
+        self.pushChild(self.tile_size_max)
+        self.pushChild(self.tile_size_min)
+        self.pushChild(self.nan_allowed)
+        self.pushChild(self.epsilon)
+        self.pushChild(self.components)
 
 
 class QKiteToolQuadtree(QtGui.QWidget):
@@ -97,10 +187,10 @@ class QKiteToolQuadtree(QtGui.QWidget):
         def updateRange():
             for wdgt in [slider, spin]:
                 wdgt.setValue(self.quadtree.epsilon)
-                wdgt.setRange(self.quadtree._epsilon_limit,
+                wdgt.setRange(self.quadtree.epsilon_limit,
                               3*self.quadtree.epsilon)
                 wdgt.setSingleStep(round((self.quadtree.epsilon -
-                                          self.quadtree._epsilon_limit)*.2, 3))
+                                          self.quadtree.epsilon_limit)*.2, 3))
 
         spin.setDecimals(3)
         updateRange()
@@ -165,7 +255,9 @@ class QKiteToolQuadtree(QtGui.QWidget):
             if smax == spin_smax.maximum() or smax == 0.:
                 smax = -9999.
 
-            self.quadtree.tile_size_lim = (smin, smax)
+            self.quadtree.tile_size_min = smin
+            self.quadtree.tile_size_max = smax
+
             slider_smin.setValue(spin_smin.value())
             slider_smax.setValue(spin_smax.value())
 
@@ -174,14 +266,14 @@ class QKiteToolQuadtree(QtGui.QWidget):
             wdgt.setSingleStep(50)
 
         for wdgt in [slider_smin, spin_smin]:
-            wdgt.setValue(self.quadtree.tile_size_lim[0])
+            wdgt.setValue(self.quadtree.tile_size_min)
         slider_smin.valueChanged.connect(
             lambda: spin_smin.setValue(slider_smin.value()))
         spin_smin.valueChanged.connect(changeTileLimits)
         spin_smin.setSuffix(' m')
 
         for wdgt in [slider_smax, spin_smax]:
-            wdgt.setValue(self.quadtree.tile_size_lim[1])
+            wdgt.setValue(self.quadtree.tile_size_max)
         slider_smax.valueChanged.connect(
             lambda: spin_smax.setValue(slider_smax.value()))
         spin_smax.valueChanged.connect(changeTileLimits)
@@ -236,13 +328,12 @@ class QKiteToolQuadtree(QtGui.QWidget):
             infos = [
                 ('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
                 ('Epsilon current', '%0.3f' % self.quadtree.epsilon),
-                ('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
+                ('Epsilon limit', '%0.3f' % self.quadtree.epsilon_limit),
                 ('Allowed NaN fraction',
                     '%d%%' % int(self.quadtree.nan_allowed * 100)
                     if self.quadtree.nan_allowed != -9999. else 'inf'),
-                ('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
-                ('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
-                    if self.quadtree.tile_size_lim[1] != -9999. else 'inf'),
+                ('Min tile size', '%d m' % self.quadtree.tile_size_min),
+                ('Max tile size', '%d m' % self.quadtree.tile_size_max),
             ]
             _text = '<table>'
             for (param, value) in infos:

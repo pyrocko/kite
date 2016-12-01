@@ -1,18 +1,19 @@
 #!/usr/bin/python2
-from PySide import QtGui
-from PySide import QtCore
-from .utils_qt import _viridis_data
+from __future__ import division, absolute_import, print_function, \
+    unicode_literals
+
 import numpy as num
-
 import pyqtgraph as pg
+import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph import dockarea
+from .utils_qt import _viridis_data
 
-__all__ = ['QKiteDock', 'QKitePlot',
-           'QKiteToolComponents', 'QKiteToolColormap']
+__all__ = ['QKiteDock', 'QKitePlot', 'QKiteToolColormap',
+           'QKiteParameterGroup']
 
 
-class QKiteDock(dockarea.DockArea):
-    def __init__(self, spool):
+class QKiteView(dockarea.DockArea):
+    def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
 
@@ -24,12 +25,7 @@ class QKiteDock(dockarea.DockArea):
             dockarea.Dock('Colormap',
                           autoOrientation=False,
                           widget=QKiteToolColormap(self.main_widget))
-
         dock_colormap.setStretch(1, None)
-
-        if hasattr(self, 'parameters'):
-            for params in self.parameters:
-                spool.ptree.addParameters(params)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             self.tool_docks.append(
@@ -40,7 +36,7 @@ class QKiteDock(dockarea.DockArea):
             self.addDock(self.tool_docks[-1], position='bottom')
 
         self.addDock(dock_main, position='left')
-        self.addDock(dock_colormap, position='bottom')
+        self.addDock(dock_colormap, position='right')
 
 
 class QKitePlot(pg.PlotWidget):
@@ -75,7 +71,6 @@ class QKitePlot(pg.PlotWidget):
         # self.scalebar()
 
     def transformToUTM(self):
-        padding = 100
         ll_x, ll_y, ur_x, ur_y, dx, dy = \
             (self.container.frame.llE, self.container.frame.llN,
              self.container.frame.urE, self.container.frame.urN,
@@ -83,10 +78,12 @@ class QKitePlot(pg.PlotWidget):
 
         self.image.translate(ll_x, ll_y)
         self.image.scale(dx, dy)
-        self.setLimits(xMin=ll_x-dx*padding,
-                       xMax=ur_x+dx*padding,
-                       yMin=ll_y-dy*padding,
-                       yMax=ur_y+dy*padding)
+        ur_x, ur_y
+        # padding = 100
+        # self.setLimits(xMin=ll_x-dx*padding,
+        #                xMax=ur_x+dx*padding,
+        #                yMin=ll_y-dy*padding,
+        #                yMax=ur_y+dy*padding)
 
     def scalebar(self):
         ''' Not working '''
@@ -145,83 +142,6 @@ class QKitePlot(pg.PlotWidget):
                     measure=self.component.title(),
                     z=z, spaces='05' if not num.isnan(z) else '03'))
             return
-
-
-class QKiteToolComponents(QtGui.QWidget):
-    def __init__(self, plot=None):
-        QtGui.QWidget.__init__(self)
-        self.plot = plot
-
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.getComponentsGroup())
-        self.layout.addWidget(self.getInfoPanel())
-        self.layout.addStretch(3)
-
-    def getComponentsGroup(self):
-        from functools import partial
-
-        layout = QtGui.QVBoxLayout()
-        self._btn_grp = QtGui.QButtonGroup()
-        self._btn_grp.setExclusive(True)
-
-        def changeComponent(component):
-            self.plot.component = component
-
-        components = self.plot.components_available.keys()
-        components.sort()
-        for comp in components:
-            btn = QtGui.QPushButton(self)
-
-            layout.addWidget(btn)
-            self._btn_grp.addButton(btn)
-
-            btn.setText(self.plot.components_available[comp][0])
-            btn.setToolTip('Scene.%s' % comp)
-            btn.setCheckable(True)
-            btn.setChecked(comp == self.plot.component)
-
-            btn.clicked_str = QtCore.Signal(str)
-            btn.clicked.connect(partial(changeComponent, comp))
-
-        layout.addStretch(3)
-
-        group = QtGui.QGroupBox('Scene Components')
-        group.setLayout(layout)
-
-        return group
-
-    def getInfoPanel(self):
-        layout = QtGui.QVBoxLayout()
-        info_text = QtGui.QLabel()
-
-        def updateInfoText():
-            table_content = [
-                ('Component', '<b>%s</b>' %
-                 self.plot.components_available[self.plot.component][0]),
-                ('Max value', '%0.4f' % num.nanmax(self.plot.data)),
-                ('Min value', '%0.4f' % num.nanmin(self.plot.data)),
-                ('Mean value', '%0.4f' % num.nanmean(self.plot.data)),
-                ('Resolution px', '%d x %d' % (self.plot.data.shape[0],
-                                               self.plot.data.shape[1])),
-                ('dx', '%.2f m' % self.plot.container.frame.dE),
-                ('dy', '%.2f m' % self.plot.container.frame.dN),
-                ]
-            rstr = '<table>'
-            for (metric, value) in table_content:
-                rstr += '<tr><td style="padding-right: 15px">%s:</td>' \
-                        '<td>%s</td></tr>' % (metric, value)
-            rstr += '</table>'
-
-            info_text.setText(rstr)
-
-        updateInfoText()
-        self.plot.image.sigImageChanged.connect(updateInfoText)
-
-        layout.addWidget(info_text)
-        group = QtGui.QGroupBox('Scene Information')
-        group.setLayout(layout)
-
-        return group
 
 
 class QKiteToolColormap(pg.HistogramLUTWidget):
@@ -287,3 +207,36 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 
         iso_ctrl.sigDragged.connect(isolineChange)
         self.vb.addItem(iso_ctrl)
+
+
+class QKiteParameterGroup(pTypes.GroupParameter):
+    def __init__(self, model, **kwargs):
+        self.model = model
+        if isinstance(self.parameters, list):
+            self.parameters = dict.fromkeys(self.parameters)
+
+        pTypes.GroupParameter.__init__(self, **kwargs)
+        self.updateValues()
+
+    def updateValues(self):
+        if not hasattr(self, 'parameters'):
+            return
+
+        for param, f in self.parameters.iteritems():
+            try:
+                if callable(f):
+                    value = f(self.model)
+                else:
+                    value = getattr(self.model, param)
+            except AttributeError:
+                value = 'n/a'
+            try:
+                self.child(param).setValue(value)
+            except Exception:
+                self.addChild({'name': param,
+                               'value': value,
+                               'type': 'str',
+                               'readonly': True})
+
+    def pushChild(self, child, **kwargs):
+        self.insertChild(0, child, **kwargs)

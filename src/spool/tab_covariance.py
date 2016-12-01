@@ -5,19 +5,20 @@ import numpy as num
 
 from PySide import QtGui, QtCore
 import pyqtgraph as pg
-from .tab import QKiteDock, QKitePlot
-from .tab_scene import QKiteSceneParamMeta, QKiteSceneParamFrame
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
 from ..covariance import modelCovariance
 
 analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
-analy_pen1 = pg.mkPen((170, 57, 57, 255), width=2.5, style=QtCore.Qt.DotLine)
-analy_pen2 = pg.mkPen((45, 136, 45, 200), width=2.5, style=QtCore.Qt.DashLine)
+pen_red_dot = pg.mkPen((170, 57, 57, 255), width=2.5,
+                       style=QtCore.Qt.DotLine)
+pen_green_dash = pg.mkPen((45, 136, 45, 200), width=2.5,
+                          style=QtCore.Qt.DashLine)
 
 
-class QKiteCovarianceDock(QKiteDock):
+class QKiteCovariance(QKiteView):
     def __init__(self, spool):
         covariance = spool.scene.covariance
-        self.title = 'Scene.displacement'
+        self.title = 'Scene.covariance'
         self.main_widget = QKiteNoisePlot(covariance)
         self.tools = {
             'Covariance.noiseSpectrum':
@@ -28,9 +29,9 @@ class QKiteCovarianceDock(QKiteDock):
                 QKiteStructureFunction(self.main_widget),
         }
 
-        self.parameters = []
+        self.parameters = [QKiteParamCovariance(spool)]
 
-        QKiteDock.__init__(self, spool)
+        QKiteView.__init__(self)
 
         for dock in self.tool_docks:
             dock.setStretch(10, .5)
@@ -62,8 +63,7 @@ class QKiteNoisePlot(QKitePlot):
         llE, llN = self.roi.pos()
         sizeE, sizeN = self.roi.size()
         self.covariance.noise_coord = (llE, llN, sizeE, sizeN)
-        self.covariance.noise_data = data
-        print(self.covariance.config)
+        self.covariance.noise_data = data.T
 
 
 class _QKiteCovariancePlot(QtGui.QWidget):
@@ -88,37 +88,28 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
     def __init__(self, parent_plot):
         _QKiteCovariancePlot.__init__(self, parent_plot)
 
-        self.power_plot = pg.PlotDataItem(antialias=True)
-        self.power_analy0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
-        self.power_analy1 = pg.PlotDataItem(antialias=True, pen=analy_pen1)
-        self.power_analy2 = pg.PlotDataItem(antialias=True, pen=analy_pen2)
+        self.power = pg.PlotDataItem(antialias=True)
+        self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
 
-        self.power_plot.setZValue(10)
+        self.power.setZValue(10)
         self.plot.setLabels(bottom='Wavenumber (cycles/m)',
                             left='Power (m<sup>2</sup>)')
         self.plot.setLogMode(x=True, y=True)
 
         self.legend = pg.LegendItem(offset=(0., .5))
         self.legend.setParentItem(self.plot.graphicsItem())
-        self.legend.addItem(self.power_analy2, 'Log Linear Model')
+        self.legend.addItem(self.power_lin, 'Log-linear model')
 
-        self.addItem(self.power_plot)
-        self.addItem(self.power_analy0)
-        self.addItem(self.power_analy1)
-        self.addItem(self.power_analy2)
+        self.addItem(self.power)
+        self.addItem(self.power_lin)
 
         self.covariance.covarianceUpdate.subscribe(self.updatePowerPlot)
         self.updatePowerPlot()
 
     def updatePowerPlot(self):
         spec, k, _, _, _ = self.covariance.noiseSpectrum()
-        self.power_plot.setData(k, spec)
-        # self.power_analy0.setData(
-        #     k, self.plot.covariance.powerspecAnalytical(k, 0))
-        # self.power_analy1.setData(
-        #     k, self.plot.covariance.powerspecAnalytical(k, 1))
-        self.power_analy2.setData(
-            k, self.covariance.powerspecAnalytical(k, 3))
+        self.power.setData(k, spec)
+        self.power_lin.setData(k, self.covariance.powerspecAnalytical(k, 3))
 
 
 class QKiteCovariogram(_QKiteCovariancePlot):
@@ -127,20 +118,18 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.plot.setLabels(bottom={'Distance', 'm'},
                             left='Covariance (m<sup>2</sup>)')
 
-        self.covariogram = pg.PlotDataItem(antialias=True)
-        self.covariogram.setZValue(10)
-        self.cov_analytical0 = pg.PlotDataItem(antialias=True, pen=analy_pen0)
-        self.cov_analytical1 = pg.PlotDataItem(antialias=True, pen=analy_pen1)
-        self.cov_analytical2 = pg.PlotDataItem(antialias=True, pen=analy_pen2)
+        self.cov = pg.PlotDataItem(antialias=True)
+        self.cov.setZValue(10)
+        self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
+        self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
 
-        self.addItem(self.covariogram)
-        self.addItem(self.cov_analytical0)
-        self.addItem(self.cov_analytical1)
-        self.addItem(self.cov_analytical2)
+        self.addItem(self.cov)
+        self.addItem(self.cov_model)
+        self.addItem(self.cov_lin_pow)
 
         self.legend = pg.LegendItem(offset=(0., .5))
         self.legend.setParentItem(self.plot.graphicsItem())
-        self.legend.addItem(self.cov_analytical1, '')
+        self.legend.addItem(self.cov_model, '')
         self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
 
         self.covariance.covarianceUpdate.subscribe(
@@ -151,14 +140,10 @@ class QKiteCovariogram(_QKiteCovariancePlot):
     def updateCovariancePlot(self):
         cov, dist = self.covariance.covariance_func
 
-        self.covariogram.setData(dist, cov)
-        self.cov_analytical0.setData(
-            dist, self.covariance.covarianceAnalytical(0)[0])
-        self.cov_analytical1.setData(
-            dist,
-            modelCovariance(dist,
-                            *self.covariance.covariance_model))
-        self.cov_analytical2.setData(
+        self.cov.setData(dist, cov)
+        self.cov_model.setData(
+            dist, modelCovariance(dist, *self.covariance.covariance_model))
+        self.cov_lin_pow.setData(
             dist, self.covariance.covarianceAnalytical(3)[0])
 
         self.legend.items[-1][1].setText(
@@ -172,7 +157,7 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
         self.structure = pg.PlotDataItem(antialias=True)
         self.variance = pg.InfiniteLine(
-            pen=analy_pen1,
+            pen=pen_red_dot,
             angle=0, movable=True, hoverPen=None,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
@@ -184,7 +169,7 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
         self.addItem(self.variance)
         self.covariance.covarianceUpdate.subscribe(
             self.updateStructurePlot)
-        self.variance.sigPositionChanged.connect(
+        self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
 
         self.updateStructurePlot()
@@ -196,3 +181,20 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
     def changeVariance(self, inf_line):
         self.covariance.variance = inf_line.getYPos()
+
+
+class QKiteParamCovariance(QKiteParameterGroup):
+    def __init__(self, spool, **kwargs):
+        covariance = spool.scene.covariance
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.covariance'
+
+        self.parameters = {'variance': None,
+                           'covariance_model [a]':
+                           lambda c: c.covariance_model[0],
+                           'covariance_model [b]':
+                           lambda c: c.covariance_model[1],
+                           'size':
+                           lambda c: c.covariance_model[1]}
+        QKiteParameterGroup.__init__(self, covariance, **kwargs)
+        covariance.covarianceUpdate.subscribe(self.updateValues)

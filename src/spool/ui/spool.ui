@@ -125,7 +125,14 @@
     <addaction name="actionHelp"/>
     <addaction name="actionAbout_Spool"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionTranssect"/>
+   </widget>
    <addaction name="menuActions"/>
+   <addaction name="menuTools"/>
    <addaction name="menuAbout"/>
   </widget>
   <action name="actionExit">
@@ -179,6 +186,11 @@
   <action name="actionLoad_config">
    <property name="text">
     <string>Load scene config (*.yml)</string>
+   </property>
+  </action>
+  <action name="actionTranssect">
+   <property name="text">
+    <string>Transsect</string>
    </property>
   </action>
  </widget>

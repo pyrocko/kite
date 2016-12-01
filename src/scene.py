@@ -76,12 +76,6 @@ class Frame(object):
         self.N = None
         self.E = None
 
-        self._parameters = ['cols', 'rows',
-                            'llLat', 'llLon', 'dLat', 'dLon',
-                            'extentE', 'extentN', 'spherical_distortion',
-                            'dN', 'dE', 'llNutm', 'llEutm',
-                            'utm_zone', 'utm_zone_letter']
-
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
