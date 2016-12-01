@@ -15,7 +15,8 @@ analy_pen2 = pg.mkPen((45, 136, 45, 200), width=2.5, style=QtCore.Qt.DashLine)
 
 
 class QKiteCovarianceDock(QKiteDock):
-    def __init__(self, covariance):
+    def __init__(self, spool):
+        covariance = spool.scene.covariance
         self.title = 'Scene.displacement'
         self.main_widget = QKiteNoisePlot(covariance)
         self.tools = {
@@ -27,12 +28,9 @@ class QKiteCovarianceDock(QKiteDock):
                 QKiteStructureFunction(self.main_widget),
         }
 
-        self.parameters = [
-            QKiteSceneParamFrame(covariance._scene, expanded=False),
-            QKiteSceneParamMeta(covariance._scene, expanded=False),
-        ]
+        self.parameters = []
 
-        QKiteDock.__init__(self, covariance)
+        QKiteDock.__init__(self, spool)
 
         for dock in self.tool_docks:
             dock.setStretch(10, .5)

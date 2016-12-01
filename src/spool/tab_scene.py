@@ -9,7 +9,9 @@ __all__ = ['QKiteSceneDock']
 
 
 class QKiteSceneDock(QKiteDock):
-    def __init__(self, scene):
+    def __init__(self, spool):
+        scene = spool.scene
+
         self.title = 'Scene.displacement'
         self.main_widget = QKiteScenePlot(scene)
         self.tools = {
@@ -21,7 +23,7 @@ class QKiteSceneDock(QKiteDock):
                            QKiteSceneParamFrame(scene),
                            QKiteSceneParamMeta(scene)]
 
-        QKiteDock.__init__(self, scene)
+        QKiteDock.__init__(self, spool)
 
 
 class QKiteScenePlot(QKitePlot):

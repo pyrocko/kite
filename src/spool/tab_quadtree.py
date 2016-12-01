@@ -10,21 +10,20 @@ import pyqtgraph as pg
 
 
 class QKiteQuadtreeDock(QKiteDock):
-    def __init__(self, quadtree):
+    def __init__(self, spool):
+        quadtree = spool.scene.quadtree
         self.title = 'Scene.quadtree'
         self.main_widget = QKiteQuadtreePlot(quadtree)
         self.tools = {
             'Quadtree Parameters': QKiteToolQuadtree(quadtree),
             'Components': QKiteToolComponents(self.main_widget),
-            # 'Histogram': QKiteToolHistogram,
         }
 
         self.parameters = [
-            QKiteSceneParamFrame(quadtree._scene, expanded=False),
-            QKiteSceneParamMeta(quadtree._scene, expanded=False),
+            QKiteQuadtreeParam(expanded=False)
         ]
 
-        QKiteDock.__init__(self, quadtree)
+        QKiteDock.__init__(self, spool)
 
 
 class QKiteQuadtreePlot(QKitePlot):
@@ -69,16 +68,6 @@ class QKiteQuadtreeParam(pTypes.GroupParameter):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         pTypes.GroupParameter.__init__(self, **kwargs)
-
-        self.addChild('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
-        self.addChild('Epsilon current', '%0.3f' % self.quadtree.epsilon),
-        self.addChild('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
-        self.addChild('Allowed NaN fraction',
-            '%d%%' % int(self.quadtree.nan_allowed * 100)
-            if self.quadtree.nan_allowed != -9999. else 'inf'),
-        self.addChild('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
-        self.addChild('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
-            if self.quadtree.tile_size_lim[1] != -9999. else 'inf')
 
 
 class QKiteToolQuadtree(QtGui.QWidget):

@@ -6,6 +6,7 @@ from .tab_quadtree import QKiteQuadtreeDock
 from .tab_covariance import QKiteCovarianceDock
 from os import path
 from utils_qt import loadUi
+import pyqtgraph as pg
 from ..meta import Subject
 
 
@@ -18,6 +19,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionSave_Scene.triggered.connect(self.onSaveData)
 
         self.scene = None
+        self.ptree = QKiteParameterTree()
+
+        self.splitter.insertWidget(0, self.ptree)
 
         self.loadingModule = Subject()
 
@@ -30,16 +34,14 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def addScene(self, scene):
         self.scene = scene
 
-        self.tabs.setMovable(True)
-        self.loadingModule._notify('Scene.displacent')
-        self.tabs.addTab(QKiteSceneDock(scene),
-                         'Scene')
+        self.tabs.addTab(QKiteSceneDock(self), 'Scene')
+        self.loadingModule._notify('Scene.displacement')
+
+        self.tabs.addTab(QKiteQuadtreeDock(self), 'Scene.quadtree')
         self.loadingModule._notify('Scene.quadtree')
-        self.tabs.addTab(QKiteQuadtreeDock(scene.quadtree),
-                         'Scene.quadtree')
+
+        self.tabs.addTab(QKiteCovarianceDock(self), 'Scene.covariance')
         self.loadingModule._notify('Scene.covariance')
-        self.tabs.addTab(QKiteCovarianceDock(scene.covariance),
-                         'Scene.covariance')
 
     def onSaveYaml(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
@@ -57,6 +59,10 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def exit(self):
         pass
+
+
+class QKiteParameterTree(pg.parametertree.ParameterTree):
+    pass
 
 
 class Spool(QtGui.QApplication):

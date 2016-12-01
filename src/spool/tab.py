@@ -12,29 +12,24 @@ __all__ = ['QKiteDock', 'QKitePlot',
 
 
 class QKiteDock(dockarea.DockArea):
-    def __init__(self, container):
+    def __init__(self, spool):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
-        parameter_tree = QKiteParameterTree()
 
-        dock_main = dockarea.Dock(self.title,
-                                  autoOrientation=False,
-                                  widget=self.main_widget)
-        dock_colormap = dockarea.Dock('Colormap',
-                                      autoOrientation=False,
-                                      widget=QKiteToolColormap(
-                                        self.main_widget))
-        dock_parameters = dockarea.Dock('Parameters',
-                                        size=(2, 3),
-                                        autoOrientation=False,
-                                   
-                                        widget=parameter_tree)
+        dock_main =\
+            dockarea.Dock(self.title,
+                          autoOrientation=False,
+                          widget=self.main_widget)
+        dock_colormap =\
+            dockarea.Dock('Colormap',
+                          autoOrientation=False,
+                          widget=QKiteToolColormap(self.main_widget))
 
         dock_colormap.setStretch(1, None)
 
         if hasattr(self, 'parameters'):
             for params in self.parameters:
-                parameter_tree.addParameters(params)
+                spool.ptree.addParameters(params)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             self.tool_docks.append(
@@ -46,7 +41,6 @@ class QKiteDock(dockarea.DockArea):
 
         self.addDock(dock_main, position='left')
         self.addDock(dock_colormap, position='bottom')
-        self.addDock(dock_parameters, position='left')
 
 
 class QKitePlot(pg.PlotWidget):
@@ -293,7 +287,3 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 
         iso_ctrl.sigDragged.connect(isolineChange)
         self.vb.addItem(iso_ctrl)
-
-
-class QKiteParameterTree(pg.parametertree.ParameterTree):
-    pass
