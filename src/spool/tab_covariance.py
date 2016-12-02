@@ -125,6 +125,10 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
         self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
+        self.misfit_label = pg.LabelItem(text='', justify='right', size='8pt',
+                                         parent=self.plot.plotItem)
+        self.misfit_label.anchor(itemPos=(0., 0.), parentPos=(.2, .1))
+        self.misfit_label.format = 'Misfit: {0:.6f}'
 
         self.addItem(self.cov)
         self.addItem(self.cov_model)
@@ -148,10 +152,14 @@ class QKiteCovariogram(_QKiteCovariancePlot):
             dist, modelCovariance(dist, *self.covariance.covariance_model))
         self.cov_lin_pow.setData(
             dist, self.covariance.covarianceAnalytical(3)[0])
+        self.misfit_label.setText(
+            self.misfit_label.format.format(
+                    self.covariance.covariance_model_misfit))
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(
                 *self.covariance.covariance_model))
+
 
 
 class QKiteStructureFunction(_QKiteCovariancePlot):
