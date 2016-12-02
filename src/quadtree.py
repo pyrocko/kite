@@ -303,6 +303,7 @@ class Quadtree(object):
 
     @property_cached
     def epsilon_limit(self):
+        """ Lowest allowed epsilon limit """
         return self._epsilon_init * .2
 
     @property
