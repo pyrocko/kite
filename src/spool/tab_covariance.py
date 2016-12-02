@@ -60,6 +60,9 @@ class QKiteNoisePlot(QKitePlot):
     def updateNoiseRegion(self):
         data = self.roi.getArrayRegion(self.image.image, self.image)
         data[data == 0.] = num.nan
+        if num.all(num.isnan(data)):
+            return
+
         llE, llN = self.roi.pos()
         sizeE, sizeN = self.roi.size()
         self.covariance.noise_coord = (llE, llN, sizeE, sizeN)
@@ -194,7 +197,7 @@ class QKiteParamCovariance(QKiteParameterGroup):
                            lambda c: c.covariance_model[0],
                            'covariance_model [b]':
                            lambda c: c.covariance_model[1],
-                           'size':
-                           lambda c: c.covariance_model[1]}
+                           'covariance_model_misfit': None,
+                           'noise_patch_size_km2': None}
         QKiteParameterGroup.__init__(self, covariance, **kwargs)
         covariance.covarianceUpdate.subscribe(self.updateValues)

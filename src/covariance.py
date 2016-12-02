@@ -6,6 +6,7 @@ import time
 
 import covariance_ext
 from pyrocko import guts
+from pyrocko.guts_array import Array
 from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
 
 __all__ = ['Covariance', 'CovarianceConfig']
@@ -26,10 +27,9 @@ def modelPowerspec(k, a, b):
 
 
 class CovarianceConfig(guts.Object):
-    noise_coord = guts.Tuple.T(4, guts.Float.T(), default=(-9999., -9999.,
-                                                           -9999., -9999.),
-                               help='Coordinates of noise patch ``(llE, llN, '
-                                    'sizeE, sizeN)``')
+    noise_coord = Array.T(shape=(None,), dtype=num.float,
+                          serialize_as='list',
+                          default=[num.nan, num.nan, num.nan, num.nan])
     a = guts.Float.T(default=-9999.,
                      help='Exponential covariance model - scaling factor')
     b = guts.Float.T(default=-9999.,
@@ -90,13 +90,17 @@ class Covariance(object):
         :returns: ((llE, llN), (sizeE, sizeN))
         :rtype: {tuple, float}
         """
-        if self.config.noise_coord == (-9999., -9999., -9999., -9999.):
+        if num.all(num.isnan(self.config.noise_coord)):
             self.noise_data
         return self.config.noise_coord
 
     @noise_coord.setter
     def noise_coord(self, value):
-        self.config.noise_coord = (float(v) for v in value)
+        self.config.noise_coord = num.array(value)
+
+    @property
+    def noise_patch_size_km2(self):
+        return (self.noise_coord[2] * self.noise_coord[3])*1e-6
 
     @property
     def noise_data(self, data):
@@ -106,11 +110,12 @@ class Covariance(object):
     def noise_data(self):
         if self._noise_data is not None:
             return self._noise_data
+        self._log.debug('Fetching noise from quadtree')
         nodes = sorted(self._quadtree.leafs,
                        key=lambda n: n.length/(n.nan_fraction+1))
         n = nodes[-1]
         self.noise_data = n.displacement
-        self.noise_coord = n.llE, n.llN, n.sizeE, n.sizeN
+        self.noise_coord = [n.llE, n.llN, n.sizeE, n.sizeN]
         return self.noise_data
 
     @noise_data.setter
@@ -329,6 +334,18 @@ class Covariance(object):
             # Normieren ueber n_k?
             return cos, k
 
+    @property_cached
+    def covariance_func(self):
+        ''' Covariance function derived from displacement noise patch
+        '''
+        power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
+        dk = self._quadtree.frame.dN if kN.size > kE.size\
+            else self._quadtree.frame.dE
+        d = num.arange(1, power_spec.size+1) * dk
+        cov, _ = self._powerspecCosineTransform(power_spec, k)
+
+        return cov, d
+
     def covarianceAnalytical(self, regime=0):
         _, k, _, kN, kE = self.noiseSpectrum()
         (a, b), _ = self._powerspecFit(regime)
@@ -354,17 +371,11 @@ class Covariance(object):
                 self._log.warning('Could not fit the covariance model.')
         return self.config.a, self.config.b
 
-    @property_cached
-    def covariance_func(self):
-        ''' Covariance function derived from displacement noise patch
-        '''
-        power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
-        dk = self._quadtree.frame.dN if kN.size > kE.size\
-            else self._quadtree.frame.dE
-        d = num.arange(1, power_spec.size+1) * dk
-        cov, _ = self._powerspecCosineTransform(power_spec, k)
-
-        return cov, d
+    @property
+    def covariance_model_misfit(self):
+        cov, d = self.covariance_func
+        cov_mod = modelCovariance(d, *self.covariance_model)
+        return num.sum(num.sqrt((cov - cov_mod)**2))
 
     @property_cached
     def structure_func(self):
