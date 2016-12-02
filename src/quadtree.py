@@ -6,9 +6,9 @@ from kite.meta import Subject, property_cached
 
 
 class QuadNode(object):
-    """
-    A node (Syn. tile) in the Quadtree.
-    """
+    '''
+    A node (or *tile*) in the Quadtree.
+    '''
     def __init__(self, quadtree, llx, lly, length):
         self.llx = int(llx)
         self.lly = int(lly)
@@ -24,76 +24,99 @@ class QuadNode(object):
 
     @property_cached
     def nan_fraction(self):
+        ''' Fraction of NaN values within the tile '''
         return float(num.sum(num.isnan(self.displacement))) / \
             self.displacement.size
 
     @property_cached
     def mean(self):
+        ''' Mean displacement '''
         return num.nanmean(self.displacement)
 
     @property_cached
     def median(self):
+        ''' Median displacement '''
         return num.nanmedian(self.displacement)
 
     @property_cached
     def std(self):
+        ''' Standard deviation of displacement '''
         return num.nanstd(self.displacement)
 
     @property_cached
     def var(self):
+        ''' Variance of displacement '''
         return num.nanvar(self.displacement)
 
     @property_cached
     def median_std(self):
-        '''Standard deviation from median'''
+        ''' Standard deviation from median '''
         return num.nanstd(self.displacement - self.median)
 
     @property_cached
     def mean_std(self):
-        '''Standard deviation from mean'''
+        ''' Standard deviation from mean '''
         return num.nanstd(self.displacement - self.mean)
 
     @property
     def weight(self):
+        ''' Absolute weight derived from :py:class:`kite.covariance`
+         - works on leaf only
+    '''
         return self._quadtree._scene.covariance.getLeafWeight(self)
 
     @property_cached
     def bilinear_std(self):
+        ''' Bilinear standard deviation '''
         raise NotImplementedError('Bilinear fit not implemented')
 
     @property_cached
     def focal_point(self):
+        ''' Node focal point in local coordinates '''
         E = num.median(self.gridE.compressed())
         N = num.median(self.gridN.compressed())
         return E, N
 
     @property_cached
     def displacement(self):
+        ''' Displacement array from :py:attr:`kite.Scene.displacement` '''
         return self._scene.displacement[self._slice_rows, self._slice_cols]
 
     @property_cached
     def displacement_masked(self):
+        ''' Masked dispalcement,
+        see :py:attr:`kite.quadtree.QuadNode.displacement`
+        '''
         d = self._scene.displacement[self._slice_rows, self._slice_cols]
         return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
 
     @property_cached
     def gridE(self):
+        ''' Grid holding local East coordinates,
+        see :py:attr:`kite.scene.Frame.gridE`
+        '''
         return self._scene.frame.gridE[self._slice_rows, self._slice_cols]
 
     @property_cached
     def gridN(self):
+        ''' Grid holding local North coordinates,
+        see :py:attr:`kite.scene.Frame.gridN`
+        '''
         return self._scene.frame.gridN[self._slice_rows, self._slice_cols]
 
     @property
     def llE(self):
+        ''' Lower left East coordinate in local coordinates '''
         return self._scene.frame.E[self.lly]
 
     @property
     def llN(self):
+        ''' Lower left East coordinate in local coordinates '''
         return self._scene.frame.N[self.llx]
 
     @property
     def sizeE(self):
+        ''' Size in Eastern direction in meters '''
         sizeE = self.length * self._scene.frame.dE
         if (self.llE + sizeE) > self._scene.frame.E.max():
             sizeE = self._scene.frame.E.max() - self.llE
@@ -101,12 +124,14 @@ class QuadNode(object):
 
     @property
     def sizeN(self):
+        ''' Size in Northern direction in meters '''
         sizeN = self.length * self._scene.frame.dN
         if (self.llN + sizeN) > self._scene.frame.N.max():
             sizeN = self._scene.frame.N.max() - self.llN
         return sizeN
 
     def iterTree(self):
+        ''' Iterator over the whole tree '''
         yield self
         if self.children is not None:
             for c in self.children:
@@ -114,6 +139,9 @@ class QuadNode(object):
                     yield rc
 
     def iterLeafs(self):
+        ''' CHECK! Iterator over the leafs - parameters from
+        :py:class:`kite.quadtree.Quadtree` instance
+        '''
         if self.children is None:
             yield self
         else:
@@ -122,6 +150,9 @@ class QuadNode(object):
                     yield q
 
     def iterLeafsEval(self):
+        ''' Iterator over the leafs - parameters from
+        :py:class:`kite.quadtree.Quadtree` instance.
+        '''
         if (self._quadtree._split_func(self) < self._quadtree.epsilon and
             (self._quadtree._tile_size_lim_px[1] is None or
              not self.length > self._quadtree._tile_size_lim_px[1]))\
@@ -148,6 +179,9 @@ class QuadNode(object):
             yield n
 
     def createTree(self, eval_func, epsilon_limit):
+        ''' Create the tree from a set of basenodes, ignited by
+        :py:class:`kite.quadtree.Quadtree` instance.
+        '''
         if (eval_func(self) > epsilon_limit or self.length >= 64)\
            and not self.length < 16:
             # self.length > .1 * max(self._quadtree._data.shape): !! Expensive
@@ -164,12 +198,6 @@ class QuadNode(object):
     def __setstate__(self, state):
         self.llx, self.lly, self.length,\
             self.children, self._quadtree = state
-
-
-def _createTreeParallel(args):
-    base_node, func, epsilon_limit = args
-    base_node.createTree(func, epsilon_limit)
-    return base_node
 
 
 class QuadtreeConfig(guts.Object):
