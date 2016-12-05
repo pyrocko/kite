@@ -105,9 +105,6 @@ class Subject(object):
             else:
                 l()
 
-    def _notify(self, msg=''):
-        return self.notify(self, msg)
-
 
 __all__ = '''
 Subject

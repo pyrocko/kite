@@ -26,6 +26,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionSave_Scene.triggered.connect(self.onSaveData)
         self.actionExport_Quadtree_CSV.triggered.connect(
             self.onExportQuadtreeCSV)
+        self.actionAbout_Spool.triggered.connect(self.onAbout)
 
         self.scene = None
         self.views = []
@@ -44,7 +45,6 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addScene(self, scene):
         self.scene = scene
-
         for v in [QKiteScene, QKiteQuadtree, QKiteCovariance]:
             self.addView(v)
 
@@ -79,6 +79,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
         if not validateFilename(filename):
             return
         self.scene.quadtree.export(filename)
+
+    def onAbout(self):
+        dialog = QtGui.QDialog()
+        diag_ui = path.join(path.dirname(path.realpath(__file__)),
+                            'ui/about.ui')
+        loadUi(diag_ui, baseinstance=dialog)
+        dialog.show()
 
     def exit(self):
         pass

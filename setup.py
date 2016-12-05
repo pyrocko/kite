@@ -42,7 +42,8 @@ setup(
                       'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
-    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui', 
+    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui',
+                                    'src/spool/ui/about.ui',
                                     'src/spool/ui/boxkite-sketch.jpg'])],
     entry_points={
         'console_scripts': ['spool = kite.spool.__main__:main'],

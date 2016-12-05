@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>SpoolMainWindow</class>
+ <widget class="QMainWindow" name="SpoolMainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -146,11 +146,17 @@
    </property>
   </action>
   <action name="actionAbout_Spool">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>About Spool</string>
    </property>
   </action>
   <action name="actionHelp">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Help</string>
    </property>
@@ -178,6 +184,9 @@
    </property>
   </action>
   <action name="actionLoad_scene">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Load scene</string>
    </property>
@@ -186,11 +195,17 @@
    </property>
   </action>
   <action name="actionLoad_config">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Load scene config (*.yml)</string>
    </property>
   </action>
   <action name="actionTranssect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Transsect</string>
    </property>
