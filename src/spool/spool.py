@@ -1,13 +1,12 @@
-#!/usr/bin/python2
-# import logging
+#!/usr/bin/python
 from PySide import QtGui, QtCore
 from .tab_scene import QKiteScene
 from .tab_quadtree import QKiteQuadtree
 from .tab_covariance import QKiteCovariance
-from os import path
-from utils_qt import loadUi
-import pyqtgraph as pg
+from .utils_qt import loadUi
 from ..meta import Subject
+from os import path
+import pyqtgraph as pg
 
 
 def validateFilename(filename):
@@ -27,6 +26,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionExport_Quadtree_CSV.triggered.connect(
             self.onExportQuadtreeCSV)
         self.actionAbout_Spool.triggered.connect(self.onAbout)
+        self.actionHelp.triggered.connect(
+            lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
 
         self.scene = None
         self.views = []

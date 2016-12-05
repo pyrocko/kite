@@ -155,10 +155,13 @@
   </action>
   <action name="actionHelp">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
-    <string>Help</string>
+    <string>Online Help</string>
+   </property>
+   <property name="toolTip">
+    <string>http://pyrocko.org</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+H</string>
