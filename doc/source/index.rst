@@ -7,7 +7,7 @@ You will find :doc:`examples` how to utilize this container as well as a *modula
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    installation
    examples
