@@ -106,7 +106,7 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
         self.addItem(self.power)
         self.addItem(self.power_lin)
 
-        self.covariance.covarianceUpdate.subscribe(self.updatePowerPlot)
+        self.covariance.evCovarianceUpdate.subscribe(self.updatePowerPlot)
         self.updatePowerPlot()
 
     def updatePowerPlot(self):
@@ -139,7 +139,7 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.legend.addItem(self.cov_model, '')
         self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
 
-        self.covariance.covarianceUpdate.subscribe(
+        self.covariance.evCovarianceUpdate.subscribe(
             self.updateCovariancePlot)
 
         self.updateCovariancePlot()
@@ -177,7 +177,7 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
         self.addItem(self.structure)
         self.addItem(self.variance)
-        self.covariance.covarianceUpdate.subscribe(
+        self.covariance.evCovarianceUpdate.subscribe(
             self.updateStructurePlot)
         self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
@@ -207,4 +207,4 @@ class QKiteParamCovariance(QKiteParameterGroup):
                            'covariance_model_misfit': None,
                            'noise_patch_size_km2': None}
         QKiteParameterGroup.__init__(self, covariance, **kwargs)
-        covariance.covarianceUpdate.subscribe(self.updateValues)
+        covariance.evCovarianceUpdate.subscribe(self.updateValues)

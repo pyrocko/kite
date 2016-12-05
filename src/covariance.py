@@ -53,10 +53,10 @@ class Covariance(object):
 
     :param quadtree: Quadtree to work on
     :type quadtree: `:python:kite.quadtree.Quadtree`
-   """
-    def __init__(self, scene, config=CovarianceConfig()):
-        self.covarianceUpdate = Subject()
+    """
+    evCovarianceUpdate = Subject()
 
+    def __init__(self, scene, config=CovarianceConfig()):
         self.config = config
         self.frame = scene.frame
         self._quadtree = scene.quadtree
@@ -66,7 +66,7 @@ class Covariance(object):
         self._initialized = False
 
         self._log = scene._log.getChild('Covariance')
-        self._quadtree.treeUpdate.subscribe(self._clear)
+        self._quadtree.evParamUpdate.subscribe(self._clear)
 
     def __call__(self, *args, **kwargs):
         return self.getLeafCovariance(*args, **kwargs)
@@ -125,7 +125,7 @@ class Covariance(object):
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
-        self.covarianceUpdate._notify()
+        self.evCovarianceUpdate.notify()
 
     def setNoiseData(self, data):
         self.noise_data = data
@@ -402,7 +402,7 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
-        self.covarianceUpdate._notify()
+        self.covarianceUpdate.notify()
 
     @variance.getter
     def variance(self):

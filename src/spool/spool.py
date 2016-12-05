@@ -50,7 +50,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addView(self, view):
         view = view(self)
-        self.loadingModule._notify(view.title)
+        self.loadingModule.notify(view.title)
 
         self.tabs.addTab(view, view.title)
 

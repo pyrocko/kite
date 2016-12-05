@@ -59,7 +59,7 @@ class Frame(object):
     def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
         self.config = config
-        self._scene.sceneChanged.subscribe(self._updateExtent)
+        self._scene.evSceneChanged.subscribe(self._updateExtent)
 
         self.extentE = 0.
         self.extentN = 0.
@@ -246,11 +246,12 @@ class Scene(object):
         satellite measurements
     :type los: :py:class:`kite.scene.DisplacementLOS`
     """
+    evSceneChanged = Subject()
+
     def __init__(self, config=SceneConfig()):
         self.config = config
         self.meta = self.config.meta
         self._log = logging.getLogger('Scene')
-        self.sceneChanged = Subject()
 
         self._displacement = None
         self._phi = None
@@ -271,7 +272,7 @@ class Scene(object):
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self.sceneChanged._notify()
+        self.evSceneChanged.notify()
 
     @property
     def phi(self):
@@ -287,7 +288,7 @@ class Scene(object):
             self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
-        self.sceneChanged._notify()
+        self.evSceneChanged.notify()
 
     @phi.getter
     def phi(self):
@@ -312,7 +313,7 @@ class Scene(object):
             self._theta = value
         else:
             _setDataNumpy(self, '_theta', value)
-        self.sceneChanged._notify()
+        self.evSceneChanged.notify()
 
     @theta.getter
     def theta(self):
@@ -509,7 +510,7 @@ class LOSUnitVectors(object):
     """
     def __init__(self, scene):
         self._scene = scene
-        self._scene.sceneChanged.subscribe(self._flush_vectors)
+        self._scene.evSceneChanged.subscribe(self._flush_vectors)
 
     def _flush_vectors(self):
         self.unitE = None

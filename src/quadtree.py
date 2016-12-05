@@ -230,6 +230,8 @@ class Quadtree(object):
     significant displacements and have high-resolution where it matters and
     lower resolution at regions with less or constant deformation.
     """
+    evParamUpdate = Subject()
+
     def __init__(self, scene, config=QuadtreeConfig()):
         self._split_methods = {
             'mean_std': ['Std around mean', lambda node: node.mean_std],
@@ -242,8 +244,6 @@ class Quadtree(object):
             'weight': lambda node: node.weight,
         }
 
-        self.treeUpdate = Subject()
-        self.splitMethodChanged = Subject()
         self._log = scene._log.getChild('Quadtree')
         self.setScene(scene)
         self.parseConfig(config)
@@ -291,7 +291,6 @@ class Quadtree(object):
 
         self._initTree()
         self._log.info('Changed to split method %s' % split_method)
-        self.splitMethodChanged._notify()
 
     def _initTree(self):
         t0 = time.time()
@@ -300,7 +299,7 @@ class Quadtree(object):
 
         self._log.debug('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                               time.time()-t0))
-        self.treeUpdate._notify()
+        self.evParamUpdate.notify()
 
     @property
     def epsilon(self):
@@ -321,7 +320,7 @@ class Quadtree(object):
         self.leafs = None
         self.config.epsilon = value
 
-        self.treeUpdate._notify()
+        self.evParamUpdate.notify()
         return
 
     @property_cached
@@ -350,7 +349,7 @@ class Quadtree(object):
 
         self.leafs = None
         self.config.nan_allowed = value
-        self.treeUpdate._notify()
+        self.evParamUpdate.notify()
 
     @property
     def tile_size_min(self):
@@ -383,7 +382,7 @@ class Quadtree(object):
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
         self.leafs = None
-        self.treeUpdate._notify()
+        self.evParamUpdate.notify()
 
     @property_cached
     def _tile_size_lim_px(self):

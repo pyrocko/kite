@@ -98,12 +98,15 @@ class Subject(object):
         except:
             raise AttributeError('%s was not subscribed to ')
 
-    def _notify(self, msg=''):
+    def notify(self, msg=''):
         for l in self._listeners:
             if 'msg' in l.__code__.co_varnames:
                 l(msg)
             else:
                 l()
+
+    def _notify(self, msg=''):
+        return self.notify(self, msg)
 
 
 __all__ = '''

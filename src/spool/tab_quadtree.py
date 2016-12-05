@@ -51,8 +51,8 @@ class QKiteQuadtreePlot(QKitePlot):
         self.addItem(self.focal_points)
         self.updateFocalPoints()
 
-        self.quadtree.treeUpdate.subscribe(self.update)
-        self.quadtree.treeUpdate.subscribe(self.updateFocalPoints)
+        self.quadtree.evParamUpdate.subscribe(self.update)
+        self.quadtree.evParamUpdate.subscribe(self.updateFocalPoints)
 
     def updateFocalPoints(self):
         self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
@@ -68,7 +68,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.parameters = ['nleafs', 'nnodes', 'epsilon_limit']
 
         QKiteParameterGroup.__init__(self, self.quadtree, **kwargs)
-        self.quadtree.treeUpdate.subscribe(self.updateValues)
+        self.quadtree.evParamUpdate.subscribe(self.updateValues)
 
         # Epsilon control
         def updateEpsilon():
