@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1154</width>
-    <height>679</height>
+    <width>1164</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,8 +18,8 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>700</width>
-    <height>500</height>
+    <width>1000</width>
+    <height>700</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -103,7 +103,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1154</width>
+     <width>1164</width>
      <height>21</height>
     </rect>
    </property>
@@ -115,6 +115,8 @@
     <addaction name="actionLoad_config"/>
     <addaction name="actionSave_YAML"/>
     <addaction name="actionSave_Scene"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_Quadtree_CSV"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -191,6 +193,11 @@
   <action name="actionTranssect">
    <property name="text">
     <string>Transsect</string>
+   </property>
+  </action>
+  <action name="actionExport_Quadtree_CSV">
+   <property name="text">
+    <string>Export Quadtree CSV</string>
    </property>
   </action>
  </widget>

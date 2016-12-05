@@ -29,7 +29,7 @@ class QKiteCovariance(QKiteView):
                 QKiteStructureFunction(self.main_widget),
         }
 
-        self.parameters = [QKiteParamCovariance(spool)]
+        self.parameters = [QKiteParamCovariance(spool, expanded=False)]
 
         QKiteView.__init__(self)
 
@@ -159,7 +159,6 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.legend.items[-1][1].setText(
             self.legend.template.format(
                 *self.covariance.covariance_model))
-
 
 
 class QKiteStructureFunction(_QKiteCovariancePlot):

@@ -304,7 +304,7 @@ class Quadtree(object):
 
     @property
     def epsilon(self):
-        """ Threshold for quadtree splitting its ``QuadNode``
+        """ Threshold for quadtree splitting the :py:class:`QuadNode`
         """
         return self.config.epsilon
 
@@ -508,6 +508,21 @@ class Quadtree(object):
         """Not Implemented
         """
         raise NotImplementedError
+
+    def export(self, filename):
+        """Export quadtree leafs to ``filename``
+
+        :param filename: export to filename
+        :type filename: {string}
+        """
+        with open(filename, mode='w') as qt_export:
+            qt_export.write(
+                '# node_id, focal_point_E, focal_point_N, mean_displacement, '
+                'median_displacement, absolute_weight\n')
+            for l in self.leafs:
+                qt_export.write(
+                    '{l.id}, {l.focal_point[0]}, {l.focal_point[1]}, '
+                    '{l.mean}, {l.median}, {l.weight}\n'.format(l=l))
 
 
 __all__ = ['Quadtree', 'QuadtreeConfig']

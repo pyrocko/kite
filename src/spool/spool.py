@@ -10,6 +10,13 @@ import pyqtgraph as pg
 from ..meta import Subject
 
 
+def validateFilename(filename):
+    filedir = path.dirname(filename)
+    if filename == '' or filedir == '' or path.isdir(filename):
+        return False
+    return True
+
+
 class SpoolMainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
@@ -17,10 +24,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
         self.actionSave_YAML.triggered.connect(self.onSaveYaml)
         self.actionSave_Scene.triggered.connect(self.onSaveData)
+        self.actionExport_Quadtree_CSV.triggered.connect(
+            self.onExportQuadtreeCSV)
 
         self.scene = None
         self.views = []
         self.ptree = QKiteParameterTree(showHeader=True)
+        self.ptree.resize(500, 500)
 
         self.splitter.insertWidget(0, self.ptree)
 
@@ -50,18 +60,25 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.views.append(view)
 
     def onSaveYaml(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='*.yml', caption='Save scene YAML config')
-        if filename == '':
+        if not validateFilename(filename):
             return
         self.scene.save_config(filename)
 
     def onSaveData(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='*', caption='Save scene')
-        if filename == '':
+        if not validateFilename(filename):
             return
         self.scene.save(filename)
+
+    def onExportQuadtreeCSV(self):
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            filter='*.csv', caption='Export Quadtree CSV')
+        if not validateFilename(filename):
+            return
+        self.scene.quadtree.export(filename)
 
     def exit(self):
         pass
