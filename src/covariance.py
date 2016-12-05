@@ -448,7 +448,7 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
-        self.covarianceUpdate.notify()
+        self.evCovarianceUpdate.notify()
 
     @variance.getter
     def variance(self):

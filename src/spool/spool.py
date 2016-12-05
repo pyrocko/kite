@@ -5,7 +5,9 @@ from .tab_quadtree import QKiteQuadtree
 from .tab_covariance import QKiteCovariance
 from .utils_qt import loadUi
 from ..meta import Subject
+
 from os import path
+import logging
 import pyqtgraph as pg
 
 
@@ -16,10 +18,60 @@ def validateFilename(filename):
     return True
 
 
+class Spool(QtGui.QApplication):
+    def __init__(self, scene=None):
+        QtGui.QApplication.__init__(self, ['KiteSpool'])
+        # self.setStyle('plastique')
+        splash_img = QtGui.QPixmap(
+            path.join(path.dirname(path.realpath(__file__)),
+                      'ui/boxkite-sketch.jpg'))\
+            .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
+        splash = QtGui.QSplashScreen(splash_img,
+                                     QtCore.Qt.WindowStaysOnTopHint)
+
+        def updateSplashMessage(msg=''):
+            splash.showMessage("Loading kite.%s ..." % msg.title(),
+                               QtCore.Qt.AlignBottom)
+
+        updateSplashMessage('Scene')
+        splash.show()
+        self.processEvents()
+
+        self.aboutToQuit.connect(self.deleteLater)
+
+        self.spool_win = SpoolMainWindow()
+        self.spool_win.loadingModule.subscribe(updateSplashMessage)
+
+        self.spool_win.actionExit.triggered.connect(self.exit)
+
+        if scene is not None:
+            self.addScene(scene)
+
+        self.spool_win.show()
+        splash.finish(self.spool_win)
+        self.exec_()
+
+    def addScene(self, scene):
+        return self.spool_win.addScene(scene)
+
+    def __del__(self):
+        pass
+
+
 class SpoolMainWindow(QtGui.QMainWindow):
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
+
+        self.scene = None
+        self.views = []
+
+        self.ptree = QKiteParameterTree(showHeader=True)
+        self.ptree.resize(500, 500)
+        self.splitter.insertWidget(0, self.ptree)
+
+        self.log_model = SceneLogModel()
+        self.log = SceneLog(self)
 
         self.actionSave_YAML.triggered.connect(self.onSaveYaml)
         self.actionSave_Scene.triggered.connect(self.onSaveData)
@@ -28,13 +80,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionAbout_Spool.triggered.connect(self.onAbout)
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
-
-        self.scene = None
-        self.views = []
-        self.ptree = QKiteParameterTree(showHeader=True)
-        self.ptree.resize(500, 500)
-
-        self.splitter.insertWidget(0, self.ptree)
+        self.actionLog.triggered.connect(self.log.show)
 
         self.loadingModule = Subject()
 
@@ -46,6 +92,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addScene(self, scene):
         self.scene = scene
+        self.log_model.attachScene(self.scene)
+
         for v in [QKiteScene, QKiteQuadtree, QKiteCovariance]:
             self.addView(v)
 
@@ -96,44 +144,70 @@ class QKiteParameterTree(pg.parametertree.ParameterTree):
     pass
 
 
-class Spool(QtGui.QApplication):
-    def __init__(self, scene=None):
-        QtGui.QApplication.__init__(self, ['KiteSpool'])
-        # self.setStyle('plastique')
-        splash_img = QtGui.QPixmap(
-            path.join(path.dirname(path.realpath(__file__)),
-                      'ui/boxkite-sketch.jpg'))\
-            .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        splash = QtGui.QSplashScreen(splash_img,
-                                     QtCore.Qt.WindowStaysOnTopHint)
+class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
+    log_records = []
 
-        def updateSplashMessage(msg=''):
-            splash.showMessage("Loading kite.%s ..." % msg.title(),
-                               QtCore.Qt.AlignBottom)
+    def __init__(self, *args, **kwargs):
+        QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
+        logging.Handler.__init__(self)
+        self.setLevel(logging.DEBUG)
 
-        updateSplashMessage('Scene')
-        splash.show()
-        self.processEvents()
+    def attachScene(self, scene):
+        self.scene = scene
+        self.scene._log.addHandler(self)
 
-        self.aboutToQuit.connect(self.deleteLater)
+    def detachScene(self, scene):
+        self.scene._log.removeHandler(self)
+        self.scene = None
 
-        self.spool_win = SpoolMainWindow()
-        self.spool_win.loadingModule.subscribe(updateSplashMessage)
+    def data(self, idx, role):
+        if role != QtCore.Qt.DisplayRole:
+            return
 
-        self.spool_win.actionExit.triggered.connect(self.exit)
+        rec = self.log_records[idx.row()]
+        if idx.column() == 0:
+            return rec.levelname
+        elif idx.column() == 1:
+            return rec.name
+        elif idx.column() == 2:
+            return rec.message
 
-        if scene is not None:
-            self.addScene(scene)
+    def rowCount(self, idx):
+        return len(self.log_records)
 
-        self.spool_win.show()
-        splash.finish(self.spool_win)
-        self.exec_()
+    def columnCount(self, idx):
+        return 3
 
-    def addScene(self, scene):
-        return self.spool_win.addScene(scene)
+    def emit(self, record):
+        self.log_records.append(record)
+        self.beginInsertRows(QtCore.QModelIndex(),
+                             len(self.log_records), len(self.log_records))
+        self.endInsertRows()
 
-    def __del__(self):
-        pass
+
+class SceneLogDelegate(QtGui.QStyledItemDelegate):
+    icons = {
+        50: None,
+        40: None,
+        30: None,
+        20: None,
+    }
+
+    def paint(self, painter, option, idx):
+        painter.drawText(option.rect, option.displayAlignment, idx.data())
+        return
+
+
+class SceneLog(QtGui.QDialog):
+    def __init__(self, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+
+        log_ui = path.join(path.dirname(path.realpath(__file__)),
+                           'ui/logging.ui')
+        loadUi(log_ui, baseinstance=self)
+
+        self.tableView.setModel(parent.log_model)
+        # self.tableView.setItemDelegate(SceneLogDelegate())
 
 
 __all__ = '''

@@ -132,12 +132,16 @@
      <string>Tools</string>
     </property>
     <addaction name="actionTranssect"/>
+    <addaction name="actionLog"/>
    </widget>
    <addaction name="menuActions"/>
    <addaction name="menuTools"/>
    <addaction name="menuAbout"/>
   </widget>
   <action name="actionExit">
+   <property name="icon">
+    <iconset theme="application-exit"/>
+   </property>
    <property name="text">
     <string>Exit</string>
    </property>
@@ -149,6 +153,9 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset theme="help-about"/>
+   </property>
    <property name="text">
     <string>About Spool</string>
    </property>
@@ -156,6 +163,9 @@
   <action name="actionHelp">
    <property name="enabled">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="help-contents"/>
    </property>
    <property name="text">
     <string>Online Help</string>
@@ -176,6 +186,9 @@
    </property>
   </action>
   <action name="actionSave_YAML">
+   <property name="icon">
+    <iconset theme="document-save"/>
+   </property>
    <property name="text">
     <string>Save scene config (*.yml)</string>
    </property>
@@ -214,8 +227,16 @@
    </property>
   </action>
   <action name="actionExport_Quadtree_CSV">
+   <property name="icon">
+    <iconset theme="application-export"/>
+   </property>
    <property name="text">
     <string>Export Quadtree CSV</string>
+   </property>
+  </action>
+  <action name="actionLog">
+   <property name="text">
+    <string>Scene.log</string>
    </property>
   </action>
  </widget>

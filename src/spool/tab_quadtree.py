@@ -55,8 +55,11 @@ class QKiteQuadtreePlot(QKitePlot):
         self.quadtree.evParamUpdate.subscribe(self.updateFocalPoints)
 
     def updateFocalPoints(self):
-        self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
-                                  pxMode=True)
+        if self.quadtree.leaf_focal_points.size == 0:
+            self.focal_points.clear()
+        else:
+            self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
+                                      pxMode=True)
 
 
 class QKiteParamQuadtree(QKiteParameterGroup):
