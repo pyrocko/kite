@@ -29,7 +29,7 @@ class QKiteScene(QKiteView):
         self.parameters[-1].addChild(
             QKiteParamSceneMeta(spool, expanded=False))
 
-        self.dialogTransect = QKiteToolTransect(self.main_widget)
+        self.dialogTransect = QKiteToolTransect(self.main_widget, spool)
 
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
@@ -56,11 +56,11 @@ class QKiteScenePlot(QKitePlot):
 
 
 class QKiteToolTransect(QtGui.QDialog):
-    def __init__(self, plot):
-        QtGui.QDialog.__init__(self)
-        log_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/transect.ui')
-        loadUi(log_ui, baseinstance=self)
+    def __init__(self, plot, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        trans_ui = path.join(path.dirname(path.realpath(__file__)),
+                             'ui/transect.ui')
+        loadUi(trans_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
         self.createButton.setIcon(self.style().standardPixmap(
