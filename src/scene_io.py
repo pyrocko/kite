@@ -139,9 +139,9 @@ class Gamma(SceneIO):
     @staticmethod
     def _getParameterFile(filename):
         path = os.path.dirname(os.path.realpath(filename))
-        par_files = glob.glob('%s/*.gc_par' % path)
+        par_files = glob.glob('%s/*par' % path)
         if len(par_files) == 0:
-            raise ImportError('Could not find Gamma parameter file (*.gc_par)')
+            raise ImportError('Could not find Gamma parameter file (*par)')
         return par_files[0]
 
     @staticmethod

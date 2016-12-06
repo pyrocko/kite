@@ -21,7 +21,9 @@ def derampMatrix(displ):
 
     rx = (ix * dx)
     ry = (iy * dy)
-    return displ - (rx[num.newaxis, :] + ry[:, num.newaxis]) - (cx+cy)/2
+    data = displ - (rx[num.newaxis, :] + ry[:, num.newaxis])
+    data -= num.nanmean(data)
+    return data
 
 
 def derampMatrix2(displ):
