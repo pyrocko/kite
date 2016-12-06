@@ -290,7 +290,7 @@ class Quadtree(object):
         self.epsilon = self._epsilon_init
 
         self._initTree()
-        self._log.info('Changed to split method %s' % split_method)
+        self._log.debug('Changed to split method %s' % split_method)
 
     def _initTree(self):
         t0 = time.time()
@@ -343,7 +343,9 @@ class Quadtree(object):
     @nan_allowed.setter
     def nan_allowed(self, value):
         if (value > 1. or value < 0.) and value != -9999.:
-            raise AttributeError('NaN fraction must be 0 <= nan_allowed <=1')
+            self._log.warning('NaN fraction must be 0 <= nan_allowed <=1')
+            return
+
         if value == 1.:
             value = -9999.
 
@@ -484,6 +486,7 @@ class Quadtree(object):
             2, num.ceil(num.log(num.min(self._displacement.shape))
                         / num.log(2)))
         nx, ny = num.ceil(num.array(self._displacement.shape)/init_length)
+        self._log.debug('Creating %d base nodes' % (nx * ny))
 
         for ix in xrange(int(nx)):
             for iy in xrange(int(ny)):
@@ -514,6 +517,7 @@ class Quadtree(object):
         :param filename: export to filename
         :type filename: {string}
         """
+        self._log.debug('Exporting quadtree to %s' % filename)
         with open(filename, mode='w') as qt_export:
             qt_export.write(
                 '# node_id, focal_point_E, focal_point_N, mean_displacement, '
