@@ -138,9 +138,6 @@
        <property name="text">
         <string>Close</string>
        </property>
-       <property name="icon">
-        <iconset theme="SP_DialogCloseButton"/>
-       </property>
        <property name="shortcut">
         <string>Esc</string>
        </property>
@@ -154,7 +151,7 @@
  <connections>
   <connection>
    <sender>closeButton</sender>
-   <signal>clicked()</signal>
+   <signal>released()</signal>
    <receiver>Logging</receiver>
    <slot>close()</slot>
    <hints>
