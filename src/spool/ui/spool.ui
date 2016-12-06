@@ -131,7 +131,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionTranssect"/>
+    <addaction name="actionTransect"/>
     <addaction name="actionLog"/>
    </widget>
    <addaction name="menuActions"/>
@@ -140,7 +140,9 @@
   </widget>
   <action name="actionExit">
    <property name="icon">
-    <iconset theme="application-exit"/>
+    <iconset theme="application-exit">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -154,7 +156,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="help-about"/>
+    <iconset theme="help-about">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>About Spool</string>
@@ -165,7 +169,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="help-contents"/>
+    <iconset theme="help-contents">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Online Help</string>
@@ -187,7 +193,9 @@
   </action>
   <action name="actionSave_YAML">
    <property name="icon">
-    <iconset theme="document-save"/>
+    <iconset theme="document-save">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Save scene config (*.yml)</string>
@@ -218,17 +226,22 @@
     <string>Load scene config (*.yml)</string>
    </property>
   </action>
-  <action name="actionTranssect">
+  <action name="actionTransect">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Transsect</string>
+    <string notr="true">Transect</string>
+   </property>
+   <property name="iconText">
+    <string>Scene Transect</string>
    </property>
   </action>
   <action name="actionExport_Quadtree_CSV">
    <property name="icon">
-    <iconset theme="application-export"/>
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Export Quadtree CSV</string>
@@ -237,6 +250,9 @@
   <action name="actionLog">
    <property name="text">
     <string>Scene.log</string>
+   </property>
+   <property name="iconText">
+    <string>Log</string>
    </property>
   </action>
  </widget>

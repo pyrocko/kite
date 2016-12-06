@@ -8,7 +8,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph import dockarea
 from .utils_qt import _viridis_data
 
-__all__ = ['QKiteDock', 'QKitePlot', 'QKiteToolColormap',
+__all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
            'QKiteParameterGroup']
 
 

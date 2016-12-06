@@ -1,11 +1,13 @@
 #!/usr/bin/python2
-from PySide import QtGui
 import pyqtgraph as pg
 import numpy as num
-
 import pyqtgraph.parametertree.parameterTypes as pTypes
+
 from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from .utils_qt import loadUi
 from collections import OrderedDict
+from PySide import QtGui
+from os import path
 
 __all__ = ['QKiteScene']
 
@@ -26,6 +28,11 @@ class QKiteScene(QKiteView):
             QKiteParamSceneFrame(spool, expanded=False))
         self.parameters[-1].addChild(
             QKiteParamSceneMeta(spool, expanded=False))
+
+        self.dialogTransect = QKiteToolTransect(self.main_widget)
+
+        spool.actionTransect.triggered.connect(self.dialogTransect.show)
+        spool.actionTransect.setEnabled(True)
 
         QKiteView.__init__(self)
 
@@ -48,9 +55,13 @@ class QKiteScenePlot(QKitePlot):
         QKitePlot.__init__(self, container=scene)
 
 
-class QKiteToolTransect(QtGui.QWidget):
+class QKiteToolTransect(QtGui.QDialog):
     def __init__(self, plot):
-        QtGui.QWidget.__init__(self)
+        QtGui.QDialog.__init__(self)
+        log_ui = path.join(path.dirname(path.realpath(__file__)),
+                           'ui/transect.ui')
+        loadUi(log_ui, baseinstance=self)
+
         self.plot = plot
         self.poly_line = None
 
@@ -66,16 +77,11 @@ class QKiteToolTransect(QtGui.QWidget):
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
 
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.plt_wdgt)
-        self.layout.addWidget(self.getPolyControl())
-
+        self.layout().addWidget(self.plt_wdgt)
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
-        # self.plot.image.sigImageChanged.connect(self.addPolyLine)
+        self.getPolyControl()
 
     def getPolyControl(self):
-        wdgt = QtGui.QWidget()
-
         def addPolyLine():
             [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
             self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
@@ -96,16 +102,8 @@ class QKiteToolTransect(QtGui.QWidget):
             except Exception as e:
                 print e
 
-        btn_addPoly = QtGui.QPushButton('Create Transsect')
-        btn_addPoly.clicked.connect(addPolyLine)
-        btn_clearPoly = QtGui.QPushButton('Clear Transsect')
-        btn_clearPoly.clicked.connect(clearPolyLine)
-
-        layout = QtGui.QHBoxLayout(wdgt)
-        layout.addWidget(btn_addPoly)
-        layout.addWidget(btn_clearPoly)
-
-        return wdgt
+        self.createButton.released.connect(addPolyLine)
+        self.removeButton.released.connect(clearPolyLine)
 
     def updateTransPlot(self):
         if self.poly_line is None:

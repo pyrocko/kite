@@ -348,13 +348,7 @@ class Covariance(object):
 
         try:
             return sp.optimize.curve_fit(modelPowerspec,
-                                         k[regime], power_spec[regime],
-                                         p0=None, sigma=None,
-                                         absolute_sigma=False,
-                                         check_finite=True,
-                                         bounds=(-num.inf, num.inf),
-                                         method=None,
-                                         jac=None)
+                                         k[regime], power_spec[regime])
         except RuntimeError:
             self._log.warning('Could not fit the powerspectrum model.')
 
