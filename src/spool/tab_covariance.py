@@ -2,10 +2,13 @@
 from __future__ import division, absolute_import, print_function, \
     unicode_literals
 import numpy as num
-
-from PySide import QtGui, QtCore
 import pyqtgraph as pg
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
+
+from os import path
+from PySide import QtGui, QtCore
+from .common import (QKiteView, QKitePlot, QKiteParameterGroup,
+                     QKiteToolColormap)
+from .utils_qt import loadUi
 from ..covariance import modelCovariance
 
 analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
@@ -30,6 +33,10 @@ class QKiteCovariance(QKiteView):
         }
 
         self.parameters = [QKiteParamCovariance(spool, expanded=False)]
+
+        self.dialogCovariance = QKiteToolCovariance(covariance, spool)
+        spool.actionCovariance.triggered.connect(self.dialogCovariance.show)
+        spool.actionCovariance.setEnabled(True)
 
         QKiteView.__init__(self)
 
@@ -191,6 +198,41 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
     def changeVariance(self, inf_line):
         self.covariance.variance = inf_line.getYPos()
+
+
+class QKiteToolCovariance(QtGui.QDialog):
+    class noise_plot(QKitePlot):
+        def __init__(self, covariance):
+            self.components_available = {
+                'noise_data': [
+                    'Displacement',
+                    lambda cov: self.noise_data_masked(cov)
+                    ]}
+
+            self._component = 'noise_data'
+            QKitePlot.__init__(self, container=covariance)
+            self.covariance = self.container
+            self.covariance.evCovarianceUpdate.subscribe(self.update)
+
+        @staticmethod
+        def noise_data_masked(covariance):
+            data = covariance.noise_data.copy()
+            data[data == 0.] = num.nan
+            return data
+
+    def __init__(self, covariance, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+
+        cov_ui = path.join(path.dirname(path.realpath(__file__)),
+                           'ui/covariance.ui')
+        loadUi(cov_ui, baseinstance=self)
+        self.closeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogCloseButton))
+
+        noise_patch = self.noise_plot(covariance)
+        noise_colormap = QKiteToolColormap(noise_patch)
+        self.horizontalLayoutPlot.addWidget(noise_patch)
+        self.horizontalLayoutPlot.addWidget(noise_colormap)
 
 
 class QKiteParamCovariance(QKiteParameterGroup):

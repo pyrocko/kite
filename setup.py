@@ -46,6 +46,7 @@ setup(
                                     'src/spool/ui/about.ui',
                                     'src/spool/ui/logging.ui',
                                     'src/spool/ui/transect.ui',
+                                    'src/spool/ui/covariance.ui',
                                     'src/spool/ui/boxkite-sketch.jpg'])],
     entry_points={
         'console_scripts': ['spool = kite.spool.__main__:main'],

@@ -11,22 +11,17 @@ def derampMatrix(displ):
         raise TypeError('Displacement has to be 2-dim array')
     mx = num.nanmedian(displ, axis=0)
     my = num.nanmedian(displ, axis=1)
-    cx = num.nanmean(mx)
-    cy = num.nanmean(my)
-    mx -= cx
-    my -= cy
-    mx[num.isnan(mx)] = 0.
-    my[num.isnan(my)] = 0.
+    mx[~num.isnan(mx)]
+    my[~num.isnan(my)]
 
-    ix = num.arange(mx.size)
-    iy = num.arange(my.size)
-    dx, _, _, _, _ = sp.stats.linregress(ix, mx)
-    dy, _, _, _, _ = sp.stats.linregress(iy, my)
+    ix = num.arange(mx.size)[~num.isnan(mx)]
+    iy = num.arange(my.size)[~num.isnan(my)]
+    dx, cx, _, _, _ = sp.stats.linregress(ix, mx)
+    dy, cy, _, _, _ = sp.stats.linregress(iy, my)
 
-    rx = (ix * dx + cx)
-    ry = (iy * dy + cy)
-
-    return displ - rx[num.newaxis, :] - ry[:, num.newaxis]
+    rx = (ix * dx)
+    ry = (iy * dy)
+    return displ - (rx[num.newaxis, :] + ry[:, num.newaxis]) - (cx+cy)/2
 
 
 def derampMatrix2(displ):

@@ -132,6 +132,9 @@
      <string>Tools</string>
     </property>
     <addaction name="actionTransect"/>
+    <addaction name="separator"/>
+    <addaction name="actionCovariance"/>
+    <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
    <addaction name="menuActions"/>
@@ -249,10 +252,24 @@
   </action>
   <action name="actionLog">
    <property name="text">
-    <string>Scene.log</string>
+    <string>Log</string>
    </property>
    <property name="iconText">
     <string>Log</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene._log</string>
+   </property>
+  </action>
+  <action name="actionCovariance">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Covariance Noise Data</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.Covariance noise_data</string>
    </property>
   </action>
  </widget>
