@@ -61,6 +61,12 @@ class QKiteToolTransect(QtGui.QDialog):
         log_ui = path.join(path.dirname(path.realpath(__file__)),
                            'ui/transect.ui')
         loadUi(log_ui, baseinstance=self)
+        self.closeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogCloseButton))
+        self.createButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_ArrowUp))
+        self.removeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None
@@ -72,38 +78,38 @@ class QKiteToolTransect(QtGui.QDialog):
 
         self.plt_wdgt = pg.PlotWidget()
         self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
-                                left={'Displacement', 'm'})
+                                left='Displacement [m]')
         self.plt_wdgt.showGrid(True, True, alpha=.5)
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
 
         self.layout().addWidget(self.plt_wdgt)
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
-        self.getPolyControl()
+        self.createButton.released.connect(self.addPolyLine)
+        self.removeButton.released.connect(self.removePolyLine)
 
-    def getPolyControl(self):
-        def addPolyLine():
-            [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
-            self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
-                                                        ymin+(ymax-ymin)*.4),
-                                                       (xmin+(xmax-xmin)*.6,
-                                                        ymin+(ymax-ymin)*.6)],
-                                            pen=pg.mkPen('g', width=2))
-            self.plot.addItem(self.poly_line)
-            self.updateTransPlot()
-            self.poly_line.sigRegionChangeFinished.connect(
-                self.updateTransPlot)
+    def addPolyLine(self):
+        [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
+        self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
+                                                    ymin+(ymax-ymin)*.4),
+                                                   (xmin+(xmax-xmin)*.6,
+                                                    ymin+(ymax-ymin)*.6)],
+                                        pen=pg.mkPen('g', width=2))
+        self.plot.addItem(self.poly_line)
+        self.updateTransPlot()
+        self.poly_line.sigRegionChangeFinished.connect(
+            self.updateTransPlot)
 
-        def clearPolyLine():
-            try:
-                self.plot.removeItem(self.poly_line)
-                self.poly_line = None
-                self.updateTransPlot()
-            except Exception as e:
-                print e
+    def removePolyLine(self):
+        if self.poly_line is None:
+            return
 
-        self.createButton.released.connect(addPolyLine)
-        self.removeButton.released.connect(clearPolyLine)
+        self.plot.removeItem(self.poly_line)
+        self.poly_line = None
+        self.updateTransPlot()
+
+    def closeEvent(self, event):
+        self.removePolyLine()
 
     def updateTransPlot(self):
         if self.poly_line is None:

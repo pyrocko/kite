@@ -122,7 +122,7 @@ class QKitePlot(pg.PlotWidget):
 
     def mouseMoved(self, event=None):
         if event is None:
-            self.hint_text.setText('East %d m | North %d m | %s %.2f'
+            self.hint_text.setText('East %d m | North %d m | %s %.3f'
                                    % (0, 0, self.component.title(), 0))
             return
         pos = event[0]
@@ -133,14 +133,12 @@ class QKitePlot(pg.PlotWidget):
             img_pos = self.image.mapFromScene(event).data
             z = self.image.image[int(img_pos().x()),
                                  int(img_pos().y())]
-            if self.component == 'displacement':
-                z *= 1e2
 
             self.hint_text.setText(
                 self.hint_text.template.format(
                     north=map_pos.x(), east=map_pos.y(),
                     measure=self.component.title(),
-                    z=z, spaces='05' if not num.isnan(z) else '03'))
+                    z=z, spaces='03' if not num.isnan(z) else '03'))
             return
 
 
