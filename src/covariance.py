@@ -236,7 +236,7 @@ class Covariance(object):
 
         t0 = time.time()
         ma, mb = self.covariance_model
-
+        self._log.debug('Calculating covariance matrix, %s mode' % method)
         if method == 'focal':
             dist_matrix = num.zeros((nl, nl))
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))

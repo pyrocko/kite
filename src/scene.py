@@ -58,6 +58,7 @@ class Frame(object):
     """
     def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
+        self._log = scene._log.getChild('Frame')
         self.config = config
         self._scene.evSceneChanged.subscribe(self._updateExtent)
 
@@ -249,9 +250,9 @@ class Scene(object):
     evSceneChanged = Subject()
 
     def __init__(self, config=SceneConfig()):
+        self._setLoggingUp()
         self.config = config
         self.meta = self.config.meta
-        self._log = logging.getLogger('Scene')
 
         self._displacement = None
         self._phi = None
@@ -260,6 +261,21 @@ class Scene(object):
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
         self.frame = Frame(scene=self, config=self.config.frame)
+
+    def _setLoggingUp(self):
+        logging.basicConfig(level=logging.DEBUG)
+
+        self._log = logging.getLogger('Scene')
+        self._log.setLevel(logging.DEBUG)
+
+        self._log_stream = None
+        for l in self._log.parent.handlers:
+            if isinstance(l, logging.StreamHandler):
+                self._log_stream = l
+        if self._log_stream is None:
+            self._log_stream = logging.StreamHandler()
+            self._log.addHandler(self._log_stream)
+        self._log_stream.setLevel(logging.INFO)
 
     @property
     def displacement(self):

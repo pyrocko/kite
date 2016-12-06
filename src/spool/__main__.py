@@ -31,7 +31,7 @@ Supported formats are:
  * GMTSAR (*.grd and binary *.los.* file)
  * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data''',
                         default=None)
-    parser.add_argument('--debug', type=str, help='Debug level (CRITICAL,'
+    parser.add_argument('--log-lvl', type=str, help='Debug level (CRITICAL,'
                         'ERROR, WARNING, INFO, DEBUG)',
                         default='INFO')
     ns = parser.parse_args(args)
@@ -39,5 +39,5 @@ Supported formats are:
         parser.print_help()
         sys.exit(0)
     sc = Scene.import_file(ns.file[0])
-    sc._log.setLevel(ns.debug)
+    sc._log_stream.setLevel(ns.log_lvl)
     sc.spool()
