@@ -188,6 +188,22 @@ class Gamma(SceneIO):
         except ImportError:
             return False
 
+    def _getAngle(self, filename, pattern):
+        path = os.path.dirname(os.path.realpath(filename))
+        phi_files = glob.glob('%s/%s' % (path, pattern))
+        if len(phi_files) == 0:
+            self._log.warning('Could not find %s file, defaulting to 0.'
+                              % pattern)
+            return 0.
+        elif len(phi_files) > 1:
+            self._log.warning('Found multiple %s files, defaulting to 0.'
+                              % pattern)
+            return 0.
+
+        filename = phi_files[0]
+        self._log.debug('Found %s in %s' % (pattern, filename))
+        return num.memmap(filename, mode='r', dtype='>f4')
+
     def read(self, filename, **kwargs):
         """Read in GAMMA file
 
@@ -202,6 +218,7 @@ class Gamma(SceneIO):
         par_file = kwargs.pop('par_file',
                               self._getParameterFile(filename))
         par = self._parseParameterFile(par_file)
+        fill = None
 
         try:
             nrows = int(par['width'])
@@ -220,14 +237,25 @@ class Gamma(SceneIO):
         displ = displ.reshape(nlines, nrows)
         displ[displ == -0.] = num.nan
 
+        phi = self._getAngle(filename, '*phi*')
+        theta = self._getAngle(filename, '*theta*')
+        theta = num.cos(theta)
+
+        if fill is not None:
+            theta = num.append(theta, fill)
+            phi = num.append(phi, fill)
+
+        theta = theta.reshape(nlines, nrows)
+        phi = phi.reshape(nlines, nrows)
+
         # LatLon UTM Conversion
         self.container['displacement'] = displ
         self.container['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
         self.container['llLon'] = par['corner_lon']
         self.container['dLon'] = par['post_lon']
         self.container['dLat'] = par['post_lat']
-        self.container['theta'] = 0.
-        self.container['phi'] = 0.
+        self.container['theta'] = theta
+        self.container['phi'] = phi
         return self.container
 
 

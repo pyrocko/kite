@@ -29,7 +29,7 @@ class Spool(QtGui.QApplication):
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
-                      'ui/radar_splash.png'))\
+                      'ui/boxkite-sketch.jpg'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         splash = QtGui.QSplashScreen(splash_img,
                                      QtCore.Qt.WindowStaysOnTopHint)
@@ -64,6 +64,8 @@ class Spool(QtGui.QApplication):
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
+    evSceneChanged = Subject()
+
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()

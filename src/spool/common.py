@@ -63,12 +63,13 @@ class QKitePlot(pg.PlotWidget):
             'vlength': '03',
             'precision': '3',
         }
+
         self.hint_text = pg.LabelItem(text='',
                                       justify='right', size='8pt',
                                       parent=self.plotItem)
         self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
         self.hint_text.template =\
-            '<span style="font-family: monospace; color: #fff">' \
+            '<span style="font-family: monospace; color: #fff;">'\
             'East {east:08.2f} m | North {north:08.2f} m | '\
             '{measure} {value:{length}.{precision}f}</span>'
 
