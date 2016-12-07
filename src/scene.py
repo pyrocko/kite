@@ -380,8 +380,7 @@ class Scene(object):
         from kite.spool import Spool
         return Spool(scene=self)
 
-    @classmethod
-    def import_file(cls, path, **kwargs):
+    def import_file(*args, **kwargs):
         """Import displacement data from foreign file format.
 
         :param path: Filename of resource to import
@@ -392,12 +391,16 @@ class Scene(object):
         :rtype: {:py:class:`kite.Scene`}
         :raises: TypeError
         """
-        import os
+        if len(args) == 1:
+            scene = Scene()
+            path = str(args[0])
+        elif len(args) == 2 and isinstance(args[0], Scene):
+            scene = args[0]
+            path = args[1]
 
+        import os
         if not os.path.isfile(path) or os.path.isdir(path):
             raise ImportError('File %s does not exist!' % path)
-
-        scene = cls()
         data = None
 
         for mod in scene_io.__all__:
@@ -420,11 +423,11 @@ class Scene(object):
         scene._testImport()
         return scene
 
-    import_file.__func__.__doc__ += \
-        '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
-    for mod in scene_io.__all__:
-        import_file.__func__.__doc__ += '\n**%s**\n\n' % mod
-        import_file.__func__.__doc__ += eval('scene_io.%s.__doc__' % mod)
+    # import_file.__func__.__doc__ += \
+    #     '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
+    # for mod in scene_io.__all__:
+    #     import_file.__func__.__doc__ += '\n**%s**\n\n' % mod
+    #     import_file.__func__.__doc__ += eval('scene_io.%s.__doc__' % mod)
 
     def _testImport(self):
         try:

@@ -38,6 +38,7 @@ Supported formats are:
     if ns.file[0] is None:
         parser.print_help()
         sys.exit(0)
-    sc = Scene.import_file(ns.file[0])
+    sc = Scene()
     sc._log_stream.setLevel(ns.log_lvl)
+    sc.import_file(ns.file[0])
     sc.spool()
