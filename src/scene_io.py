@@ -73,7 +73,7 @@ class Matlab(SceneIO):
         Scene.frame.y      ``yy``
         ================== ====================
     """
-    def validate(self, filename):
+    def validate(self, filename, **kwargs):
         if filename[-4:] == '.mat':
             return True
         else:
@@ -86,7 +86,7 @@ class Matlab(SceneIO):
         except ValueError:
             return False
 
-    def read(self, filename):
+    def read(self, filename, **kwargs):
         import utm
 
         mat = scipy.io.loadmat(filename)
@@ -135,23 +135,32 @@ class Gamma(SceneIO):
 
         * Binary file from gamma (``*``)
         * Parameter file (``*.par``)
+
+    invoke with Gamma.read(filename, par_file='123.1a.seg_par')
     """
-    @staticmethod
-    def _getParameterFile(filename):
-        path = os.path.dirname(os.path.realpath(filename))
+    def _getParameterFile(self, path):
+        path = os.path.dirname(os.path.realpath(path))
         par_files = glob.glob('%s/*par' % path)
-        if len(par_files) == 0:
-            raise ImportError('Could not find Gamma parameter file (*par)')
-        return par_files[0]
+
+        for file in par_files:
+            try:
+                self._parseParameterFile(file)
+                self._log.debug('Found parameter file %s' % file)
+                return file
+            except ImportError:
+                continue
+        raise ImportError('Could not find Gamma parameter file (*par)')
 
     @staticmethod
-    def _parseParameterFile(parameter_file):
+    def _parseParameterFile(par_file):
         import re
 
-        parameters = {}
+        params = {}
+        required = ['corner_lat', 'corner_lon', 'nlines', 'width',
+                    'post_lat', 'post_lon']
         rc = re.compile(r'^(\w*):\s*([a-zA-Z0-9+-.*]*\s[a-zA-Z0-9_]*).*')
 
-        with open(parameter_file, mode='r') as par:
+        with open(par_file, mode='r') as par:
             for line in par:
                 parsed = rc.match(line)
                 if parsed is None:
@@ -159,54 +168,66 @@ class Gamma(SceneIO):
 
                 groups = parsed.groups()
                 try:
-                    parameters[groups[0]] = float(groups[1])
+                    params[groups[0]] = float(groups[1])
                 except ValueError:
-                    parameters[groups[0]] = groups[1].strip()
-        return parameters or None
+                    params[groups[0]] = groups[1].strip()
 
-    def validate(self, filename):
+        for r in required:
+            if r not in params:
+                raise ImportError(
+                    'Parameter file does not hold required parameter %s' % r)
+
+        return params
+
+    def validate(self, filename, **kwargs):
         try:
-            self._getParameterFile(filename)
+            par_file = kwargs.pop('par_file',
+                                  self._getParameterFile(filename))
+            self._parseParameterFile(par_file)
             return True
         except ImportError:
             return False
 
-    def read(self, filename, parameter_file=None):
-        if parameter_file is None:
-            parameter_file = self._getParameterFile(filename)
-        par = self._parseParameterFile(parameter_file)
+    def read(self, filename, **kwargs):
+        """Read in GAMMA file
+
+        :param filename: GAMMA software binary file
+        :type filename: str
+        :param par_file: Corresponding parameter (*par) file. (optional)
+        :type par_file: str
+        :returns: Import dictionary
+        :rtype: dict
+        :raises: ImportError
+        """
+        par_file = kwargs.pop('par_file',
+                              self._getParameterFile(filename))
+        par = self._parseParameterFile(par_file)
 
         try:
-            par['width'] = int(par['width'])
-            par['nlines'] = int(par['nlines'])
+            nrows = int(par['width'])
+            nlines = int(par['nlines'])
         except:
-            raise ValueError('Error parsing width and nlines from %s' %
-                             parameter_file)
+            raise ImportError('Error parsing width and nlines from %s' %
+                              par_file)
 
-        self.container['displacement'] = num.fromfile(filename, dtype='>f4')
+        displ = num.fromfile(filename, dtype='>f4')
+        # Resize array if last line is not scanned completely
+        if (displ.size % nrows) != 0:
+            fill = num.empty(nrows - displ.size % nrows)
+            fill.fill(num.nan)
+            displ = num.append(displ, fill)
 
-        # Resize array last line is not scanned completely
-        fill = num.empty(par['width'] -
-                         self.container['displacement'].size % par['width'])
-        fill.fill(num.nan)
-        self.container['displacement'] = num.append(
-                          self.container['displacement'], fill)
-
-        # Reshape displacement vector
-        self.container['displacement'] = \
-            self.container['displacement'].reshape(par['nlines'], par['width'])
-        self.container['displacement'][self.container['displacement']
-                                       == -0.] = num.nan
+        displ = displ.reshape(nlines, nrows)
+        displ[displ == -0.] = num.nan
 
         # LatLon UTM Conversion
-        self.container['llLat'] = par['corner_lat'] +\
-            par['post_lat'] * par['width']
+        self.container['displacement'] = displ
+        self.container['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
         self.container['llLon'] = par['corner_lon']
-
-        # Theta and Phi
+        self.container['dLon'] = par['post_lon']
+        self.container['dLat'] = par['post_lat']
         self.container['theta'] = 0.
         self.container['phi'] = 0.
-
         return self.container
 
 
@@ -354,7 +375,7 @@ class GMTSAR(SceneIO):
             disp_file = files[0]
         return disp_file
 
-    def read(self, path, parameter_file=None):
+    def read(self, path, **kwargs):
         from scipy.io import netcdf
         path = os.path.abspath(path)
 

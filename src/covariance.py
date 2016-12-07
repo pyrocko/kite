@@ -236,7 +236,6 @@ class Covariance(object):
 
         t0 = time.time()
         ma, mb = self.covariance_model
-        self._log.debug('Calculating covariance matrix, %s mode' % method)
         if method == 'focal':
             dist_matrix = num.zeros((nl, nl))
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
@@ -321,8 +320,8 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec /= f_spec.size
         f_spec = num.abs(f_spec)
+        f_spec /= 2*f_spec.size
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
         kN = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
@@ -356,13 +355,13 @@ class Covariance(object):
         p, _ = self._powerspecFit(regime)
         return modelPowerspec(k, *p)
 
-    @staticmethod
-    def _powerspecCosineTransform(p_spec, k):
+    def _powerspecCosineTransform(self, p_spec, k):
             p_spec = p_spec[k > 0]
             k = k[k > 0]
-            p_spec[num.isnan(p_spec)] = 0.
+            if k.sum() == num.nan:
+                self._log.warning('Wavenumber infested with NaN')
             cos = sp.fftpack.dct(p_spec, type=2, n=None, norm=None)
-            cos *= 2./cos.size
+            cos /= cos.size
 
             # Normieren ueber n_k?
             return cos, k
@@ -400,7 +399,7 @@ class Covariance(object):
             try:
                 (a, b), _ =\
                     sp.optimize.curve_fit(modelCovariance, d, cov,
-                                          p0=(.001, 1000.))
+                                          p0=(.001, 500.))
                 self.config.a, self.config.b = (float(a), float(b))
             except RuntimeError:
                 self._log.warning('Could not fit the covariance model.')

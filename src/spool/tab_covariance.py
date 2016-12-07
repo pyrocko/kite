@@ -36,6 +36,7 @@ class QKiteCovariance(QKiteView):
 
         self.dialogCovariance = QKiteToolCovariance(covariance, spool)
         spool.actionCovariance.triggered.connect(self.dialogCovariance.show)
+        self.main_widget.roi.sigClicked.connect(self.dialogCovariance.show)
         spool.actionCovariance.setEnabled(True)
 
         QKiteView.__init__(self)
@@ -61,6 +62,7 @@ class QKiteNoisePlot(QKitePlot):
         self.roi = pg.RectROI((llE, llN), (sizeE, sizeN),
                               sideScalers=True,
                               pen=roi_pen)
+        self.roi.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
 

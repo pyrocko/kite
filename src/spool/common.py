@@ -7,6 +7,7 @@ import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph import dockarea
 from .utils_qt import _viridis_data
+from ..meta import calcPrecission
 
 __all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
            'QKiteParameterGroup']
@@ -44,7 +45,9 @@ class QKitePlot(pg.PlotWidget):
         pg.PlotWidget.__init__(self)
         self.container = container
 
-        self.image = pg.ImageItem(None)
+        border = pg.mkPen(255, 255, 255, 50)
+        self.image = pg.ImageItem(None, autoDownsample=True,
+                                  border=border)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
@@ -52,6 +55,14 @@ class QKitePlot(pg.PlotWidget):
         self.setLabels(bottom={'East', 'm'},
                        left={'North', 'm'},)
 
+        self.hint = {
+            'east': 0.,
+            'north': 0.,
+            'value': num.nan,
+            'measure': self.component.title(),
+            'vlength': '03',
+            'precision': '3',
+        }
         self.hint_text = pg.LabelItem(text='',
                                       justify='right', size='8pt',
                                       parent=self.plotItem)
@@ -59,7 +70,7 @@ class QKitePlot(pg.PlotWidget):
         self.hint_text.template =\
             '<span style="font-family: monospace; color: #fff">' \
             'East {east:08.2f} m | North {north:08.2f} m | '\
-            '{measure} {z:{spaces}.1f}</span>'
+            '{measure} {value:{length}.{precision}f}</span>'
 
         self.addItem(self.image)
         self.update()
@@ -105,6 +116,7 @@ class QKitePlot(pg.PlotWidget):
     @property
     def data(self):
         _data = self.components_available[self.component][1](self.container)
+        self.hint['precision'], self.hint['vlength'] = calcPrecission(_data)
         return _data  # num.nan_to_num(_data)
 
     def update(self):
@@ -122,24 +134,20 @@ class QKitePlot(pg.PlotWidget):
 
     def mouseMoved(self, event=None):
         if event is None:
-            self.hint_text.setText('East %d m | North %d m | %s %.3f'
-                                   % (0, 0, self.component.title(), 0))
-            return
-        pos = event[0]
-        if self.image.sceneBoundingRect().contains(pos):
-            map_pos = self.plotItem.vb.mapSceneToView(pos)
-            if map_pos.isNull():
-                return
-            img_pos = self.image.mapFromScene(event).data
-            z = self.image.image[int(img_pos().x()),
-                                 int(img_pos().y())]
+            pass
+        elif self.image.sceneBoundingRect().contains(event[0]):
+            map_pos = self.plotItem.vb.mapSceneToView(event[0])
+            if not map_pos.isNull():
+                img_pos = self.image.mapFromScene(event).data
+                value = self.image.image[int(img_pos().x()),
+                                         int(img_pos().y())]
 
-            self.hint_text.setText(
-                self.hint_text.template.format(
-                    north=map_pos.x(), east=map_pos.y(),
-                    measure=self.component.title(),
-                    z=z, spaces='03' if not num.isnan(z) else '03'))
-            return
+                self.hint['east'] = map_pos.y()
+                self.hint['north'] = map_pos.x()
+                self.hint['value'] = value
+        self.hint['length'] = '03' if num.isnan(self.hint['value'])\
+                              else self.hint['vlength']
+        self.hint_text.setText(self.hint_text.template.format(**self.hint))
 
 
 class QKiteToolColormap(pg.HistogramLUTWidget):

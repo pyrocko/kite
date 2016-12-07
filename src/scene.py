@@ -403,7 +403,7 @@ class Scene(object):
         for mod in scene_io.__all__:
             module = eval('scene_io.%s(scene)' % mod)
             if module.validate(path, **kwargs):
-                scene._log.info('Importing %s using %s' %
+                scene._log.info('Importing %s using %s module' %
                                 (path, mod))
                 data = module.read(path, **kwargs)
                 break

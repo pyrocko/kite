@@ -11,13 +11,13 @@ def derampMatrix(displ):
         raise TypeError('Displacement has to be 2-dim array')
     mx = num.nanmedian(displ, axis=0)
     my = num.nanmedian(displ, axis=1)
-    mx[~num.isnan(mx)]
-    my[~num.isnan(my)]
 
-    ix = num.arange(mx.size)[~num.isnan(mx)]
-    iy = num.arange(my.size)[~num.isnan(my)]
-    dx, cx, _, _, _ = sp.stats.linregress(ix, mx)
-    dy, cy, _, _, _ = sp.stats.linregress(iy, my)
+    ix = num.arange(mx.size)
+    iy = num.arange(my.size)
+    dx, cx, _, _, _ = sp.stats.linregress(ix[~num.isnan(mx)],
+                                          mx[~num.isnan(mx)])
+    dy, cy, _, _, _ = sp.stats.linregress(iy[~num.isnan(my)],
+                                          my[~num.isnan(my)])
 
     rx = (ix * dx)
     ry = (iy * dy)
@@ -147,6 +147,18 @@ def property_cached(func):
     return property(fget=cache_return,
                     fset=cache_return_setter,
                     doc=func_doc)
+
+
+def calcPrecission(data):
+    # number of floating points:
+    mn = num.nanmin(data)
+    mx = num.nanmax(data)
+    precission = int(round(num.log10((100. / (mx-mn)))))
+    if precission < 0:
+        precission = 0
+    # length of the number in the label:
+    length = max(len(str(int(mn))), len(str(int(mx)))) + precission
+    return precission, length
 
 
 class Subject(object):

@@ -7,13 +7,18 @@ from .utils_qt import loadUi
 from ..meta import Subject
 
 from os import path
+import os
 import logging
 import pyqtgraph as pg
 
 
 def validateFilename(filename):
     filedir = path.dirname(filename)
-    if filename == '' or filedir == '' or path.isdir(filename):
+    if filename == '' or filedir == '' or path.isdir(filename)\
+            or not os.access(filedir, os.W_OK):
+        QtGui.QMessageBox.critical(None, 'Path Error',
+                                   'Could not access file <b>%s</b>'
+                                   % filename)
         return False
     return True
 
@@ -24,7 +29,7 @@ class Spool(QtGui.QApplication):
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
-                      'ui/boxkite-sketch.jpg'))\
+                      'ui/radar_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         splash = QtGui.QSplashScreen(splash_img,
                                      QtCore.Qt.WindowStaysOnTopHint)
@@ -47,8 +52,8 @@ class Spool(QtGui.QApplication):
         if scene is not None:
             self.addScene(scene)
 
-        self.spool_win.show()
         splash.finish(self.spool_win)
+        self.spool_win.show()
         self.exec_()
 
     def addScene(self, scene):

@@ -84,11 +84,24 @@ class QuadNode(object):
 
     @property_cached
     def displacement_masked(self):
-        ''' Masked dispalcement,
+        ''' Masked displacement,
         see :py:attr:`kite.quadtree.QuadNode.displacement`
         '''
-        d = self._scene.displacement[self._slice_rows, self._slice_cols]
-        return num.ma.masked_array(d, num.isnan(d), fill_value=num.nan)
+        return num.ma.masked_array(self.displacement,
+                                   num.isnan(self.displacement),
+                                   fill_value=num.nan)
+
+    @property_cached
+    def phi(self):
+        ''' Median Phi angle '''
+        phi = self._scene.phi[self._slice_rows, self._slice_cols]
+        return num.median(phi[~num.isnan(self.displacement)])
+
+    @property_cached
+    def theta(self):
+        ''' Median Phi angle '''
+        theta = self._scene.theta[self._slice_rows, self._slice_cols]
+        return num.median(theta[~num.isnan(self.displacement)])
 
     @property_cached
     def gridE(self):
@@ -520,11 +533,12 @@ class Quadtree(object):
         self._log.debug('Exporting quadtree to %s' % filename)
         with open(filename, mode='w') as qt_export:
             qt_export.write(
-                '# node_id, focal_point_E, focal_point_N, mean_displacement, '
-                'median_displacement, absolute_weight\n')
+                '# node_id, focal_point_E, focal_point_N, theta, phi, '
+                'mean_displacement, median_displacement, absolute_weight\n')
             for l in self.leafs:
                 qt_export.write(
                     '{l.id}, {l.focal_point[0]}, {l.focal_point[1]}, '
+                    '{l.theta}, {l.phi}, '
                     '{l.mean}, {l.median}, {l.weight}\n'.format(l=l))
 
 
