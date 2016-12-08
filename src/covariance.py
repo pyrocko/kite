@@ -135,7 +135,10 @@ class Covariance(object):
     @property
     def noise_patch_size_km2(self):
         ''' Noise patch size in ``km^2``. '''
-        return (self.noise_coord[2] * self.noise_coord[3])*1e-6
+        size = (self.noise_coord[2] * self.noise_coord[3])*1e-6
+        if size < 75:
+            self._log.warning('Defined noise patch is instably small')
+        return size
 
     @property
     def noise_data(self, data):
@@ -320,18 +323,18 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec = num.abs(f_spec)
-        f_spec /= 2*f_spec.size
+        f_spec = num.abs(f_spec)**2 / f_spec.size
+        # f_spec /= f_spec.size
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
         kN = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
-        k_bin = kN if kN.size > kE.size else kE
+        k_bin = kN if kN.size < kE.size else kE
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
-                                                     statistic='mean',
+                                                     statistic='sum',
                                                      bins=k_bin[k_bin > 0])
 
         self._noise_spectrum_cached = power_spec, k[:-1], f_spec, kN, kE
@@ -356,12 +359,12 @@ class Covariance(object):
         return modelPowerspec(k, *p)
 
     def _powerspecCosineTransform(self, p_spec, k):
-            p_spec = p_spec[k > 0]
-            k = k[k > 0]
+            # p_spec = p_spec[k > 0]
+            # k = k[k > 0]
             if k.sum() == num.nan:
                 self._log.warning('Wavenumber infested with NaN')
-            cos = sp.fftpack.dct(p_spec, type=2, n=None, norm=None)
-            cos /= cos.size
+            cos = sp.fftpack.dct(p_spec, type=2, norm=None)
+            cos /= p_spec.size
 
             # Normieren ueber n_k?
             return cos, k
@@ -370,7 +373,7 @@ class Covariance(object):
     def covariance_func(self):
         ''' Covariance function derived from displacement noise patch. '''
         power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
-        dk = self._quadtree.frame.dN if kN.size > kE.size\
+        dk = self._quadtree.frame.dN if kN.size < kE.size\
             else self._quadtree.frame.dE
         d = num.arange(1, power_spec.size+1) * dk
         cov, _ = self._powerspecCosineTransform(power_spec, k)
@@ -383,7 +386,7 @@ class Covariance(object):
         '''
         _, k, _, kN, kE = self.noiseSpectrum()
         (a, b), _ = self._powerspecFit(regime)
-        dk = self._quadtree.frame.dN if kN.size > kE.size\
+        dk = self._quadtree.frame.dN if kN.size < kE.size\
             else self._quadtree.frame.dE
 
         spec = modelPowerspec(k, a, b)
@@ -402,7 +405,7 @@ class Covariance(object):
                                           p0=(.001, 500.))
                 self.config.a, self.config.b = (float(a), float(b))
             except RuntimeError:
-                self._log.warning('Could not fit the covariance model.')
+                self._log.warning('Could not fit the covariance model')
         return self.config.a, self.config.b
 
     @property
