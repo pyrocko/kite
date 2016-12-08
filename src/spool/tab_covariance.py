@@ -6,10 +6,11 @@ import pyqtgraph as pg
 
 from os import path
 from PySide import QtGui, QtCore
-from .common import (QKiteView, QKitePlot, QKiteParameterGroup,
-                     QKiteToolColormap)
+from collections import OrderedDict
 from .utils_qt import loadUi
 from ..covariance import modelCovariance
+from .common import (QKiteView, QKitePlot, QKiteParameterGroup,
+                     QKiteToolColormap)
 
 analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
 pen_red_dot = pg.mkPen((170, 57, 57, 255), width=2.5,
@@ -243,12 +244,16 @@ class QKiteParamCovariance(QKiteParameterGroup):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.covariance'
 
-        self.parameters = {'variance': None,
-                           'covariance_model [a]':
-                           lambda c: c.covariance_model[0],
-                           'covariance_model [b]':
-                           lambda c: c.covariance_model[1],
-                           'covariance_model_misfit': None,
-                           'noise_patch_size_km2': None}
+        self.parameters = OrderedDict([
+            ('variance', None),
+            ('covariance_model [a]',
+             lambda c: c.covariance_model[0]),
+            ('covariance_model [b]',
+             lambda c: c.covariance_model[1]),
+            ('covariance_model_misfit', None),
+            ('noise_patch_size_km2', None),
+            ('noise_patch_coord',
+             lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
+            ])
         QKiteParameterGroup.__init__(self, covariance, **kwargs)
         covariance.evCovarianceUpdate.subscribe(self.updateValues)

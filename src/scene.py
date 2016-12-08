@@ -40,7 +40,7 @@ class SceneError(Exception):
 
 class FrameConfig(guts.Object):
     """
-    Config object holding :py:class:`kite.scene.Scene` cobfiguration
+    Config object holding :class:`kite.scene.Scene` cobfiguration
     """
     llLat = guts.Float.T(default=0.,
                          help='Scene latitude of lower left corner')
@@ -53,8 +53,7 @@ class FrameConfig(guts.Object):
 
 
 class Frame(object):
-    """UTM frame holding geographical references for
-    :py:class:`kite.scene.Scene`
+    """ UTM frame holding geographical references for :class:`kite.scene.Scene`
     """
     def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
@@ -230,22 +229,22 @@ class Scene(object):
     """Scene holding satellite LOS ground dispacements measurements
 
     :param displacement: ``NxM`` matrix of displacement in LOS
-    :type displacement: :py:class:`numpy.ndrray`
+    :type displacement: :class:`numpy.array`
     :param theta: ``NxM`` matrix of theta towards LOS.
         Theta is look vector elevation angle towards satellite from vertical
         in radians - ``pi/2: up; -pi/2: down``
-    :type theta: :py:class:`numpy.ndarray`
+    :type theta: :class:`numpy.array`
     :param phi: ``NxM`` matrix of phi towards LOS.
         Phi look vector orientation angle towards satellite from East
         in radians.
         ``(0: east, pi/2 north)``
-    :type phi: :py:class:`numpy.ndarray`
+    :type phi: :class:`numpy.array`
     :param meta: Meta information for the scene
-    :type meta: :py:class:`kite.scene.Meta`
+    :type meta: :class:`kite.scene.Meta`
 
     :param los: Displacement measurements (displacement, theta, phi) from
         satellite measurements
-    :type los: :py:class:`kite.scene.DisplacementLOS`
+    :type los: :class:`kite.scene.DisplacementLOS`
     """
     evSceneChanged = Subject()
 
@@ -279,8 +278,11 @@ class Scene(object):
 
     @property
     def displacement(self):
-        """InSAR scene displacement ``NxM`` matrix of type
-        :py:class:`numpy:ndarray`
+        """ Geodetical displacement in *meter*.
+
+        :setter: Set the unwrapped InSAR displacement.
+        :getter: Return the displacement matrix.
+        :type: :class:`numpy.array`, ``NxM``
         """
         return self._displacement
 
@@ -292,9 +294,13 @@ class Scene(object):
 
     @property
     def phi(self):
-        """``NxM`` matrix of phi towards satellite' line of sight.
-        Phi look vector orientation angle towards satellite in radians.
-        (0: east, pi/2 north)
+        """ Horizontal angle towards satellite' point of view in radians.
+        (``0: east, pi/2: north``)
+
+        :getter: Returns the phi angles
+        :setter: Set the phi matrix for scene's displacement, can be ``int``
+            for static look vector.
+        :type: :class:`numpy.array` or ``int``
         """
         return self._phi
 
@@ -317,9 +323,14 @@ class Scene(object):
 
     @property
     def theta(self):
-        """``NxM`` matrix of theta towards satellite' line of sight.
+        """ ``NxM`` matrix of theta towards satellite' line of sight.
         Theta is look vector elevation angle towards satellite from horizon
         in radians - ``pi/2: up; -pi/2: down``
+
+        :getter: Returns the theta angles
+        :setter: Set the theta matrix for scene's displacement, can be ``int``
+            for static look vector.
+        :type: :class:`numpy.array` or `int`
         """
         return self._theta
 
@@ -342,37 +353,45 @@ class Scene(object):
 
     @property_cached
     def thetaDeg(self):
-        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.theta``
+        """ LOS incident angle in degree, ``NxM`` matrix like
+            :class:`kite.Scene.theta`
+        :type: :class:`numpy.array`
         """
         return num.rad2deg(self.theta)
 
     @property_cached
     def phiDeg(self):
-        """LOS incident angle in degree, ``NxM`` matrix like ``Scene.phi``
+        """ LOS incident angle in degree, ``NxM`` matrix like
+            :class:`kite.Scene.theta`
+        :type: :class:`numpy.array`
         """
         return num.rad2deg(self.phi)
 
     @property_cached
     def quadtree(self):
-        """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
+        """ Instanciates the scene's quadtree.
+        :type: :class:`kite.quadtree.Quadtree`
         """
         from kite.quadtree import Quadtree
         return Quadtree(scene=self, config=self.config.quadtree)
 
     @property_cached
     def covariance(self):
-        """References the scene's :py:class:`kite.quadtree.Quadtree` instance.
+        """ Instanciates the scene's covariance attribute.
+        :type: :class:`kite.covariance.Covariance`
         """
         from kite.covariance import Covariance
         return Covariance(scene=self, config=self.config.covariance)
 
     @property_cached
     def plot(self):
+        ''' Shows a simple plot of the scene's displacement
+        '''
         from kite.plot2d import ScenePlot
         return ScenePlot(self)
 
     def spool(self):
-        """Start the spool GUI :py:class:`kite.spool.Spool` to inspect
+        """ Start the spool user interface :class:`kite.spool.Spool` to inspect
         the scene.
         """
         if self.displacement is None:
@@ -381,14 +400,14 @@ class Scene(object):
         return Spool(scene=self)
 
     def import_file(*args, **kwargs):
-        """Import displacement data from foreign file format.
+        """ Import displacement data from foreign file format.
 
         :param path: Filename of resource to import
         :type path: str
         :param **kwargs: keyword arguments passed to import function
         :type **kwargs: dict
         :returns: Scene from path
-        :rtype: {:py:class:`kite.Scene`}
+        :rtype: :class:`kite.Scene`
         :raises: TypeError
         """
         if len(args) == 1:
@@ -446,15 +465,17 @@ class Scene(object):
                               'see Exception!')
 
     def save(self, scene_name=None):
-        """Save kite scene to kite file structure
+        """ Save kite scene to kite file structure
 
         Saves the current scene meta information and UTM frame to a YAML
-        (``.yml``) file. Numerical data (``Scene.displacement``,
-        ``Scene.theta`` and ``Scene.phi``) are saved as binary files from
-        :py:class:`numpy.ndarray`.
+        (``.yml``) file. Numerical data (:attr:`kite.Scene.displacement`,
+        :attr:`kite.Scene.theta` and :attr:`kite.Scene.phi`)
+        are saved as binary files from :class:`numpy.array`.
+
         :param scene_name: Filenames to save scene to, defaults to
-        ``Scene.meta.scene_id + _ + Scene.meta.scene_view``
-        :type scene_name: {str}, optional
+            ' :attr:`kite.Scene.meta.scene_id` ``_``
+            :attr:`kite.Scene.meta.scene_view`
+        :type scene_name: str, optional
         """
         filename = scene_name or '%s_%s' % (self.meta.scene_id,
                                             self.meta.scene_view)
@@ -478,13 +499,13 @@ class Scene(object):
 
     @classmethod
     def load(cls, scene_name):
-        """Load a kite scene from file ``scene_name.[yml,dsp,tht,phi]``
+        """ Load a kite scene from file ``scene_name.[yml,dsp,tht,phi]``
         structure
 
         :param scene_name: Filenames the scene data is saved under
-        :type scene_name: {str}
+        :type scene_name: str
         :returns: Scene object from data resources
-        :rtype: {:py:class:`kite.Scene`}
+        :rtype: :class:`kite.Scene`
         """
         success = False
         components = {
@@ -524,7 +545,7 @@ class Scene(object):
 
 
 class LOSUnitVectors(object):
-    """Decomposed Line Of Sight vectors (LOS) derived from
+    """ Decomposed Line Of Sight vectors (LOS) derived from
     ``Scene.displacement``.
     """
     def __init__(self, scene):
@@ -538,19 +559,25 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitE(self):
-        """Unit vector in East, ``NxM`` matrix like ``Scene.displacement``
+        """ Unit vector in East, ``NxM`` matrix like
+            :attr:`kite.Scene.displacement`
+        :type: :class:`numpy.array`
         """
         return num.cos(self._scene.phi) * num.sin(self._scene.theta)
 
     @property_cached
     def unitN(self):
-        """Unit vector in North, ``NxM`` matrix like ``Scene.displacement``
+        """ Unit vector in North, ``NxM`` matrix like
+            :attr:`kite.Scene.displacement`
+        :type: :class:`numpy.array`
         """
         return num.sin(self._scene.phi) * num.sin(self._scene.theta)
 
     @property_cached
     def unitU(self):
-        """Unit vector Up, ``NxM`` matrix like ``Scene.displacement``
+        """ Unit vector Up, ``NxM`` matrix like
+            :attr:`kite.Scene.displacement`
+        :type: :class:`numpy.array`
         """
         return num.cos(self._scene.theta)
 

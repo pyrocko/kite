@@ -13,6 +13,7 @@ Contents:
    examples
    spool
    modules
+   contributing
 
 
 
