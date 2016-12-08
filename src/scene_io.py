@@ -249,7 +249,7 @@ class Gamma(SceneIO):
         phi = phi.reshape(nlines, nrows)
 
         # LatLon UTM Conversion
-        self.container['displacement'] = displ
+        self.container['displacement'] = displ*1e-2
         self.container['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
         self.container['llLon'] = par['corner_lon']
         self.container['dLon'] = par['post_lon']
