@@ -45,9 +45,10 @@ class QKitePlot(pg.PlotWidget):
         pg.PlotWidget.__init__(self)
         self.container = container
 
-        border = pg.mkPen(255, 255, 255, 50)
-        self.image = pg.ImageItem(None, autoDownsample=True,
-                                  border=border)
+        border_pen = pg.mkPen(255, 255, 255, 50)
+        self.image = pg.ImageItem(None,
+                                  autoDownsample=False,
+                                  border=border_pen)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
@@ -69,7 +70,8 @@ class QKitePlot(pg.PlotWidget):
                                       parent=self.plotItem)
         self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
         self.hint_text.template =\
-            '<span style="font-family: monospace; color: #fff;">'\
+            '<span style="font-family: monospace; color: #fff;'\
+            'background-color: #000;">'\
             'East {east:08.2f} m | North {north:08.2f} m | '\
             '{measure} {value:{length}.{precision}f}</span>'
 
@@ -121,7 +123,7 @@ class QKitePlot(pg.PlotWidget):
         return _data  # num.nan_to_num(_data)
 
     def update(self):
-        self.image.updateImage(self.data.T, autoDownsample=True)
+        self.image.updateImage(self.data.T)
         self.mouseMoved()
         # self.addIsocurves()
 
