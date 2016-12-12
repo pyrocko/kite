@@ -27,7 +27,7 @@ class SceneIO(object):
         }
 
     def read(self, filename, **kwargs):
-        """Read function of the file format
+        """ Read function of the file format
 
         :param filename: file to read
         :type filename: string
@@ -37,7 +37,7 @@ class SceneIO(object):
         raise NotImplementedError('read not implemented')
 
     def write(self, filename, **kwargs):
-        """Write method for IO
+        """ Write method for IO
 
         :param filename: file to write to
         :type filename: string
@@ -47,7 +47,7 @@ class SceneIO(object):
         raise NotImplementedError('write not implemented')
 
     def validate(self, filename, **kwargs):
-        """Validate file format
+        """ Validate file format
 
         :param filename: file to validate
         :type filename: string
@@ -59,7 +59,7 @@ class SceneIO(object):
 
 
 class Matlab(SceneIO):
-    """Reads Matlab files
+    """ Reads Matlab files
 
     Variable naming conventions within Matlab ``.mat`` container:
 
@@ -129,14 +129,17 @@ class Matlab(SceneIO):
 
 
 class Gamma(SceneIO):
-    """Reads in binary files processed with GAMMA
+    """ Reads in binary files processed with Gamma.
 
-    Expects two files in the same folder:
+    .. note::
+
+        Data has to be georeferenced to latitude/longitude!
+
+    Expects two files:
 
         * Binary file from gamma (``*``)
-        * Parameter file (``*.par``)
-
-    invoke with Gamma.read(filename, par_file='123.1a.seg_par')
+        * Parameter file (``*par``), including ``corner_lat, corner_lon,
+            nlines, width, post_lat, post_lon``
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))
@@ -149,7 +152,7 @@ class Gamma(SceneIO):
                 return file
             except ImportError:
                 continue
-        raise ImportError('Could not find Gamma parameter file (*par)')
+        raise ImportError('Could not find suiting Gamma parameter file (*par)')
 
     @staticmethod
     def _parseParameterFile(par_file):
@@ -205,11 +208,11 @@ class Gamma(SceneIO):
         return num.memmap(filename, mode='r', dtype='>f4')
 
     def read(self, filename, **kwargs):
-        """Read in GAMMA file
+        """ Reads in Gamma scene
 
-        :param filename: GAMMA software binary file
+        :param filename: Gamma software binary file
         :type filename: str
-        :param par_file: Corresponding parameter (*par) file. (optional)
+        :param par_file: Corresponding parameter (``*par``) file. (optional)
         :type par_file: str
         :returns: Import dictionary
         :rtype: dict
@@ -288,11 +291,11 @@ class ISCEXMLParser(object):
 
 
 class ISCE(SceneIO):
-    """Read in files processed with ISCE
+    """Reads in files processed with ISCE
 
     Expects three files in the same folder:
 
-        * Unwrapped displacement (``*.unw.geo``)
+        * Unwrapped displacement binary (``*.unw.geo``)
         * Metadata XML (``*.unw.geo.xml``)
         * LOS binary data (``*.rdr.geo``)
     """
@@ -360,19 +363,21 @@ class ISCE(SceneIO):
 
 
 class GMTSAR(SceneIO):
-    """Reads in data processed with GMT5SAR
+    """ Reads in data processed with GMT5SAR
+
+    Use gmt5sar ``SAT_look`` to calculate the corresponding unit look vectors:
+
+    .. code-block:: sh
+
+        gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
+        awk {'print $1, $2, $4'} |
+        SAT_look 20050731.PRM -bos > 20050731.los.enu
 
     Expects two binary files:
 
         * Displacement grid (NetCDF, ``*los_ll.grd``)
         * LOS binary data (see instruction, ``*los.enu``)
 
-    Use gmt5sar ``SAT_look`` to calculate the corresponding unit look vectors:
-
-    ``sh
-    gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd | \
-    awk {'print $1, $2, $4'} | SAT_look 20050731.PRM -bos > 20050731.los.enu
-    ``
     """
     def validate(self, filename, **kwargs):
         try:

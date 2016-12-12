@@ -5,6 +5,7 @@ from .tab_quadtree import QKiteQuadtree
 from .tab_covariance import QKiteCovariance
 from .utils_qt import loadUi
 from ..meta import Subject
+from ..scene import Scene
 
 from os import path
 import os
@@ -14,8 +15,9 @@ import pyqtgraph as pg
 
 def validateFilename(filename):
     filedir = path.dirname(filename)
-    if filename == '' or filedir == '' or path.isdir(filename)\
-            or not os.access(filedir, os.W_OK):
+    if filename == '' or filedir == '':
+        return False
+    if path.isdir(filename) or not os.access(filedir, os.W_OK):
         QtGui.QMessageBox.critical(None, 'Path Error',
                                    'Could not access file <b>%s</b>'
                                    % filename)
@@ -71,7 +73,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.loadUi()
 
         self.scene = None
-        self.views = []
+        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
 
         self.ptree = QKiteParameterTree(showHeader=True)
         self.ptree.resize(500, 500)
@@ -80,14 +82,25 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.log_model = SceneLogModel(self)
         self.log = SceneLog(self)
 
-        self.actionSave_YAML.triggered.connect(
-            self.onSaveYaml)
-        self.actionSave_Scene.triggered.connect(
+        self.about = QtGui.QDialog()
+        about_ui = path.join(path.dirname(path.realpath(__file__)),
+                             'ui/about.ui')
+        loadUi(about_ui, baseinstance=self.about)
+
+        self.actionSave_config.triggered.connect(
+            self.onSaveConfig)
+        self.actionSave_scene.triggered.connect(
             self.onSaveData)
-        self.actionExport_Quadtree_CSV.triggered.connect(
+        self.actionLoad_config.triggered.connect(
+            self.onLoadConfig)
+        self.actionExport_quadtree_CSV.triggered.connect(
             self.onExportQuadtreeCSV)
+        self.actionLoad_scene.triggered.connect(
+            self.onOpenScene)
+        self.actionImport_scene.triggered.connect(
+            self.onImportScene)
         self.actionAbout_Spool.triggered.connect(
-            self.onAbout)
+            self.about.show)
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
         self.actionLog.triggered.connect(
@@ -105,23 +118,25 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.scene = scene
         self.log_model.attachScene(self.scene)
 
-        for v in [QKiteScene, QKiteQuadtree, QKiteCovariance]:
+        for v in self.views:
             self.addView(v)
+
+    def setScene(self, scene):
+        self.scene = scene
+        self.evSceneChanged.notify()
 
     def addView(self, view):
         view = view(self)
         self.loadingModule.notify(view.title)
-
         self.tabs.addTab(view, view.title)
 
         if hasattr(view, 'parameters'):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)
-        self.views.append(view)
 
-    def onSaveYaml(self):
+    def onSaveConfig(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='*.yml', caption='Save scene YAML config')
+            filter='YAML file (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
         self.scene.save_config(filename)
@@ -133,19 +148,35 @@ class SpoolMainWindow(QtGui.QMainWindow):
             return
         self.scene.save(filename)
 
+    def onLoadConfig(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='YAML file (*.yml)', caption='Load scene YAML config')
+        if not validateFilename(filename):
+            return
+        self.scene.load_config(filename)
+
     def onExportQuadtreeCSV(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='*.csv', caption='Export Quadtree CSV')
+            filter='CSV File (*.csv)', caption='Export Quadtree CSV')
         if not validateFilename(filename):
             return
         self.scene.quadtree.export(filename)
 
-    def onAbout(self):
-        dialog = QtGui.QDialog()
-        diag_ui = path.join(path.dirname(path.realpath(__file__)),
-                            'ui/about.ui')
-        loadUi(diag_ui, baseinstance=dialog)
-        dialog.show()
+    def onOpenScene(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='YAML, NumPy NPZ file (*.yml *.npz)',
+            caption='Load kite scene')
+        if not validateFilename(filename):
+            return
+        Scene.load(filename).spool()
+
+    def onImportScene(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='Any file (*)',
+            caption='Import scene to spool')
+        if not validateFilename(filename):
+            return
+        Scene.import_data(filename).spool()
 
     def exit(self):
         pass

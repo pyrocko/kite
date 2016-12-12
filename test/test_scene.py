@@ -8,7 +8,7 @@ from kite import Scene, SceneTest
 class TestGaussScene(unittest.TestCase):
     def setUp(self):
         self.sc = SceneTest.createGauss()
-        self.sc._log.setLevel('CRITICAL')
+        self.sc._log.setLevel('INFO')
         self.sc.quadtree.epsilon = .02
         self.sc.covariance.subsampling = 24
 
@@ -31,25 +31,24 @@ class TestGaussScene(unittest.TestCase):
         import shutil
 
         tmp_dir = tempfile.mkdtemp()
+        filename = os.path.join(tmp_dir, self.__class__.__name__)
         print tmp_dir
         try:
-            self.sc.save(os.path.join(tmp_dir,
-                         self.__class__.__name__))
-            load_scene = Scene.load(os.path.join(tmp_dir,
-                                                 self.__class__.__name__))
-            del load_scene
+            self.sc.save(filename)
+            Scene.load(filename)
         finally:
-            return
             shutil.rmtree(tmp_dir)
 
 
+@unittest.skip
 class TestMatlabScene(unittest.TestCase):
     def setUp(self):
         file = os.path.join(
          os.path.abspath(os.path.dirname(__file__)),
          'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
 
-        self.sc = Scene.import_file(file)
+        self.sc = Scene.import_data(file)
+        self.sc._log.setLevel('CRITICAL')
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
 
     def testQuadtree(self):

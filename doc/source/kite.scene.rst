@@ -1,19 +1,28 @@
-Scene object
-============
+kite.Scene
+==========
 
 .. autoclass:: kite.Scene
     :members:
 
+kite.scene.SceneConfig
+----------------------
 
-Meta Information
-----------------
+.. autoclass:: kite.scene.SceneConfig
+
+kite.scene.FrameConfig
+----------------------
+
+.. autoclass:: kite.scene.FrameConfig
+
+kite.scene.Meta
+---------------
 A ``Scene`` holds several configuration objects:
 
 .. autoclass:: kite.scene.Meta
 
 
-Scene Configuration
--------------------
-.. autoclass:: kite.scene.SceneConfig
+kite.scene_io
+-------------
 
-.. autoclass:: kite.scene.FrameConfig
+.. automodule:: kite.scene_io
+    :members:

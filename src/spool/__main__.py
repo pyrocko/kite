@@ -40,5 +40,5 @@ Supported formats are:
         sys.exit(0)
     sc = Scene()
     sc._log_stream.setLevel(ns.log_lvl)
-    sc.import_file(ns.file[0])
+    sc.import_data(ns.file[0])
     sc.spool()

@@ -67,6 +67,15 @@ class QKiteNoisePlot(QKitePlot):
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
 
+        covariance.evConfigUpdated.subscribe(self.onConfigUpdate)
+
+    def onConfigUpdate(self):
+        llE, llN, sizeE, sizeN = self.covariance.noise_coord
+        self.roi.setPos((llE, llN), update=False, finish=False)
+        self.roi.setSize((sizeE, sizeN), finish=False)
+        self.update()
+        self.transformToUTM()
+
     def updateNoiseRegion(self):
         data = self.roi.getArrayRegion(self.image.image, self.image)
         data[data == 0.] = num.nan
@@ -116,10 +125,10 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
         self.addItem(self.power)
         self.addItem(self.power_lin)
 
-        self.covariance.evCovarianceUpdate.subscribe(self.updatePowerPlot)
-        self.updatePowerPlot()
+        self.covariance.evConfigUpdated.subscribe(self.update)
+        self.update()
 
-    def updatePowerPlot(self):
+    def update(self):
         spec, k, _, _, _ = self.covariance.noiseSpectrum()
         self.power.setData(k, spec)
         self.power_lin.setData(k, self.covariance.powerspecAnalytical(k, 3))
@@ -135,9 +144,9 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
         self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
-        self.misfit_label = pg.LabelItem(text='', justify='right', size='8pt',
+        self.misfit_label = pg.LabelItem(text='', justify='right', size='10pt',
                                          parent=self.plot.plotItem)
-        self.misfit_label.anchor(itemPos=(0., 0.), parentPos=(.2, .1))
+        self.misfit_label.anchor(itemPos=(0., 0.), parentPos=(.1, .05))
         self.misfit_label.format = 'Misfit: {0:.6f}'
 
         self.addItem(self.cov)
@@ -149,12 +158,12 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.legend.addItem(self.cov_model, '')
         self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
 
-        self.covariance.evCovarianceUpdate.subscribe(
-            self.updateCovariancePlot)
+        self.covariance.evConfigUpdated.subscribe(
+            self.update)
 
-        self.updateCovariancePlot()
+        self.update()
 
-    def updateCovariancePlot(self):
+    def update(self):
         cov, dist = self.covariance.covariance_func
 
         self.cov.setData(dist, cov)
@@ -187,14 +196,14 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
         self.addItem(self.structure)
         self.addItem(self.variance)
-        self.covariance.evCovarianceUpdate.subscribe(
-            self.updateStructurePlot)
+        self.covariance.evConfigUpdated.subscribe(
+            self.update)
         self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
 
-        self.updateStructurePlot()
+        self.update()
 
-    def updateStructurePlot(self):
+    def update(self):
         struc, dist = self.covariance.structure_func
         self.structure.setData(dist, struc)
         self.variance.setValue(self.covariance.variance)
@@ -215,7 +224,7 @@ class QKiteToolCovariance(QtGui.QDialog):
             self._component = 'noise_data'
             QKitePlot.__init__(self, container=covariance)
             self.covariance = self.container
-            self.covariance.evCovarianceUpdate.subscribe(self.update)
+            self.covariance.evConfigUpdated.subscribe(self.update)
 
         @staticmethod
         def noise_data_masked(covariance):
@@ -256,4 +265,3 @@ class QKiteParamCovariance(QKiteParameterGroup):
              lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
             ])
         QKiteParameterGroup.__init__(self, covariance, **kwargs)
-        covariance.evCovarianceUpdate.subscribe(self.updateValues)

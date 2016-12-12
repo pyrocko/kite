@@ -6,7 +6,7 @@ from kite.meta import Subject, property_cached
 
 
 class QuadNode(object):
-    ''' A node (or *tile*) in hel by :class:`kite.quadtree.Quadtree`.
+    ''' A node (or *tile*) in hel by :class:`kite.Quadtree`.
 
     :param llr: Lower left corner row in :attr:`kite.Scene.displacement`
         matrix.
@@ -87,7 +87,7 @@ class QuadNode(object):
     @property
     def weight(self):
         '''
-        :getter: Absolute weight derived from :class:`kite.covariance`
+        :getter: Absolute weight derived from :class:`kite.Covariance`
          - works on tree leafs only.
         :type: float
         '''
@@ -210,7 +210,7 @@ class QuadNode(object):
 
     def iterLeafsEval(self):
         ''' Iterator over the leafs, evaluating parameters from
-        :class:`kite.quadtree.Quadtree` instance.
+        :class:`kite.Quadtree` instance.
 
         :yields: Leafs fullfilling the tree's parameters.
         :type: :class:`kite.quadtree.QuadNode`
@@ -241,7 +241,7 @@ class QuadNode(object):
 
     def createTree(self, eval_func, epsilon_limit):
         ''' Create the tree from a set of basenodes, ignited by
-        :class:`kite.quadtree.Quadtree` instance.
+        :class:`kite.Quadtree` instance.
 
         :param eval_func: Evaluation function passed
         :type eval_func: function
@@ -273,7 +273,7 @@ class QuadtreeConfig(guts.Object):
     split_method = guts.String.T(
         default='median_std',
         help='Tile split method, available methods '
-             ' [\'mean_std\' \'median_std\' \'std\']')
+             ' ``[\'mean_std\' \'median_std\' \'std\']``')
     epsilon = guts.Float.T(
         optional=True,
         help='Threshold for tile splitting, measure for '
@@ -283,10 +283,10 @@ class QuadtreeConfig(guts.Object):
         help='Allowed NaN fraction per tile')
     tile_size_min = guts.Float.T(
         default=250.,
-        help='Minimum allowed tile size in meter')
+        help='Minimum allowed tile size in *meter*')
     tile_size_max = guts.Float.T(
         default=25e3,
-        help='Maximum allowed tile size in meter')
+        help='Maximum allowed tile size in *meter*')
 
 
 class Quadtree(object):
@@ -299,7 +299,7 @@ class Quadtree(object):
     significant displacements and have high-resolution where it matters and
     lower resolution at regions with less or constant deformation.
     """
-    evParamUpdate = Subject()
+    evConfigUpdated = Subject()
 
     def __init__(self, scene, config=QuadtreeConfig()):
         self._split_methods = {
@@ -318,20 +318,30 @@ class Quadtree(object):
         self.parseConfig(config)
 
         self._leafs = None
+        self._scene.evConfigUpdated.subscribe(self.parseConfig)
 
     def setScene(self, scene):
         self._scene = scene
         self._displacement = self._scene.displacement
         self.frame = self._scene.frame
 
-    def parseConfig(self, config):
-        self.config = config
+    def parseConfig(self, config=None):
+        if config is None:
+            self.config = self._scene.config.quadtree
+        else:
+            self.config = config
+
+        self.evConfigUpdated.mute()
+
         self.setSplitMethod(self.config.split_method)
         if self.config.epsilon is not None:
             self.epsilon = self.config.epsilon
         self.nan_allowed = self.config.nan_allowed
         self.tile_size_min = self.config.tile_size_min
         self.tile_size_max = self.config.tile_size_max
+
+        self.evConfigUpdated.unmute()
+        self.evConfigUpdated.notify()
 
     def setSplitMethod(self, split_method):
         """Set splitting method for quadtree tiles
@@ -368,7 +378,6 @@ class Quadtree(object):
 
         self._log.debug('Tree created, %d nodes [%0.8f s]' % (self.nnodes,
                                                               time.time()-t0))
-        self.evParamUpdate.notify()
 
     @property
     def epsilon(self):
@@ -389,7 +398,7 @@ class Quadtree(object):
         self.leafs = None
         self.config.epsilon = value
 
-        self.evParamUpdate.notify()
+        self.evConfigUpdated.notify()
         return
 
     @property_cached
@@ -417,7 +426,7 @@ class Quadtree(object):
 
         self.leafs = None
         self.config.nan_allowed = value
-        self.evParamUpdate.notify()
+        self.evConfigUpdated.notify()
 
     @property
     def tile_size_min(self):
@@ -458,7 +467,7 @@ class Quadtree(object):
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
         self.leafs = None
-        self.evParamUpdate.notify()
+        self.evConfigUpdated.notify()
 
     @property_cached
     def _tile_size_lim_px(self):
@@ -468,8 +477,7 @@ class Quadtree(object):
 
     @property
     def nnodes(self):
-        """
-        :getter: Number of nodes of the built tree.
+        """ Number of nodes of the built tree.
         :type: int
         """
         nnodes = 0
@@ -481,7 +489,7 @@ class Quadtree(object):
     @property_cached
     def leafs(self):
         """
-        :getter: List of leafs for current configuration
+        :getter: List of leafs for current configuration.
         :type: (list[:class:`kite.quadtree.QuadNode`])
         """
         t0 = time.time()

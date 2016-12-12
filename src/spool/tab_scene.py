@@ -53,6 +53,11 @@ class QKiteScenePlot(QKitePlot):
         self._component = 'displacement'
 
         QKitePlot.__init__(self, container=scene)
+        scene.evConfigUpdated.subscribe(self.onConfigUpdate)
+
+    def onConfigUpdate(self):
+        self.update()
+        self.transformToUTM()
 
 
 class QKiteToolTransect(QtGui.QDialog):
@@ -87,6 +92,7 @@ class QKiteToolTransect(QtGui.QDialog):
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
         self.createButton.released.connect(self.addPolyLine)
         self.removeButton.released.connect(self.removePolyLine)
+        parent.scene.evConfigUpdated.subscribe(self.close)
 
     def addPolyLine(self):
         [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
@@ -199,6 +205,7 @@ class QKiteParamSceneMeta(QKiteParameterGroup):
     def __init__(self, spool, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.meta'
+        self. scene = spool.scene
         scene = spool.scene
         self.meta = scene.meta
         self.parameters =\
@@ -206,3 +213,5 @@ class QKiteParamSceneMeta(QKiteParameterGroup):
              scene.meta.T.inamevals_to_save(scene.meta)]
 
         QKiteParameterGroup.__init__(self, self.meta, **kwargs)
+        scene.evConfigUpdated.subscribe(
+            lambda: self.updateModel(scene.config.meta))

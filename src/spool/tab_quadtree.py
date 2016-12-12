@@ -34,9 +34,9 @@ class QKiteQuadtreePlot(QKitePlot):
                        lambda qt: qt.leaf_matrix_weights],
         }
         self._component = 'median'
+        self.quadtree = quadtree
 
         QKitePlot.__init__(self, container=quadtree)
-        self.quadtree = self.container
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
@@ -49,10 +49,9 @@ class QKiteQuadtreePlot(QKitePlot):
                                 brush=pg.mkBrush(focalpoint_color))
 
         self.addItem(self.focal_points)
-        self.updateFocalPoints()
 
-        self.quadtree.evParamUpdate.subscribe(self.update)
-        self.quadtree.evParamUpdate.subscribe(self.updateFocalPoints)
+        self.quadtree.evConfigUpdated.subscribe(self.update)
+        self.quadtree.evConfigUpdated.subscribe(self.updateFocalPoints)
 
     def updateFocalPoints(self):
         if self.quadtree.leaf_focal_points.size == 0:
@@ -66,14 +65,23 @@ class QKiteParamQuadtree(QKiteParameterGroup):
     def __init__(self, spool, plot, *args, **kwargs):
         self.quadtree = spool.scene.quadtree
         self.plot = plot
+        self.sig_guard = True
+
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         self.parameters = ['nleafs', 'nnodes', 'epsilon_limit']
 
         QKiteParameterGroup.__init__(self, self.quadtree, **kwargs)
-        self.quadtree.evParamUpdate.subscribe(self.updateValues)
+        self.quadtree.evConfigUpdated.subscribe(self.onConfigUpdate)
+
+        def updateGuard(func):
+            def wrapper(*args, **kwargs):
+                if not self.sig_guard:
+                    func()
+            return wrapper
 
         # Epsilon control
+        @updateGuard
         def updateEpsilon():
             self.quadtree.epsilon = self.epsilon.value()
 
@@ -90,6 +98,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.epsilon.sigValueChanged.connect(updateEpsilon)
 
         # Epsilon control
+        @updateGuard
         def updateNanFrac():
             self.quadtree.nan_allowed = self.nan_allowed.value()
 
@@ -98,12 +107,13 @@ class QKiteParamQuadtree(QKiteParameterGroup):
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
-             'editable': True}
+             'editable': True, }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
         self.nan_allowed.sigValueChanged.connect(updateNanFrac)
 
         # Tile size controls
+        @updateGuard
         def updateTileSizeMin():
             self.quadtree.tile_size_min = self.tile_size_min.value()
 
@@ -112,10 +122,12 @@ class QKiteParamQuadtree(QKiteParameterGroup):
              'type': 'int',
              'limits': (50, 50000),
              'step': 100,
-             'editable': True}
+             'editable': True,
+             'siPrefix': 'm'}
         self.tile_size_min = pTypes.SimpleParameter(**p)
         self.tile_size_min.itemClass = SliderWidgetParameterItem
 
+        @updateGuard
         def updateTileSizeMax():
             self.quadtree.tile_size_max = self.tile_size_max.value()
 
@@ -154,9 +166,18 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.split_method = pTypes.ListParameter(**p)
         self.split_method.sigValueChanged.connect(changeSplitMethod)
 
+        self.sig_guard = False
         self.pushChild(self.split_method)
         self.pushChild(self.tile_size_max)
         self.pushChild(self.tile_size_min)
         self.pushChild(self.nan_allowed)
         self.pushChild(self.epsilon)
         self.pushChild(self.components)
+
+    def onConfigUpdate(self):
+        self.sig_guard = True
+        for p in ['epsilon', 'nan_allowed',
+                  'tile_size_min', 'tile_size_max']:
+            param = getattr(self, p)
+            param.setValue(getattr(self.quadtree, p))
+        self.sig_guard = False

@@ -1,18 +1,18 @@
-Quadtree object
-===============
+kite.Quadtree
+=============
 
-.. autoclass:: kite.quadtree.Quadtree
+.. autoclass:: kite.Quadtree
     :members:
 
 
-Configuration
--------------
-The ``QuadtreeConfiguration`` holds the necessary configuration to reconstruct and save an instance.
+kite.quadtree.QuadtreeConfig
+----------------------------
+The ``QuadtreeConfig`` holds the necessary configuration to reconstruct and save an instance.
 
 .. autoclass:: kite.quadtree.QuadtreeConfig
 
-QuadNode object
----------------
+kite.quadtree.QuadNode
+----------------------
 
 .. autoclass:: kite.quadtree.QuadNode
     :members:

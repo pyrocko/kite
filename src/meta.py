@@ -127,6 +127,17 @@ def trimMatrix(displ):
     return displ[r1:r2, c1:c2]
 
 
+def greatCircleDistance(alat, alon, blat, blon):
+    R1 = 6371009.
+    d2r = num.deg2rad
+    sin = num.sin
+    cos = num.cos
+    a = sin(d2r(alat-blat)/2)**2 + cos(d2r(alat)) * cos(d2r(blat))\
+        * sin(d2r(alon-blon)/2)**2
+    c = 2. * num.arctan2(num.sqrt(a), num.sqrt(1.-a))
+    return R1 * c
+
+
 def property_cached(func):
     var_name = '_cached_' + func.__name__
     func_doc = ':getter: *(Cached)*'
@@ -153,6 +164,8 @@ def calcPrecission(data):
     # number of floating points:
     mn = num.nanmin(data)
     mx = num.nanmax(data)
+    if not num.isfinite(mx) or num.isfinite(mn):
+        return 3, 6
     precission = int(round(num.log10((100. / (mx-mn)))))
     if precission < 0:
         precission = 0
@@ -167,6 +180,13 @@ class Subject(object):
     """
     def __init__(self):
         self._listeners = list()
+        self._mute = False
+
+    def mute(self):
+        self._mute = True
+
+    def unmute(self):
+        self._mute = False
 
     def subscribe(self, listener):
         """
@@ -186,12 +206,21 @@ class Subject(object):
         except:
             raise AttributeError('%s was not subscribed to ')
 
-    def notify(self, msg=''):
+    def notify(self, *args, **kwargs):
+        if self._mute:
+            return
         for l in self._listeners:
-            if 'msg' in l.__code__.co_varnames:
-                l(msg)
-            else:
-                l()
+            self._call(l, *args, **kwargs)
+
+    @staticmethod
+    def _call(func, *args, **kwargs):
+        try:
+            for k in kwargs.keys():
+                if k not in func.__code__.co_varnames:
+                    k.pop(k)
+        except AttributeError:
+            kwargs = {}
+        func(*args, **kwargs)
 
 
 __all__ = '''

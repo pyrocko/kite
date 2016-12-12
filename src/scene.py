@@ -1,5 +1,4 @@
 #!/bin/python
-import warnings
 import logging
 import numpy as num
 import utm
@@ -7,20 +6,10 @@ import utm
 from pyrocko import guts
 from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
-from .meta import Subject, property_cached
+from .meta import Subject, property_cached, greatCircleDistance
 from . import scene_io
+from os import path
 logging.basicConfig(level=20)
-
-
-def greatCircleDistance(alat, alon, blat, blon):
-    R1 = 6371009.
-    d2r = num.deg2rad
-    sin = num.sin
-    cos = num.cos
-    a = sin(d2r(alat-blat)/2)**2 + cos(d2r(alat)) * cos(d2r(blat))\
-        * sin(d2r(alon-blon)/2)**2
-    c = 2. * num.arctan2(num.sqrt(a), num.sqrt(1.-a))
-    return R1 * c
 
 
 def _setDataNumpy(obj, variable, value):
@@ -55,11 +44,10 @@ class FrameConfig(guts.Object):
 class Frame(object):
     """ UTM frame holding geographical references for :class:`kite.scene.Scene`
     """
+    evConfigUpdated = Subject()
     def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
         self._log = scene._log.getChild('Frame')
-        self.config = config
-        self._scene.evSceneChanged.subscribe(self._updateExtent)
 
         self.extentE = 0.
         self.extentN = 0.
@@ -75,6 +63,17 @@ class Frame(object):
         self.llE = None
         self.N = None
         self.E = None
+
+        self.parseConfig(config)
+        self._scene.evConfigUpdated.subscribe(self.parseConfig)
+        self._scene.evSceneChanged.subscribe(self._updateExtent)
+
+    def parseConfig(self, config=None):
+        if config is None:
+            self.config = self._scene.config.frame
+        else:
+            self.config = config
+        self.evConfigUpdated.notify()
 
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
@@ -201,7 +200,7 @@ class Frame(object):
 
 
 class Meta(guts.Object):
-    """Meta configuration for ``Scene``.
+    """ Meta configuration for ``Scene``.
     """
     scene_title = guts.String.T(default='Unnamed Scene')
     scene_id = guts.String.T(default='INSAR')
@@ -216,13 +215,26 @@ class SceneConfig(guts.Object):
     sub-objects configuration.
     """
     meta = Meta.T(default=Meta(),
-                  help='Scene metainformation.')
+                  help='Scene metainformation')
     frame = FrameConfig.T(default=FrameConfig(),
-                          help='Scene Frame configuration.')
+                          help='Frame/reference configuration')
     quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
-                                help='Quadtree configuration.')
+                                help='Quadtree parameters')
     covariance = CovarianceConfig.T(default=CovarianceConfig(),
-                                    help='Covariance config for the quadtree')
+                                    help='Covariance parameters')
+
+
+def dynamicmethod(func):
+    ''' Decorator for dynamic classmethod / instancemethod declaration '''
+    def dynclassmethod(*args, **kwargs):
+        if isinstance(args[0], Scene):
+            return func(*args, **kwargs)
+        else:
+            return func(Scene(), *args, **kwargs)
+
+    dynclassmethod.__doc__ = func.__doc__
+    dynclassmethod.__name__ = func.__name__
+    return dynclassmethod
 
 
 class Scene(object):
@@ -247,6 +259,7 @@ class Scene(object):
     :type los: :class:`kite.scene.DisplacementLOS`
     """
     evSceneChanged = Subject()
+    evConfigUpdated = Subject()
 
     def __init__(self, config=SceneConfig()):
         self._setLoggingUp()
@@ -260,6 +273,9 @@ class Scene(object):
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
         self.frame = Frame(scene=self, config=self.config.frame)
+
+        self.import_data = self._import_data
+        self.load = self.load
 
     def _setLoggingUp(self):
         logging.basicConfig(level=logging.DEBUG)
@@ -399,7 +415,89 @@ class Scene(object):
         from kite.spool import Spool
         return Spool(scene=self)
 
-    def import_file(*args, **kwargs):
+    def _testImport(self):
+        try:
+            self.frame.E
+            self.frame.N
+            self.frame.gridE
+            self.frame.gridN
+            self.frame.dE
+            self.frame.dN
+            self.displacement
+            self.theta
+            self.phi
+        except Exception as e:
+            print e
+            raise ImportError('Something went wrong during import - '
+                              'see Exception!')
+
+    def save(self, filename=None):
+        """ Save kite scene to kite file structure
+
+        Saves the current scene meta information and UTM frame to a YAML
+        (``.yml``) file. Numerical data (:attr:`kite.Scene.displacement`,
+        :attr:`kite.Scene.theta` and :attr:`kite.Scene.phi`)
+        are saved as binary files from :class:`numpy.array`.
+
+        :param filename: Filenames to save scene to, defaults to
+            ' :attr:`kite.Scene.meta.scene_id` ``_``
+            :attr:`kite.Scene.meta.scene_view`
+        :type filename: str, optional
+        """
+        filename = filename or '%s_%s' % (self.meta.scene_id,
+                                          self.meta.scene_view)
+
+        components = ['displacement', 'theta', 'phi']
+        self._log.info('Saving scene data to %s.npz' % filename)
+
+        num.savez('%s.npz' % (filename),
+                  *[getattr(self, arr) for arr in components])
+        self.save_config('%s.yml' % filename)
+
+    def save_config(self, filename):
+        self._log.info('Saving scene config to %s' % filename)
+        self.config.dump(filename='%s' % filename,
+                         header='kite.Scene YAML Config')
+
+    @dynamicmethod
+    def _load(self, filename):
+        """ Load a kite scene from file ``filename.[npz,yml]``
+        structure
+
+        :param filename: Filenames the scene data is saved under
+        :type filename: str
+        :returns: Scene object from data resources
+        :rtype: :class:`kite.Scene`
+        """
+        scene = self
+        components = ['displacement', 'theta', 'phi']
+
+        basename = path.splitext(filename)[0]
+        scene._log.info('Loading from %s[.npz,.yml]' % basename)
+        try:
+            data = num.load('%s.npz' % basename)
+            for i, comp in enumerate(components):
+                scene.__setattr__(comp, data['arr_%d' % i])
+        except IOError:
+            raise UserIOWarning('Could not load data from %s.npz' % basename)
+
+        try:
+            scene.load_config('%s.yml' % basename)
+        except IOError:
+            raise UserIOWarning('Could not load %s.yml' % basename)
+
+        scene._testImport()
+        return scene
+
+    load = staticmethod(_load)
+
+    def load_config(self, filename):
+        self._log.info('Loading config from %s' % filename)
+        self.config = guts.load(filename=filename)
+        self.evConfigUpdated.notify()
+
+    @dynamicmethod
+    def _import_data(self, path, **kwargs):
         """ Import displacement data from foreign file format.
 
         :param path: Filename of resource to import
@@ -410,13 +508,7 @@ class Scene(object):
         :rtype: :class:`kite.Scene`
         :raises: TypeError
         """
-        if len(args) == 1:
-            scene = Scene()
-            path = str(args[0])
-        elif len(args) == 2 and isinstance(args[0], Scene):
-            scene = args[0]
-            path = args[1]
-
+        scene = self
         import os
         if not os.path.isfile(path) or os.path.isdir(path):
             raise ImportError('File %s does not exist!' % path)
@@ -442,103 +534,12 @@ class Scene(object):
         scene._testImport()
         return scene
 
-    # import_file.__func__.__doc__ += \
-    #     '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
-    # for mod in scene_io.__all__:
-    #     import_file.__func__.__doc__ += '\n**%s**\n\n' % mod
-    #     import_file.__func__.__doc__ += eval('scene_io.%s.__doc__' % mod)
-
-    def _testImport(self):
-        try:
-            self.frame.E
-            self.frame.N
-            self.frame.gridE
-            self.frame.gridN
-            self.frame.dE
-            self.frame.dN
-            self.displacement
-            self.theta
-            self.phi
-        except Exception as e:
-            print e
-            raise ImportError('Something went wrong during import - '
-                              'see Exception!')
-
-    def save(self, scene_name=None):
-        """ Save kite scene to kite file structure
-
-        Saves the current scene meta information and UTM frame to a YAML
-        (``.yml``) file. Numerical data (:attr:`kite.Scene.displacement`,
-        :attr:`kite.Scene.theta` and :attr:`kite.Scene.phi`)
-        are saved as binary files from :class:`numpy.array`.
-
-        :param scene_name: Filenames to save scene to, defaults to
-            ' :attr:`kite.Scene.meta.scene_id` ``_``
-            :attr:`kite.Scene.meta.scene_view`
-        :type scene_name: str, optional
-        """
-        filename = scene_name or '%s_%s' % (self.meta.scene_id,
-                                            self.meta.scene_view)
-
-        self._log.info('Saving scene data to %s.[dsp,tht,phi]' % filename)
-
-        components = {
-            'displacement': 'disp',
-            'theta': 'theta',
-            'phi': 'phi',
-        }
-        for comp, ext in components.iteritems():
-            num.save(file='%s.%s' % (filename, ext),
-                     arr=self.__getattribute__(comp))
-        self.save_config(filename + '.yml')
-
-    def save_config(self, filename):
-        self._log.info('Saving scene config to %s' % filename)
-        self.config.dump(filename='%s' % filename,
-                         header='kite.Scene YAML Config')
-
-    @classmethod
-    def load(cls, scene_name):
-        """ Load a kite scene from file ``scene_name.[yml,dsp,tht,phi]``
-        structure
-
-        :param scene_name: Filenames the scene data is saved under
-        :type scene_name: str
-        :returns: Scene object from data resources
-        :rtype: :class:`kite.Scene`
-        """
-        success = False
-        components = {
-            'displacement': 'disp',
-            'theta': 'theta',
-            'phi': 'phi',
-        }
-
-        try:
-            scene = cls()
-            scene.config = guts.load(filename='%s.yml' % scene_name)
-            success = True
-        except IOError:
-            raise UserIOWarning('Could not load %s.yml' % scene_name)
-
-        for comp, ext in components.iteritems():
-            try:
-                data = num.load('%s.%s.npy' % (scene_name, ext))
-                scene.__setattr__(comp, data)
-                success = True
-            except IOError:
-                warnings.warn('Could not load %s from %s.%s'
-                              % (comp.title(), scene_name, ext),
-                              UserIOWarning)
-        if not success:
-            raise ImportError('Could not load kite scene container %s'
-                              % scene_name)
-
-        scene._testImport()
-        return scene
-
-    def load_config(self, filename):
-        raise NotImplemented()
+    _import_data.__doc__ += \
+        '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
+    for mod in scene_io.__all__:
+        _import_data.__doc__ += '\n**%s**\n\n' % mod
+        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
+    import_data = staticmethod(_import_data)
 
     def __str__(self):
         return self.config.__str__()
@@ -594,7 +595,7 @@ class SceneTest(Scene):
         scene.displacement = scene._gaussAnomaly(scene.frame.E, scene.frame.N,
                                                  **kwargs)
         if noise is not None:
-            cls._addNoise(scene, noise)
+            cls.addNoise(scene, noise)
         return scene
 
     @classmethod
@@ -609,19 +610,35 @@ class SceneTest(Scene):
         return scene
 
     @classmethod
-    def createSine(cls, nx=500, ny=500, noise=None, **kwargs):
+    def createSine(cls, nx=500, ny=500, kE=.0041, kN=.0061, amplitude=3.,
+                   noise=1., **kwargs):
         scene = cls()
         scene.meta.title = 'Synthetic Displacement | Sine'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        scene.displacement = scene._sineAnomaly(scene.frame.E, scene.frame.N,
-                                                **kwargs)
+        E, N = num.meshgrid(scene.frame.E, scene.frame.N)
+        displ = num.zeros_like(E)
+
+        kE = num.random.rand(3) * kE
+        kN = num.random.rand(3) * kN
+
+        for ke in kE:
+            phase = num.random.randn(1)[0]
+            displ += num.sin(ke * E + phase)
+        for kn in kN:
+            phase = num.random.randn(1)[0]
+            displ += num.sin(kn * N + phase)
+        displ -= num.mean(displ)
+
+        scene.displacement = displ * amplitude
         if noise is not None:
-            cls._addNoise(scene, noise)
+            cls.addNoise(scene, noise)
         return scene
 
     @staticmethod
     def _prepareSceneTest(scene, nx=500, ny=500):
+        scene.frame.llLat = 32.1
+        scene.frame.llLon = 54.14
         scene.frame.dLat = 1e-4
         scene.frame.dLon = 1e-4
         scene.frame.E = num.arange(nx) * 50.
@@ -632,16 +649,10 @@ class SceneTest(Scene):
         return scene
 
     @staticmethod
-    def _addNoise(scene, noise_amplitude):
+    def addNoise(scene, noise_amplitude):
         rand = num.random.RandomState()
-        noise = rand.rand(*scene.displacement.shape) *\
-            num.max(scene.displacement) * noise_amplitude
+        noise = rand.randn(*scene.displacement.shape) * noise_amplitude
         scene.displacement += noise
-
-    @staticmethod
-    def _sineAnomaly(x, y, k1=.01, k2=.01, amplitude=3.):
-        X, Y = num.meshgrid(x, y)
-        return num.sin(k1 * X) * num.sin(k2 * Y)
 
     @staticmethod
     def _gaussAnomaly(x, y, sigma_x=.007, sigma_y=.005,

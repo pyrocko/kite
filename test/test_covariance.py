@@ -16,7 +16,7 @@ class TestCovariance(unittest.TestCase):
          os.path.abspath(os.path.dirname(__file__)),
          'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
 
-        self.sc = Scene.import_file(file)
+        self.sc = Scene.import_data(file)
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
         self.sc._log.setLevel('CRITICAL')
 

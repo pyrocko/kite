@@ -1,11 +1,11 @@
-Covariance
-==========
+kite.Covariance
+===============
 
-.. autoclass:: kite.covariance.Covariance
+.. autoclass:: kite.Covariance
     :members:
 
-Config
-------
+kite.covariance.CovarianceConfig
+--------------------------------
 
 .. autoclass:: kite.covariance.CovarianceConfig
     :members:

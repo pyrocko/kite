@@ -48,7 +48,8 @@ class QKitePlot(pg.PlotWidget):
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(None,
                                   autoDownsample=False,
-                                  border=border_pen)
+                                  border=border_pen,
+                                  useOpenGL=True)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
@@ -85,19 +86,15 @@ class QKitePlot(pg.PlotWidget):
         # self.scalebar()
 
     def transformToUTM(self):
-        ll_x, ll_y, ur_x, ur_y, dx, dy = \
+        ll_E, ll_N, ur_E, ur_N, dE, dN = \
             (self.container.frame.llE, self.container.frame.llN,
              self.container.frame.urE, self.container.frame.urN,
              self.container.frame.dE, self.container.frame.dN)
 
-        self.image.translate(ll_x, ll_y)
-        self.image.scale(dx, dy)
-        ur_x, ur_y
-        # padding = 100
-        # self.setLimits(xMin=ll_x-dx*padding,
-        #                xMax=ur_x+dx*padding,
-        #                yMin=ll_y-dy*padding,
-        #                yMax=ur_y+dy*padding)
+        self.image.resetTransform()
+        # self.image.translate(ll_x, ll_y)
+        self.image.scale(dE, dN)
+        ll_E, ll_N, ur_E, ur_N, dE, dN  # noqa
 
     def scalebar(self):
         ''' Not working '''
@@ -221,6 +218,9 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 class QKiteParameterGroup(pTypes.GroupParameter):
     def __init__(self, model, **kwargs):
         self.model = model
+        if hasattr(model, 'evConfigUpdated'):
+            model.evConfigUpdated.subscribe(lambda: self.updateModel(model))
+
         if isinstance(self.parameters, list):
             self.parameters = dict.fromkeys(self.parameters)
 
@@ -235,8 +235,10 @@ class QKiteParameterGroup(pTypes.GroupParameter):
             try:
                 if callable(f):
                     value = f(self.model)
+                    # print('Updating %s: %s (func)' % (param, value))
                 else:
                     value = getattr(self.model, param)
+                    # print('Updating %s: %s (getattr)' % (param, value))
             except AttributeError:
                 value = 'n/a'
             try:
@@ -246,6 +248,10 @@ class QKiteParameterGroup(pTypes.GroupParameter):
                                'value': value,
                                'type': 'str',
                                'readonly': True})
+
+    def updateModel(self, model):
+        self.model = model
+        self.updateValues()
 
     def pushChild(self, child, **kwargs):
         self.insertChild(0, child, **kwargs)
