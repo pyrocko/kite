@@ -41,9 +41,9 @@ class QKiteView(dockarea.DockArea):
 
 
 class QKitePlot(pg.PlotWidget):
-    def __init__(self, container):
+    def __init__(self, scene_proxy):
         pg.PlotWidget.__init__(self)
-        self.container = container
+        self.scene_proxy = scene_proxy
 
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(None,
@@ -79,22 +79,15 @@ class QKitePlot(pg.PlotWidget):
         self.addItem(self.image)
         self.update()
 
-        self.transformToUTM()
+        self.transFromFrame()
         self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
                                         rateLimit=30, slot=self.mouseMoved)
         # self.addIsocurve()
         # self.scalebar()
 
-    def transformToUTM(self):
-        ll_E, ll_N, ur_E, ur_N, dE, dN = \
-            (self.container.frame.llE, self.container.frame.llN,
-             self.container.frame.urE, self.container.frame.urN,
-             self.container.frame.dE, self.container.frame.dN)
-
+    def transFromFrame(self):
         self.image.resetTransform()
-        # self.image.translate(ll_x, ll_y)
-        self.image.scale(dE, dN)
-        ll_E, ll_N, ur_E, ur_N, dE, dN  # noqa
+        self.image.scale(self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
 
     def scalebar(self):
         ''' Not working '''
@@ -115,7 +108,7 @@ class QKitePlot(pg.PlotWidget):
 
     @property
     def data(self):
-        _data = self.components_available[self.component][1](self.container)
+        _data = self.components_available[self.component][1](self.scene_proxy)
         self.hint['precision'], self.hint['vlength'] = calcPrecission(_data)
         return _data  # num.nan_to_num(_data)
 
@@ -216,10 +209,9 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 
 
 class QKiteParameterGroup(pTypes.GroupParameter):
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
-        if hasattr(model, 'evConfigUpdated'):
-            model.evConfigUpdated.subscribe(lambda: self.updateModel(model))
+        self.model_attr = model_attr
 
         if isinstance(self.parameters, list):
             self.parameters = dict.fromkeys(self.parameters)
@@ -231,13 +223,19 @@ class QKiteParameterGroup(pTypes.GroupParameter):
         if not hasattr(self, 'parameters'):
             return
 
+        if self.model_attr is not None and\
+           hasattr(self.model, self.model_attr):
+            model = getattr(self.model, self.model_attr)
+        else:
+            model = self.model
+
         for param, f in self.parameters.iteritems():
             try:
                 if callable(f):
-                    value = f(self.model)
+                    value = f(model)
                     # print('Updating %s: %s (func)' % (param, value))
                 else:
-                    value = getattr(self.model, param)
+                    value = getattr(model, param)
                     # print('Updating %s: %s (getattr)' % (param, value))
             except AttributeError:
                 value = 'n/a'
@@ -248,10 +246,6 @@ class QKiteParameterGroup(pTypes.GroupParameter):
                                'value': value,
                                'type': 'str',
                                'readonly': True})
-
-    def updateModel(self, model):
-        self.model = model
-        self.updateValues()
 
     def pushChild(self, child, **kwargs):
         self.insertChild(0, child, **kwargs)

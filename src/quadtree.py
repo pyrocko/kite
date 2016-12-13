@@ -299,7 +299,8 @@ class Quadtree(object):
     significant displacements and have high-resolution where it matters and
     lower resolution at regions with less or constant deformation.
     """
-    evConfigUpdated = Subject()
+    evChanged = Subject()
+    evConfigChanged = Subject()
 
     def __init__(self, scene, config=QuadtreeConfig()):
         self._split_methods = {
@@ -318,7 +319,7 @@ class Quadtree(object):
         self.parseConfig(config)
 
         self._leafs = None
-        self._scene.evConfigUpdated.subscribe(self.parseConfig)
+        self._scene.evConfigChanged.subscribe(self.parseConfig)
 
     def setScene(self, scene):
         self._scene = scene
@@ -331,7 +332,7 @@ class Quadtree(object):
         else:
             self.config = config
 
-        self.evConfigUpdated.mute()
+        self.evChanged.mute()
 
         self.setSplitMethod(self.config.split_method)
         if self.config.epsilon is not None:
@@ -340,8 +341,10 @@ class Quadtree(object):
         self.tile_size_min = self.config.tile_size_min
         self.tile_size_max = self.config.tile_size_max
 
-        self.evConfigUpdated.unmute()
-        self.evConfigUpdated.notify()
+        self.evChanged.unmute()
+
+        self.evConfigChanged.notify()
+        self.evChanged.notify()
 
     def setSplitMethod(self, split_method):
         """Set splitting method for quadtree tiles
@@ -398,7 +401,7 @@ class Quadtree(object):
         self.leafs = None
         self.config.epsilon = value
 
-        self.evConfigUpdated.notify()
+        self.evChanged.notify()
         return
 
     @property_cached
@@ -426,7 +429,7 @@ class Quadtree(object):
 
         self.leafs = None
         self.config.nan_allowed = value
-        self.evConfigUpdated.notify()
+        self.evChanged.notify()
 
     @property
     def tile_size_min(self):
@@ -467,7 +470,7 @@ class Quadtree(object):
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
         self.leafs = None
-        self.evConfigUpdated.notify()
+        self.evChanged.notify()
 
     @property_cached
     def _tile_size_lim_px(self):

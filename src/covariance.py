@@ -100,7 +100,8 @@ class Covariance(object):
     :param config: Config object
     :type config: :class:`kite.covariance.CovarianceConfig`
     """
-    evConfigUpdated = Subject()
+    evChanged = Subject()
+    evConfigChanged = Subject()
 
     def __init__(self, scene, config=CovarianceConfig()):
         self.frame = scene.frame
@@ -112,8 +113,8 @@ class Covariance(object):
         self.parseConfig(config)
 
         self._log = scene._log.getChild('Covariance')
-        self._quadtree.evConfigUpdated.subscribe(self._clear)
-        self._scene.evConfigUpdated.subscribe(self.parseConfig)
+        self._quadtree.evChanged.subscribe(self._clear)
+        self._scene.evConfigChanged.subscribe(self.parseConfig)
 
     def __call__(self, *args, **kwargs):
         return self.getLeafCovariance(*args, **kwargs)
@@ -123,12 +124,15 @@ class Covariance(object):
             self.config = self._scene.config.covariance
         else:
             self.config = config
-        self.evConfigUpdated.notify()
+        self._clear(config=False)
+        self.evConfigChanged.notify()
+        self.evChanged.notify()
 
-    def _clear(self):
-        self.config.a = None
-        self.config.b = None
-        self.config.variance = None
+    def _clear(self, config=True):
+        if not config:
+            self.config.a = None
+            self.config.b = None
+            self.config.variance = None
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_func = None
@@ -160,6 +164,8 @@ class Covariance(object):
         :getter: Noise patch size in ``km^2``.
         :type: float
         '''
+        if self.noise_coord is None:
+            return 0.
         size = (self.noise_coord[2] * self.noise_coord[3])*1e-6
         if size < 75:
             self._log.warning('Defined noise patch is instably small')
@@ -196,7 +202,7 @@ class Covariance(object):
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
-        self.evConfigUpdated.notify()
+        self.evChanged.notify()
 
     def setNoiseData(self, data):
         ''' Convenience function for
@@ -503,7 +509,7 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
-        self.evConfigUpdated.notify()
+        self.evChanged.notify()
 
     @variance.getter
     def variance(self):
