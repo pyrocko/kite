@@ -181,10 +181,30 @@ class Frame(object):
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
-    def _mapGridXY(self, x, y):
-        ll_x, ll_y, ur_x, ur_y, dx, dy = self.extent()
-        return (ll_x + (x * dx),
-                ll_y + (y * dy))
+    def mapMatrixEN(self, row, col):
+        """ Maps matrix row, column to local easting and northing.
+
+        :param row: Matrix row number
+        :type row: int
+        :param col: Matrix column number
+        :type col: int
+        :returns: Easting and northing in local coordinates
+        :rtype: tuple (float), (easting, northing)
+        """
+        return row * self.dE, col * self.dN
+
+    def mapENMatrix(self, E, N):
+        """ Maps local coordinates (easting and northing) to matrix
+            row and column
+
+        :param E: Easting in local coordinates
+        :type E: float
+        :param N: Northing in local coordinates
+        :type N: float
+        :returns: Row and column
+        :rtype: tuple (int), (row, column)
+        """
+        return int(E/self.dE), int(N/self.dN)
 
     def __str__(self):
         return (
@@ -464,6 +484,8 @@ class Scene(object):
         """
         filename = filename or '%s_%s' % (self.meta.scene_id,
                                           self.meta.scene_view)
+        _file, ext = path.splitext(filename)
+        filename = _file if ext in ['yml', 'npz'] else filename
 
         components = ['displacement', 'theta', 'phi']
         self._log.info('Saving scene data to %s.npz' % filename)
@@ -473,6 +495,8 @@ class Scene(object):
         self.save_config('%s.yml' % filename)
 
     def save_config(self, filename):
+        _file, ext = path.splitext(filename)
+        filename = _file if ext in ['yml'] else filename
         self._log.info('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')

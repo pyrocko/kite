@@ -110,9 +110,9 @@ class Covariance(object):
         self._noise_data = None
         self._noise_spectrum_cached = None
         self._initialized = False
-        self.parseConfig(config)
-
         self._log = scene._log.getChild('Covariance')
+
+        self.parseConfig(config)
         self._quadtree.evChanged.subscribe(self._clear)
         self._scene.evConfigChanged.subscribe(self.parseConfig)
 
@@ -122,7 +122,17 @@ class Covariance(object):
     def parseConfig(self, config=None):
         if config is None:
             config = self._scene.config.covariance
+
         self.config = config
+
+        if config.noise_coord is None\
+           and (config.a is not None or
+                config.b is not None or
+                config.variance is not None):
+            self.noise_data  # init data array
+            self.config.a = config.a
+            self.config.b = config.b
+            self.config.variance = config.variance
 
         self._clear(config=False)
         self.evConfigChanged.notify()
@@ -187,11 +197,20 @@ class Covariance(object):
     def noise_data(self):
         if self._noise_data is not None:
             return self._noise_data
-
-        node = self.getNoiseNode()
-        self.noise_data = node.displacement
-        self.noise_coord = [node.llE, node.llN,
-                            node.sizeE, node.sizeN]
+        elif self.config.noise_coord is not None:
+            print(self.config.noise_coord[:])
+            llR, llC = self._scene.frame.mapENMatrix(
+                *self.config.noise_coord[:2])
+            sR, sC = self._scene.frame.mapENMatrix(
+                *self.config.noise_coord[2:])
+            slice_rows = slice(llR, llR + sR)
+            slice_cols = slice(llC, llC + sC)
+            self.noise_data = self._scene.displacement[slice_rows, slice_cols]
+        else:
+            node = self.getNoiseNode()
+            self.noise_data = node.displacement
+            self.noise_coord = [node.llE, node.llN,
+                                node.sizeE, node.sizeN]
         return self.noise_data
 
     @noise_data.setter
@@ -205,9 +224,13 @@ class Covariance(object):
 
     def getNoiseNode(self):
         """ Choose noise node from quadtree """
-        self._log.debug('Fetching noise from Quadtree.nodes (QuadNode)')
-        nodes = sorted(self._quadtree.leafs,
-                       key=lambda n: n.length/(n.nan_fraction+1))
+        t0 = time.time()
+        stdm = max([n.std for n in self._quadtree.nodes])
+        nodes = sorted(self._quadtree.nodes,
+                       key=lambda n: (n.length/(n.std+1.)))
+
+        self._log.debug('Fetched noise from Quadtree.nodes [%0.8f s]'
+                        % (time.time() - t0))
         return nodes[-1]
 
     def _mapLeafs(self, nx, ny):
@@ -375,7 +398,7 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec = num.abs(f_spec)**2 / f_spec.size
+        f_spec = num.abs(f_spec) / f_spec.size
         # f_spec /= f_spec.size
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
@@ -386,7 +409,7 @@ class Covariance(object):
         k_bin = kN if kN.size < kE.size else kE
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
-                                                     statistic='sum',
+                                                     statistic='mean',
                                                      bins=k_bin[k_bin > 0])
 
         self._noise_spectrum_cached = power_spec, k[:-1], f_spec, kN, kE

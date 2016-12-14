@@ -362,18 +362,19 @@ class Quadtree(object):
         if correction not in self._corrections.keys():
             raise AttributeError('Method %s not in %s'
                                  % (correction, self._corrections))
+        self._log.debug('Changing to split method \'%s\'' % correction)
 
         self.config.correction = correction
         self._split_func = self._corrections[correction][1]
 
         # Clearing cached properties through None
         self.leafs = None
-        self._epsilon_init = None
+        self.nodes = None
         self.epsilon_limit = None
+        self._epsilon_init = None
         self.epsilon = self.config.epsilon or self._epsilon_init
 
         self._initTree()
-        self._log.debug('Changed to split method %s' % correction)
         self.evChanged.notify()
 
     def _initTree(self):
@@ -408,8 +409,8 @@ class Quadtree(object):
 
     @property_cached
     def _epsilon_init(self):
+        ''' Initial epsilon for virgin tree creation '''
         return num.nanstd(self._displacement)
-        # return num.mean([self._split_func(b) for b in self._base_nodes])
 
     @property_cached
     def epsilon_limit(self):
@@ -441,6 +442,7 @@ class Quadtree(object):
     @property
     def tile_size_min(self):
         """ Minimum allowed tile size in *meter*.
+            Measured along long edge `(max(dE, dN))`
 
         :getter: Returns the minimum allowed tile size
         :setter: Sets the threshold
@@ -459,6 +461,7 @@ class Quadtree(object):
     @property
     def tile_size_max(self):
         """ Maximum allowed tile size in *meter*.
+            Measured along long edge `(max(dE, dN))`
 
         :getter: Returns the maximum allowed tile size
         :setter: Sets the threshold
@@ -487,17 +490,22 @@ class Quadtree(object):
         return (int(self.tile_size_min / dpx),
                 int(self.tile_size_max / dpx))
 
+    @property_cached
+    def nodes(self):
+        """ All nodes of the tree
+
+        :getter: Get the list of nodes
+        :type: list
+        """
+        return [n for b in self._base_nodes for n in b.iterTree()]
+
     @property
     def nnodes(self):
         """
         :getter: Number of nodes of the built tree.
         :type: int
         """
-        nnodes = 0
-        for b in self._base_nodes:
-            for n in b.iterTree():
-                nnodes += 1
-        return nnodes
+        return len(self.nodes)
 
     @property_cached
     def leafs(self):
@@ -510,8 +518,9 @@ class Quadtree(object):
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafsEval()
                           if l.nan_fraction < self.nan_allowed])
-        self._log.debug('Gathering leafs (%d) for epsilon %.4f [%0.8f s]' %
-                        (len(leafs), self.epsilon, time.time()-t0))
+        self._log.debug(
+            'Gathering leafs for epsilon %.4f (nleafs=%d) [%0.8f s]' %
+            (self.epsilon, len(leafs), time.time()-t0))
         return leafs
 
     @property

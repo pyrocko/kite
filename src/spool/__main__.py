@@ -39,7 +39,7 @@ Supported formats are:
         parser.print_help()
         sys.exit(0)
     sc = Scene()
-    sc._log_stream.setLevel(ns.log_lvl)
+    sc.setLogLevel(ns.log_lvl)
     try:
         sc.import_data(ns.file[0])
     except ImportError:

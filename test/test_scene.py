@@ -95,7 +95,7 @@ class TestMatlabScene(unittest.TestCase):
         import shutil
 
         tmp_dir = tempfile.mkdtemp()
-        print(tmp_dir)
+        # print(tmp_dir)
         file = os.path.join(tmp_dir, self.__class__.__name__)
         sc1 = self.sc
 
@@ -126,18 +126,17 @@ class TestMatlabScene(unittest.TestCase):
             self.assertEqual([l.id for l in sc1.quadtree.leafs],
                              [l.id for l in sc2.quadtree.leafs])
 
-            self.assertEqual(sc1.covariance.covariance_model,
-                             sc2.covariance.covariance_model)
             self.assertEqual(sc1.covariance.variance,
                              sc2.covariance.variance)
-            self.assertEqual(sc1.covariance.weight_matrix_focal,
-                             sc2.covariance.weight_matrix_focal)
-            self.assertEqual(sc1.covariance.covariance_matrix_focal,
-                             sc2.covariance.covariance_matrix_focal)
+            self.assertEqual(sc1.covariance.covariance_model,
+                             sc2.covariance.covariance_model)
+            num.testing.assert_equal(sc1.covariance.weight_matrix_focal,
+                                     sc2.covariance.weight_matrix_focal)
+            num.testing.assert_equal(sc1.covariance.covariance_matrix_focal,
+                                     sc2.covariance.covariance_matrix_focal)
 
         finally:
-            pass
-            # shutil.rmtree(tmp_dir)
+            shutil.rmtree(tmp_dir)
 
 
 if __name__ == '__main__':

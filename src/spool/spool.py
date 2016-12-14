@@ -118,10 +118,6 @@ class SpoolMainWindow(QtGui.QMainWindow):
         for v in self.views:
             self.addView(v)
 
-    def setScene(self, scene):
-        self.scene = scene
-        self.evSceneChanged.notify()
-
     def addView(self, view):
         view = view(self)
         self.loadingModule.notify(view.title)
@@ -133,35 +129,36 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def onSaveConfig(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='YAML file (*.yml)', caption='Save scene YAML config')
+            filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene.save_config(filename)
+        self.scene_proxy.scene.save_config(filename)
 
     def onSaveData(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='*', caption='Save scene')
+            filter='YAML *.yml, NumPy container *.npz (*.yml *.npz)',
+            caption='Save scene')
         if not validateFilename(filename):
             return
-        self.scene.save(filename)
+        self.scene_proxy.scene.save(filename)
 
     def onLoadConfig(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
-            filter='YAML file (*.yml)', caption='Load scene YAML config')
+            filter='YAML file *.yml (*.yml)', caption='Load scene YAML config')
         if not validateFilename(filename):
             return
         self.scene_proxy.scene.load_config(filename)
 
     def onExportQuadtreeCSV(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='CSV File (*.csv)', caption='Export Quadtree CSV')
+            filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
         if not validateFilename(filename):
             return
-        self.scene.quadtree.export(filename)
+        self.scene_proxy.quadtree.export(filename)
 
     def onOpenScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
-            filter='YAML, NumPy NPZ file (*.yml *.npz)',
+            filter='YAML *.yml, NumPy container *.npz (*.yml *.npz)',
             caption='Load kite scene')
         if not validateFilename(filename):
             return
