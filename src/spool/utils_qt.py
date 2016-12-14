@@ -282,7 +282,7 @@ class SliderWidget(QtGui.QWidget):
 
     def setOpts(self, bounds=None):
         if bounds is not None:
-            self.setRange(bounds)
+            self.setRange(*bounds)
 
     def _updateLabel(self, val):
         if self.mn is not None:

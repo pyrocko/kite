@@ -10,69 +10,99 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 
 class QKiteQuadtree(QKiteView):
     def __init__(self, spool):
-        quadtree = spool.scene.quadtree
+        scene_proxy = spool.scene_proxy
         self.title = 'Scene.quadtree'
-        self.main_widget = QKiteQuadtreePlot(quadtree)
+        self.main_widget = QKiteQuadtreePlot(scene_proxy)
         self.tools = {}
 
-        self.parameters = [
-            QKiteParamQuadtree(spool, self.main_widget, expanded=True)
-        ]
+        self.param_quadtree = QKiteParamQuadtree(scene_proxy,
+                                                 self.main_widget,
+                                                 expanded=True)
+        self.parameters = [self.param_quadtree]
+
+        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
         QKiteView.__init__(self)
 
+    def modelChanged(self):
+        self.main_widget.update()
+        self.main_widget.transFromFrame()
+        self.main_widget.updateFocalPoints()
+
+        self.param_quadtree.updateValues()
+        self.param_quadtree.onConfigUpdate()
+        self.param_quadtree.updateEpsilonLimits()
+
 
 class QKiteQuadtreePlot(QKitePlot):
-    def __init__(self, quadtree):
+    def __init__(self, scene_proxy):
 
         self.components_available = {
-            'mean': ['Node.mean displacement',
-                     lambda qt: qt.leaf_matrix_means],
-            'median': ['Node.median displacement',
-                       lambda qt: qt.leaf_matrix_medians],
-            'weight': ['Node.weight covariance',
-                       lambda qt: qt.leaf_matrix_weights],
+            'mean':
+            ['Node.mean displacement',
+             lambda sp: sp.quadtree.leaf_matrix_means],
+            'median':
+            ['Node.median displacement',
+             lambda sp: sp.quadtree.leaf_matrix_medians],
+            'weight':
+            ['Node.weight covariance',
+             lambda sp: sp.quadtree.leaf_matrix_weights],
         }
-        self._component = 'median'
-        self.quadtree = quadtree
 
-        QKitePlot.__init__(self, container=quadtree)
+        self._component = 'median'
+
+        QKitePlot.__init__(self, scene_proxy=scene_proxy)
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
         # focalpoint_outline_color = (255, 255, 255, 200)
         focalpoint_outline_color = (3, 212, 3)
-        self.focal_points = pg.ScatterPlotItem(
-                                size=3.,
-                                pen=pg.mkPen(focalpoint_outline_color,
-                                             width=.5),
-                                brush=pg.mkBrush(focalpoint_color))
+        self.focal_points =\
+            pg.ScatterPlotItem(size=3.,
+                               pen=pg.mkPen(focalpoint_outline_color,
+                                            width=.5),
+                               brush=pg.mkBrush(focalpoint_color),
+                               antialias=True)
 
         self.addItem(self.focal_points)
 
-        self.quadtree.evConfigUpdated.subscribe(self.update)
-        self.quadtree.evConfigUpdated.subscribe(self.updateFocalPoints)
+        self.scene_proxy.sigQuadtreeChanged.connect(self.update)
+        self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrame)
+        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrameScatter)
+
+        self.updateFocalPoints()
+
+    def transFromFrameScatter(self):
+        self.focal_points.resetTransform()
+        self.focal_points.scale(
+            self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
 
     def updateFocalPoints(self):
-        if self.quadtree.leaf_focal_points.size == 0:
+        if self.scene_proxy.quadtree.leaf_focal_points.size == 0:
             self.focal_points.clear()
         else:
-            self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
-                                      pxMode=True)
+            self.focal_points.setData(
+                pos=self.scene_proxy.quadtree.leaf_focal_points,
+                pxMode=True)
 
 
 class QKiteParamQuadtree(QKiteParameterGroup):
-    def __init__(self, spool, plot, *args, **kwargs):
-        self.quadtree = spool.scene.quadtree
+    def __init__(self, scene_proxy, plot, *args, **kwargs):
         self.plot = plot
         self.sig_guard = True
+        self.sp = scene_proxy
 
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         self.parameters = ['nleafs', 'nnodes', 'epsilon_limit']
+        scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
+        scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
 
-        QKiteParameterGroup.__init__(self, self.quadtree, **kwargs)
-        self.quadtree.evConfigUpdated.subscribe(self.onConfigUpdate)
+        QKiteParameterGroup.__init__(self,
+                                     model=scene_proxy,
+                                     model_attr='quadtree',
+                                     **kwargs)
 
         def updateGuard(func):
             def wrapper(*args, **kwargs):
@@ -83,15 +113,15 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Epsilon control
         @updateGuard
         def updateEpsilon():
-            self.quadtree.epsilon = self.epsilon.value()
+            scene_proxy.quadtree.epsilon = self.epsilon.value()
 
         p = {'name': 'epsilon',
-             'value': self.quadtree.epsilon,
+             'value': scene_proxy.quadtree.epsilon,
              'type': 'float',
-             'step': round((self.quadtree.epsilon -
-                            self.quadtree.epsilon_limit)*.1, 3),
-             'limits': (self.quadtree.epsilon_limit,
-                        2*self.quadtree.epsilon),
+             'step': round((scene_proxy.quadtree.epsilon -
+                            scene_proxy.quadtree.epsilon_limit)*.1, 3),
+             'limits': (scene_proxy.quadtree.epsilon_limit,
+                        2*scene_proxy.quadtree.epsilon),
              'editable': True}
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
@@ -100,10 +130,10 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Epsilon control
         @updateGuard
         def updateNanFrac():
-            self.quadtree.nan_allowed = self.nan_allowed.value()
+            scene_proxy.quadtree.nan_allowed = self.nan_allowed.value()
 
         p = {'name': 'nan_allowed',
-             'value': self.quadtree.nan_allowed,
+             'value': scene_proxy.quadtree.nan_allowed,
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
@@ -115,10 +145,10 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Tile size controls
         @updateGuard
         def updateTileSizeMin():
-            self.quadtree.tile_size_min = self.tile_size_min.value()
+            scene_proxy.quadtree.tile_size_min = self.tile_size_min.value()
 
         p = {'name': 'tile_size_min',
-             'value': self.quadtree.tile_size_min,
+             'value': scene_proxy.quadtree.tile_size_min,
              'type': 'int',
              'limits': (50, 50000),
              'step': 100,
@@ -129,10 +159,10 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         @updateGuard
         def updateTileSizeMax():
-            self.quadtree.tile_size_max = self.tile_size_max.value()
+            scene_proxy.quadtree.tile_size_max = self.tile_size_max.value()
 
         p.update({'name': 'tile_size_max',
-                  'value': self.quadtree.tile_size_max})
+                  'value': scene_proxy.quadtree.tile_size_max})
         self.tile_size_max = pTypes.SimpleParameter(**p)
         self.tile_size_max.itemClass = SliderWidgetParameterItem
 
@@ -154,7 +184,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.components.sigValueChanged.connect(changeComponent)
 
         def changeSplitMethod():
-            self.quadtree.setSplitMethod(self.split_method.value())
+            scene_proxy.quadtree.setSplitMethod(scene_proxylit_method.value())
 
         p = {'name': 'setSplitMethod',
              'values': {
@@ -163,11 +193,11 @@ class QKiteParamQuadtree(QKiteParameterGroup):
                 'Std (Sigurjonson, 2001)': 'std',
              },
              'value': 'mean'}
-        self.split_method = pTypes.ListParameter(**p)
-        self.split_method.sigValueChanged.connect(changeSplitMethod)
+        scene_proxylit_method = pTypes.ListParameter(**p)
+        scene_proxylit_method.sigValueChanged.connect(changeSplitMethod)
 
         self.sig_guard = False
-        self.pushChild(self.split_method)
+        self.pushChild(scene_proxylit_method)
         self.pushChild(self.tile_size_max)
         self.pushChild(self.tile_size_min)
         self.pushChild(self.nan_allowed)
@@ -179,5 +209,9 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         for p in ['epsilon', 'nan_allowed',
                   'tile_size_min', 'tile_size_max']:
             param = getattr(self, p)
-            param.setValue(getattr(self.quadtree, p))
+            param.setValue(getattr(self.sp.quadtree, p))
         self.sig_guard = False
+
+    def updateEpsilonLimits(self):
+        self.epsilon.setLimits((self.sp.quadtree.epsilon_limit,
+                                2*self.sp.quadtree.epsilon))
