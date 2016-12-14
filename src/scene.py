@@ -44,8 +44,7 @@ class FrameConfig(guts.Object):
 class Frame(object):
     """ UTM frame holding geographical references for :class:`kite.scene.Scene`
     """
-    evChanged = Subject()
-
+    evConfigUpdated = Subject()
     def __init__(self, scene, config=FrameConfig()):
         self._scene = scene
         self._log = scene._log.getChild('Frame')
@@ -65,20 +64,16 @@ class Frame(object):
         self.N = None
         self.E = None
 
-        self._updateConfig(config)
-        self._scene.evConfigChanged.subscribe(self._updateConfig)
-        self._scene.evChanged.subscribe(self._updateExtent)
+        self.parseConfig(config)
+        self._scene.evConfigUpdated.subscribe(self.parseConfig)
+        self._scene.evSceneChanged.subscribe(self._updateExtent)
 
-    def _updateConfig(self, config=None):
-        if config is not None:
-            self.config = config
-        elif self.config != self._scene.config.frame:
+    def parseConfig(self, config=None):
+        if config is None:
             self.config = self._scene.config.frame
         else:
-            return
-
-        self._updateExtent()
-        self.evChanged.notify()
+            self.config = config
+        self.evConfigUpdated.notify()
 
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
@@ -263,8 +258,8 @@ class Scene(object):
         satellite measurements
     :type los: :class:`kite.scene.DisplacementLOS`
     """
-    evChanged = Subject()
-    evConfigChanged = Subject()
+    evSceneChanged = Subject()
+    evConfigUpdated = Subject()
 
     def __init__(self, config=SceneConfig()):
         self._setLoggingUp()
@@ -280,7 +275,7 @@ class Scene(object):
         self.frame = Frame(scene=self, config=self.config.frame)
 
         self.import_data = self._import_data
-        self.load = self._load
+        self.load = self.load
 
     def _setLoggingUp(self):
         logging.basicConfig(level=logging.DEBUG)
@@ -311,7 +306,7 @@ class Scene(object):
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self.evChanged.notify()
+        self.evSceneChanged.notify()
 
     @property
     def phi(self):
@@ -331,7 +326,7 @@ class Scene(object):
             self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
-        self.evChanged.notify()
+        self.evSceneChanged.notify()
 
     @phi.getter
     def phi(self):
@@ -361,7 +356,7 @@ class Scene(object):
             self._theta = value
         else:
             _setDataNumpy(self, '_theta', value)
-        self.evChanged.notify()
+        self.evSceneChanged.notify()
 
     @theta.getter
     def theta(self):
@@ -499,9 +494,7 @@ class Scene(object):
     def load_config(self, filename):
         self._log.info('Loading config from %s' % filename)
         self.config = guts.load(filename=filename)
-        self.meta = self.config.meta
-
-        self.evConfigChanged.notify()
+        self.evConfigUpdated.notify()
 
     @dynamicmethod
     def _import_data(self, path, **kwargs):
@@ -558,7 +551,7 @@ class LOSUnitVectors(object):
     """
     def __init__(self, scene):
         self._scene = scene
-        self._scene.evChanged.subscribe(self._flush_vectors)
+        self._scene.evSceneChanged.subscribe(self._flush_vectors)
 
     def _flush_vectors(self):
         self.unitE = None

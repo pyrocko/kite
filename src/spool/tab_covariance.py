@@ -21,56 +21,45 @@ pen_green_dash = pg.mkPen((45, 136, 45, 200), width=2.5,
 
 class QKiteCovariance(QKiteView):
     def __init__(self, spool):
+        covariance = spool.scene.covariance
         self.title = 'Scene.covariance'
-        scene_proxy = spool.scene_proxy
-
-        covariance_plot = QKiteNoisePlot(scene_proxy)
-        self.main_widget = covariance_plot
+        self.main_widget = QKiteNoisePlot(covariance)
         self.tools = {
             'Covariance.noiseSpectrum':
-                QKiteNoisePowerspec(covariance_plot),
+                QKiteNoisePowerspec(self.main_widget),
             'Covariance.covariance_func':
-                QKiteCovariogram(covariance_plot),
+                QKiteCovariogram(self.main_widget),
             'Covariance.structure_func':
-                QKiteStructureFunction(covariance_plot),
+                QKiteStructureFunction(self.main_widget),
         }
 
-        self.param_covariance = QKiteParamCovariance(scene_proxy)
-        self.parameters = [self.param_covariance]
+        self.parameters = [QKiteParamCovariance(spool, expanded=False)]
 
-        self.dialogCovariance = QKiteToolCovariance(scene_proxy, spool)
+        self.dialogCovariance = QKiteToolCovariance(covariance, spool)
         spool.actionCovariance.triggered.connect(self.dialogCovariance.show)
-        covariance_plot.roi.sigClicked.connect(self.dialogCovariance.show)
+        self.main_widget.roi.sigClicked.connect(self.dialogCovariance.show)
         spool.actionCovariance.setEnabled(True)
-
-        scene_proxy.evSceneModelChanged.subscribe(self.modelChanged)
 
         QKiteView.__init__(self)
 
         for dock in self.tool_docks:
             dock.setStretch(10, .5)
 
-    def modelChanged(self):
-        self.dialogCovariance.close()
-        self.main_widget.onConfigChanged()
-
-        self.param_covariance.updateValues()
-        for v in self.tools.itervalues():
-            v.update()
-
 
 class QKiteNoisePlot(QKitePlot):
-    def __init__(self, scene_proxy):
+    def __init__(self, covariance):
         self.components_available = {
-            'displacement':
-            ['Displacement', lambda sp: sp.scene.displacement],
+            'displacement': ['Displacement',
+                             lambda cov: cov._scene.displacement],
         }
+
         self._component = 'displacement'
-
-        QKitePlot.__init__(self, scene_proxy=scene_proxy)
-
-        llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
         roi_pen = pg.mkPen((45, 136, 45), width=3)
+
+        QKitePlot.__init__(self, container=covariance)
+        self.covariance = self.container
+
+        llE, llN, sizeE, sizeN = self.covariance.noise_coord
         self.roi = pg.RectROI((llE, llN), (sizeE, sizeN),
                               sideScalers=True,
                               pen=roi_pen)
@@ -78,15 +67,14 @@ class QKiteNoisePlot(QKitePlot):
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
 
-        self.scene_proxy.evCovarianceConfigChanged.subscribe(
-            self.onConfigChanged)
+        covariance.evConfigUpdated.subscribe(self.onConfigUpdate)
 
-    def onConfigChanged(self):
-        llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
+    def onConfigUpdate(self):
+        llE, llN, sizeE, sizeN = self.covariance.noise_coord
         self.roi.setPos((llE, llN), update=False, finish=False)
         self.roi.setSize((sizeE, sizeN), finish=False)
         self.update()
-        self.transFromFrame()
+        self.transformToUTM()
 
     def updateNoiseRegion(self):
         data = self.roi.getArrayRegion(self.image.image, self.image)
@@ -96,15 +84,15 @@ class QKiteNoisePlot(QKitePlot):
 
         llE, llN = self.roi.pos()
         sizeE, sizeN = self.roi.size()
-        self.scene_proxy.covariance.noise_coord = (llE, llN, sizeE, sizeN)
-        self.scene_proxy.covariance.noise_data = data.T
+        self.covariance.noise_coord = (llE, llN, sizeE, sizeN)
+        self.covariance.noise_data = data.T
 
 
 class _QKiteCovariancePlot(QtGui.QWidget):
     def __init__(self, parent_plot):
         QtGui.QWidget.__init__(self)
         self.parent_plot = parent_plot
-        self.scene_proxy = parent_plot.scene_proxy
+        self.covariance = parent_plot.covariance
 
         self.plot = pg.PlotWidget(background='default')
         self.plot.showGrid(True, True, alpha=.5)
@@ -137,15 +125,13 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
         self.addItem(self.power)
         self.addItem(self.power_lin)
 
-        self.scene_proxy.evCovarianceChanged.subscribe(self.update)
+        self.covariance.evConfigUpdated.subscribe(self.update)
         self.update()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
-        spec, k, _, _, _ = covariance.noiseSpectrum()
+        spec, k, _, _, _ = self.covariance.noiseSpectrum()
         self.power.setData(k, spec)
-        self.power_lin.setData(
-            k, covariance.powerspecAnalytical(k, 3))
+        self.power_lin.setData(k, self.covariance.powerspecAnalytical(k, 3))
 
 
 class QKiteCovariogram(_QKiteCovariancePlot):
@@ -172,27 +158,26 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.legend.addItem(self.cov_model, '')
         self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
 
-        self.scene_proxy.evCovarianceChanged.subscribe(
+        self.covariance.evConfigUpdated.subscribe(
             self.update)
 
         self.update()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
-        cov, dist = covariance.covariance_func
+        cov, dist = self.covariance.covariance_func
 
         self.cov.setData(dist, cov)
         self.cov_model.setData(
-            dist, modelCovariance(dist, *covariance.covariance_model))
+            dist, modelCovariance(dist, *self.covariance.covariance_model))
         self.cov_lin_pow.setData(
-            dist, covariance.covarianceAnalytical(3)[0])
+            dist, self.covariance.covarianceAnalytical(3)[0])
         self.misfit_label.setText(
             self.misfit_label.format.format(
-                    covariance.covariance_model_misfit))
+                    self.covariance.covariance_model_misfit))
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(
-                *covariance.covariance_model))
+                *self.covariance.covariance_model))
 
 
 class QKiteStructureFunction(_QKiteCovariancePlot):
@@ -211,7 +196,7 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
         self.addItem(self.structure)
         self.addItem(self.variance)
-        self.scene_proxy.evCovarianceChanged.subscribe(
+        self.covariance.evConfigUpdated.subscribe(
             self.update)
         self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
@@ -219,10 +204,9 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
         self.update()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
-        struc, dist = covariance.structure_func
+        struc, dist = self.covariance.structure_func
         self.structure.setData(dist, struc)
-        self.variance.setValue(covariance.variance)
+        self.variance.setValue(self.covariance.variance)
 
     def changeVariance(self, inf_line):
         self.covariance.variance = inf_line.getYPos()
@@ -230,17 +214,17 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
 
 class QKiteToolCovariance(QtGui.QDialog):
     class noise_plot(QKitePlot):
-        def __init__(self, scene_proxy):
+        def __init__(self, covariance):
             self.components_available = {
                 'noise_data': [
-                  'Displacement',
-                  lambda sp: self.noise_data_masked(sp.covariance)
-                ]}
+                    'Displacement',
+                    lambda cov: self.noise_data_masked(cov)
+                    ]}
 
             self._component = 'noise_data'
-            QKitePlot.__init__(self, scene_proxy=scene_proxy)
-
-            self.scene_proxy.evCovarianceChanged.subscribe(self.update)
+            QKitePlot.__init__(self, container=covariance)
+            self.covariance = self.container
+            self.covariance.evConfigUpdated.subscribe(self.update)
 
         @staticmethod
         def noise_data_masked(covariance):
@@ -248,7 +232,7 @@ class QKiteToolCovariance(QtGui.QDialog):
             data[data == 0.] = num.nan
             return data
 
-    def __init__(self, scene_proxy, parent=None):
+    def __init__(self, covariance, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
         cov_ui = path.join(path.dirname(path.realpath(__file__)),
@@ -257,15 +241,15 @@ class QKiteToolCovariance(QtGui.QDialog):
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
 
-        noise_patch = self.noise_plot(scene_proxy)
+        noise_patch = self.noise_plot(covariance)
         noise_colormap = QKiteToolColormap(noise_patch)
-
         self.horizontalLayoutPlot.addWidget(noise_patch)
         self.horizontalLayoutPlot.addWidget(noise_colormap)
 
 
 class QKiteParamCovariance(QKiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, spool, **kwargs):
+        covariance = spool.scene.covariance
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.covariance'
 
@@ -280,9 +264,4 @@ class QKiteParamCovariance(QKiteParameterGroup):
             ('noise_patch_coord',
              lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
             ])
-
-        scene_proxy.evCovarianceChanged.subscribe(self.updateValues)
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='covariance',
-                                     **kwargs)
+        QKiteParameterGroup.__init__(self, covariance, **kwargs)

@@ -1,8 +1,8 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
 from .tab_scene import QKiteScene
-from .tab_quadtree import QKiteQuadtree  # noqa
-from .tab_covariance import QKiteCovariance  # noqa
+from .tab_quadtree import QKiteQuadtree
+from .tab_covariance import QKiteCovariance
 from .utils_qt import loadUi
 from ..meta import Subject
 from ..scene import Scene
@@ -35,20 +35,21 @@ class Spool(QtGui.QApplication):
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         splash = QtGui.QSplashScreen(splash_img,
                                      QtCore.Qt.WindowStaysOnTopHint)
-        splash.show()
-        self.processEvents()
 
         def updateSplashMessage(msg=''):
             splash.showMessage("Loading kite.%s ..." % msg.title(),
                                QtCore.Qt.AlignBottom)
 
+        splash.show()
+        self.processEvents()
         updateSplashMessage('Scene')
+
+        self.aboutToQuit.connect(self.deleteLater)
 
         self.spool_win = SpoolMainWindow()
         self.spool_win.loadingModule.subscribe(updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
-        self.aboutToQuit.connect(self.deleteLater)
 
         if scene is not None:
             self.addScene(scene)
@@ -71,8 +72,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
 
-        self.scene_proxy = SceneProxy()
-
+        self.scene = None
         self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
 
         self.ptree = QKiteParameterTree(showHeader=True)
@@ -115,7 +115,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         return
 
     def addScene(self, scene):
-        self.scene_proxy.setScene(scene)
+        self.scene = scene
+        self.log_model.attachScene(self.scene)
 
         for v in self.views:
             self.addView(v)
@@ -152,7 +153,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='YAML file (*.yml)', caption='Load scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.load_config(filename)
+        self.scene.load_config(filename)
 
     def onExportQuadtreeCSV(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -167,7 +168,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             caption='Load kite scene')
         if not validateFilename(filename):
             return
-        self.scene_proxy.setScene(Scene.load(filename))
+        Scene.load(filename).spool()
 
     def onImportScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
@@ -175,83 +176,10 @@ class SpoolMainWindow(QtGui.QMainWindow):
             caption='Import scene to spool')
         if not validateFilename(filename):
             return
-        self.scene_proxy.setScene(Scene.import_data(filename))
+        Scene.import_data(filename).spool()
 
     def exit(self):
         pass
-
-
-class SceneProxy(object):
-    ''' Proxy for :class:`kite.Scene` so we can change the scene
-    '''
-    evSceneModelChanged = Subject()
-
-    evSceneChanged = Subject()
-    evConfigChanged = Subject()
-
-    evFrameChanged = Subject()
-    evQuadtreeChanged = Subject()
-    evQuadtreeConfigChanged = Subject()
-    evCovarianceChanged = Subject()
-    evCovarianceConfigChanged = Subject()
-
-    def __init__(self):
-        self.scene = None
-        self.frame = None
-        self.quadtree = None
-        self.covariance = None
-
-    def setScene(self, scene):
-        self.disconnectSlots()
-
-        self.scene = scene
-        self.frame = scene.frame
-        self.quadtree = scene.quadtree
-        self.covariance = scene.covariance
-
-        self.connectSlots()
-        self.evSceneModelChanged.notify()
-
-    def disconnectSlots(self):
-        if self.scene is None:
-            return
-
-        self.scene.evChanged.unsubscribe(
-            self.evSceneChanged.notify)
-        self.scene.evConfigChanged.unsubscribe(
-            self.evConfigChanged.notify)
-
-        self.scene.frame.evChanged.unsubscribe(
-            self.evFrameChanged.notify)
-
-        self.quadtree.evChanged.unsubscribe(
-            self.evQuadtreeChanged.notify)
-        self.quadtree.evConfigChanged.unsubscribe(
-            self.evQuadtreeConfigChanged.notify)
-
-        self.covariance.evChanged.unsubscribe(
-            self.evCovarianceChanged.notify)
-        self.covariance.evConfigChanged.unsubscribe(
-            self.evCovarianceConfigChanged.notify)
-
-    def connectSlots(self):
-        self.scene.evChanged.subscribe(
-            self.evSceneChanged.notify)
-        self.scene.evConfigChanged.subscribe(
-            self.evConfigChanged.notify)
-
-        self.scene.frame.evChanged.subscribe(
-            self.evFrameChanged.notify)
-
-        self.quadtree.evChanged.subscribe(
-            self.evQuadtreeChanged.notify)
-        self.quadtree.evConfigChanged.subscribe(
-            self.evQuadtreeConfigChanged.notify)
-
-        self.covariance.evChanged.subscribe(
-            self.evCovarianceChanged.notify)
-        self.covariance.evConfigChanged.subscribe(
-            self.evCovarianceConfigChanged.notify)
 
 
 class QKiteParameterTree(pg.parametertree.ParameterTree):
@@ -261,12 +189,12 @@ class QKiteParameterTree(pg.parametertree.ParameterTree):
 class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
     log_records = []
 
-    def __init__(self, spool, *args, **kwargs):
+    def __init__(self, window, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
         logging.Handler.__init__(self)
 
-        self.spool = spool
-        getPixmap = spool.style().standardPixmap
+        self.window = window
+        getPixmap = window.style().standardPixmap
         qstyle = QtGui.QStyle
 
         self.levels = {
@@ -279,9 +207,6 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
 
         for i in self.levels.itervalues():
             i[0] = i[0].scaledToHeight(20)
-
-        self.spool.scene_proxy.evSceneModelChanged.subscribe(
-            lambda: self.attachScene(self.spool.scene_proxy.scene))
 
     def attachScene(self, scene):
         self.scene = scene
@@ -330,9 +255,9 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
         self.beginInsertRows(QtCore.QModelIndex(),
                              0, 0)
         self.endInsertRows()
-        self.spool.log.tableView.scrollToBottom()
-        if record.levelno >= 30 and self.spool.log.autoBox.isChecked():
-            self.spool.log.show()
+        self.window.log.tableView.scrollToBottom()
+        if record.levelno >= 30 and self.window.log.autoBox.isChecked():
+            self.window.log.show()
 
 
 class SceneLog(QtGui.QDialog):
@@ -381,10 +306,12 @@ class SceneLog(QtGui.QDialog):
         self.filterBox.currentIndexChanged.connect(changeFilter)
 
 
-__all__ = ['Spool']
+__all__ = '''
+Spool
+'''.split()
 
 if __name__ == '__main__':
-    from kite.scene import SceneSynTest
+    from kite.scene import SceneSynTest, Scene
     import sys
     if len(sys.argv) > 1:
         sc = Scene.load(sys.argv[1])

@@ -14,73 +14,50 @@ __all__ = ['QKiteScene']
 
 class QKiteScene(QKiteView):
     def __init__(self, spool):
-        self.title = 'Scene'
-        scene_proxy = spool.scene_proxy
+        scene = spool.scene
 
-        scene_plot = QKiteScenePlot(scene_proxy)
-        self.main_widget = scene_plot
+        self.title = 'Scene'
+        self.main_widget = QKiteScenePlot(scene)
         self.tools = {
             # 'Components': QKiteToolComponents(self.main_widget),
             # 'Displacement Transect': QKiteToolTransect(self.main_widget),
         }
 
-        self.param_scene = QKiteParamScene(scene_proxy, scene_plot)
-        self.param_frame = QKiteParamSceneFrame(scene_proxy, expanded=False)
-        self.param_meta = QKiteParamSceneMeta(scene_proxy, expanded=False)
+        self.parameters = [QKiteParamScene(spool, self.main_widget)]
+        self.parameters[-1].addChild(
+            QKiteParamSceneFrame(spool, expanded=False))
+        self.parameters[-1].addChild(
+            QKiteParamSceneMeta(spool, expanded=False))
 
-        self.param_scene.addChild(self.param_frame)
-        self.param_scene.addChild(self.param_meta)
+        self.dialogTransect = QKiteToolTransect(self.main_widget, spool)
 
-        self.parameters = [self.param_scene]
-
-        self.dialogTransect = QKiteToolTransect(scene_plot, spool)
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
-        scene_proxy.evSceneModelChanged.subscribe(self.modelChanged)
-
         QKiteView.__init__(self)
-
-    def modelChanged(self):
-        self.main_widget.update()
-        self.main_widget.transFromFrame()
-
-        self.param_scene.updateValues()
-        self.param_frame.updateValues()
-        self.param_meta.updateValues()
-
-        self.dialogTransect.close()
 
 
 class QKiteScenePlot(QKitePlot):
-    def __init__(self, scene_proxy):
+    def __init__(self, scene):
+
         self.components_available = {
-            'displacement':
-            ['Scene.displacement', lambda sp: sp.scene.displacement],
-            'theta':
-            ['Scene.theta', lambda sp: sp.scene.theta],
-            'phi':
-            ['Scene.phi', lambda sp: sp.scene.phi],
-            'thetaDeg':
-            ['Scene.thetaDeg', lambda sp: sp.scene.thetaDeg],
-            'phiDeg':
-            ['Scene.phiDeg', lambda sp: sp.scene.phiDeg],
-            'unitE':
-            ['Scene.los.unitE', lambda sp: sp.scene.los.unitE],
-            'unitN':
-            ['Scene.los.unitN', lambda sp: sp.scene.los.unitN],
-            'unitU':
-            ['Scene.los.unitU', lambda sp: sp.scene.los.unitU],
+            'displacement': ['Scene.displacement', lambda sc: sc.displacement],
+            'theta': ['Scene.theta', lambda sc: sc.theta],
+            'phi': ['Scene.phi', lambda sc: sc.phi],
+            'thetaDeg': ['Scene.thetaDeg', lambda sc: sc.thetaDeg],
+            'phiDeg': ['Scene.phiDeg', lambda sc: sc.phiDeg],
+            'unitE': ['Scene.los.unitE', lambda sc: sc.los.unitE],
+            'unitN': ['Scene.los.unitN', lambda sc: sc.los.unitN],
+            'unitU': ['Scene.los.unitU', lambda sc: sc.los.unitU],
         }
         self._component = 'displacement'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy)
-        scene_proxy.evFrameChanged.subscribe(self.onFrameChange)
-        scene_proxy.evSceneModelChanged.subscribe(self.update)
+        QKitePlot.__init__(self, container=scene)
+        scene.evConfigUpdated.subscribe(self.onConfigUpdate)
 
-    def onFrameChange(self):
+    def onConfigUpdate(self):
         self.update()
-        self.transFromFrame()
+        self.transformToUTM()
 
 
 class QKiteToolTransect(QtGui.QDialog):
@@ -115,8 +92,7 @@ class QKiteToolTransect(QtGui.QDialog):
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
         self.createButton.released.connect(self.addPolyLine)
         self.removeButton.released.connect(self.removePolyLine)
-
-        parent.scene_proxy.evConfigChanged.subscribe(self.close)
+        parent.scene.evConfigUpdated.subscribe(self.close)
 
     def addPolyLine(self):
         [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
@@ -165,23 +141,19 @@ class QKiteToolTransect(QtGui.QDialog):
 
 
 class QKiteParamScene(QKiteParameterGroup):
-    def __init__(self, scene_proxy, plot, **kwargs):
+    def __init__(self, spool, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
+        self.scene = spool.scene
         self.plot = plot
-
         self.parameters = {
             'min value': lambda plot: num.nanmin(plot.data),
             'max value': lambda plot: num.nanmax(plot.data),
-            'mean value': lambda plot: num.nanmean(plot.data),
+            'mean value': lambda plot: num.nanmean(plot.data)
         }
 
+        QKiteParameterGroup.__init__(self, self.plot, **kwargs)
         self.plot.image.sigImageChanged.connect(self.updateValues)
-
-        QKiteParameterGroup.__init__(self,
-                                     model=self.plot,
-                                     model_attr=None,
-                                     **kwargs)
 
         def changeComponent(parameter):
             self.plot.component = parameter.value()
@@ -200,13 +172,14 @@ class QKiteParamScene(QKiteParameterGroup):
              'value': 'displacement'}
         component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
-        self.pushChild(component)
+        self.pushChild(component, autoIncrementName=None)
 
 
 class QKiteParamSceneFrame(QKiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, spool, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.frame'
+        self.frame = spool.scene.frame
 
         self.parameters = OrderedDict([
             ('cols', None),
@@ -223,34 +196,22 @@ class QKiteParamSceneFrame(QKiteParameterGroup):
             ('llNutm', None),
             ('llEutm', None),
             ('utm_zone', None),
-            ('utm_zone_letter', None),
-            ])
+            ('utm_zone_letter', None)])
 
-        scene_proxy.evFrameChanged.subscribe(self.updateValues)
-
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='frame',
-                                     **kwargs)
+        QKiteParameterGroup.__init__(self, self.frame, **kwargs)
 
 
 class QKiteParamSceneMeta(QKiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, spool, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.meta'
+        self. scene = spool.scene
+        scene = spool.scene
+        self.meta = scene.meta
+        self.parameters =\
+            [param[0] for param in
+             scene.meta.T.inamevals_to_save(scene.meta)]
 
-        self.parameters = OrderedDict([
-            ('scene_title', lambda sc: sc.meta.scene_title),
-            ('scene_id', lambda sc: sc.meta.scene_id),
-            ('scene_path', lambda sc: sc.meta.scene_path),
-            ('date_first_view', lambda sc: sc.meta.date_first_view),
-            ('date_second_view', lambda sc: sc.meta.date_second_view),
-            ('satellite_name', lambda sc: sc.meta.satellite_name),
-            ])
-
-        scene_proxy.evConfigChanged.subscribe(self.updateValues)
-
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='scene',
-                                     **kwargs)
+        QKiteParameterGroup.__init__(self, self.meta, **kwargs)
+        scene.evConfigUpdated.subscribe(
+            lambda: self.updateModel(scene.config.meta))
