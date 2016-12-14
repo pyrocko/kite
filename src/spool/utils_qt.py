@@ -229,6 +229,7 @@ class SliderWidget(QtGui.QWidget):
         self.precission = 0
         self.step = 100
         self.valueLen = 2
+        self.suffix = None
 
         self.label = QtGui.QLabel()
         self.label.setFont(QtGui.QFont('Courier'))
@@ -284,6 +285,9 @@ class SliderWidget(QtGui.QWidget):
         if bounds is not None:
             self.setRange(*bounds)
 
+    def setSuffix(self, suffix=None):
+        self.suffix = suffix
+
     def _updateLabel(self, val):
         if self.mn is not None:
             val /= 99.0  # val->0...1
@@ -292,8 +296,11 @@ class SliderWidget(QtGui.QWidget):
         self._value = round(val, self.precission)
         self.sigValueChanged.emit(self._value)
 
-        self.label.setText(format(self._value, '%s.%sf'
-                                  % (self.valueLen, self.precission)))
+        text = format(self._value, '%s.%sf'
+                      % (self.valueLen, self.precission))
+        if self.suffix is not None:
+            text += ' %s' % self.suffix
+        self.label.setText(text)
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
@@ -310,6 +317,7 @@ class SliderWidgetParameterItem(WidgetParameterItem):
         v = opts.get('value')
         if l:
             w.setValue(v)
+        w.setSuffix(opts.get('suffix', None))
         self.hideWidget = False
         return w
 

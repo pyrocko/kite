@@ -225,7 +225,8 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
-        self.covariance.variance = inf_line.getYPos()
+        covariance = self.scene_proxy.covariance
+        covariance.variance = inf_line.getYPos()
 
 
 class QKiteToolCovariance(QtGui.QDialog):

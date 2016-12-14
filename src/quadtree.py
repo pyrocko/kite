@@ -2,7 +2,7 @@ import numpy as num
 import time
 from pyrocko import guts
 
-from kite.meta import Subject, property_cached
+from .meta import Subject, property_cached, derampMatrix
 
 
 class QuadNode(object):
@@ -71,18 +71,25 @@ class QuadNode(object):
         return num.nanvar(self.displacement)
 
     @property_cached
-    def median_std(self):
+    def median_corr(self):
         ''' Standard deviation from median
         :type: float
         '''
         return num.nanstd(self.displacement - self.median)
 
     @property_cached
-    def mean_std(self):
+    def mean_corr(self):
         ''' Standard deviation from mean
         :type: float
         '''
         return num.nanstd(self.displacement - self.mean)
+
+    @property_cached
+    def bilinear_corr(self):
+        ''' Bilinear standard deviation
+        :type: float
+        '''
+        return num.nanstd(derampMatrix(self.displacement))
 
     @property
     def weight(self):
@@ -92,13 +99,6 @@ class QuadNode(object):
         :type: float
         '''
         return self._quadtree._scene.covariance.getLeafWeight(self)
-
-    @property_cached
-    def bilinear_std(self):
-        ''' Bilinear standard deviation
-        :type: float
-        '''
-        raise NotImplementedError('Bilinear fit not implemented')
 
     @property_cached
     def focal_point(self):
@@ -270,13 +270,14 @@ class QuadtreeConfig(guts.Object):
     ''' Quadtree configuration object holding essential parameters used to
     reconstruct a particular tree
     '''
-    split_method = guts.String.T(
-        default='median_std',
-        help='Tile split method, available methods '
-             ' ``[\'mean_std\' \'median_std\' \'std\']``')
+    correction = guts.StringChoice.T(
+        choices=['mean', 'median', 'bilinear', 'std'],
+        default='median',
+        help='Node correction for splitting, available methods '
+             ' ``[\'mean\', \'median\', \'bilinear\', \'std\']``')
     epsilon = guts.Float.T(
         optional=True,
-        help='Threshold for tile splitting, measure for '
+        help='Threshold for node splitting, measure for '
              'quadtree nodes\' variance')
     nan_allowed = guts.Float.T(
         default=0.9,
@@ -302,17 +303,24 @@ class Quadtree(object):
     evChanged = Subject()
     evConfigChanged = Subject()
 
+    _corrections = {
+        'mean':
+        ['Std around mean', lambda n: n.mean_corr],
+        'median':
+        ['Std around median', lambda n: n.median_corr],
+        'bilinear':
+        ['Std around bilinear detrended node', lambda n: n.bilinear_corr],
+        'std':
+        ['Standard deviation (std)', lambda n: n.std],
+
+    }
+    _norm_methods = {
+        'mean': lambda n: n.mean,
+        'median': lambda n: n.median,
+        'weight': lambda n: n.weight,
+    }
+
     def __init__(self, scene, config=QuadtreeConfig()):
-        self._split_methods = {
-            'mean_std': ['Std around mean', lambda node: node.mean_std],
-            'median_std': ['Std around median', lambda node: node.median_std],
-            'std': ['Standard deviation (std)', lambda node: node.std],
-        }
-        self._norm_methods = {
-            'mean': lambda node: node.mean,
-            'median': lambda node: node.median,
-            'weight': lambda node: node.weight,
-        }
 
         self._log = scene._log.getChild('Quadtree')
         self.setScene(scene)
@@ -328,51 +336,45 @@ class Quadtree(object):
 
     def parseConfig(self, config=None):
         if config is None:
-            self.config = self._scene.config.quadtree
-        else:
-            self.config = config
-
-        self.evChanged.mute()
-
-        self.setSplitMethod(self.config.split_method)
-        if self.config.epsilon is not None:
-            self.epsilon = self.config.epsilon
-        self.nan_allowed = self.config.nan_allowed
-        self.tile_size_min = self.config.tile_size_min
-        self.tile_size_max = self.config.tile_size_max
-
-        self.evChanged.unmute()
+            config = self._scene.config.quadtree
+        self.config = config
+        self.setCorrection(self.config.correction)
 
         self.evConfigChanged.notify()
-        self.evChanged.notify()
 
-    def setSplitMethod(self, split_method):
-        """Set splitting method for quadtree tiles
+    def setCorrection(self, correction='mean'):
+        """ Set correction method calculating the standard deviation of
+            :class:`kite.quadtree.QuadNode`
 
-        * ``mean_std``: tiles standard deviation from tile's mean is evaluated
-        * ``median_std``: tiles standard deviation from tile's median is
-            evaluated
-        * ``std``: tiles standard deviation is evaluated
+        The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
+        is evaluated against different corrections:
 
-        :param split_method: Choose from methods
-            ``['mean_std', 'median_std', 'std']``
-        :type split_method: str
+        * ``mean``: Mean is substracted
+        * ``median``: Median is substracted
+        * ``bilinear``: A 2D detrend is applied to the node
+        * ``std``:  Pure standard deviation without correction
+
+        :param correction: Choose from methods
+            ``['mean_std', 'median_std', 'bilinear_std', 'std']``
+        :type correction: str
         :raises: AttributeError
         """
-        if split_method not in self._split_methods.keys():
+        if correction not in self._corrections.keys():
             raise AttributeError('Method %s not in %s'
-                                 % (split_method, self._split_methods))
+                                 % (correction, self._corrections))
 
-        self.config.split_method = split_method
-        self._split_func = self._split_methods[split_method][1]
+        self.config.correction = correction
+        self._split_func = self._corrections[correction][1]
 
         # Clearing cached properties through None
+        self.leafs = None
         self._epsilon_init = None
         self.epsilon_limit = None
-        self.epsilon = self._epsilon_init
+        self.epsilon = self.config.epsilon or self._epsilon_init
 
         self._initTree()
-        self._log.debug('Changed to split method %s' % split_method)
+        self._log.debug('Changed to split method %s' % correction)
+        self.evChanged.notify()
 
     def _initTree(self):
         t0 = time.time()
@@ -395,7 +397,7 @@ class Quadtree(object):
             return
         if value < self.epsilon_limit:
             self._log.warning(
-                'Epsilon is out of bounds [%0.3f], epsilon_limit %0.3f' %
+                'Epsilon is out of bounds [%0.6f], epsilon_limit %0.6f' %
                 (value, self.epsilon_limit))
             return
         self.leafs = None
@@ -411,13 +413,18 @@ class Quadtree(object):
 
     @property_cached
     def epsilon_limit(self):
-        """ Lowest allowed epsilon limit """
+        """ Lowest allowed epsilon
+        :type: float
+        """
         return self._epsilon_init * .2
 
     @property
     def nan_allowed(self):
-        """Fraction of allowed ``NaN`` values allwed in quadtree leafs, if
+        """ Fraction of allowed ``NaN`` values allwed in quadtree leafs, if
         value is exceeded the leaf is kicked out.
+
+        :setter: Fraction  ``0. <= fraction <= 1``.
+        :type: float
         """
         return self.config.nan_allowed
 
@@ -433,7 +440,7 @@ class Quadtree(object):
 
     @property
     def tile_size_min(self):
-        """Minimum allowed tile size in *meter*.
+        """ Minimum allowed tile size in *meter*.
 
         :getter: Returns the minimum allowed tile size
         :setter: Sets the threshold
@@ -451,7 +458,7 @@ class Quadtree(object):
 
     @property
     def tile_size_max(self):
-        """Maximum allowed tile size in *meter*.
+        """ Maximum allowed tile size in *meter*.
 
         :getter: Returns the maximum allowed tile size
         :setter: Sets the threshold
@@ -474,13 +481,16 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_px(self):
-        dpx = self._scene.frame.dE
+        dpx = self._scene.frame.dE\
+            if self._scene.frame.dE > self._scene.frame.dN\
+            else self._scene.frame.dN
         return (int(self.tile_size_min / dpx),
                 int(self.tile_size_max / dpx))
 
     @property
     def nnodes(self):
-        """ Number of nodes of the built tree.
+        """
+        :getter: Number of nodes of the built tree.
         :type: int
         """
         nnodes = 0
@@ -581,6 +591,27 @@ class Quadtree(object):
         leaf_matrix[num.isnan(self._displacement)] = num.nan
         return leaf_matrix
 
+    @property
+    def reduction_efficiency(self):
+        ''' This is measure for the total reduction of the scene.
+
+        :getter: Displacement resolution over number of leafs.
+        :type: float
+        '''
+        return (self._scene.rows*self._scene.cols)/self.nleafs
+
+    @property
+    def reduction_rms(self):
+        ''' The RMS error is defined between
+        :attr:`kite.Quadtree.leaf_matrix_means` and
+        :attr:`kite.Scene.displacement`.
+
+        :getter: The reduction error
+        :type: float
+        '''
+        return num.sqrt(num.nanmean((self._scene.displacement -
+                                     self.leaf_matrix_means)**2))
+
     @property_cached
     def _base_nodes(self):
         self._base_nodes = []
@@ -602,7 +633,7 @@ class Quadtree(object):
 
     @property_cached
     def plot(self):
-        """Simple `matplotlib` illustration of the quadtree
+        """ Simple `matplotlib` illustration of the quadtree
 
         :type: :class:`Quadtree.leaf_matrix_means`.
         """
@@ -615,7 +646,7 @@ class Quadtree(object):
         raise NotImplementedError
 
     def export(self, filename):
-        """Export quadtree leafs in a *CSV* format to ``filename``.
+        """ Export quadtree leafs in a *CSV* format to ``filename``.
 
         The format is as::
 

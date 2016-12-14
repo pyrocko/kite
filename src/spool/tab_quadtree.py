@@ -3,6 +3,8 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 from .utils_qt import SliderWidgetParameterItem
 from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from ..quadtree import QuadtreeConfig
+from collections import OrderedDict
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -95,7 +97,13 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
-        self.parameters = ['nleafs', 'nnodes', 'epsilon_limit']
+        self.parameters = OrderedDict(
+                          [('nleafs', None),
+                           ('reduction_rms', None),
+                           ('reduction_efficiency', None),
+                           ('epsilon_limit', None),
+                           ('nnodes', None),
+                           ])
         scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
         scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
 
@@ -118,6 +126,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         p = {'name': 'epsilon',
              'value': scene_proxy.quadtree.epsilon,
              'type': 'float',
+             'default': scene_proxy.quadtree._epsilon_init,
              'step': round((scene_proxy.quadtree.epsilon -
                             scene_proxy.quadtree.epsilon_limit)*.1, 3),
              'limits': (scene_proxy.quadtree.epsilon_limit,
@@ -134,6 +143,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         p = {'name': 'nan_allowed',
              'value': scene_proxy.quadtree.nan_allowed,
+             'default': QuadtreeConfig.nan_allowed.default(),
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
@@ -149,11 +159,12 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         p = {'name': 'tile_size_min',
              'value': scene_proxy.quadtree.tile_size_min,
+             'default': QuadtreeConfig.tile_size_min.default(),
              'type': 'int',
              'limits': (50, 50000),
              'step': 100,
              'editable': True,
-             'siPrefix': 'm'}
+             'suffix': 'm'}
         self.tile_size_min = pTypes.SimpleParameter(**p)
         self.tile_size_min.itemClass = SliderWidgetParameterItem
 
@@ -162,7 +173,8 @@ class QKiteParamQuadtree(QKiteParameterGroup):
             scene_proxy.quadtree.tile_size_max = self.tile_size_max.value()
 
         p.update({'name': 'tile_size_max',
-                  'value': scene_proxy.quadtree.tile_size_max})
+                  'value': scene_proxy.quadtree.tile_size_max,
+                  'default': QuadtreeConfig.tile_size_max.default()})
         self.tile_size_max = pTypes.SimpleParameter(**p)
         self.tile_size_max.itemClass = SliderWidgetParameterItem
 
@@ -183,21 +195,23 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.components = pTypes.ListParameter(**p)
         self.components.sigValueChanged.connect(changeComponent)
 
-        def changeSplitMethod():
-            scene_proxy.quadtree.setSplitMethod(scene_proxylit_method.value())
+        def changeCorrection():
+            scene_proxy.quadtree.setCorrection(correction_method.value())
+            self.updateEpsilonLimits()
 
-        p = {'name': 'setSplitMethod',
+        p = {'name': 'setCorrection',
              'values': {
-                'Mean Std (Sigurjonson, 2001)': 'mean_std',
-                'Median Std (Sigurjonson, 2001)': 'median_std',
-                'Std (Sigurjonson, 2001)': 'std',
+                'Mean (Jonsson, 2002)': 'mean',
+                'Median (Jonsson, 2002)': 'median',
+                'Bilinear (Jonsson, 2002)': 'bilinear',
+                'SD (Jonsson, 2002)': 'std',
              },
-             'value': 'mean'}
-        scene_proxylit_method = pTypes.ListParameter(**p)
-        scene_proxylit_method.sigValueChanged.connect(changeSplitMethod)
+             'value': QuadtreeConfig.correction.default()}
+        correction_method = pTypes.ListParameter(**p)
+        correction_method.sigValueChanged.connect(changeCorrection)
 
         self.sig_guard = False
-        self.pushChild(scene_proxylit_method)
+        self.pushChild(correction_method)
         self.pushChild(self.tile_size_max)
         self.pushChild(self.tile_size_min)
         self.pushChild(self.nan_allowed)

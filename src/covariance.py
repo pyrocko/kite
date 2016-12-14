@@ -121,15 +121,15 @@ class Covariance(object):
 
     def parseConfig(self, config=None):
         if config is None:
-            self.config = self._scene.config.covariance
-        else:
-            self.config = config
+            config = self._scene.config.covariance
+        self.config = config
+
         self._clear(config=False)
         self.evConfigChanged.notify()
         self.evChanged.notify()
 
     def _clear(self, config=True):
-        if not config:
+        if config:
             self.config.a = None
             self.config.b = None
             self.config.variance = None
@@ -187,12 +187,11 @@ class Covariance(object):
     def noise_data(self):
         if self._noise_data is not None:
             return self._noise_data
-        self._log.debug('Fetching noise from quadtree')
-        nodes = sorted(self._quadtree.leafs,
-                       key=lambda n: n.length/(n.nan_fraction+1))
-        n = nodes[-1]
-        self.noise_data = n.displacement
-        self.noise_coord = [n.llE, n.llN, n.sizeE, n.sizeN]
+
+        node = self.getNoiseNode()
+        self.noise_data = node.displacement
+        self.noise_coord = [node.llE, node.llN,
+                            node.sizeE, node.sizeN]
         return self.noise_data
 
     @noise_data.setter
@@ -204,11 +203,12 @@ class Covariance(object):
         self._clear()
         self.evChanged.notify()
 
-    def setNoiseData(self, data):
-        ''' Convenience function for
-            :attr:`kite.Covariance.noise_data`.
-        '''
-        self.noise_data = data
+    def getNoiseNode(self):
+        """ Choose noise node from quadtree """
+        self._log.debug('Fetching noise from Quadtree.nodes (QuadNode)')
+        nodes = sorted(self._quadtree.leafs,
+                       key=lambda n: n.length/(n.nan_fraction+1))
+        return nodes[-1]
 
     def _mapLeafs(self, nx, ny):
         """ Helper function returning appropriate

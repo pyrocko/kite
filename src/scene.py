@@ -297,6 +297,8 @@ class Scene(object):
             self._log.addHandler(self._log_stream)
         self._log_stream.setLevel(logging.INFO)
 
+        self.setLogLevel = self._log_stream.setLevel
+
     @property
     def displacement(self):
         """ Geodetical displacement in *meter*.
@@ -312,6 +314,14 @@ class Scene(object):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
         self.evChanged.notify()
+
+    @property
+    def displacement_mask(self):
+        """
+        :getter: Displacement :attr:`numpy.nan` mask
+        :type: :class:`numpy.array`, dtype :class:`numpy.bool`
+        """
+        return num.isnan(self.displacement)
 
     @property
     def phi(self):
@@ -393,6 +403,7 @@ class Scene(object):
         """ Instanciates the scene's quadtree.
         :type: :class:`kite.quadtree.Quadtree`
         """
+        self._log.debug('Creating kite.Quadtree instance')
         from kite.quadtree import Quadtree
         return Quadtree(scene=self, config=self.config.quadtree)
 
@@ -401,6 +412,7 @@ class Scene(object):
         """ Instanciates the scene's covariance attribute.
         :type: :class:`kite.covariance.Covariance`
         """
+        self._log.debug('Creating kite.Covariance instance')
         from kite.covariance import Covariance
         return Covariance(scene=self, config=self.config.covariance)
 
@@ -408,6 +420,7 @@ class Scene(object):
     def plot(self):
         ''' Shows a simple plot of the scene's displacement
         '''
+        self._log.debug('Creating kite.ScenePlot instance')
         from kite.plot2d import ScenePlot
         return ScenePlot(self)
 
