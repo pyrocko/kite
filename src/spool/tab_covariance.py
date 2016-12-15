@@ -158,10 +158,10 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
         self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
-        self.misfit_label = pg.LabelItem(text='', justify='right', size='10pt',
-                                         parent=self.plot.plotItem)
-        self.misfit_label.anchor(itemPos=(0., 0.), parentPos=(.1, .05))
-        self.misfit_label.format = 'Misfit: {0:.6f}'
+        self.rms_label = pg.LabelItem(text='', justify='right', size='10pt',
+                                      parent=self.plot.plotItem)
+        self.rms_label.anchor(itemPos=(0., 0.), parentPos=(.15, .05))
+        self.rms_label.format = 'RMS: {0:.4e}'
 
         self.addItem(self.cov)
         self.addItem(self.cov_model)
@@ -186,9 +186,9 @@ class QKiteCovariogram(_QKiteCovariancePlot):
             dist, modelCovariance(dist, *covariance.covariance_model))
         self.cov_lin_pow.setData(
             dist, covariance.covarianceAnalytical(3)[0])
-        self.misfit_label.setText(
-            self.misfit_label.format.format(
-                    covariance.covariance_model_misfit))
+        self.rms_label.setText(
+            self.rms_label.format.format(
+                    covariance.covariance_model_rms))
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(
@@ -276,7 +276,7 @@ class QKiteParamCovariance(QKiteParameterGroup):
              lambda c: c.covariance_model[0]),
             ('covariance_model [b]',
              lambda c: c.covariance_model[1]),
-            ('covariance_model_misfit', None),
+            ('covariance_model_rms', None),
             ('noise_patch_size_km2', None),
             ('noise_patch_coord',
              lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),

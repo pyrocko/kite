@@ -134,6 +134,8 @@ class TestMatlabScene(unittest.TestCase):
                                      sc2.covariance.weight_matrix_focal)
             num.testing.assert_equal(sc1.covariance.covariance_matrix_focal,
                                      sc2.covariance.covariance_matrix_focal)
+            num.testing.assert_equal(sc1.covariance.covariance_matrix,
+                                     sc2.covariance.covariance_matrix)
 
         finally:
             shutil.rmtree(tmp_dir)

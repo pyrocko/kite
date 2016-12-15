@@ -105,23 +105,29 @@ class Covariance(object):
 
     def __init__(self, scene, config=CovarianceConfig()):
         self.frame = scene.frame
-        self._quadtree = scene.quadtree
-        self._scene = scene
+        self.quadtree = scene.quadtree
+        self.scene = scene
         self._noise_data = None
         self._noise_spectrum_cached = None
         self._initialized = False
         self._log = scene._log.getChild('Covariance')
 
-        self.parseConfig(config)
-        self._quadtree.evChanged.subscribe(self._clear)
-        self._scene.evConfigChanged.subscribe(self.parseConfig)
+        self.setConfig(config)
+        self.quadtree.evChanged.subscribe(self._clear)
+        self.scene.evConfigChanged.subscribe(self.setConfig)
 
     def __call__(self, *args, **kwargs):
         return self.getLeafCovariance(*args, **kwargs)
 
-    def parseConfig(self, config=None):
+    def setConfig(self, config=None):
+        """ Sets and updated the config of the instance
+
+        :param config: New config instance, defaults to configuration provided
+                       by parent :class:`kite.Scene`
+        :type config: :class:`kite.covariance.CovarianceConfig`, optional
+        """
         if config is None:
-            config = self._scene.config.covariance
+            config = self.scene.config.covariance
 
         self.config = config
 
@@ -199,13 +205,13 @@ class Covariance(object):
             return self._noise_data
         elif self.config.noise_coord is not None:
             print(self.config.noise_coord[:])
-            llR, llC = self._scene.frame.mapENMatrix(
+            llR, llC = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[:2])
-            sR, sC = self._scene.frame.mapENMatrix(
+            sR, sC = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[2:])
             slice_rows = slice(llR, llR + sR)
             slice_cols = slice(llC, llC + sC)
-            self.noise_data = self._scene.displacement[slice_rows, slice_cols]
+            self.noise_data = self.scene.displacement[slice_rows, slice_cols]
         else:
             node = self.getNoiseNode()
             self.noise_data = node.displacement
@@ -225,8 +231,8 @@ class Covariance(object):
     def getNoiseNode(self):
         """ Choose noise node from quadtree """
         t0 = time.time()
-        stdm = max([n.std for n in self._quadtree.nodes])
-        nodes = sorted(self._quadtree.nodes,
+        stdm = max([n.std for n in self.quadtree.nodes])  # noqa
+        nodes = sorted(self.quadtree.nodes,
                        key=lambda n: (n.length/(n.std+1.)))
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.8f s]'
@@ -246,8 +252,8 @@ class Covariance(object):
             and ``ny``
         :rtype: tuple
         """
-        leaf1 = self._quadtree.leafs[nx]
-        leaf2 = self._quadtree.leafs[ny]
+        leaf1 = self.quadtree.leafs[nx]
+        leaf2 = self.quadtree.leafs[ny]
 
         self._leaf_mapping[leaf1.id] = nx
         self._leaf_mapping[leaf2.id] = ny
@@ -309,7 +315,7 @@ class Covariance(object):
         """
         self._initialized = True
 
-        nl = len(self._quadtree.leafs)
+        nl = len(self.quadtree.leafs)
         self._leaf_mapping = {}
 
         t0 = time.time()
@@ -325,17 +331,17 @@ class Covariance(object):
             cov_matrix = modelCovariance(dist_matrix, ma, mb)
 
         elif method == 'full':
-            leaf_map = num.empty((len(self._quadtree.leafs), 4),
+            leaf_map = num.empty((len(self.quadtree.leafs), 4),
                                  dtype=num.uint32)
-            for nl, leaf in enumerate(self._quadtree.leafs):
+            for nl, leaf in enumerate(self.quadtree.leafs):
                 leaf, _ = self._mapLeafs(nl, nl)
                 leaf_map[nl, 0], leaf_map[nl, 1] = (leaf._slice_rows.start,
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
             cov_matrix = covariance_ext.leaf_distances(
-                            self._scene.frame.gridE.filled(),
-                            self._scene.frame.gridN.filled(),
+                            self.scene.frame.gridE.filled(),
+                            self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, nthreads)
         else:
             raise ValueError('%s method not defined!' % method)
@@ -401,8 +407,8 @@ class Covariance(object):
         f_spec = num.abs(f_spec) / f_spec.size
         # f_spec /= f_spec.size
 
-        kE = num.fft.fftfreq(f_spec.shape[1], d=self._quadtree.frame.dE)
-        kN = num.fft.fftfreq(f_spec.shape[0], d=self._quadtree.frame.dN)
+        kE = num.fft.fftfreq(f_spec.shape[1], d=self.quadtree.frame.dE)
+        kN = num.fft.fftfreq(f_spec.shape[0], d=self.quadtree.frame.dN)
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
@@ -447,8 +453,8 @@ class Covariance(object):
         ''' Covariance function derived from displacement noise patch.
         :type: tuple, :class:`numpy.array` (covariance, distance) '''
         power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
-        dk = self._quadtree.frame.dN if kN.size < kE.size\
-            else self._quadtree.frame.dE
+        dk = self.quadtree.frame.dN if kN.size < kE.size\
+            else self.quadtree.frame.dE
 
         d = num.arange(1, power_spec.size+1) * dk
         cov, _ = self._powerCosineTransform(power_spec, k)
@@ -464,8 +470,8 @@ class Covariance(object):
         '''
         _, k, _, kN, kE = self.noiseSpectrum()
         (a, b), _ = self._powerspecFit(regime)
-        dk = self._quadtree.frame.dN if kN.size < kE.size\
-            else self._quadtree.frame.dE
+        dk = self.quadtree.frame.dN if kN.size < kE.size\
+            else self.quadtree.frame.dE
 
         spec = modelPowerspec(k, a, b)
         d = num.arange(1, spec.size+1) * dk
@@ -488,7 +494,7 @@ class Covariance(object):
         return self.config.a, self.config.b
 
     @property
-    def covariance_model_misfit(self):
+    def covariance_model_rms(self):
         '''
         :getter: RMS missfit between :class:`kite.Covariance.covariance_model`
             and :class:`kite.Covariance.covariance_func`
@@ -496,7 +502,7 @@ class Covariance(object):
         '''
         cov, d = self.covariance_func
         cov_mod = modelCovariance(d, *self.covariance_model)
-        return num.sum(num.sqrt((cov - cov_mod)**2))
+        return num.sqrt(num.mean(cov**2 - cov_mod**2))
 
     @property_cached
     def structure_func(self):
@@ -525,6 +531,9 @@ class Covariance(object):
     def variance(self):
         ''' Variance, derived from the mean of
         :attr:`kite.Covariance.structure_func`.
+
+        :setter: Set the variance manually
+        :getter: Retrieve the variance
         :type: float
         '''
         return self.config.variance
@@ -539,6 +548,14 @@ class Covariance(object):
         if self.config.variance is None:
             self.config.variance = float(num.mean(self.structure_func[0]))
         return self.config.variance
+
+    def export(self, filename):
+        """ Export the :attr:`kite.Covariance.weight_matrix` in a *CSV* format
+
+        :param filename: path to export to
+        :type filename: str
+        """
+        pass
 
     @property_cached
     def plot(self):

@@ -68,8 +68,14 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self.addItem(self.focal_points)
 
+        def covarianceChanged():
+            if self._component == 'weight':
+                self.update()
+
         self.scene_proxy.sigQuadtreeChanged.connect(self.update)
         self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        self.scene_proxy.sigCovarianceChanged.connect(covarianceChanged)
+
         # self.scene_proxy.sigFrameChanged.connect(self.transFromFrame)
         # self.scene_proxy.sigFrameChanged.connect(self.transFromFrameScatter)
 
