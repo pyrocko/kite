@@ -549,13 +549,19 @@ class Covariance(object):
             self.config.variance = float(num.mean(self.structure_func[0]))
         return self.config.variance
 
-    def export(self, filename):
-        """ Export the :attr:`kite.Covariance.weight_matrix` in a *CSV* format
+    def export_weight_matrix(self, filename):
+        """ Export the :attr:`kite.Covariance.weight_matrix` through numpy.
+        The data can be loaded through :fund:`numpy.loadtxt`.
 
         :param filename: path to export to
         :type filename: str
         """
-        pass
+        self._log.debug('Exporting Covariance.weight_matrix to %s' % filename)
+        header = 'Exported kite.Covariance.weight_matrix, '\
+                 'for more information visit http://pyrocko.com\n'\
+                 '\nThe matrix is symmetric and ordered by QuadNode.id:\n'
+        header += ', '.join([l.id for l in self.quadtree.leafs])
+        num.savetxt(filename, self.weight_matrix, header=header)
 
     @property_cached
     def plot(self):

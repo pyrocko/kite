@@ -10,39 +10,6 @@ from PySide.QtCore import QMetaObject
 from PySide.QtUiTools import QUiLoader
 
 
-# -*- coding: utf-8 -*-
-# Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
-# Modifications by Charl Botha <cpbotha@vxlabs.com>
-# * customWidgets support (registerCustomWidget() causes segfault in
-#   pyside 1.1.2 on Ubuntu 12.04 x86_64)
-# * workingDirectory support in loadUi
-
-# found this here:
-# https://github.com/lunaryorn/snippets/blob/master/qt4/designer/pyside_dynamic.py
-
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
-"""
-    How to load a user interface dynamically with PySide.
-    .. moduleauthor::  Sebastian Wiesner  <lunaryorn@gmail.com>
-"""
-
 SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
 _viridis_data = [[68, 1, 84],
@@ -110,6 +77,40 @@ _viridis_data = [[68, 1, 84],
                  [236, 228, 26],
                  [246, 230, 31]]
 _viridis_data.reverse()
+
+
+# -*- coding: utf-8 -*-
+# Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
+# Modifications by Charl Botha <cpbotha@vxlabs.com>
+# * customWidgets support (registerCustomWidget() causes segfault in
+#   pyside 1.1.2 on Ubuntu 12.04 x86_64)
+# * workingDirectory support in loadUi
+
+# found this here:
+# https://github.com/lunaryorn/snippets/blob/master/qt4/designer/pyside_dynamic.py
+
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+"""
+    How to load a user interface dynamically with PySide.
+    .. moduleauthor::  Sebastian Wiesner  <lunaryorn@gmail.com>
+"""
 
 
 class UiLoader(QUiLoader):

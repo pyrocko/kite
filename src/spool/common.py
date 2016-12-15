@@ -2,6 +2,7 @@
 from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
+from PySide import QtCore
 import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -249,3 +250,19 @@ class QKiteParameterGroup(pTypes.GroupParameter):
 
     def pushChild(self, child, **kwargs):
         self.insertChild(0, child, **kwargs)
+
+
+class QKiteThread(QtCore.QThread):
+    def __init__(self, work=None, args=(), kwargs={}, parent=None):
+        self.work = work
+        self.args = args
+        self.kwargs = kwargs
+        print(args)
+        print(kwargs)
+        QtCore.QThread.__init__(self, parent)
+
+    def run(self):
+        if callable(self.work):
+            self.work(*self.args, **self.kwargs)
+        else:
+            raise TypeError('worker must be callable!')

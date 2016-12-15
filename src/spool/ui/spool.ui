@@ -125,8 +125,9 @@
     <addaction name="actionSave_scene"/>
     <addaction name="actionSave_config"/>
     <addaction name="separator"/>
-    <addaction name="actionExport_quadtree_CSV"/>
     <addaction name="actionImport_scene"/>
+    <addaction name="actionExport_quadtree"/>
+    <addaction name="actionExport_covariance_weights"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -226,6 +227,9 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset theme="application-export"/>
+   </property>
    <property name="text">
     <string>Load scene</string>
    </property>
@@ -263,20 +267,17 @@
     <string>Scene Transect</string>
    </property>
   </action>
-  <action name="actionExport_quadtree_CSV">
+  <action name="actionExport_quadtree">
    <property name="icon">
     <iconset theme="application-export">
      <normaloff/>
     </iconset>
    </property>
    <property name="text">
-    <string>Export Quadtree CSV</string>
+    <string>Export Quadtree</string>
    </property>
    <property name="toolTip">
     <string>Scene.quadtree.export(filename)</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionLog">
@@ -323,6 +324,17 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport_covariance_weights">
+   <property name="icon">
+    <iconset theme="application-export"/>
+   </property>
+   <property name="text">
+    <string>Export Covariance Weights</string>
+   </property>
+   <property name="toolTip">
+    <string>Covariance.export_weight_matrix(filename)</string>
    </property>
   </action>
  </widget>

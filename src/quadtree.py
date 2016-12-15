@@ -687,13 +687,13 @@ mean_displacement, median_displacement, absolute_weight
         :param filename: export to path
         :type filename: string
         """
-        self._log.debug('Exporting quadtree to %s' % filename)
-        with open(filename, mode='w') as qt_export:
-            qt_export.write(
+        self._log.debug('Exporting Quadtree.leafs to %s' % filename)
+        with open(filename, mode='w') as f:
+            f.write(
                 '# node_id, focal_point_E, focal_point_N, theta, phi, '
                 'mean_displacement, median_displacement, absolute_weight\n')
             for l in self.leafs:
-                qt_export.write(
+                f.write(
                     '{l.id}, {l.focal_point[0]}, {l.focal_point[1]}, '
                     '{l.theta}, {l.phi}, '
                     '{l.mean}, {l.median}, {l.weight}\n'.format(l=l))

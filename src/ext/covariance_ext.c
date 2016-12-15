@@ -80,6 +80,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
     // printf("coord_matrix: %ldx%ld\n", nrows, ncols);
     // printf("subsampling: %d\n", subsampling);
     // printf("nthreads: %d\n", nthreads);
+    Py_BEGIN_ALLOW_THREADS
     #pragma omp parallel \
         shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
         private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
@@ -147,6 +148,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
             }
         }
     }
+    Py_END_ALLOW_THREADS
 }
 
 static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {

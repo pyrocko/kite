@@ -1,6 +1,8 @@
 #!/usr/bin/python2
 from __future__ import division, absolute_import, print_function, \
     unicode_literals
+
+from PySide import QtCore
 from .utils_qt import SliderWidgetParameterItem
 from .common import QKiteView, QKitePlot, QKiteParameterGroup
 from ..quadtree import QuadtreeConfig
@@ -96,6 +98,8 @@ class QKiteQuadtreePlot(QKitePlot):
 
 
 class QKiteParamQuadtree(QKiteParameterGroup):
+    sigEpsilon = QtCore.Signal(float)
+
     def __init__(self, scene_proxy, plot, *args, **kwargs):
         self.plot = plot
         self.sig_guard = True
@@ -110,13 +114,15 @@ class QKiteParamQuadtree(QKiteParameterGroup):
                            ('epsilon_limit', None),
                            ('nnodes', None),
                            ])
-        scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
-        scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
 
         QKiteParameterGroup.__init__(self,
                                      model=scene_proxy,
                                      model_attr='quadtree',
                                      **kwargs)
+
+        scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
+        scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
+        self.sigEpsilon.connect(self.sp.setQuadtreeEpsilon)
 
         def updateGuard(func):
             def wrapper(*args, **kwargs):
@@ -127,6 +133,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Epsilon control
         @updateGuard
         def updateEpsilon():
+            # self.sigEpsilon.emit(self.epsilon.value())
             scene_proxy.quadtree.epsilon = self.epsilon.value()
 
         p = {'name': 'epsilon',
@@ -141,6 +148,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
+        # self.epsilon.sigValueChanged.connect(self.sp.setQuadtreeEpsilon)
 
         # Epsilon control
         @updateGuard

@@ -38,10 +38,13 @@ Supported formats are:
     if ns.file[0] is None:
         parser.print_help()
         sys.exit(0)
-    sc = Scene()
-    sc.setLogLevel(ns.log_lvl)
-    try:
-        sc.import_data(ns.file[0])
-    except ImportError:
-        sc.load(ns.file[0])
-    sc.spool()
+    # sc = Scene()
+    # sc.setLogLevel(ns.log_lvl)
+    # try:
+    #     sc.import_data(ns.file[0])
+    # except ImportError:
+    #     sc.load(ns.file[0])
+    # sc.spool()
+    from kite.spool import Spool
+    spool = Spool(filename=ns.file[0])
+    spool.spool_win.buildViews()

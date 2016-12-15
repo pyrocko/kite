@@ -9,6 +9,8 @@ from ..scene import Scene
 
 from os import path
 import os
+import sys
+import time  # noqa
 import logging
 import pyqtgraph as pg
 
@@ -26,7 +28,7 @@ def validateFilename(filename):
 
 
 class Spool(QtGui.QApplication):
-    def __init__(self, scene=None):
+    def __init__(self, scene=None, filename=None):
         QtGui.QApplication.__init__(self, ['KiteSpool'])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
@@ -52,38 +54,45 @@ class Spool(QtGui.QApplication):
 
         if scene is not None:
             self.addScene(scene)
+        if filename is not None:
+            self.importScene(filename)
 
         splash.finish(self.spool_win)
         self.spool_win.show()
-        self.exec_()
+        sys.exit(self.exec_())
 
     def addScene(self, scene):
-        return self.spool_win.addScene(scene)
+        self.spool_win.addScene(scene)
+
+    def importScene(self, filename):
+        self.spool_win.scene_proxy.importFile(filename)
 
     def __del__(self):
         pass
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
+    sigExportCovariance = QtCore.Signal(str)
+
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
+        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
         self.loadUi()
 
-        self.scene_proxy = QSceneProxy()
+        self.scene_thread = QtCore.QThread()
+        self.scene_thread.scene_proxy = QSceneProxy()
+        self.scene_thread.scene_proxy.moveToThread(self.scene_thread)
+        self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
+        self.scene_thread.start()
 
-        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
+        self.sigExportCovariance.connect(self.scene_proxy.exportCovariance)
 
         self.ptree = QKiteParameterTree(showHeader=True)
-        self.ptree.resize(500, 500)
+        self.ptree.resize(100, 100)
         self.splitter.insertWidget(0, self.ptree)
 
         self.log_model = SceneLogModel(self)
         self.log = SceneLog(self)
-
-        self.about = QtGui.QDialog()
-        about_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'ui/about.ui')
-        loadUi(about_ui, baseinstance=self.about)
 
         self.actionSave_config.triggered.connect(
             self.onSaveConfig)
@@ -91,12 +100,16 @@ class SpoolMainWindow(QtGui.QMainWindow):
             self.onSaveData)
         self.actionLoad_config.triggered.connect(
             self.onLoadConfig)
-        self.actionExport_quadtree_CSV.triggered.connect(
-            self.onExportQuadtreeCSV)
         self.actionLoad_scene.triggered.connect(
             self.onOpenScene)
+
         self.actionImport_scene.triggered.connect(
             self.onImportScene)
+        self.actionExport_quadtree.triggered.connect(
+            self.onExportQuadtree)
+        self.actionExport_covariance_weights.triggered.connect(
+            self.onExportCovarianceWeight)
+
         self.actionAbout_Spool.triggered.connect(
             self.about.show)
         self.actionHelp.triggered.connect(
@@ -106,6 +119,18 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
         self.loadingModule = Subject()
 
+    @property
+    def scene_proxy(self):
+        return self.scene_thread.scene_proxy
+
+    @property
+    def about(self):
+        about = QtGui.QDialog()
+        about_ui = path.join(path.dirname(path.realpath(__file__)),
+                             'ui/about.ui')
+        loadUi(about_ui, baseinstance=about)
+        return about
+
     def loadUi(self):
         ui_file = path.join(path.dirname(path.realpath(__file__)),
                             'ui/spool.ui')
@@ -114,7 +139,11 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def addScene(self, scene):
         self.scene_proxy.setScene(scene)
+        self.buildViews()
 
+    def buildViews(self):
+        if self.scene_proxy.scene is None:
+            return
         for v in self.views:
             self.addView(v)
 
@@ -136,7 +165,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def onSaveData(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='YAML *.yml, NumPy container *.npz (*.yml *.npz)',
+            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')
         if not validateFilename(filename):
             return
@@ -149,16 +178,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
             return
         self.scene_proxy.scene.load_config(filename)
 
-    def onExportQuadtreeCSV(self):
-        filename, _ = QtGui.QFileDialog.getSaveFileName(
-            filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
-        if not validateFilename(filename):
-            return
-        self.scene_proxy.quadtree.export(filename)
-
     def onOpenScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
-            filter='YAML *.yml, NumPy container *.npz (*.yml *.npz)',
+            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Load kite scene')
         if not validateFilename(filename):
             return
@@ -166,11 +188,41 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
     def onImportScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
-            filter='Any file (*)',
+            self,
+            filter='GMT5SAR Scene *.grd (*.grd);;'
+                   'ISCE Scene *unw* (*unw*);;Gamma Scene *.geo (*.geo);;'
+                   'Matlab Container *.mat (*.mat);;Any File (*)',
             caption='Import scene to spool')
         if not validateFilename(filename):
             return
         self.scene_proxy.setScene(Scene.import_data(filename))
+
+    def onExportQuadtree(self):
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
+        if not validateFilename(filename):
+            return
+        self.scene_proxy.quadtree.export(filename)
+
+    def onExportCovarianceWeight(self):
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            filter='Text File *.txt (*.txt)',
+            caption='Export Covariance Weights',)
+        if not validateFilename(filename):
+            return
+
+        p = QtGui.QProgressDialog(
+            'Caluclating full <span style="font-family: monospace">'
+            'Covariance.weight_matrix</span>, this can take a few minutes...',
+            '', 0, 0)
+        p.setCancelButtonText(None)
+        p.closeEvent = lambda e: e.ignore()
+        p.setValue(0)
+        p.show()
+
+        self.sigExportCovariance.emit(filename)
+        self.scene_proxy.sigOperationFinished.connect(p.reset)
+        self.progress = p
 
     def exit(self):
         pass
@@ -189,6 +241,8 @@ class QSceneProxy(QtCore.QObject):
     sigQuadtreeConfigChanged = QtCore.Signal()
     sigCovarianceChanged = QtCore.Signal()
     sigCovarianceConfigChanged = QtCore.Signal()
+
+    sigOperationFinished = QtCore.Signal()
 
     def __init__(self):
         QtCore.QObject.__init__(self)
@@ -248,6 +302,34 @@ class QSceneProxy(QtCore.QObject):
             self.sigCovarianceChanged.emit)
         self.covariance.evConfigChanged.subscribe(
             self.sigCovarianceConfigChanged.emit)
+
+    @QtCore.Slot(str)
+    def exportCovariance(self, filename):
+        self.scene.covariance.export_weight_matrix(filename)
+        self.sigOperationFinished.emit()
+
+    @QtCore.Slot(str)
+    def importFile(self, filename):
+        self.setScene(Scene.import_data(filename))
+        self.sigOperationFinished.emit()
+
+    @QtCore.Slot(str)
+    def loadFile(self, filename):
+        self.setScene(Scene.load(filename))
+        self.sigOperationFinished.emit()
+
+    @QtCore.Slot(str)
+    def loadConfig(self, filename):
+        self.scene.load_config(filename)
+        self.sigOperationFinished.emit()
+
+    @QtCore.Slot(float)
+    def setQuadtreeNanFraction(self, value):
+        self.quadtree.nan_fraction = value
+
+    @QtCore.Slot(float)
+    def setQuadtreeEpsilon(self, value):
+        self.quadtree.epsilon = value
 
 
 class QKiteParameterTree(pg.parametertree.ParameterTree):
@@ -381,7 +463,6 @@ __all__ = ['Spool']
 
 if __name__ == '__main__':
     from kite.scene import SceneSynTest
-    import sys
     if len(sys.argv) > 1:
         sc = Scene.load(sys.argv[1])
     else:
