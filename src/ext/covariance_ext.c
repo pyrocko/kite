@@ -1,5 +1,5 @@
 #define NPY_NO_DEPRECATED_API 7
-#define SQR(a)  ( a * a)
+#define SQR(a)  ( (a) * (a) )
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -95,7 +95,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
             l1row_end = map[il1*4+1];
             l1col_beg = map[il1*4+2];
             l1col_end = map[il1*4+3];
-            //printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
+            // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
             for (il2=il1; il2<nleafs; il2++) {
                 l2row_beg = map[il2*4+0];
                 l2row_end = map[il2*4+1];
@@ -108,7 +108,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
                 cov = 0.;
                 npx = 0;
                 while(! (l1hit && l2hit)) {
-                    //printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
+                    // printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
                     for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
                         if (il1row > nrows) continue;
                         for (il1col=l1col_beg; il1col<l1col_end; il1col+=leaf_subsampling[il1]) {
@@ -152,49 +152,49 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
 }
 
 static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
-    PyObject *x_arr, *y_arr, *map_arr;
-    PyArrayObject *c_x_arr, *c_y_arr, *c_map_arr, *cov_arr;
+    PyObject *E_arr, *N_arr, *map_arr;
+    PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
     float64_t *x, *y, *covs, ma, mb;
     uint32_t *map, nthreads;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
 
-    if (! PyArg_ParseTuple(args, "OOOddI", &x_arr, &y_arr, &map_arr, &ma, &mb, &nthreads)) {
+    if (! PyArg_ParseTuple(args, "OOOddI", &E_arr, &N_arr, &map_arr, &ma, &mb, &nthreads)) {
         PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads)");
         return NULL;
     }
 
-    if (! good_array(x_arr, NPY_FLOAT64, -1, 2, NULL))
+    if (! good_array(E_arr, NPY_FLOAT64, -1, 2, NULL))
         return NULL;
-    if (! good_array(y_arr, NPY_FLOAT64, -1, 2, NULL))
+    if (! good_array(N_arr, NPY_FLOAT64, -1, 2, NULL))
         return NULL;
     if (! good_array(map_arr, NPY_UINT32, -1, 2, shape_want_map))
         return NULL;
 
-    c_x_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) x_arr);
-    c_y_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) y_arr);
+    c_E_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) E_arr);
+    c_N_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) N_arr);
     c_map_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) map_arr);
 
 
-    if (PyArray_SIZE(c_x_arr) != PyArray_SIZE(c_y_arr)) {
+    if (PyArray_SIZE(c_E_arr) != PyArray_SIZE(c_N_arr)) {
         PyErr_SetString(CovarianceExtError, "X and Y must have the same size!");
         return NULL;
     }
 
-    x = PyArray_DATA(c_x_arr);
-    y = PyArray_DATA(c_y_arr);
+    x = PyArray_DATA(c_E_arr);
+    y = PyArray_DATA(c_N_arr);
     map = PyArray_DATA(c_map_arr);
     nleafs = PyArray_SIZE(c_map_arr)/4;
 
-    shape_coord[0] = (npy_intp) PyArray_DIMS(c_x_arr)[0];
-    shape_coord[1] = (npy_intp) PyArray_DIMS(c_x_arr)[1];
+    shape_coord[0] = (npy_intp) PyArray_DIMS(c_E_arr)[0];
+    shape_coord[1] = (npy_intp) PyArray_DIMS(c_E_arr)[1];
     shape_dist[0] = nleafs;
     shape_dist[1] = nleafs;
 
     cov_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
     // printf("size distance matrix: %lu\n", PyArray_SIZE(cov_arr));
-    // printf("size coord matrix: %lu\n", PyArray_SIZE(x_arr));
+    // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
     calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, covs);
@@ -202,8 +202,8 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
-    {"leaf_distances", w_calc_covariance_matrix, METH_VARARGS,
-     "Calculates mean distances between quadtree leafs." },
+    {"covariance_matrix", w_calc_covariance_matrix, METH_VARARGS,
+     "Calculates the covariance matrix for full resolution." },
 
     {NULL, NULL, 0, NULL}         /* Sentinel */
 };
