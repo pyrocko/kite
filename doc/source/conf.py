@@ -16,7 +16,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import sphinx_py3doc_pyrocko
+import sphinx_py3doc_enhanced_theme
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../../'))
@@ -124,11 +124,25 @@ todo_include_todos = True
 
 
 # -- Options for HTML output ----------------------------------------------
+html_theme_options = {
+    # 'githuburl': 'https://github.com/ionelmc/sphinx-py3doc-enhanced-theme/',
+    'bodyfont': '"Roboto Slab",Arial,sans-serif',
+    'headfont': '"Lucida Grande",Arial,sans-serif',
+    'codefont': 'monospace,sans-serif',
+    'linkcolor': '#0072AA',
+    'visitedlinkcolor': '#6363bb',
+    'extrastyling': True,
+    'googlewebfonturl': 'https://fonts.googleapis.com/css?family=Roboto+Slab',
+    'appendcss': open('style.css').read(),
+}
+
+pygments_style = 'friendly'
+
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_py3doc_pyrocko'
+html_theme = 'sphinx_py3doc_enhanced_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -137,7 +151,7 @@ html_theme = 'sphinx_py3doc_pyrocko'
 # html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [sphinx_py3doc_pyrocko.get_html_theme_path()]
+html_theme_path = [sphinx_py3doc_enhanced_theme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.

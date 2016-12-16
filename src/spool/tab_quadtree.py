@@ -99,6 +99,9 @@ class QKiteQuadtreePlot(QKitePlot):
 
 class QKiteParamQuadtree(QKiteParameterGroup):
     sigEpsilon = QtCore.Signal(float)
+    sigNanFraction = QtCore.Signal(float)
+    sigTileMaximum = QtCore.Signal(float)
+    sigTileMinimum = QtCore.Signal(float)
 
     def __init__(self, scene_proxy, plot, *args, **kwargs):
         self.plot = plot
@@ -122,7 +125,11 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
         scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
-        self.sigEpsilon.connect(self.sp.setQuadtreeEpsilon)
+
+        self.sigEpsilon.connect(scene_proxy.qtproxy.setEpsilon)
+        self.sigNanFraction.connect(scene_proxy.qtproxy.setNanFraction)
+        self.sigTileMaximum.connect(scene_proxy.qtproxy.setTileMaximum)
+        self.sigTileMinimum.connect(scene_proxy.qtproxy.setTileMinimum)
 
         def updateGuard(func):
             def wrapper(*args, **kwargs):
@@ -133,8 +140,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Epsilon control
         @updateGuard
         def updateEpsilon():
-            # self.sigEpsilon.emit(self.epsilon.value())
-            scene_proxy.quadtree.epsilon = self.epsilon.value()
+            self.sigEpsilon.emit(self.epsilon.value())
 
         p = {'name': 'epsilon',
              'value': scene_proxy.quadtree.epsilon,
@@ -148,12 +154,11 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
-        # self.epsilon.sigValueChanged.connect(self.sp.setQuadtreeEpsilon)
 
         # Epsilon control
         @updateGuard
         def updateNanFrac():
-            scene_proxy.quadtree.nan_allowed = self.nan_allowed.value()
+            self.sigNanFraction.emit(self.nan_allowed.value())
 
         p = {'name': 'nan_allowed',
              'value': scene_proxy.quadtree.nan_allowed,
@@ -169,7 +174,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         # Tile size controls
         @updateGuard
         def updateTileSizeMin():
-            scene_proxy.quadtree.tile_size_min = self.tile_size_min.value()
+            self.sigTileMinimum.emit(self.tile_size_min.value())
 
         p = {'name': 'tile_size_min',
              'value': scene_proxy.quadtree.tile_size_min,
@@ -184,7 +189,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
 
         @updateGuard
         def updateTileSizeMax():
-            scene_proxy.quadtree.tile_size_max = self.tile_size_max.value()
+            self.sigTileMaximum.emit(self.tile_size_max.value())
 
         p.update({'name': 'tile_size_max',
                   'value': scene_proxy.quadtree.tile_size_max,

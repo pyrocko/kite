@@ -1,5 +1,6 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
+from .scene_proxy import QSceneProxy
 from .tab_scene import QKiteScene
 from .tab_quadtree import QKiteQuadtree  # noqa
 from .tab_covariance import QKiteCovariance  # noqa
@@ -72,24 +73,28 @@ class Spool(QtGui.QApplication):
 
 
 class SpoolMainWindow(QtGui.QMainWindow):
+    sigImportFile = QtCore.Signal(str)
+    sigLoadFile = QtCore.Signal(str)
+    sigLoadConfig = QtCore.Signal(str)
     sigExportCovariance = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
-        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
         self.loadUi()
 
-        self.scene_thread = QtCore.QThread()
-        self.scene_thread.scene_proxy = QSceneProxy()
-        self.scene_thread.scene_proxy.moveToThread(self.scene_thread)
-        self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
-        self.scene_thread.start()
-
-        self.sigExportCovariance.connect(self.scene_proxy.exportCovariance)
+        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
 
         self.ptree = QKiteParameterTree(showHeader=True)
         self.ptree.resize(100, 100)
         self.splitter.insertWidget(0, self.ptree)
+
+        self.scene_proxy = QSceneProxy()
+        self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
+
+        self.sigLoadFile.connect(self.scene_proxy.loadFile)
+        self.sigImportFile.connect(self.scene_proxy.importFile)
+        self.sigLoadConfig.connect(self.scene_proxy.loadConfig)
+        self.sigExportCovariance.connect(self.scene_proxy.exportCovariance)
 
         self.log_model = SceneLogModel(self)
         self.log = SceneLog(self)
@@ -117,11 +122,14 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionLog.triggered.connect(
             self.log.show)
 
-        self.loadingModule = Subject()
+        self.progress = QtGui.QProgressDialog('', None, 0, 0)
+        self.progress.setValue(0)
+        self.progress.closeEvent = lambda e: e.ignore()
+        self.progress.setMinimumWidth(400)
+        self.scene_proxy.sigProcessingStarted.connect(self.processingStarted)
+        self.scene_proxy.sigProcessingFinished.connect(self.progress.reset)
 
-    @property
-    def scene_proxy(self):
-        return self.scene_thread.scene_proxy
+        self.loadingModule = Subject()
 
     @property
     def about(self):
@@ -142,7 +150,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.buildViews()
 
     def buildViews(self):
-        if self.scene_proxy.scene is None:
+        if self.scene_proxy.scene is None or self.tabs.count() != 0:
             return
         for v in self.views:
             self.addView(v)
@@ -155,6 +163,11 @@ class SpoolMainWindow(QtGui.QMainWindow):
         if hasattr(view, 'parameters'):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)
+
+    @QtCore.Slot(str)
+    def processingStarted(self, text):
+        self.progress.setLabelText(text)
+        self.progress.show()
 
     def onSaveConfig(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -176,7 +189,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='YAML file *.yml (*.yml)', caption='Load scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.load_config(filename)
+        self.sigLoadConfig.emit(filename)
 
     def onOpenScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
@@ -184,18 +197,20 @@ class SpoolMainWindow(QtGui.QMainWindow):
             caption='Load kite scene')
         if not validateFilename(filename):
             return
-        self.scene_proxy.setScene(Scene.load(filename))
+        self.scene_proxy.loadFile(filename)
 
     def onImportScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
             self,
-            filter='GMT5SAR Scene *.grd (*.grd);;'
-                   'ISCE Scene *unw* (*unw*);;Gamma Scene *.geo (*.geo);;'
-                   'Matlab Container *.mat (*.mat);;Any File (*)',
+            filter='Supported Formats, *.grd, *.geo, *unw*, *.mat '
+                   '(*.grd,*.geo,*unw*,*.mat);;'
+                   'GMT5SAR Scene, *.grd (*.grd);;'
+                   'ISCE Scene, *unw* (*unw*);;Gamma Scene *.geo (*.geo);;'
+                   'Matlab Container, *.mat (*.mat);;Any File * (*)',
             caption='Import scene to spool')
         if not validateFilename(filename):
             return
-        self.scene_proxy.setScene(Scene.import_data(filename))
+        self.sigImportFile.emit(filename)
 
     def onExportQuadtree(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -210,126 +225,10 @@ class SpoolMainWindow(QtGui.QMainWindow):
             caption='Export Covariance Weights',)
         if not validateFilename(filename):
             return
-
-        p = QtGui.QProgressDialog(
-            'Caluclating full <span style="font-family: monospace">'
-            'Covariance.weight_matrix</span>, this can take a few minutes...',
-            '', 0, 0)
-        p.setCancelButtonText(None)
-        p.closeEvent = lambda e: e.ignore()
-        p.setValue(0)
-        p.show()
-
         self.sigExportCovariance.emit(filename)
-        self.scene_proxy.sigOperationFinished.connect(p.reset)
-        self.progress = p
 
     def exit(self):
         pass
-
-
-class QSceneProxy(QtCore.QObject):
-    ''' Proxy for :class:`kite.Scene` so we can change the scene
-    '''
-    sigSceneModelChanged = QtCore.Signal()
-
-    sigSceneChanged = QtCore.Signal()
-    sigConfigChanged = QtCore.Signal()
-
-    sigFrameChanged = QtCore.Signal()
-    sigQuadtreeChanged = QtCore.Signal()
-    sigQuadtreeConfigChanged = QtCore.Signal()
-    sigCovarianceChanged = QtCore.Signal()
-    sigCovarianceConfigChanged = QtCore.Signal()
-
-    sigOperationFinished = QtCore.Signal()
-
-    def __init__(self):
-        QtCore.QObject.__init__(self)
-        self.scene = None
-        self.frame = None
-        self.quadtree = None
-        self.covariance = None
-
-    def setScene(self, scene):
-        self.disconnectSlots()
-
-        self.scene = scene
-        self.frame = scene.frame
-        self.quadtree = scene.quadtree
-        self.covariance = scene.covariance
-
-        self.connectSlots()
-        self.sigSceneModelChanged.emit()
-
-    def disconnectSlots(self):
-        if self.scene is None:
-            return
-
-        self.scene.evChanged.unsubscribe(
-            self.sigSceneChanged.emit)
-        self.scene.evConfigChanged.unsubscribe(
-            self.sigConfigChanged.emit)
-
-        self.scene.frame.evChanged.unsubscribe(
-            self.sigFrameChanged.emit)
-
-        self.quadtree.evChanged.unsubscribe(
-            self.sigQuadtreeChanged.emit)
-        self.quadtree.evConfigChanged.unsubscribe(
-            self.sigQuadtreeConfigChanged.emit)
-
-        self.covariance.evChanged.unsubscribe(
-            self.sigCovarianceChanged.emit)
-        self.covariance.evConfigChanged.unsubscribe(
-            self.sigCovarianceConfigChanged.emit)
-
-    def connectSlots(self):
-        self.scene.evChanged.subscribe(
-            self.sigSceneChanged.emit)
-        self.scene.evConfigChanged.subscribe(
-            self.sigConfigChanged.emit)
-
-        self.scene.frame.evChanged.subscribe(
-            self.sigFrameChanged.emit)
-
-        self.quadtree.evChanged.subscribe(
-            self.sigQuadtreeChanged.emit)
-        self.quadtree.evConfigChanged.subscribe(
-            self.sigQuadtreeConfigChanged.emit)
-
-        self.covariance.evChanged.subscribe(
-            self.sigCovarianceChanged.emit)
-        self.covariance.evConfigChanged.subscribe(
-            self.sigCovarianceConfigChanged.emit)
-
-    @QtCore.Slot(str)
-    def exportCovariance(self, filename):
-        self.scene.covariance.export_weight_matrix(filename)
-        self.sigOperationFinished.emit()
-
-    @QtCore.Slot(str)
-    def importFile(self, filename):
-        self.setScene(Scene.import_data(filename))
-        self.sigOperationFinished.emit()
-
-    @QtCore.Slot(str)
-    def loadFile(self, filename):
-        self.setScene(Scene.load(filename))
-        self.sigOperationFinished.emit()
-
-    @QtCore.Slot(str)
-    def loadConfig(self, filename):
-        self.scene.load_config(filename)
-        self.sigOperationFinished.emit()
-
-    @QtCore.Slot(float)
-    def setQuadtreeNanFraction(self, value):
-        self.quadtree.nan_fraction = value
-
-    @QtCore.Slot(float)
-    def setQuadtreeEpsilon(self, value):
-        self.quadtree.epsilon = value
 
 
 class QKiteParameterTree(pg.parametertree.ParameterTree):
@@ -344,6 +243,7 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
         logging.Handler.__init__(self)
 
         self.spool = spool
+        self.spool.scene_proxy.sigLogRecord.connect(self.newRecord)
         getPixmap = spool.style().standardPixmap
         qstyle = QtGui.QStyle
 
@@ -357,17 +257,6 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
 
         for i in self.levels.itervalues():
             i[0] = i[0].scaledToHeight(20)
-
-        self.spool.scene_proxy.sigSceneModelChanged.connect(
-            lambda: self.attachScene(self.spool.scene_proxy.scene))
-
-    def attachScene(self, scene):
-        self.scene = scene
-        self.scene._log.addHandler(self)
-
-    def detachScene(self, scene):
-        self.scene._log.removeHandler(self)
-        self.scene = None
 
     def data(self, idx, role):
         rec = self.log_records[idx.row()]
@@ -403,7 +292,8 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
     def columnCount(self, idx):
         return 3
 
-    def emit(self, record):
+    @QtCore.Slot(object)
+    def newRecord(self, record):
         self.log_records.append(record)
         self.beginInsertRows(QtCore.QModelIndex(),
                              0, 0)

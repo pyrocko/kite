@@ -451,8 +451,8 @@ class Quadtree(object):
 
     @nan_allowed.setter
     def nan_allowed(self, value):
-        if (value > 1. or value < 0.):
-            self._log.warning('NaN fraction must be 0 <= nan_allowed <=1')
+        if (value > 1. or value <= 0.):
+            self._log.warning('NaN fraction must be 0. < nan_allowed <= 1.')
             return
 
         self.leafs = None
