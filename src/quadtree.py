@@ -626,13 +626,13 @@ class Quadtree(object):
         if method not in self._norm_methods.keys():
             raise AttributeError('Method %s is not in %s' % (method,
                                  self._norm_methods.keys()))
-        t0 = time.time()
+        t0 = time.time()  # noqa
         array.fill(num.nan)
         for l in self.leafs:
             array[l._slice_rows, l._slice_cols] = \
                 self._norm_methods[method](l)
         array[self.scene.displacement_mask] = num.nan
-        print time.time()-t0, method
+        # print time.time()-t0, method
         return array
 
     @property
