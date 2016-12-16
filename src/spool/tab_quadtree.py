@@ -114,7 +114,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
                           [('nleafs', None),
                            ('reduction_rms', None),
                            ('reduction_efficiency', None),
-                           ('epsilon_limit', None),
+                           ('epsilon_min', None),
                            ('nnodes', None),
                            ])
 
@@ -147,9 +147,9 @@ class QKiteParamQuadtree(QKiteParameterGroup):
              'type': 'float',
              'default': scene_proxy.quadtree._epsilon_init,
              'step': round((scene_proxy.quadtree.epsilon -
-                            scene_proxy.quadtree.epsilon_limit)*.1, 3),
-             'limits': (scene_proxy.quadtree.epsilon_limit,
-                        2*scene_proxy.quadtree.epsilon),
+                            scene_proxy.quadtree.epsilon_min)*.1, 3),
+             'limits': (scene_proxy.quadtree.epsilon_min,
+                        3*scene_proxy.quadtree._epsilon_init),
              'editable': True}
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
@@ -246,5 +246,5 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.sig_guard = False
 
     def updateEpsilonLimits(self):
-        self.epsilon.setLimits((self.sp.quadtree.epsilon_limit,
-                                2*self.sp.quadtree.epsilon))
+        self.epsilon.setLimits((self.sp.quadtree.epsilon_min,
+                                3*self.sp.quadtree._epsilon_init))

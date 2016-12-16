@@ -39,7 +39,7 @@ class QuadNode(object):
         ''' Fraction of NaN values within the tile
         :type: float
         '''
-        return float(num.sum(num.isnan(self.displacement))) / \
+        return float(num.sum(self.displacement_mask)) / \
             self.displacement.size
 
     @property_cached
@@ -124,8 +124,15 @@ class QuadNode(object):
         :type: :class:`numpy.array`
         '''
         return num.ma.masked_array(self.displacement,
-                                   num.isnan(self.displacement),
+                                   self.displacement_mask,
                                    fill_value=num.nan)
+
+    @property_cached
+    def displacement_mask(self):
+        ''' Displacement nan mask
+        :type: :class:`numpy.array`, dtype :type:`numpy.bool`
+        '''
+        return num.isnan(self.displacement)
 
     @property_cached
     def phi(self):
@@ -133,7 +140,7 @@ class QuadNode(object):
         :type: float
         '''
         phi = self.scene.phi[self._slice_rows, self._slice_cols]
-        return num.median(phi[~num.isnan(self.displacement)])
+        return num.median(phi[~self.displacement_mask])
 
     @property_cached
     def theta(self):
@@ -141,7 +148,7 @@ class QuadNode(object):
         :type: float
         '''
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
-        return num.median(theta[~num.isnan(self.displacement)])
+        return num.median(theta[~self.displacement_mask])
 
     @property_cached
     def gridE(self):
@@ -235,7 +242,7 @@ class QuadNode(object):
                          self.llr + self.length/2 * _nr,
                          self.llc + self.length/2 * _nc,
                          self.length/2)
-            if n.displacement.size == 0 or num.all(num.isnan(n.displacement)):
+            if n.displacement.size == 0 or num.all(n.displacement_mask):
                 n = None
                 continue
             yield n
@@ -243,9 +250,9 @@ class QuadNode(object):
     def createTree(self):
         ''' Create the tree from a set of basenodes, ignited by
         :class:`kite.Quadtree` instance. Evaluates :class:`kite.Quadtree`
-        correction method and :attr:`kite.Quadtree.epsilon_limit`.
+        correction method and :attr:`kite.Quadtree.epsilon_min`.
         '''
-        if (self.quadtree._corr_func(self) > self.quadtree.epsilon_limit
+        if (self.quadtree._corr_func(self) > self.quadtree.epsilon_min
             or self.length >= 64)\
            and not self.length < 16:
             # self.length > .1 * max(self.quadtree._data.shape): !! Expensive
@@ -338,6 +345,11 @@ class Quadtree(object):
         self.displacement = self.scene.displacement
         self.frame = self.scene.frame
 
+        # Cached matrizes
+        self._leaf_matrix_means = num.empty_like(self.displacement)
+        self._leaf_matrix_medians = num.empty_like(self.displacement)
+        self._leaf_matrix_weights = num.empty_like(self.displacement)
+
         self._log = scene._log.getChild('Quadtree')
         self.setConfig(config)
 
@@ -385,7 +397,7 @@ class Quadtree(object):
         # Clearing cached properties through None
         self.leafs = None
         self.nodes = None
-        self.epsilon_limit = None
+        self.epsilon_min = None
         self._epsilon_init = None
         self.epsilon = self.config.epsilon or self._epsilon_init
 
@@ -416,10 +428,10 @@ class Quadtree(object):
         value = float(value)
         if self.config.epsilon == value:
             return
-        if value < self.epsilon_limit:
+        if value < self.epsilon_min:
             self._log.warning(
-                'Epsilon is out of bounds [%0.6f], epsilon_limit %0.6f' %
-                (value, self.epsilon_limit))
+                'Epsilon is out of bounds [%0.6f], epsilon_min %0.6f' %
+                (value, self.epsilon_min))
             return
         self.leafs = None
         self.config.epsilon = value
@@ -433,7 +445,7 @@ class Quadtree(object):
         return num.nanstd(self.displacement)
 
     @property_cached
-    def epsilon_limit(self):
+    def epsilon_min(self):
         """ Lowest allowed epsilon
         :type: float
         """
@@ -588,7 +600,8 @@ class Quadtree(object):
             :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N,M)``
         """
-        return self._getLeafsNormMatrix(method='mean')
+        return self._getLeafsNormMatrix(self._leaf_matrix_means,
+                                        method='mean')
 
     @property
     def leaf_matrix_medians(self):
@@ -597,7 +610,8 @@ class Quadtree(object):
             :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N,M)``
         """
-        return self._getLeafsNormMatrix(method='median')
+        return self._getLeafsNormMatrix(self._leaf_matrix_medians,
+                                        method='median')
 
     @property
     def leaf_matrix_weights(self):
@@ -605,20 +619,21 @@ class Quadtree(object):
         :getter: Leaf weights casted to :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N,M)``
         """
-        return self._getLeafsNormMatrix(method='weight')
+        return self._getLeafsNormMatrix(self._leaf_matrix_weights,
+                                        method='weight')
 
-    def _getLeafsNormMatrix(self, method='median'):
+    def _getLeafsNormMatrix(self, array, method='median'):
         if method not in self._norm_methods.keys():
             raise AttributeError('Method %s is not in %s' % (method,
                                  self._norm_methods.keys()))
-
-        leaf_matrix = num.empty_like(self.displacement)
-        leaf_matrix.fill(num.nan)
+        t0 = time.time()
+        array.fill(num.nan)
         for l in self.leafs:
-            leaf_matrix[l._slice_rows, l._slice_cols] = \
+            array[l._slice_rows, l._slice_cols] = \
                 self._norm_methods[method](l)
-        leaf_matrix[num.isnan(self.displacement)] = num.nan
-        return leaf_matrix
+        array[self.scene.displacement_mask] = num.nan
+        print time.time()-t0, method
+        return array
 
     @property
     def reduction_efficiency(self):

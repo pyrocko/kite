@@ -1,4 +1,5 @@
 from PySide import QtCore
+from pyqtgraph import SignalProxy
 from kite import Scene
 import logging
 
@@ -13,6 +14,7 @@ class QSceneProxy(QtCore.QObject):
 
     sigFrameChanged = QtCore.Signal()
     sigQuadtreeChanged = QtCore.Signal()
+    _sigQuadtreeChanged = QtCore.Signal()
     sigQuadtreeConfigChanged = QtCore.Signal()
     sigCovarianceChanged = QtCore.Signal()
     sigCovarianceConfigChanged = QtCore.Signal()
@@ -29,6 +31,11 @@ class QSceneProxy(QtCore.QObject):
         self.frame = None
         self.quadtree = None
         self.covariance = None
+
+        self._ = SignalProxy(self._sigQuadtreeChanged,
+                             rateLimit=5,
+                             delay=0,
+                             slot=lambda: self.sigQuadtreeChanged.emit())
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit
@@ -63,7 +70,7 @@ class QSceneProxy(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.unsubscribe(
-            self.sigQuadtreeChanged.emit)
+            self._sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.unsubscribe(
             self.sigQuadtreeConfigChanged.emit)
 
@@ -84,7 +91,7 @@ class QSceneProxy(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.subscribe(
-            self.sigQuadtreeChanged.emit)
+            self._sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.subscribe(
             self.sigQuadtreeConfigChanged.emit)
 

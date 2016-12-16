@@ -231,13 +231,21 @@ class Covariance(object):
     def getNoiseNode(self):
         """ Choose noise node from quadtree """
         t0 = time.time()
-        stdm = max([n.std for n in self.quadtree.nodes])  # noqa
+
+        stdmax = max([n.std for n in self.quadtree.nodes])  # noqa
+        lmax = max([n.std for n in self.quadtree.nodes])  # noqa
+
+        def costFunction(n):
+            nl = num.log2(n.length)/num.log2(lmax)
+            ns = n.std/stdmax
+            return nl/(1.-ns)
+
         nodes = sorted(self.quadtree.nodes,
-                       key=lambda n: (n.length/(n.std+1.)))
+                       key=costFunction)
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.8f s]'
                         % (time.time() - t0))
-        return nodes[-1]
+        return nodes[3]
 
     def _mapLeafs(self, nx, ny):
         """ Helper function returning appropriate

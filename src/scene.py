@@ -333,9 +333,10 @@ class Scene(object):
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
+        self.displacement_mask = None
         self.evChanged.notify()
 
-    @property
+    @property_cached
     def displacement_mask(self):
         """
         :getter: Displacement :attr:`numpy.nan` mask

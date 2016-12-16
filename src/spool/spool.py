@@ -158,8 +158,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def addView(self, view):
         view = view(self)
         self.loadingModule.notify(view.title)
+        QtCore.QCoreApplication.processEvents()
         self.tabs.addTab(view, view.title)
-
+        QtCore.QCoreApplication.processEvents()
         if hasattr(view, 'parameters'):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)

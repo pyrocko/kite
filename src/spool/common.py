@@ -3,6 +3,7 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
 from PySide import QtCore
+import time
 import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -45,6 +46,7 @@ class QKitePlot(pg.PlotWidget):
     def __init__(self, scene_proxy):
         pg.PlotWidget.__init__(self)
         self.scene_proxy = scene_proxy
+        self.draw_time = 0.
 
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(None,
@@ -82,7 +84,7 @@ class QKitePlot(pg.PlotWidget):
 
         self.transFromFrame()
         self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
-                                        rateLimit=30, slot=self.mouseMoved)
+                                        rateLimit=25, slot=self.mouseMoved)
         # self.addIsocurve()
         # self.scalebar()
 
@@ -113,8 +115,11 @@ class QKitePlot(pg.PlotWidget):
         self.hint['precision'], self.hint['vlength'] = calcPrecission(_data)
         return _data  # num.nan_to_num(_data)
 
+    @QtCore.Slot()
     def update(self):
+        ts = time.time()
         self.image.updateImage(self.data.T)
+        self.draw_time = time.time() - ts
         self.mouseMoved()
         # self.addIsocurves()
 
@@ -126,6 +131,7 @@ class QKitePlot(pg.PlotWidget):
 
         self.iso = iso
 
+    @QtCore.Slot(object)
     def mouseMoved(self, event=None):
         if event is None:
             pass
@@ -231,6 +237,7 @@ class QKiteParameterGroup(pTypes.GroupParameter):
             model = self.model
 
         for param, f in self.parameters.iteritems():
+            QtCore.QCoreApplication.processEvents()
             try:
                 if callable(f):
                     value = f(model)
