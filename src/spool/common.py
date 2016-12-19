@@ -57,8 +57,8 @@ class QKitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(bottom={'East', 'm'},
-                       left={'North', 'm'},)
+        self.setLabels(bottom={'Easting', 'm'},
+                       left={'Northing', 'm'},)
 
         self.hint = {
             'east': 0.,
@@ -112,7 +112,6 @@ class QKitePlot(pg.PlotWidget):
     @property
     def data(self):
         _data = self.components_available[self.component][1](self.scene_proxy)
-        self.hint['precision'], self.hint['vlength'] = calcPrecission(_data)
         return _data  # num.nan_to_num(_data)
 
     @QtCore.Slot()
@@ -120,6 +119,9 @@ class QKitePlot(pg.PlotWidget):
         ts = time.time()
         self.image.updateImage(self.data.T)
         self.draw_time = time.time() - ts
+
+        self.hint['precision'], self.hint['vlength'] =\
+            calcPrecission(self.data)
         self.mouseMoved()
         # self.addIsocurves()
 
@@ -142,8 +144,8 @@ class QKitePlot(pg.PlotWidget):
                 value = self.image.image[int(img_pos().x()),
                                          int(img_pos().y())]
 
-                self.hint['east'] = map_pos.y()
-                self.hint['north'] = map_pos.x()
+                self.hint['east'] = map_pos.x()
+                self.hint['north'] = map_pos.y()
                 self.hint['value'] = value
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']

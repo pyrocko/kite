@@ -236,16 +236,29 @@ class QKiteParamSceneFrame(QKiteParameterGroup):
 
 class QKiteParamSceneMeta(QKiteParameterGroup):
     def __init__(self, scene_proxy, **kwargs):
+        from datetime import datetime as dt
         kwargs['type'] = 'group'
         kwargs['name'] = '.meta'
 
+        def str_to_time(d, fmt='%Y-%m-%d %H:%M:%S'):
+            return dt.strftime(dt.fromtimestamp(d), fmt)
+
         self.parameters = OrderedDict([
-            ('scene_title', lambda sc: sc.meta.scene_title),
-            ('scene_id', lambda sc: sc.meta.scene_id),
-            ('scene_path', lambda sc: sc.meta.scene_path),
-            ('date_first_view', lambda sc: sc.meta.date_first_view),
-            ('date_second_view', lambda sc: sc.meta.date_second_view),
-            ('satellite_name', lambda sc: sc.meta.satellite_name),
+            ('scene_title',
+             lambda sc: sc.meta.scene_title),
+            ('scene_id',
+             lambda sc: sc.meta.scene_id),
+            ('satellite_name',
+             lambda sc: sc.meta.satellite_name),
+            ('orbit_direction',
+             lambda sc: sc.meta.orbit_direction),
+            ('time_master',
+             lambda sc: str_to_time(sc.meta.time_master)),
+            ('time_slave',
+             lambda sc: str_to_time(sc.meta.time_slave)),
+            ('time_separation',
+             lambda sc: str_to_time(sc.meta.time_separation,
+                                    '%j days %H:%m hours')),
             ])
 
         scene_proxy.sigConfigChanged.connect(self.updateValues)

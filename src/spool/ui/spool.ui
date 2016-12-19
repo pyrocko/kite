@@ -143,7 +143,8 @@
      <string>Tools</string>
     </property>
     <addaction name="actionTransect"/>
-    <addaction name="actionCovariance"/>
+    <addaction name="actionCovariance_Noise"/>
+    <addaction name="actionCovariance_Matrix"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -228,7 +229,9 @@
     <bool>true</bool>
    </property>
    <property name="icon">
-    <iconset theme="application-export"/>
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Load scene</string>
@@ -297,7 +300,7 @@
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="actionCovariance">
+  <action name="actionCovariance_Noise">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -328,13 +331,23 @@
   </action>
   <action name="actionExport_covariance_weights">
    <property name="icon">
-    <iconset theme="application-export"/>
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
    </property>
    <property name="text">
     <string>Export Covariance Weights</string>
    </property>
    <property name="toolTip">
     <string>Covariance.export_weight_matrix(filename)</string>
+   </property>
+  </action>
+  <action name="actionCovariance_Matrix">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Covariance Weight Matrix</string>
    </property>
   </action>
  </widget>

@@ -228,15 +228,19 @@ class Meta(guts.Object):
     """ Meta configuration for ``Scene``.
     """
     scene_title = guts.String.T(default='Unnamed Scene')
-    scene_id = guts.String.T(default='INSAR')
-    orbit_direction = guts.String.T(default='ASCENDING')
-    master_time = guts.Timestamp.T(default=0.0)
-    slave_time = guts.Timestamp.T(default=86400.0)
+    scene_id = guts.String.T(default='None')
     satellite_name = guts.String.T(default='Unnamed Satellite')
+    orbit_direction = guts.String.T(default='Ascending')
+    time_master = guts.Timestamp.T(default=0.0)
+    time_slave = guts.Timestamp.T(default=86400.0)
 
     @property
     def time_separation(self):
-        return slave_time - master_time
+        '''
+        :getter: Time between ``master_time`` and ``slave_time``
+        :type: Float
+        '''
+        return self.slave_time - self.master_time
 
 
 class SceneConfig(guts.Object):

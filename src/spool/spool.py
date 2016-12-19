@@ -126,18 +126,17 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.progress.setValue(0)
         self.progress.closeEvent = lambda e: e.ignore()
         self.progress.setMinimumWidth(400)
-        self.scene_proxy.sigProcessingStarted.connect(self.processingStarted)
         self.scene_proxy.sigProcessingFinished.connect(self.progress.reset)
 
         self.loadingModule = Subject()
 
     @property
     def about(self):
-        about = QtGui.QDialog()
+        self._about = QtGui.QDialog()
         about_ui = path.join(path.dirname(path.realpath(__file__)),
                              'ui/about.ui')
-        loadUi(about_ui, baseinstance=about)
-        return about
+        loadUi(about_ui, baseinstance=self._about)
+        return self._about
 
     def loadUi(self):
         ui_file = path.join(path.dirname(path.realpath(__file__)),
@@ -154,6 +153,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             return
         for v in self.views:
             self.addView(v)
+        self.scene_proxy.sigProcessingStarted.connect(self.processingStarted)
 
     def addView(self, view):
         view = view(self)

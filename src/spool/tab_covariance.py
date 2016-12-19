@@ -38,10 +38,18 @@ class QKiteCovariance(QKiteView):
         self.param_covariance = QKiteParamCovariance(scene_proxy)
         self.parameters = [self.param_covariance]
 
-        self.dialogCovariance = QKiteToolCovariance(scene_proxy, spool)
-        spool.actionCovariance.triggered.connect(self.dialogCovariance.show)
-        covariance_plot.roi.sigClicked.connect(self.dialogCovariance.show)
-        spool.actionCovariance.setEnabled(True)
+        self.dialogCovarianceNoise = QKiteToolNoiseData(scene_proxy, spool)
+        self.dialogCovarianceMatrix = QKiteToolWeightMatrix(scene_proxy, spool)
+
+        spool.actionCovariance_Noise.triggered.connect(
+            self.dialogCovarianceNoise.show)
+        covariance_plot.roi.sigClicked.connect(
+            self.dialogCovarianceNoise.show)
+        spool.actionCovariance_Matrix.triggered.connect(
+            self.dialogCovarianceMatrix.show)
+
+        spool.actionCovariance_Noise.setEnabled(True)
+        spool.actionCovariance_Matrix.setEnabled(True)
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
@@ -142,7 +150,7 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
 
     def update(self):
         covariance = self.scene_proxy.covariance
-        spec, k, _, _, _ = covariance.noiseSpectrum()
+        spec, k, _, _, _, _ = covariance.noiseSpectrum()
         self.power.setData(k, spec)
         self.power_lin.setData(
             k, covariance.powerspecAnalytical(k, 3))
@@ -229,7 +237,7 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
         covariance.variance = inf_line.getYPos()
 
 
-class QKiteToolCovariance(QtGui.QDialog):
+class QKiteToolNoiseData(QtGui.QDialog):
     class noise_plot(QKitePlot):
         def __init__(self, scene_proxy):
             self.components_available = {
@@ -253,7 +261,7 @@ class QKiteToolCovariance(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
 
         cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/covariance.ui')
+                           'ui/covariance_noise.ui')
         loadUi(cov_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
@@ -263,6 +271,81 @@ class QKiteToolCovariance(QtGui.QDialog):
 
         self.horizontalLayoutPlot.addWidget(noise_patch)
         self.horizontalLayoutPlot.addWidget(noise_colormap)
+
+
+class QKiteToolWeightMatrix(QtGui.QDialog):
+    class weight_plot(QKitePlot):
+        def __init__(self, scene_proxy):
+            from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
+            self._component = 'weight'
+
+            QKitePlot.__init__(self, scene_proxy)
+            self.scene_proxy = scene_proxy
+
+            gradient = Gradients['flame']
+
+            self.cmap = pg.ColorMap(pos=[c[0] for c in gradient['ticks']],
+                                    color=[c[1] for c in gradient['ticks']],
+                                    mode=gradient['mode'])
+            self.image.setLookupTable(self.cmap.getLookupTable())
+
+            self.setLabels(bottom={'Leaf #', ''},
+                           left={'Leaf #', ''})
+            self.setAspectLocked(True)
+            self.setMouseEnabled(x=False, y=False)
+            self.hint = {
+                'leaf1': 0,
+                'leaf2': 0,
+                'weight': num.nan,
+            }
+
+            self.hint_text.template =\
+                '<span style="font-family: monospace; color: #fff;'\
+                'background-color: #000;">'\
+                'Leaf #1: {leaf1:d} | Leaf #2: {leaf2:d} | '\
+                'Weight {weight:e}</span>'
+
+            self.scene_proxy.sigCovarianceChanged.connect(self.update)
+            self.scene_proxy.sigQuadtreeChanged.connect(self.transFromFrame)
+            self.update()
+
+        def update(self):
+            self.image.updateImage(
+                self.scene_proxy.covariance.weight_matrix_focal.T,
+                autoLevels=True)
+
+        def transFromFrame(self):
+            # self.resetTransform()
+            self.setRange(xRange=(0, self.scene_proxy.quadtree.nleafs),
+                          yRange=(0, self.scene_proxy.quadtree.nleafs))
+
+        @QtCore.Slot(object)
+        def mouseMoved(self, event=None):
+            if event is None:
+                pass
+            elif self.image.sceneBoundingRect().contains(event[0]):
+                map_pos = self.plotItem.vb.mapSceneToView(event[0])
+                if not map_pos.isNull():
+                    img_pos = self.image.mapFromScene(event).data
+                    value = self.image.image[int(img_pos().x()),
+                                             int(img_pos().y())]
+
+                    self.hint['leaf1'] = int(map_pos.x())
+                    self.hint['leaf2'] = int(map_pos.y())
+                    self.hint['weight'] = value
+            self.hint_text.setText(self.hint_text.template.format(**self.hint))
+
+    def __init__(self, scene_proxy, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+
+        cov_ui = path.join(path.dirname(path.realpath(__file__)),
+                           'ui/covariance_matrix.ui')
+        loadUi(cov_ui, baseinstance=self)
+        self.closeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogCloseButton))
+
+        weight_matrix = self.weight_plot(scene_proxy)
+        self.horizontalLayoutPlot.addWidget(weight_matrix)
 
 
 class QKiteParamCovariance(QKiteParameterGroup):

@@ -47,7 +47,7 @@ def modelPowerspec(k, a, b):
 
     .. math::
 
-        pow(k) = k^a * \\frac{1}{b}
+        pow(k) = k^a \\frac{1}{b}
 
 
     :param k: Wavenumber
@@ -142,21 +142,24 @@ class Covariance(object):
 
         self._clear(config=False)
         self.evConfigChanged.notify()
-        self.evChanged.notify()
 
-    def _clear(self, config=True):
+    def _clear(self, config=True, spectrum=True):
         if config:
             self.config.a = None
             self.config.b = None
             self.config.variance = None
+
+        if spectrum:
+            self.structure_func = None
+            self._noise_spectrum_cached = None
+
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_func = None
         self.weight_matrix = None
         self.weight_matrix_focal = None
-        self.structure_func = None
-        self._noise_spectrum_cached = None
         self._initialized = False
+        self.evChanged.notify()
 
     @property
     def noise_coord(self):
@@ -226,7 +229,6 @@ class Covariance(object):
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
-        self.evChanged.notify()
 
     def getNoiseNode(self):
         """ Choose noise node from quadtree """
@@ -238,14 +240,14 @@ class Covariance(object):
         def costFunction(n):
             nl = num.log2(n.length)/num.log2(lmax)
             ns = n.std/stdmax
-            return nl/(1.-ns)
+            return nl*(1.-ns)*(1.-n.nan_fraction)
 
         nodes = sorted(self.quadtree.nodes,
                        key=costFunction)
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.8f s]'
                         % (time.time() - t0))
-        return nodes[3]
+        return nodes[0]
 
     def _mapLeafs(self, nx, ny):
         """ Helper function returning appropriate
@@ -347,7 +349,7 @@ class Covariance(object):
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
-            cov_matrix = covariance_ext.leaf_distances(
+            cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, nthreads)
@@ -390,8 +392,23 @@ class Covariance(object):
         """
         return self.covariance_matrix[self._getMapping(leaf1, leaf2)]
 
-    def getLeafWeight(self, leaf1):
-        (nl, _) = self._getMapping(leaf1, leaf1)
+    def getLeafWeight(self, leaf, model='focal'):
+        ''' Get the absolute weight of ``leaf``, summation of all weights from
+        :attr:`kite.Covariance.weight_matrix`
+
+        .. math ::
+
+            w_{x} = \\sum_i W_{x,i}
+
+        :param model: ``Focal`` or ``full``, default ``focal``
+        :type model: str
+        :param leaf: A leaf from :class:`kite.Quadtree`
+        :type leaf: :class:`kite.quadtree.QuadNode`
+
+        :returns: Weight of the leaf
+        :rtype: float
+        '''
+        (nl, _) = self._getMapping(leaf, leaf)
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
@@ -412,7 +429,7 @@ class Covariance(object):
             noise = data.copy()
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        f_spec = num.abs(f_spec) / f_spec.size
+        f_spec = num.abs(f_spec)**2 / f_spec.size
         # f_spec /= f_spec.size
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self.quadtree.frame.dE)
@@ -420,17 +437,33 @@ class Covariance(object):
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
-        k_bin = kN if kN.size < kE.size else kE
+        if kN.size < kE.size:
+            dk = self.quadtree.frame.dN
+            k_bin = kN
+        else:
+            dk = self.quadtree.frame.dE
+            k_bin = kE
+
+        if self.quadtree.frame.dN > self.quadtree.frame.dE:
+            dk = self.quadtree.frame.dN
+            k_bin = kN
+        else:
+            dk = self.quadtree.frame.dE
+            k_bin = kE
+
+        k_max = min(kE.max(), kN.max())
+        k_bin = k_bin[k_bin < k_max]
+
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
-                                                     statistic='mean',
+                                                     statistic='sum',
                                                      bins=k_bin[k_bin > 0])
 
-        self._noise_spectrum_cached = power_spec, k[:-1], f_spec, kN, kE
+        self._noise_spectrum_cached = power_spec, k[:-1], dk, f_spec, kN, kE
         return self._noise_spectrum_cached
 
     def _powerspecFit(self, regime=0):
-        power_spec, k, _, _, _ = self.noiseSpectrum()
+        power_spec, k, _, _, _, _ = self.noiseSpectrum()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -444,6 +477,15 @@ class Covariance(object):
             self._log.warning('Could not fit the powerspectrum model.')
 
     def powerspecAnalytical(self, k, regime=0):
+        ''' Calculates the analytical power based on the fit of
+        :func:`kite.covariance.modelPowerspec` to
+        :func:`kite.Covariance.noiseSpectrum`.
+
+        :param k: Wavenumber(s)
+        :type k: float or :class:`numpy.ndarray`
+        :returns: Power at wavenumber ``k``
+        :rtype: float or :class:`numpy.ndarray`
+        '''
         p, _ = self._powerspecFit(regime)
         return modelPowerspec(k, *p)
 
@@ -460,9 +502,7 @@ class Covariance(object):
     def covariance_func(self):
         ''' Covariance function derived from displacement noise patch.
         :type: tuple, :class:`numpy.array` (covariance, distance) '''
-        power_spec, k, p_spec, kN, kE = self.noiseSpectrum()
-        dk = self.quadtree.frame.dN if kN.size < kE.size\
-            else self.quadtree.frame.dE
+        power_spec, k, dk, _, _, _ = self.noiseSpectrum()
 
         d = num.arange(1, power_spec.size+1) * dk
         cov, _ = self._powerCosineTransform(power_spec, k)
@@ -476,10 +516,8 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.array` (covariance_analytical, distance)
         '''
-        _, k, _, kN, kE = self.noiseSpectrum()
+        _, k, dk, _, kN, kE = self.noiseSpectrum()
         (a, b), _ = self._powerspecFit(regime)
-        dk = self.quadtree.frame.dN if kN.size < kE.size\
-            else self.quadtree.frame.dE
 
         spec = modelPowerspec(k, a, b)
         d = num.arange(1, spec.size+1) * dk
@@ -521,7 +559,7 @@ class Covariance(object):
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
         cov, d = self.covariance_func
-        power_spec, k, f_spec, kN, kE = self.noiseSpectrum()
+        power_spec, k, dk, _, _, _ = self.noiseSpectrum()
 
         def structure_func(power_spec, d, k):
             struc_func = num.zeros_like(cov)
@@ -549,7 +587,7 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
-        self.evChanged.notify()
+        self._clear(config=False, spectrum=False)
 
     @variance.getter
     def variance(self):

@@ -46,7 +46,8 @@ setup(
                                     'src/spool/ui/about.ui',
                                     'src/spool/ui/logging.ui',
                                     'src/spool/ui/transect.ui',
-                                    'src/spool/ui/covariance.ui',
+                                    'src/spool/ui/covariance_noise.ui',
+                                    'src/spool/ui/covariance_matrix.ui',
                                     'src/spool/ui/boxkite-sketch.jpg',
                                     'src/spool/ui/radar_splash.png'])],
     entry_points={
