@@ -354,7 +354,8 @@ class Covariance(object):
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, nthreads)
         else:
-            raise ValueError('%s method not defined!' % method)
+            raise TypeError('Covariance calculation %s method not defined!'
+                            % method)
 
         num.fill_diagonal(cov_matrix, self.variance)
         self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
@@ -527,6 +528,13 @@ class Covariance(object):
 
     @property
     def covariance_model(self, regime=0):
+        ''' Covariance model parameters for
+        :func:`kite.covariance.modelCovariance` retrieved
+        from :attr:`kite.Covariance.covarianceAnalytical`.
+
+        :getter: Get the parameters.
+        :type: tuple, ``a`` and ``b``
+        '''
         if self.config.a is None or self.config.b is None:
             cov, d = self.covarianceAnalytical(regime)
             try:
@@ -559,15 +567,15 @@ class Covariance(object):
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
         cov, d = self.covariance_func
-        power_spec, k, dk, _, _, _ = self.noiseSpectrum()
+        power_spec, k, _, _, _, _ = self.noiseSpectrum()
 
         def structure_func(power_spec, d, k):
             struc_func = num.zeros_like(cov)
             for i, d in enumerate(d):
                 for ik, tk in enumerate(k):
-                    struc_func[i] += (1. - num.cos(tk*d))*power_spec[ik]
-                    # struc_func[i] += (1. - num.i0(tk*d))*power_spec[ik]
-            # struc_func *= 1./power_spec.size
+                    # struc_func[i] += (1. - num.cos(tk*d))*power_spec[ik]
+                    struc_func[i] += (1. - sp.special.j0(tk*d))*power_spec[ik]
+            struc_func *= 2./1
             return struc_func
 
         struc_func = structure_func(power_spec, d, k)

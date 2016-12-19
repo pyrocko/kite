@@ -166,19 +166,16 @@ class QKiteCovariogram(_QKiteCovariancePlot):
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
         self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
-        self.rms_label = pg.LabelItem(text='', justify='right', size='10pt',
-                                      parent=self.plot.plotItem)
-        self.rms_label.anchor(itemPos=(0., 0.), parentPos=(.15, .05))
-        self.rms_label.format = 'RMS: {0:.4e}'
 
         self.addItem(self.cov)
         self.addItem(self.cov_model)
         self.addItem(self.cov_lin_pow)
 
         self.legend = pg.LegendItem(offset=(0., .5))
+
         self.legend.setParentItem(self.plot.graphicsItem())
         self.legend.addItem(self.cov_model, '')
-        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})'
+        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})\nRMS: {rms:.4e}'
 
         self.scene_proxy.sigCovarianceChanged.connect(
             self.update)
@@ -194,13 +191,11 @@ class QKiteCovariogram(_QKiteCovariancePlot):
             dist, modelCovariance(dist, *covariance.covariance_model))
         self.cov_lin_pow.setData(
             dist, covariance.covarianceAnalytical(3)[0])
-        self.rms_label.setText(
-            self.rms_label.format.format(
-                    covariance.covariance_model_rms))
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(
-                *covariance.covariance_model))
+                *covariance.covariance_model,
+                rms=covariance.covariance_model_rms))
 
 
 class QKiteStructureFunction(_QKiteCovariancePlot):
@@ -282,7 +277,7 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
             QKitePlot.__init__(self, scene_proxy)
             self.scene_proxy = scene_proxy
 
-            gradient = Gradients['flame']
+            gradient = Gradients['thermal']
 
             self.cmap = pg.ColorMap(pos=[c[0] for c in gradient['ticks']],
                                     color=[c[1] for c in gradient['ticks']],
