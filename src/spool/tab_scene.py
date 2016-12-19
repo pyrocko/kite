@@ -111,7 +111,7 @@ class QKiteToolTransect(QtGui.QDialog):
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
 
-        self.layout().addWidget(self.plt_wdgt)
+        self.layoutPlot.addWidget(self.plt_wdgt)
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
         self.createButton.released.connect(self.addPolyLine)
         self.removeButton.released.connect(self.removePolyLine)
