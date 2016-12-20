@@ -175,7 +175,7 @@ class QKiteCovariogram(_QKiteCovariancePlot):
 
         self.legend.setParentItem(self.plot.graphicsItem())
         self.legend.addItem(self.cov_model, '')
-        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f})\nRMS: {rms:.4e}'
+        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f}) | RMS: {rms:.4e}'
 
         self.scene_proxy.sigCovarianceChanged.connect(
             self.update)
@@ -208,7 +208,8 @@ class QKiteStructureFunction(_QKiteCovariancePlot):
             angle=0, movable=True, hoverPen=None,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
-                       'anchors': ((1., 0.), (1., 1.))})
+                       'anchors': ((1., 0.), (1., 1.)),
+                       'color': pg.mkColor(255, 255, 255, 155)})
         self.plot.setLabels(bottom={'Distance', 'm'},
                             left='Covariance (m<sup>2</sup>)')
 
