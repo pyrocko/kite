@@ -47,6 +47,8 @@ templates_path = ['_templates']
 #
 # source_suffix = ['.rst', '.md']
 source_suffix = '.rst'
+imgmath_image_format = 'svg'
+
 
 # The encoding of source files.
 #
@@ -54,6 +56,7 @@ source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
+
 
 # General information about the project.
 project = u'Kite'
@@ -132,6 +135,7 @@ html_theme_options = {
     'linkcolor': '#0072AA',
     'visitedlinkcolor': '#6363bb',
     'extrastyling': True,
+    # 'sidebarcollapse': False,
     'googlewebfonturl': 'https://fonts.googleapis.com/css?family=Roboto+Slab',
     'appendcss': open('style.css').read(),
 }

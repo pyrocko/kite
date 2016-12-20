@@ -4,6 +4,19 @@ kite.Scene
 .. autoclass:: kite.Scene
     :members:
 
+
+Frame
+-----
+
+.. autoclass:: kite.scene.Frame
+    :members:
+
+LOSUnitVectors
+--------------
+
+.. autoclass:: kite.scene.LOSUnitVectors
+    :members:
+
 kite.scene.SceneConfig
 ----------------------
 

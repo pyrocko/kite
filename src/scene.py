@@ -259,7 +259,7 @@ class Meta(guts.Object):
         :type: timedelta
         '''
         return dt.fromtimestamp(self.time_slave) -\
-               dt.fromtimestamp(self.time_master)
+            dt.fromtimestamp(self.time_master)
 
 
 class SceneConfig(guts.Object):
@@ -308,11 +308,11 @@ class Scene(object):
         ``(0: east, pi/2 north)``
     :type phi: :class:`numpy.array`
     :param meta: Meta information for the scene
-    :type meta: :class:`kite.scene.Meta`
+    :type meta: :class:`~kite.scene.Meta`
 
     :param los: Displacement measurements (displacement, theta, phi) from
         satellite measurements
-    :type los: :class:`kite.scene.DisplacementLOS`
+    :type los: :class:`~kite.scene.LOSUnitVectors`
     """
     evChanged = Subject()
     evConfigChanged = Subject()
@@ -477,7 +477,7 @@ class Scene(object):
         return ScenePlot(self)
 
     def spool(self):
-        """ Start the spool user interface :class:`kite.spool.Spool` to inspect
+        """ Start the spool user interface :class:`~kite.spool.Spool` to inspect
         the scene.
         """
         if self.displacement is None:
@@ -505,13 +505,13 @@ class Scene(object):
         """ Save kite scene to kite file structure
 
         Saves the current scene meta information and UTM frame to a YAML
-        (``.yml``) file. Numerical data (:attr:`kite.Scene.displacement`,
-        :attr:`kite.Scene.theta` and :attr:`kite.Scene.phi`)
+        (``.yml``) file. Numerical data (:attr:`~kite.Scene.displacement`,
+        :attr:`~kite.Scene.theta` and :attr:`~kite.Scene.phi`)
         are saved as binary files from :class:`numpy.array`.
 
         :param filename: Filenames to save scene to, defaults to
-            ' :attr:`kite.Scene.meta.scene_id` ``_``
-            :attr:`kite.Scene.meta.scene_view`
+            ' :attr:`~kite.Scene.meta.scene_id` ``_``
+            :attr:`~kite.Scene.meta.scene_view`
         :type filename: str, optional
         """
         filename = filename or '%s_%s' % (self.meta.scene_id,
@@ -627,7 +627,7 @@ class Scene(object):
 
 class LOSUnitVectors(object):
     """ Decomposed Line Of Sight vectors (LOS) derived from
-    ``Scene.displacement``.
+    :attr:`~kite.Scene.displacement`.
     """
     def __init__(self, scene):
         self._scene = scene
@@ -641,7 +641,7 @@ class LOSUnitVectors(object):
     @property_cached
     def unitE(self):
         """ Unit vector in East, ``NxM`` matrix like
-            :attr:`kite.Scene.displacement`
+            :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.array`
         """
         return num.cos(self._scene.phi) * num.sin(self._scene.theta)
@@ -649,7 +649,7 @@ class LOSUnitVectors(object):
     @property_cached
     def unitN(self):
         """ Unit vector in North, ``NxM`` matrix like
-            :attr:`kite.Scene.displacement`
+            :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.array`
         """
         return num.sin(self._scene.phi) * num.sin(self._scene.theta)
@@ -657,7 +657,7 @@ class LOSUnitVectors(object):
     @property_cached
     def unitU(self):
         """ Unit vector Up, ``NxM`` matrix like
-            :attr:`kite.Scene.displacement`
+            :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.array`
         """
         return num.cos(self._scene.theta)

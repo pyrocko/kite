@@ -1,11 +1,13 @@
 Kite Documentation
 ==================
 
-Welcome to the documentation of **Kite**! Here we want to give an overview of the frameworks' structure, features and the inner workings.
-You will find :doc:`examples` how to utilize this container as well as a *modular overview* of the framework.
+Welcome to the documentation of **Kite** InSAR container!
+
+Here you will find :doc:`examples` how to utilize this container as well as a *modular overview* of the framework. In the modular overview we want to give an overview of the frameworks' structure, features and the inner workings as well as application examples!
 
 
-Contents:
+Overview:
+---------
 
 .. toctree::
    :maxdepth: 3
