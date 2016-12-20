@@ -257,8 +257,7 @@ class QKiteParamSceneMeta(QKiteParameterGroup):
             ('time_slave',
              lambda sc: str_to_time(sc.meta.time_slave)),
             ('time_separation',
-             lambda sc: str_to_time(sc.meta.time_separation,
-                                    '%j days %H:%m hours')),
+             lambda sc: '%s' % sc.meta.time_separation),
             ])
 
         scene_proxy.sigConfigChanged.connect(self.updateValues)

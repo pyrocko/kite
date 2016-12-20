@@ -242,10 +242,10 @@ class Meta(guts.Object):
         default='Undefined',
         help='Orbital direction, ascending/descending')
     time_master = guts.Timestamp.T(
-        default=0.0,
+        default=1481116161.930574,
         help='Timestamp for master acquisition')
     time_slave = guts.Timestamp.T(
-        default=86400.0,
+        default=1482239325.482,
         help='Timestamp for slave acquisition')
     extra = guts.Dict.T(
         default={},
@@ -258,9 +258,8 @@ class Meta(guts.Object):
                  and ``time_slave``
         :type: timedelta
         '''
-        # return (dt.fromtimestamp(self.time_slave) -
-        #        dt.fromtimestamp(self.time_master))
-        return 0.
+        return dt.fromtimestamp(self.time_slave) -\
+               dt.fromtimestamp(self.time_master)
 
 
 class SceneConfig(guts.Object):
