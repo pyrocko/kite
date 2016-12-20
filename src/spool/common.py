@@ -9,7 +9,7 @@ import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph import dockarea
 from .utils_qt import _viridis_data
-from ..meta import calcPrecission
+from ..meta import calcPrecission, formatScalar
 
 __all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
            'QKiteParameterGroup']
@@ -247,6 +247,10 @@ class QKiteParameterGroup(pTypes.GroupParameter):
                 else:
                     value = getattr(model, param)
                     # print('Updating %s: %s (getattr)' % (param, value))
+                try:
+                    value = formatScalar(float(value))
+                except ValueError:
+                    pass
             except AttributeError:
                 value = 'n/a'
             try:

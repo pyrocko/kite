@@ -174,6 +174,23 @@ def calcPrecission(data):
     return precission, length
 
 
+def formatScalar(v, ndigits=7):
+    if v % 1 == 0.:
+        return '{value:d}'.format(value=v)
+
+    if abs(v) < (10.**-(ndigits-2)):
+        return '{value:e}'.format(value=v)
+
+    p = num.ceil(num.log10(num.abs(v)))
+    if p <= 0.:
+        f = {'d': 1, 'f': ndigits - 1}
+    else:
+        p = int(p)
+        f = {'d': p, 'f': ndigits - p}
+
+    return '{value:{d}.{f}f}'.format(value=v, **f)
+
+
 class Subject(object):
     """
     Subject - Obsever model realization
