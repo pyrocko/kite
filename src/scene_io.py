@@ -13,17 +13,29 @@ class SceneIO(object):
             self._log = scene._log.getChild('IO/%s' % self.__class__.__name__)
         else:
             import logging
-            self._log = logging.logger('SceneIO/%s' % self.__class__.__name__)
+            self._log = logging.getLogger('SceneIO/%s' % self.__class__.__name__)
 
         self.container = {
-            'phi': None,  # Look incident angle from vertical in degree
+            'phi': None,    # Look incident angle from vertical in degree
             'theta': None,  # Look orientation angle from east; 0deg East,
                             # 90deg North
             'displacement': None,  # Displacement towards LOS
-            'llLon': None,  # Lower left corner latitude
-            'llLat': None,  # Lower left corner londgitude
-            'dLat': None,  # Pixel delta latitude
-            'dLon': None,  # Pixel delta longitude
+            'frame': {
+                'llLon': None,  # Lower left corner latitude
+                'llLat': None,  # Lower left corner londgitude
+                'dLat': None,   # Pixel delta latitude
+                'dLon': None,   # Pixel delta longitude
+            },
+            # Meta information
+            'meta': {
+                'title': None,
+                'orbit_direction': None,
+                'satellite_name': None,
+                'time_master': None,
+                'time_slave': None
+            },
+            # All extra information
+            'extra': {}
         }
 
     def read(self, filename, **kwargs):
@@ -88,14 +100,15 @@ class Matlab(SceneIO):
 
     def read(self, filename, **kwargs):
         import utm
+        c = self.container
 
         mat = scipy.io.loadmat(filename)
         for mat_k, v in mat.iteritems():
-            for io_k in self.container.iterkeys():
+            for io_k in c.iterkeys():
                 if io_k in mat_k:
-                    self.container[io_k] = mat[mat_k]
+                    c[io_k] = mat[mat_k]
                 elif 'ig_' in mat_k:
-                    self.container['displacement'] = mat[mat_k]
+                    c['displacement'] = mat[mat_k]
                 elif 'xx' in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
@@ -107,25 +120,25 @@ class Matlab(SceneIO):
         utm_zone = 32
         utm_zone_letter = 'N'
         try:
-            self.container['llLat'], self.container['llLon'] =\
+            c['frame']['llLat'], c['frame']['llLon'] =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
                               utm_zone, utm_zone_letter)
             urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
                                          utm_zone, utm_zone_letter)
-            self.container['dLat'] =\
-                (urlat - self.container['llLat']) /\
-                self.container['displacement'].shape[0]
+            c['frame']['dLat'] =\
+                (urlat - c['frame']['llLat']) /\
+                c['displacement'].shape[0]
 
-            self.container['dLon'] =\
-                (urlon - self.container['llLon']) /\
-                self.container['displacement'].shape[1]
+            c['frame']['dLon'] =\
+                (urlon - c['frame']['llLon']) /\
+                c['displacement'].shape[1]
         except utm.error.OutOfRangeError:
-            self.container['llLat'], self.container['llLon'] = (0., 0.)
-            self.container['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
-            self.container['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
+            c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
+            c['frame']['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
+            c['frame']['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
             self._log.warning('Could not interpret spatial vectors, '
                               'referencing to 0, 0 (lat, lon)')
-        return self.container
+        return c
 
 
 class Gamma(SceneIO):
@@ -252,13 +265,18 @@ class Gamma(SceneIO):
         phi = phi.reshape(nlines, nrows)
 
         # LatLon UTM Conversion
-        self.container['displacement'] = displ*1e-2
-        self.container['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
-        self.container['llLon'] = par['corner_lon']
-        self.container['dLon'] = par['post_lon']
-        self.container['dLat'] = par['post_lat']
-        self.container['theta'] = theta
-        self.container['phi'] = phi
+        c = self.container
+        c['displacement'] = displ*1e-2
+        c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
+        c['frame']['llLon'] = par['corner_lon']
+        c['frame']['dLon'] = par['post_lon']
+        c['frame']['dLat'] = par['post_lat']
+        c['theta'] = theta
+        c['phi'] = phi
+
+        c['meta']['title'] = par.get('title', None)
+        c['bin_file'] = filename
+        c['par_file'] = par_file
         return self.container
 
 
@@ -335,31 +353,32 @@ class ISCE(SceneIO):
 
     def read(self, path, **kwargs):
         path = os.path.abspath(path)
+        c = self.container
         isce_xml = ISCEXMLParser(self._getDisplacementFile(path) + '.xml')
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
-        self.container['dLat'] = num.abs(coord_lat['delta'])
-        self.container['dLon'] = num.abs(coord_lon['delta'])
+        c['frame']['dLat'] = num.abs(coord_lat['delta'])
+        c['frame']['dLon'] = num.abs(coord_lon['delta'])
         nlon = int(coord_lon['size'])
         nlat = int(coord_lat['size'])
 
-        self.container['llLat'] = coord_lat['startingvalue'] +\
+        c['frame']['llLat'] = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
-        self.container['llLon'] = coord_lon['startingvalue']
+        c['frame']['llLon'] = coord_lon['startingvalue']
 
         displacement = num.memmap(self._getDisplacementFile(path),
                                   dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
         displacement[displacement == 0.] = num.nan
-        self.container['displacement'] = displacement*1e-2
+        c['displacement'] = displacement*1e-2
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
-        self.container['phi'] = los_data[:, :nlon]
-        self.container['theta'] = los_data[:, nlon:] + 90.
+        c['phi'] = los_data[:, :nlon]
+        c['theta'] = los_data[:, nlon:] + 90.
 
-        return self.container
+        return c
 
 
 class GMTSAR(SceneIO):
@@ -411,20 +430,21 @@ class GMTSAR(SceneIO):
     def read(self, path, **kwargs):
         from scipy.io import netcdf
         path = os.path.abspath(path)
+        c = self.container
 
         grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
-        self.container['displacement'] = grd.variables['z'][:].copy()
-        self.container['displacement'] *= 1e-2
-        shape = self.container['displacement'].shape
+        c['displacement'] = grd.variables['z'][:].copy()
+        c['displacement'] *= 1e-2
+        shape = c['displacement'].shape
         # LatLon
-        self.container['llLat'] = grd.variables['lat'][:].min()
-        self.container['llLon'] = grd.variables['lon'][:].min()
+        c['frame']['llLat'] = grd.variables['lat'][:].min()
+        c['frame']['llLon'] = grd.variables['lon'][:].min()
 
-        self.container['dLat'] = (grd.variables['lat'][:].max() -
-                                  self.container['llLat'])/shape[1]
-        self.container['dLon'] = (grd.variables['lon'][:].max() -
-                                  self.container['llLon'])/shape[0]
+        c['frame']['dLat'] = (grd.variables['lat'][:].max() -
+                              c['frame']['llLat'])/shape[1]
+        c['frame']['dLon'] = (grd.variables['lon'][:].max() -
+                              c['frame']['llLon'])/shape[0]
 
         # Theta and Phi
         try:
@@ -437,11 +457,11 @@ class GMTSAR(SceneIO):
             phi = num.rad2deg(num.arccos(u))
             theta[n < 0] += 180.
 
-            self.container['phi'] = phi
-            self.container['theta'] = theta
+            c['phi'] = phi
+            c['theta'] = theta
         except ImportError:
             self._log.warning('Defaulting theta and phi to 0')
-            self.container['theta'] = 0.
-            self.container['phi'] = 0.
+            c['theta'] = 0.
+            c['phi'] = 0.
 
-        return self.container
+        return c

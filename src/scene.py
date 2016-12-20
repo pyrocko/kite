@@ -4,6 +4,7 @@ import numpy as num
 import utm
 
 from pyrocko import guts
+from datetime import datetime as dt
 from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
 from .meta import Subject, property_cached, greatCircleDistance
@@ -227,34 +228,57 @@ class Frame(object):
 class Meta(guts.Object):
     """ Meta configuration for ``Scene``.
     """
-    scene_title = guts.String.T(default='Unnamed Scene')
-    scene_id = guts.String.T(default='None')
-    satellite_name = guts.String.T(default='Unnamed Satellite')
-    orbit_direction = guts.String.T(default='Ascending')
-    time_master = guts.Timestamp.T(default=0.0)
-    time_slave = guts.Timestamp.T(default=86400.0)
+    scene_title = guts.String.T(
+        default='Undefined',
+        help='Scene title')
+    scene_id = guts.String.T(
+        default='None',
+        help='Scene identification (uid, unused)')
+    satellite_name = guts.String.T(
+        default='Undefined',
+        help='Satellite mission name')
+    orbit_direction = guts.StringChoice.T(
+        choices=['Ascending', 'Descending', 'Undefined'],
+        default='Undefined',
+        help='Orbital direction, ascending/descending')
+    time_master = guts.Timestamp.T(
+        default=0.0,
+        help='Timestamp for master acquisition')
+    time_slave = guts.Timestamp.T(
+        default=86400.0,
+        help='Timestamp for slave acquisition')
+    extra = guts.Dict.T(
+        default={},
+        help='Extra header information')
 
     @property
     def time_separation(self):
         '''
-        :getter: Time between ``master_time`` and ``slave_time``
-        :type: Float
+        :getter: Absolute time difference between ``time_master``
+                 and ``time_slave``
+        :type: timedelta
         '''
-        return self.slave_time - self.master_time
+        # return (dt.fromtimestamp(self.time_slave) -
+        #        dt.fromtimestamp(self.time_master))
+        return 0.
 
 
 class SceneConfig(guts.Object):
     """ Configuration object, gathering ``kite.Scene`` and
     sub-objects configuration.
     """
-    meta = Meta.T(default=Meta(),
-                  help='Scene metainformation')
-    frame = FrameConfig.T(default=FrameConfig(),
-                          help='Frame/reference configuration')
-    quadtree = QuadtreeConfig.T(default=QuadtreeConfig(),
-                                help='Quadtree parameters')
-    covariance = CovarianceConfig.T(default=CovarianceConfig(),
-                                    help='Covariance parameters')
+    meta = Meta.T(
+        default=Meta(),
+        help='Scene metainformation')
+    frame = FrameConfig.T(
+        default=FrameConfig(),
+        help='Frame/reference configuration')
+    quadtree = QuadtreeConfig.T(
+        default=QuadtreeConfig(),
+        help='Quadtree parameters')
+    covariance = CovarianceConfig.T(
+        default=CovarianceConfig(),
+        help='Covariance parameters')
 
 
 def dynamicmethod(func):
@@ -576,13 +600,17 @@ class Scene(object):
                 break
         if data is None:
             raise ImportError('Could not recognize format for %s' % path)
-        scene.theta = data['theta']
-        scene.phi = data['phi']
-        scene.displacement = data['displacement']
-        scene.frame.llLat = data['llLat']
-        scene.frame.llLon = data['llLon']
-        scene.frame.dLat = data['dLat']
-        scene.frame.dLon = data['dLon']
+
+        for sk in ['theta', 'phi', 'displacement']:
+            setattr(scene, sk, data[sk])
+
+        for fk, fv in data['frame'].iteritems():
+            setattr(scene.frame, fk, fv)
+
+        for mk, mv in data['meta'].iteritems():
+            if mv is not None:
+                setattr(scene.meta, mk, mv)
+        scene.meta.extra.update(data['extra'])
 
         scene._testImport()
         return scene
