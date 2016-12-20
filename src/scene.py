@@ -162,9 +162,9 @@ class Frame(object):
 
     @property_cached
     def gridE(self):
-        """
-        UTM grid holding y coordinates of all pixels in ``NxM`` matrix
-        of ``Scene.displacement``.
+        """ UTM grid holding eastings of all pixels in ``NxM`` matrix
+            of :attr:`~kite.Scene.displacement`.
+        :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
         gridE = num.repeat(self.E[num.newaxis, :],
@@ -173,9 +173,9 @@ class Frame(object):
 
     @property_cached
     def gridN(self):
-        """
-        UTM grid holding x coordinates of all pixels in ``NxM`` matrix
-        of ``Scene.displacement``.
+        """ UTM grid holding northings of all pixels in ``NxM`` matrix
+            of :attr:`~kite.Scene.displacement`.
+        :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
         gridN = num.repeat(self.N[:, num.newaxis],
@@ -578,10 +578,10 @@ class Scene(object):
 
         :param path: Filename of resource to import
         :type path: str
-        :param **kwargs: keyword arguments passed to import function
-        :type **kwargs: dict
+        :param kwargs: keyword arguments passed to import function
+        :type kwargs: dict
         :returns: Scene from path
-        :rtype: :class:`kite.Scene`
+        :rtype: :class:`~kite.Scene`
         :raises: TypeError
         """
         scene = self

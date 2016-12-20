@@ -13,7 +13,8 @@ class SceneIO(object):
             self._log = scene._log.getChild('IO/%s' % self.__class__.__name__)
         else:
             import logging
-            self._log = logging.getLogger('SceneIO/%s' % self.__class__.__name__)
+            self._log = logging.getLogger('SceneIO/%s'
+                                          % self.__class__.__name__)
 
         self.container = {
             'phi': None,    # Look incident angle from vertical in degree
@@ -152,7 +153,7 @@ class Gamma(SceneIO):
 
         * Binary file from gamma (``*``)
         * Parameter file (``*par``), including ``corner_lat, corner_lon,
-            nlines, width, post_lat, post_lon``
+          nlines, width, post_lat, post_lon``
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))

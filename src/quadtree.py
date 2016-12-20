@@ -88,7 +88,7 @@ class QuadNode(object):
     @property_cached
     def corr_bilinear(self):
         ''' Standard deviation of node's displacement corrected for bilinear
-        trend (2D)
+            trend (2D)
         :type: float
         '''
         return num.nanstd(derampMatrix(self.displacement))
@@ -131,7 +131,7 @@ class QuadNode(object):
     @property_cached
     def displacement_mask(self):
         ''' Displacement nan mask from :attr:`kite.Scene.displacement`
-        :type: :class:`numpy.array`, dtype :type:`numpy.bool`
+        :type: :class:`numpy.array`, dtype :class:`numpy.bool`
         '''
         return num.isnan(self.displacement)
 
@@ -361,8 +361,7 @@ class Quadtree(object):
         """ Sets and updated the config of the instance
 
         :param config: New config instance, defaults to configuration provided
-                       by parent :class:`~kite.Scene
-`
+                       by parent :class:`~kite.Scene`
         :type config: :class:`~kite.covariance.QuadtreeConfig`, optional
         """
         if config is None:
