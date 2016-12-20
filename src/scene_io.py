@@ -72,9 +72,8 @@ class SceneIO(object):
 
 
 class Matlab(SceneIO):
-    """ Reads Matlab files
-
-    Variable naming conventions within Matlab ``.mat`` container:
+    """
+    Variable naming conventions for Matlab :file:`.mat` container:
 
         ================== ====================
         Property           Matlab ``.mat`` name
@@ -143,16 +142,13 @@ class Matlab(SceneIO):
 
 
 class Gamma(SceneIO):
-    """ Reads in binary files processed with Gamma.
-
-    .. note::
-
-        Data has to be georeferenced to latitude/longitude!
+    """
+    .. warning :: Data has to be georeferenced to latitude/longitude!
 
     Expects two files:
 
-        * Binary file from gamma (``*``)
-        * Parameter file (``*par``), including ``corner_lat, corner_lon,
+        * Binary file from gamma (:file:`*`)
+        * Parameter file (:file:`*par`), including ``corner_lat, corner_lon,
           nlines, width, post_lat, post_lon``
     """
     def _getParameterFile(self, path):
@@ -222,11 +218,11 @@ class Gamma(SceneIO):
         return num.memmap(filename, mode='r', dtype='>f4')
 
     def read(self, filename, **kwargs):
-        """ Reads in Gamma scene
-
+        """
         :param filename: Gamma software binary file
         :type filename: str
-        :param par_file: Corresponding parameter (``*par``) file. (optional)
+        :param par_file: Corresponding parameter (:file:`*par`) file.
+                         (optional)
         :type par_file: str
         :returns: Import dictionary
         :rtype: dict
@@ -310,13 +306,12 @@ class ISCEXMLParser(object):
 
 
 class ISCE(SceneIO):
-    """Reads in files processed with ISCE
-
+    """
     Expects three files in the same folder:
 
-        * Unwrapped displacement binary (``*.unw.geo``)
-        * Metadata XML (``*.unw.geo.xml``)
-        * LOS binary data (``*.rdr.geo``)
+        * Unwrapped displacement binary (:file:`*.unw.geo`)
+        * Metadata XML (:file:`*.unw.geo.xml`)
+        * LOS binary data (:file:`*.rdr.geo`)
     """
     def validate(self, filename, **kwargs):
         try:
@@ -383,8 +378,7 @@ class ISCE(SceneIO):
 
 
 class GMTSAR(SceneIO):
-    """ Reads in data processed with GMT5SAR
-
+    """
     Use gmt5sar ``SAT_look`` to calculate the corresponding unit look vectors:
 
     .. code-block:: sh
@@ -395,8 +389,8 @@ class GMTSAR(SceneIO):
 
     Expects two binary files:
 
-        * Displacement grid (NetCDF, ``*los_ll.grd``)
-        * LOS binary data (see instruction, ``*los.enu``)
+        * Displacement grid (NetCDF, :file:`*los_ll.grd`)
+        * LOS binary data (see instruction, :file:`*los.enu`)
 
     """
     def validate(self, filename, **kwargs):

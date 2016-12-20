@@ -295,30 +295,12 @@ def dynamicmethod(func):
 
 class Scene(object):
     """Scene holding satellite LOS ground dispacements measurements
-
-    :param displacement: ``NxM`` matrix of displacement in LOS
-    :type displacement: :class:`numpy.array`
-    :param theta: ``NxM`` matrix of theta towards LOS.
-        Theta is look vector elevation angle towards satellite from vertical
-        in radians - ``pi/2: up; -pi/2: down``
-    :type theta: :class:`numpy.array`
-    :param phi: ``NxM`` matrix of phi towards LOS.
-        Phi look vector orientation angle towards satellite from East
-        in radians.
-        ``(0: east, pi/2 north)``
-    :type phi: :class:`numpy.array`
-    :param meta: Meta information for the scene
-    :type meta: :class:`~kite.scene.Meta`
-
-    :param los: Displacement measurements (displacement, theta, phi) from
-        satellite measurements
-    :type los: :class:`~kite.scene.LOSUnitVectors`
     """
     evChanged = Subject()
     evConfigChanged = Subject()
 
     def __init__(self, config=SceneConfig()):
-        self._setLoggingUp()
+        self._setupLogging()
         self.config = config
         self.meta = self.config.meta
 
@@ -333,7 +315,7 @@ class Scene(object):
         self.import_data = self._import_data
         self.load = self._load
 
-    def _setLoggingUp(self):
+    def _setupLogging(self):
         logging.basicConfig(level=logging.DEBUG)
 
         self._log = logging.getLogger('Scene')
@@ -369,21 +351,27 @@ class Scene(object):
 
     @property_cached
     def displacement_mask(self):
-        """
-        :getter: Displacement :attr:`numpy.nan` mask
+        """ Displacement :attr:`numpy.nan` mask
         :type: :class:`numpy.array`, dtype :class:`numpy.bool`
         """
         return num.isnan(self.displacement)
 
     @property
     def phi(self):
-        """ Horizontal angle towards satellite' point of view in radians.
-        (``0: east, pi/2: north``)
+        """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
+        in radians
 
-        :getter: Returns the phi angles
-        :setter: Set the phi matrix for scene's displacement, can be ``int``
-            for static look vector.
-        :type: :class:`numpy.array` or ``int``
+        .. warning :: 
+
+            Kite convention!
+
+            * ``0`` is **East**
+            * ``pi/2`` is **North**!
+
+        :setter: Set the phi matrix for scene's displacement, can be int
+                 for static look vector.
+        :type: :class:`numpy.array`, size same as
+               :attr:`~kite.Scene.displacement` or int
         """
         return self._phi
 
@@ -395,25 +383,23 @@ class Scene(object):
             _setDataNumpy(self, '_phi', value)
         self.evChanged.notify()
 
-    @phi.getter
-    def phi(self):
-        if isinstance(self._phi, float):
-            _a = num.empty_like(self.displacement)
-            _a.fill(self._phi)
-            return _a
-        else:
-            return self._phi
-
     @property
     def theta(self):
-        """ ``NxM`` matrix of theta towards satellite' line of sight.
-        Theta is look vector elevation angle towards satellite from horizon
-        in radians - ``pi/2: up; -pi/2: down``
+        """ Theta is look vector elevation angle towards satellite from horizon
+        in radians. Matrix of theta towards satellite's
+        :abbr:`line of sight (LOS)`.
 
-        :getter: Returns the theta angles
-        :setter: Set the theta matrix for scene's displacement, can be ``int``
-            for static look vector.
-        :type: :class:`numpy.array` or `int`
+        .. warning ::
+
+            Kite convention!
+
+            * ``-pi/2`` is **Down**
+            * ``pi/2`` is **Up**
+
+        :setter: Set the theta matrix for scene's displacement, can be int
+                 for static look vector.
+        :type: :class:`numpy.array`, size same as
+               :attr:`~kite.Scene.displacement` or int
         """
         return self._theta
 
@@ -424,15 +410,6 @@ class Scene(object):
         else:
             _setDataNumpy(self, '_theta', value)
         self.evChanged.notify()
-
-    @theta.getter
-    def theta(self):
-        if isinstance(self._theta, float):
-            _a = num.empty_like(self.displacement)
-            _a.fill(self._theta)
-            return _a
-        else:
-            return self._theta
 
     @property_cached
     def thetaDeg(self):
@@ -615,7 +592,8 @@ class Scene(object):
         return scene
 
     _import_data.__doc__ += \
-        '\nSupported import modules: %s.\n' % (', ').join(scene_io.__all__)
+        '\nSupported import modules are **%s**.\n'\
+        % (', ').join(scene_io.__all__)
     for mod in scene_io.__all__:
         _import_data.__doc__ += '\n**%s**\n\n' % mod
         _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)

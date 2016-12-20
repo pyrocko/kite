@@ -4,7 +4,6 @@ kite.Scene
 .. autoclass:: kite.Scene
     :members:
 
-
 Frame
 -----
 
