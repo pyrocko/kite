@@ -122,7 +122,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionLog.triggered.connect(
             self.log.show)
 
-        self.progress = QtGui.QProgressDialog('', None, 0, 0)
+        self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)
         self.progress.closeEvent = lambda e: e.ignore()
         self.progress.setMinimumWidth(400)
