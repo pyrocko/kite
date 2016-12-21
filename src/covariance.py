@@ -47,7 +47,7 @@ def modelPowerspec(k, a, b):
 
     .. math::
 
-        pow(k) = k^a \\frac{1}{b}
+        pow(k) = \\frac{k^a}{b}
 
 
     :param k: Wavenumber
@@ -263,7 +263,7 @@ class Covariance(object):
         :class:`~kite.Quadtree`.
 
         :returns: A quadnode with the least signal.
-        :rtype: :class:`kite.quadtree.QuadNode`
+        :rtype: :class:`~kite.quadtree.QuadNode`
         """
         t0 = time.time()
 
