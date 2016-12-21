@@ -1,5 +1,6 @@
 #define NPY_NO_DEPRECATED_API 7
 #define SQR(a)  ( (a) * (a) )
+#define LOG2(a)  ( (log(a)) * 1.44269504088896340736 )
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -57,7 +58,7 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
-static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, float64_t *cov_arr) {
+static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, uint32_t adaptive_subsampling, float64_t *cov_arr) {
     npy_intp l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
     npy_intp icl1, icl2, nrows, ncols;
@@ -70,9 +71,12 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
 
     // Defining adaptive subsampling
     for (il1=0; il1<nleafs; il1++) {
-        l_length = map[il1*4+1] - map[il1*4+0];
-        leaf_subsampling[il1] = ceil(sqrt(l_length)/2);
-        // leaf_subsampling[il1] = 1;
+        if (adaptive_subsampling) {
+            l_length = map[il1*4+1] - map[il1*4+0];
+            leaf_subsampling[il1] = ceil(LOG2(l_length));
+        } else {
+           leaf_subsampling[il1] = 1;
+        }
     }
     if (nthreads == 0)
         nthreads = omp_get_num_procs();
@@ -156,12 +160,12 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
     float64_t *x, *y, *covs, ma, mb;
-    uint32_t *map, nthreads;
+    uint32_t *map, nthreads, adaptive_subsampling;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
 
-    if (! PyArg_ParseTuple(args, "OOOddI", &E_arr, &N_arr, &map_arr, &ma, &mb, &nthreads)) {
-        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads)");
+    if (! PyArg_ParseTuple(args, "OOOddII", &E_arr, &N_arr, &map_arr, &ma, &mb, &nthreads, &adaptive_subsampling)) {
+        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads, adaptive_subsampling)");
         return NULL;
     }
 
@@ -197,7 +201,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
-    calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, covs);
+    calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, adaptive_subsampling, covs);
     return (PyObject*) cov_arr;
 }
 

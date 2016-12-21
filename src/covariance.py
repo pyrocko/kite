@@ -77,6 +77,9 @@ class CovarianceConfig(guts.Object):
     variance = guts.Float.T(
         optional=True,
         help='Variance of the model')
+    adaptive_subsampling = guts.Bool.T(
+        default=False,
+        help='Adaptive subsampling flag for full covariance calculation.')
 
 
 class Covariance(object):
@@ -111,6 +114,7 @@ class Covariance(object):
         self._noise_data = None
         self._noise_spectrum_cached = None
         self._initialized = False
+        self._nthreads = 0
         self._log = scene._log.getChild('Covariance')
 
         self.setConfig(config)
@@ -161,6 +165,22 @@ class Covariance(object):
         self.weight_matrix_focal = None
         self._initialized = False
         self.evChanged.notify()
+
+    @property
+    def nthreads(self):
+        ''' Number of threads (CPU cores) to use for full covariance
+            calculation
+
+        Setting ``nthreads`` to ``0`` uses all available cores.
+
+        :setter: Sets the number of threads
+        :type: int
+        '''
+        return self._nthreads
+
+    @nthreads.setter
+    def nthreads(self, value):
+        self._nthreads = int(value)
 
     @property
     def noise_coord(self):
@@ -315,7 +335,7 @@ class Covariance(object):
         """
         return num.linalg.inv(self.covariance_matrix_focal)
 
-    def _calcCovarianceMatrix(self, method='focal', nthreads=0):
+    def _calcCovarianceMatrix(self, method='focal'):
         """Calculates the covariance matrix.
 
         :param method: Either ``focal`` point distances are used - this is
@@ -324,9 +344,6 @@ class Covariance(object):
             calculated
             , defaults to ``focal``
         :type method: str, optional
-        :param nthreads: Number of threads to use, ``0`` will use all
-            available processors
-        :ttype nthreads: int
         :returns: Covariance matrix
         :rtype: thon:numpy.ndarray
         """
@@ -359,7 +376,8 @@ class Covariance(object):
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
-                            leaf_map, ma, mb, nthreads)
+                            leaf_map, ma, mb, self.nthreads,
+                            self.config.adaptive_subsampling)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
