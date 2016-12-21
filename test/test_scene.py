@@ -107,6 +107,8 @@ class TestMatlabScene(unittest.TestCase):
         sc1.covariance.config.a = 0.008
         sc1.covariance.config.b = 300.2
         sc1.covariance.config.variance = .2
+        sc1.covariance.covariance_matrix
+
         try:
             sc1.save(file)
             sc2 = Scene()

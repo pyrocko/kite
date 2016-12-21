@@ -69,17 +69,23 @@ class CovarianceConfig(guts.Object):
     a = guts.Float.T(
         optional=True,
         help='Exponential covariance model; scaling factor. '
-             'See :func:`kite.covariance.modelCovariance`')
+             'See :func:`~kite.covariance.modelCovariance`')
     b = guts.Float.T(
         optional=True,
         help='Exponential covariance model; exponential decay. '
-             'See :func:`kite.covariance.modelCovariance`')
+             'See :func:`~kite.covariance.modelCovariance`')
     variance = guts.Float.T(
         optional=True,
         help='Variance of the model')
     adaptive_subsampling = guts.Bool.T(
-        default=False,
+        default=True,
         help='Adaptive subsampling flag for full covariance calculation.')
+    covariance_matrix = Array.T(
+        optional=True,
+        serialize_as='base64',
+        help='Cached covariance matrix, '
+             'see :attr:`~kite.Covariance.covariance_matrix`',
+        )
 
 
 class Covariance(object):
@@ -153,6 +159,7 @@ class Covariance(object):
             self.config.a = None
             self.config.b = None
             self.config.variance = None
+            self.config.covariance_matrix = None
 
         if spectrum:
             self.structure_func = None
@@ -304,7 +311,10 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
         """
-        return self._calcCovarianceMatrix(method='full')
+        if not self.config.covariance_matrix:
+            self.config.covariance_matrix =\
+                self._calcCovarianceMatrix(method='full')
+        return self.config.covariance_matrix
 
     @property_cached
     def covariance_matrix_focal(self):
