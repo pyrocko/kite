@@ -1,11 +1,11 @@
-kite.Covariance
-===============
+The Covariance Module
+=====================
 
 .. autoclass:: kite.Covariance
     :members:
 
-kite.covariance.CovarianceConfig
---------------------------------
+The CovarianceConfig
+--------------------
 
 .. autoclass:: kite.covariance.CovarianceConfig
     :members:

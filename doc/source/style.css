@@ -1,9 +1,11 @@
 body {
-    background-color: rgb(254, 254, 254);
+    background-color: rgb(250, 250, 250);
 }
 
+
+
 div.documentwrapper {
-    background-color: rgb(254, 254, 254);
+    background-color: rgb(250, 250, 250);
 }
 
 p.caption {
@@ -85,6 +87,15 @@ div.related {
     max-width: 1000px;
     margin-right: auto;
     margin-left: auto;
+}
+
+dl.attribute, dl.method {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+div.footer {
+    margin-top: 2em;
+    text-align: center;
 }
 
 @media only screen and (max-width: 1024px) {

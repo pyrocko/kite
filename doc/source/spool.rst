@@ -55,7 +55,7 @@ The first tab offers simple data inspection of plain parameters. From the side m
 Quadtree
 --------
 
-The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. The whole :class:`~kite.Quadtree` and is built upon initialisation an instance, the tree consists of :class:`~kite.quadtree.QuadNode` s, a state or slice of the tree is denoted as :attr:`~kite.Quadtree.leafs`.
+The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. The tree consists of :class:`~kite.quadtree.QuadNode` s, a state or slice of the tree is denoted as :attr:`~kite.Quadtree.leafs`.
 
 Four parameters characterize the quadtree and when a :class:`~kite.quadtree.QuadNode` is split:
 
@@ -69,7 +69,7 @@ Four parameters characterize the quadtree and when a :class:`~kite.quadtree.Quad
 
     Interactive quadtree parametrization through the :command:`spool` GUI. Shown here is the mean displacement of the leafs (:attr:`kite.quadtree.QuadNode.mean`).
 
-To get a feel for the covariance and error estimation we can have a look at the absolute weights current tree's state (see :attr:`kite.quadtree.QuadNode.weight` or :func:`kite.Covariance.getWeight`).
+To get a feel for the covariance and error estimation we can have a look at the absolute weights of the leafs (see :attr:`kite.quadtree.QuadNode.weight` or :func:`kite.Covariance.getLeafWeight`).
 
 .. figure:: ../_images/spool-quadtree_weight.png
     :alt: Quadtree nodes with associated errors/weights derived from kite.Covariance
