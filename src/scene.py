@@ -518,7 +518,7 @@ class Scene(object):
         :param filename: Filenames the scene data is saved under
         :type filename: str
         :returns: Scene object from data resources
-        :rtype: :class:`kite.Scene`
+        :rtype: :class:`~kite.Scene`
         """
         scene = self
         components = ['displacement', 'theta', 'phi']

@@ -52,8 +52,8 @@ code {
 
 div.bodywrapper {
     max-width: 1000px;
-    margin-left: auto;
-    margin-right: auto;
+    margin-left: auto !important;
+    margin-right: auto !important;
     border: 1px solid rgb(236, 233, 233);
     /* border: 1px solid rgb(236, 233, 233); */
     box-shadow: 1px 1px 2px rgb(225, 225, 225);

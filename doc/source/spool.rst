@@ -55,9 +55,9 @@ The first tab offers simple data inspection of plain parameters. From the side m
 Quadtree
 --------
 
-The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. The tree consists of :class:`~kite.quadtree.QuadNode` s, a state or slice of the tree is denoted as :attr:`~kite.Quadtree.leafs`.
+The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. 
 
-Four parameters characterize the quadtree and when a :class:`~kite.quadtree.QuadNode` is split:
+The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`examples_03-quadtree`)
 
 * epsilon/std threshold (:attr:`~kite.Quadtree.epsilon`)
 * Fraction of NaN values within (:attr:`~kite.Quadtree.nan_allowed`)

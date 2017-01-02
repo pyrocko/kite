@@ -11,7 +11,31 @@ Four parameters characterize the quadtree and when a :class:`~kite.quadtree.Quad
   (:attr:`~kite.Quadtree.tile_size_max` and :attr:`~kite.Quadtree.tile_size_min`)
 
 
-.. note :: The whole :class:`~kite.Quadtree` and is built upon initialisation an instance, 
+.. note :: All nodes of the :class:`~kite.Quadtree` are built upon initialisation an instance.
+
+The parametrization of the tree can be done through the :doc:`spool` or the python interface of :class:`~kite.Quadtree`.
+
+::
+    
+    from sc import Scene
+    sc = Scene.import_data('test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+
+    sc.quadtree  # this initializes and constructs the tree
+
+    sc.epsilon = .024
+    sc.nan_allowed = .9
+    sc.tile_size_max = 12000
+    sc.tile_size_min = 250
+
+    print(sc.reduction_rms)  # In units of [m]
+    >>> 0.234123152
+
+    for l in sc.quadtree.leafs:
+        print l
+
+    # One may export the tree in a CSV format
+    sc.quadtree.export('/tmp/tree.csv')
+
 
 .. rubric:: Footnotes
 

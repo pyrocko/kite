@@ -9,10 +9,10 @@ class QuadNode(object):
     ''' A node (or *tile*) in held by :class:`~kite.Quadtree`. Each node in the
     tree hold a back reference to the quadtree and scene to access
 
-    :param llr: Lower left corner row in :attr:`~kite.Scene.displacement`
+    :param llr: Lower left corner row in :attr:`kite.Scene.displacement`
         matrix.
     :type llr: int
-    :param llc: Lower left corner column in :attr:`~kite.Scene.displacement`
+    :param llc: Lower left corner column in :attr:`kite.Scene.displacement`
         matrix.
     :type llc: int
     :param length: Length of node in from ``llr, llc`` in both dimensions
@@ -113,7 +113,7 @@ class QuadNode(object):
 
     @property_cached
     def displacement(self):
-        ''' Displacement array from :attr:`kite.Scene.displacement`
+        ''' Displacement array, slice from :attr:`kite.Scene.displacement`
         :type: :class:`numpy.array`
         '''
         return self.scene.displacement[self._slice_rows, self._slice_cols]
@@ -121,7 +121,7 @@ class QuadNode(object):
     @property_cached
     def displacement_masked(self):
         ''' Masked displacement,
-            see :attr:`kite.quadtree.QuadNode.displacement`
+            see :attr:`~kite.quadtree.QuadNode.displacement`
         :type: :class:`numpy.array`
         '''
         return num.ma.masked_array(self.displacement,
@@ -130,8 +130,13 @@ class QuadNode(object):
 
     @property_cached
     def displacement_mask(self):
-        ''' Displacement nan mask from :attr:`kite.Scene.displacement`
+        ''' Displacement nan mask of
+            :attr:`~kite.quadtree.QuadNode.displacement`
         :type: :class:`numpy.array`, dtype :class:`numpy.bool`
+
+        .. todo ::
+
+            Faster to slice Scene.displacement_mask?
         '''
         return num.isnan(self.displacement)
 
@@ -209,7 +214,7 @@ class QuadNode(object):
         ''' Iterator over the all children.
 
         :yields: Children of it's own.
-        :type: :class:`kite.quadtree.QuadNode`
+        :type: :class:`~kite.quadtree.QuadNode`
         '''
         yield self
         if self.children is not None:
@@ -222,7 +227,7 @@ class QuadNode(object):
         :class:`~kite.Quadtree` instance.
 
         :yields: Leafs fullfilling the tree's parameters.
-        :type: :class:`kite.quadtree.QuadNode`
+        :type: :class:`~kite.quadtree.QuadNode`
         '''
         if (self.quadtree._corr_func(self) < self.quadtree.epsilon and
             not self.length > self.quadtree._tile_size_lim_px[1])\
@@ -652,7 +657,7 @@ class Quadtree(object):
     @property
     def reduction_rms(self):
         ''' The RMS error is defined between
-        :attr:`kite.Quadtree.leaf_matrix_means` and
+        :attr:`~kite.Quadtree.leaf_matrix_means` and
         :attr:`kite.Scene.displacement`.
 
         :getter: The reduction RMS error
