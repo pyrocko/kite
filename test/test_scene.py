@@ -32,7 +32,7 @@ class TestGaussScene(unittest.TestCase):
         import tempfile
         import shutil
 
-        tmp_dir = tempfile.mkdtemp()
+        tmp_dir = tempfile.mkdtemp(prefix='kite')
         file = os.path.join(tmp_dir, self.__class__.__name__)
         sc1 = self.sc
 
@@ -94,7 +94,7 @@ class TestMatlabScene(unittest.TestCase):
         import tempfile
         import shutil
 
-        tmp_dir = tempfile.mkdtemp()
+        tmp_dir = tempfile.mkdtemp(prefix='kite')
         # print(tmp_dir)
         file = os.path.join(tmp_dir, self.__class__.__name__)
         sc1 = self.sc
