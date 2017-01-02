@@ -202,8 +202,8 @@ class Covariance(object):
         return self.config.noise_coord
 
     @noise_coord.setter
-    def noise_coord(self, value):
-        self.config.noise_coord = num.array(value)
+    def noise_coord(self, values):
+        self.config.noise_coord = num.array(values)
 
     @property
     def noise_patch_size_km2(self):
@@ -234,15 +234,16 @@ class Covariance(object):
         if self._noise_data is not None:
             return self._noise_data
         elif self.config.noise_coord is not None:
-            print(self.config.noise_coord[:])
-            llR, llC = self.scene.frame.mapENMatrix(
+            self._log.info('Selecting noise_data from config...')
+            llE, llN = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[:2])
-            sR, sC = self.scene.frame.mapENMatrix(
+            sE, sN = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[2:])
-            slice_rows = slice(llR, llR + sR)
-            slice_cols = slice(llC, llC + sC)
-            self.noise_data = self.scene.displacement[slice_rows, slice_cols]
+            slice_E = slice(llE, llE + sE)
+            slice_N = slice(llN, llN + sN)
+            self.noise_data = self.scene.displacement[slice_N, slice_E]
         else:
+            self._log.info('Selecting noise_data from Quadtree...')
             node = self.getNoiseNode()
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,
@@ -466,21 +467,14 @@ class Covariance(object):
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
         f_spec = num.abs(f_spec)**2 / f_spec.size
-        # f_spec /= f_spec.size
 
         kE = num.fft.fftfreq(f_spec.shape[1], d=self.quadtree.frame.dE)
         kN = num.fft.fftfreq(f_spec.shape[0], d=self.quadtree.frame.dN)
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
-        if kN.size < kE.size:
-            dk = self.quadtree.frame.dN
-            k_bin = kN
-        else:
-            dk = self.quadtree.frame.dE
-            k_bin = kE
-
-        if self.quadtree.frame.dN > self.quadtree.frame.dE:
+        _, _, sizeE, sizeN = self.noise_coord
+        if sizeN < sizeE:
             dk = self.quadtree.frame.dN
             k_bin = kN
         else:
@@ -489,11 +483,12 @@ class Covariance(object):
 
         k_max = min(kE.max(), kN.max())
         k_bin = k_bin[k_bin < k_max]
+        k_bin = k_bin[k_bin > 0.]
 
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
                                                      statistic='sum',
-                                                     bins=k_bin[k_bin > 0])
+                                                     bins=k_bin)
 
         self._noise_spectrum_cached = power_spec, k[:-1], dk, f_spec, kN, kE
         return self._noise_spectrum_cached

@@ -205,7 +205,9 @@ class Frame(object):
         :returns: Row and column
         :rtype: tuple (int), (row, column)
         """
-        return int(E/self.dE), int(N/self.dN)
+        row = int(E/self.dE) if E > 0 else 0
+        col = int(N/self.dN) if N > 0 else 0
+        return row, col
 
     def __str__(self):
         return (
@@ -361,9 +363,9 @@ class Scene(object):
         """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
         in radians
 
-        .. warning :: 
+        .. warning ::
 
-            Kite convention!
+            Kite convention is:
 
             * ``0`` is **East**
             * ``pi/2`` is **North**!
@@ -645,7 +647,7 @@ class SceneTest(Scene):
     """Test scenes for synthetic displacements """
 
     @classmethod
-    def createGauss(cls, nx=500, ny=500, noise=None, **kwargs):
+    def createGauss(cls, nx=512, ny=512, noise=None, **kwargs):
         scene = cls()
         scene.meta.scene_title = 'Synthetic Displacement | Gaussian'
         scene = cls._prepareSceneTest(scene, nx, ny)
@@ -653,11 +655,11 @@ class SceneTest(Scene):
         scene.displacement = scene._gaussAnomaly(scene.frame.E, scene.frame.N,
                                                  **kwargs)
         if noise is not None:
-            cls.addNoise(scene, noise)
+            cls.addNoise(noise)
         return scene
 
     @classmethod
-    def createRandom(cls, nx=500, ny=500, **kwargs):
+    def createRandom(cls, nx=512, ny=512, **kwargs):
         scene = cls()
         scene.meta.title = 'Synthetic Displacement | Uniform Random'
         scene = cls._prepareSceneTest(scene, nx, ny)
@@ -668,8 +670,8 @@ class SceneTest(Scene):
         return scene
 
     @classmethod
-    def createSine(cls, nx=500, ny=500, kE=.0041, kN=.0061, amplitude=3.,
-                   noise=1., **kwargs):
+    def createSine(cls, nx=512, ny=512, kE=.0041, kN=.0061, amplitude=1.,
+                   noise=.5, **kwargs):
         scene = cls()
         scene.meta.title = 'Synthetic Displacement | Sine'
         scene = cls._prepareSceneTest(scene, nx, ny)
@@ -690,27 +692,88 @@ class SceneTest(Scene):
 
         scene.displacement = displ * amplitude
         if noise is not None:
-            cls.addNoise(scene, noise)
+            cls.addNoise(noise)
         return scene
 
+    @classmethod
+    def createFractal(cls, nx=512, ny=512,
+                      beta=[5./3, 8./3, 2./3], regime=[.15, .99, 1.],
+                      amplitude=1.):
+        scene = cls()
+        scene.meta.title =\
+            'Synthetic Disaplcement | Fractal Noise (Hanssen, 2001)'
+        scene = cls._prepareSceneTest(scene, nx, ny)
+
+        rfield = num.random.rand(nx, ny)
+        spec = num.fft.fftshift(num.fft.fft2(rfield))
+
+        X, Y = num.meshgrid(num.arange(-ny/2, ny/2),
+                            num.arange(-nx/2, nx/2))
+        k = num.sqrt(X**2 + Y**2)
+
+        beta = num.array(beta)
+
+        # From Hanssen (2000)
+        #   beta+1 is used as beta, since, the power exponent
+        #   is defined for a 1D slice of the 2D spectrum:
+        #   austin94: "Adler, 1981, shows that the surface profile
+        #   created by the intersection of a plane and a
+        #   2-D fractal surface is itself fractal with
+        #   a fractal dimension  equal to that of the 2D
+        #   surface decreased by one."
+        beta += 1.
+        # From Hanssen (2000)
+        #   The power beta/2 is used because the power spectral
+        #   density is proportional to the amplitude squared
+        #   Here we work with the amplitude, instead of the power
+        #   so we should take sqrt( k.^beta) = k.^(beta/2)  RH
+        beta /= 2.
+
+        regime = num.array(regime)
+        k0 = 0.
+        k1 = regime[0] * X.max()
+        k2 = regime[1] * X.max()
+        k3 = k.max()
+
+        r0 = num.logical_and(k > k0, k <= k1)
+        r1 = num.logical_and(k >= k1, k <= k2)
+        r2 = num.logical_and(k >= k2, k <= k3)
+
+        amplif = num.zeros_like(k)
+        amplif[r0] = k[r0] ** beta[0]
+
+        amplif[r1] = k[r1] ** beta[1]
+        amplif[r1] = amplif[r1] / amplif[r1].min() * amplif[r0].max()
+
+        amplif[r2] = k[r2] ** beta[2] * amplif[r1].max()
+        amplif[r2] = amplif[r2] / amplif[r2].min() * amplif[r1].max()
+
+        amplif[amplif == 0.] = 1.
+
+        spec = amplitude * spec / amplif
+        disp = num.abs(num.fft.ifft2(spec))
+        disp -= num.mean(disp)
+
+        scene.displacement = disp
+        return scene
+
+    def addNoise(self, noise_amplitude):
+        rand = num.random.RandomState()
+        noise = rand.randn(*self.displacement.shape) * noise_amplitude
+        self.displacement += noise
+
     @staticmethod
-    def _prepareSceneTest(scene, nx=500, ny=500):
-        scene.frame.llLat = 32.1
-        scene.frame.llLon = 54.14
-        scene.frame.dLat = 1e-4
-        scene.frame.dLon = 1e-4
-        scene.frame.E = num.arange(nx) * 50.
-        scene.frame.N = num.arange(ny) * 50.
+    def _prepareSceneTest(scene, nx=512, ny=512):
+        scene.frame.llLat = 0.
+        scene.frame.llLon = 0.
+        scene.frame.dLat = 5e-4
+        scene.frame.dLon = 5e-4
+        # scene.frame.E = num.arange(nx) * 50.
+        # scene.frame.N = num.arange(ny) * 50.
         scene.theta = num.repeat(
             num.linspace(0.8, 0.85, nx), ny).reshape((nx, ny))
         scene.phi = num.rot90(scene.theta)
         return scene
-
-    @staticmethod
-    def addNoise(scene, noise_amplitude):
-        rand = num.random.RandomState()
-        noise = rand.randn(*scene.displacement.shape) * noise_amplitude
-        scene.displacement += noise
 
     @staticmethod
     def _gaussAnomaly(x, y, sigma_x=.007, sigma_y=.005,
