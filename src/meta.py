@@ -115,16 +115,16 @@ def trimMatrix(displ):
     for r in xrange(displ.shape[0]):
         if not num.all(num.isnan(displ[r, :])):
             if not r1:
-                r1 = r
+                r1 = r + 1
             else:
                 r2 = r
     for c in xrange(displ.shape[1]):
         if not num.all(num.isnan(displ[:, c])):
             if not c1:
-                c1 = c
+                c1 = c + 1
             else:
                 c2 = c
-    return displ[r1:r2, c1:c2]
+    return displ[(r1-1):(r2+1), (c1-1):(c2+1)]
 
 
 def greatCircleDistance(alat, alon, blat, blon):
