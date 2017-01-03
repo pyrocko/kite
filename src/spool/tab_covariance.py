@@ -20,14 +20,15 @@ pen_green_dash = pg.mkPen((45, 136, 45, 200), width=2.5,
 
 
 class QKiteCovariance(QKiteView):
+    title = 'Scene.covariance'
+    
     def __init__(self, spool):
-        self.title = 'Scene.covariance'
         scene_proxy = spool.scene_proxy
 
         covariance_plot = QKiteNoisePlot(scene_proxy)
         self.main_widget = covariance_plot
         self.tools = {
-            'Covariance.noiseSpectrum':
+            'Covariance.powerspecNoise':
                 QKiteNoisePowerspec(covariance_plot),
             'Covariance.covariance_func':
                 QKiteCovariogram(covariance_plot),
@@ -150,10 +151,10 @@ class QKiteNoisePowerspec(_QKiteCovariancePlot):
 
     def update(self):
         covariance = self.scene_proxy.covariance
-        spec, k, _, _, _, _ = covariance.noiseSpectrum()
+        spec, k, _, _, _, _ = covariance.powerspecNoise()
         self.power.setData(k, spec)
         self.power_lin.setData(
-            k, covariance.powerspecAnalytical(k, 3))
+            k, covariance.powerspecModel(k))
 
 
 class QKiteCovariogram(_QKiteCovariancePlot):
@@ -350,6 +351,7 @@ class QKiteParamCovariance(QKiteParameterGroup):
         kwargs['name'] = 'Scene.covariance'
 
         self.parameters = OrderedDict([
+            ('powerspec_model_rms', None),
             ('variance', None),
             ('covariance_model [a]',
              lambda c: c.covariance_model[0]),

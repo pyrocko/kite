@@ -462,7 +462,8 @@ class Scene(object):
         if self.displacement is None:
             raise SceneError('Can not display an empty scene.')
         from kite.spool import Spool
-        return Spool(scene=self)
+        spool = Spool(scene=self)
+        return spool.spool_win.buildViews()
 
     def _testImport(self):
         try:
@@ -696,7 +697,7 @@ class SceneTest(Scene):
         return scene
 
     @classmethod
-    def createFractal(cls, nx=512, ny=512,
+    def createFractal(cls, nx=1024, ny=1024,
                       beta=[5./3, 8./3, 2./3], regime=[.15, .99, 1.],
                       amplitude=1.):
         scene = cls()

@@ -5,7 +5,6 @@ from .tab_scene import QKiteScene
 from .tab_quadtree import QKiteQuadtree  # noqa
 from .tab_covariance import QKiteCovariance  # noqa
 from .utils_qt import loadUi
-from ..meta import Subject
 from ..scene import Scene
 
 from os import path
@@ -29,44 +28,49 @@ def validateFilename(filename):
 
 
 class Spool(QtGui.QApplication):
-    def __init__(self, scene=None, filename=None):
+    def __init__(self, scene=None, import_data=None, load_file=None):
         QtGui.QApplication.__init__(self, ['KiteSpool'])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
                       'ui/boxkite-sketch.jpg'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        splash = QtGui.QSplashScreen(splash_img,
-                                     QtCore.Qt.WindowStaysOnTopHint)
-        splash.show()
+        self.splash = QtGui.QSplashScreen(splash_img,
+                                          QtCore.Qt.WindowStaysOnTopHint)
+        self.updateSplashMessage('Scene')
+        self.splash.show()
         self.processEvents()
 
-        def updateSplashMessage(msg=''):
-            splash.showMessage("Loading kite.%s ..." % msg.title(),
-                               QtCore.Qt.AlignBottom)
-
-        updateSplashMessage('Scene')
-
         self.spool_win = SpoolMainWindow()
-        self.spool_win.loadingModule.subscribe(updateSplashMessage)
+        self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
         self.aboutToQuit.connect(self.deleteLater)
 
         if scene is not None:
             self.addScene(scene)
-        if filename is not None:
-            self.importScene(filename)
+        if import_data is not None:
+            self.importScene(import_data)
+        if load_file is not None:
+            self.loadScene(load_file)
 
-        splash.finish(self.spool_win)
+        self.splash.finish(self.spool_win)
         self.spool_win.show()
         sys.exit(self.exec_())
+
+    @QtCore.Slot(str)
+    def updateSplashMessage(self, msg=''):
+        self.splash.showMessage("Loading %s ..." % msg.title(),
+                                QtCore.Qt.AlignBottom)
 
     def addScene(self, scene):
         self.spool_win.addScene(scene)
 
     def importScene(self, filename):
         self.spool_win.scene_proxy.importFile(filename)
+
+    def loadScene(self, filename):
+        self.spool_win.scene_proxy.loadFile(filename)
 
     def __del__(self):
         pass
@@ -77,6 +81,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
     sigLoadFile = QtCore.Signal(str)
     sigLoadConfig = QtCore.Signal(str)
     sigExportCovariance = QtCore.Signal(str)
+    sigLoadingModule = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
@@ -128,8 +133,6 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.progress.setMinimumWidth(400)
         self.scene_proxy.sigProcessingFinished.connect(self.progress.reset)
 
-        self.loadingModule = Subject()
-
     @property
     def about(self):
         self._about = QtGui.QDialog()
@@ -156,8 +159,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.scene_proxy.sigProcessingStarted.connect(self.processingStarted)
 
     def addView(self, view):
+        self.sigLoadingModule.emit(view.title)
         view = view(self)
-        self.loadingModule.notify(view.title)
         QtCore.QCoreApplication.processEvents()
         self.tabs.addTab(view, view.title)
         QtCore.QCoreApplication.processEvents()

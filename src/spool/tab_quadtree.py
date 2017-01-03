@@ -13,9 +13,10 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
 class QKiteQuadtree(QKiteView):
+    title = 'Scene.quadtree'
+
     def __init__(self, spool):
         scene_proxy = spool.scene_proxy
-        self.title = 'Scene.quadtree'
         self.main_widget = QKiteQuadtreePlot(scene_proxy)
         self.tools = {}
 

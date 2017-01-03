@@ -21,31 +21,31 @@ def main(args=None):
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',
         fromfile_prefix_chars=None,
-        argument_default=None,
+        argument_default=ap.SUPPRESS,
         conflict_handler='resolve',
         add_help=True)
-    parser.add_argument('--file', type=str,
+    parser.add_argument('file', type=str,
+                        help='Load Kite native container (*.npz/*.yml)',
+                        default=None, nargs='?')
+    parser.add_argument('--imp', metavar='file', type=str,
+                        default=None,
                         help='''Import file or directory
 Supported formats are:
  * Matlab (*.mat)
  * GAMMA  (*.* and *.par in same directory)
  * GMTSAR (*.grd and binary *.los.* file)
- * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data)''',
-                        default=None)
-    parser.add_argument('--log-lvl', type=str, help='Debug level (CRITICAL,'
-                        'ERROR, WARNING, INFO, DEBUG)',
-                        default='INFO')
-
-    parser.add_argument('--syn', type=str, help='''Synthetic Tests
-Available Synthetic Displacement are:
+ * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data)''')
+    parser.add_argument('--syn', type=str, default=None,
+                        choices=['fractal', 'sine', 'gauss'],
+                        help='''Synthetic Tests
+Available Synthetic Displacement:
  * fractal (Atmospheric model, after Hanssen, 2001)
  * sine
  * gauss
-''',
-                        default=None)
+''')
 
     ns = parser.parse_args(args)
-    if ns.file is None and ns.syn is None:
+    if ns.imp is None and ns.syn is None and ns.file is None:
         parser.print_help()
         sys.exit(0)
 
@@ -61,15 +61,11 @@ Available Synthetic Displacement are:
         else:
             parser.print_help()
             sys.exit(0)
-    # sc = Scene()
-    # sc.setLogLevel(ns.log_lvl)
-    # try:
-    #     sc.import_data(ns.file[0])
-    # except ImportError:
-    #     sc.load(ns.file[0])
-    # sc.spool()
+
     if sc:
         spool = Spool(scene=sc)
-    else:
-        spool = Spool(filename=ns.file)
+    elif ns.imp is not None:
+        spool = Spool(import_data=ns.imp)
+    elif ns.file is not None:
+        spool = Spool(load_file=ns.file)
     spool.spool_win.buildViews()

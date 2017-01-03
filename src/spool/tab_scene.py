@@ -13,8 +13,9 @@ __all__ = ['QKiteScene']
 
 
 class QKiteScene(QKiteView):
+    title = 'Scene'
+
     def __init__(self, spool):
-        self.title = 'Scene'
         scene_proxy = spool.scene_proxy
 
         scene_plot = QKiteScenePlot(scene_proxy)

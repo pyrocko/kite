@@ -178,7 +178,7 @@ class Covariance(object):
         ''' Number of threads (CPU cores) to use for full covariance
             calculation
 
-        Setting ``nthreads`` to ``0`` uses all available cores.
+        Setting ``nthreads`` to ``0`` uses all available cores (default).
 
         :setter: Sets the number of threads
         :type: int
@@ -208,7 +208,7 @@ class Covariance(object):
     @property
     def noise_patch_size_km2(self):
         '''
-        :getter: Noise patch size in ``km^2``.
+        :getter: Noise patch size in :math:`km^2`.
         :type: float
         '''
         if self.noise_coord is None:
@@ -405,7 +405,7 @@ class Covariance(object):
                         (leaf1.focal_point[1]
                          - leaf2.focal_point[1])**2)
 
-    def _getMapping(self, leaf1, leaf2):
+    def _leafMapping(self, leaf1, leaf2):
         if not isinstance(leaf1, str):
             leaf1 = leaf1.id
         if not isinstance(leaf2, str):
@@ -427,7 +427,7 @@ class Covariance(object):
         :returns: Covariance between ``leaf1`` and ``leaf2``
         :rtype: float
         """
-        return self.covariance_matrix[self._getMapping(leaf1, leaf2)]
+        return self.covariance_matrix[self._leafMapping(leaf1, leaf2)]
 
     def getLeafWeight(self, leaf, model='focal'):
         ''' Get the absolute weight of ``leaf``, summation of all weights from
@@ -445,11 +445,11 @@ class Covariance(object):
         :returns: Weight of the leaf
         :rtype: float
         '''
-        (nl, _) = self._getMapping(leaf, leaf)
+        (nl, _) = self._leafMapping(leaf, leaf)
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
-    def noiseSpectrum(self, data=None):
+    def powerspecNoise(self, data=None):
         """Get the noise spectrum from
         :attr:`kite.Covariance.noise_data`.
 
@@ -467,34 +467,36 @@ class Covariance(object):
 
         f_spec = num.fft.fft2(noise, axes=(0, 1), norm=None)
         f_spec = num.abs(f_spec)**2 / f_spec.size
-
         kE = num.fft.fftfreq(f_spec.shape[1], d=self.quadtree.frame.dE)
         kN = num.fft.fftfreq(f_spec.shape[0], d=self.quadtree.frame.dN)
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
         _, _, sizeE, sizeN = self.noise_coord
-        if sizeN < sizeE:
-            dk = self.quadtree.frame.dN
-            k_bin = kN
-        else:
+        if self.quadtree.frame.dE < self.quadtree.frame.dN:
             dk = self.quadtree.frame.dE
-            k_bin = kE
+            k = kE
+        else:
+            dk = self.quadtree.frame.dN
+            k = kN
+
+        k_bin = k + 1./(k.size*dk)
+        k_bin = k_bin[k_bin > 0.]
 
         k_max = min(kE.max(), kN.max())
         k_bin = k_bin[k_bin < k_max]
-        k_bin = k_bin[k_bin > 0.]
 
         power_spec, k, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                      f_spec.flatten(),
                                                      statistic='sum',
                                                      bins=k_bin)
 
-        self._noise_spectrum_cached = power_spec, k[:-1], dk, f_spec, kN, kE
+        self._noise_spectrum_cached = power_spec, k_bin[:-1], dk,\
+            f_spec, kN, kE
         return self._noise_spectrum_cached
 
     def _powerspecFit(self, regime=0):
-        power_spec, k, _, _, _, _ = self.noiseSpectrum()
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -506,34 +508,56 @@ class Covariance(object):
                                          k[regime], power_spec[regime])
         except RuntimeError:
             self._log.warning('Could not fit the powerspectrum model.')
+            return (0., 0.), 0.
 
-    def powerspecAnalytical(self, k, regime=0):
+    @property
+    def powerspec_model(self):
+        """Powerspectrum model parameters based on the spectral model after
+        :func:`~kite.covariance.modelPowerspec`
+
+        :returns: Model parameters ``a`` and ``b``
+        :rtype: tuple, floats
+        """
+        p, _ = self._powerspecFit()
+        return p
+
+    @property
+    def powerspec_model_rms(self):
+        '''
+        :getter: RMS missfit between :class:`~kite.Covariance.powerspecNoise`
+            and :class:`~kite.Covariance.powerspec_model``
+        :type: float
+        '''
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
+        power_spec_mod = self.powerspecModel(k)
+        return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
+
+    def powerspecModel(self, k):
         ''' Calculates the analytical power based on the fit of
-        :func:`~kite.covariance.modelPowerspec` to
-        :func:`~kite.Covariance.noiseSpectrum`.
+        :func:`~kite.covariance.powerspec_model`.
 
         :param k: Wavenumber(s)
         :type k: float or :class:`numpy.ndarray`
         :returns: Power at wavenumber ``k``
         :rtype: float or :class:`numpy.ndarray`
         '''
-        p, _ = self._powerspecFit(regime)
+        p = self.powerspec_model
         return modelPowerspec(k, *p)
 
     def _powerCosineTransform(self, p_spec, k):
-            if k.sum() == num.nan:
-                self._log.warning('Wavenumber infested with nan values')
-            cos = sp.fftpack.dct(p_spec, type=2, norm=None)
-            cos /= p_spec.size
+        if k.sum() == num.nan:
+            self._log.warning('Wavenumber infested with nan values')
+        cos = sp.fftpack.dct(p_spec, type=2)
+        cos /= 2*p_spec.size
 
-            # Normieren ueber n_k?
-            return cos, k
+        return cos, k
 
     @property_cached
     def covariance_func(self):
-        ''' Covariance function derived from displacement noise patch.
+        ''' Covariance function derived from powerspectrum of
+            displacement noise patch.
         :type: tuple, :class:`numpy.array` (covariance, distance) '''
-        power_spec, k, dk, _, _, _ = self.noiseSpectrum()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise()
         # power_spec -= self.variance
 
         d = num.arange(1, power_spec.size+1) * dk
@@ -548,8 +572,8 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.array` (covariance_analytical, distance)
         '''
-        _, k, dk, _, kN, kE = self.noiseSpectrum()
-        (a, b), _ = self._powerspecFit(regime)
+        _, k, dk, _, kN, kE = self.powerspecNoise()
+        (a, b) = self.powerspec_model
 
         spec = modelPowerspec(k, a, b)
         d = num.arange(1, spec.size+1) * dk
@@ -568,6 +592,7 @@ class Covariance(object):
         '''
         if self.config.a is None or self.config.b is None:
             cov, d = self.covarianceAnalytical(regime)
+            cov, d = self.covariance_func
             try:
                 (a, b), _ =\
                     sp.optimize.curve_fit(modelCovariance, d, cov,
@@ -587,7 +612,7 @@ class Covariance(object):
         '''
         cov, d = self.covariance_func
         cov_mod = modelCovariance(d, *self.covariance_model)
-        return num.sqrt(num.mean(cov**2 - cov_mod**2))
+        return num.sqrt(num.mean((cov - cov_mod)**2))
 
     @property_cached
     def structure_func(self):
@@ -597,7 +622,7 @@ class Covariance(object):
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
-        power_spec, k, dk, _, _, _ = self.noiseSpectrum()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise()
         d = num.arange(1, power_spec.size+1) * dk
 
         def structure_func(power_spec, d, k):
@@ -630,7 +655,7 @@ class Covariance(object):
 
     @variance.getter
     def variance(self):
-        power_spec, k, _, _, _, _ = self.noiseSpectrum()
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
 
         if self.config.variance is None:
             self.config.variance = float(num.mean(self.structure_func[0]))

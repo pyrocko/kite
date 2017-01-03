@@ -24,7 +24,7 @@ class QuadNode(object):
     '''
 
     def __init__(self, quadtree, llr, llc, length):
-        self.children = None
+        self.children = []
         self.llr = int(llr)
         self.llc = int(llc)
         self.length = int(length)
@@ -265,6 +265,8 @@ class QuadNode(object):
             self.children = [c for c in self._iterSplitNode()]
             for c in self.children:
                 c.createTree()
+            if len(self.children) == 0:
+                self.children = None
         else:
             self.children = None
 

@@ -17,8 +17,8 @@ class SceneIO(object):
                                           % self.__class__.__name__)
 
         self.container = {
-            'phi': None,    # Look incident angle from vertical in degree
-            'theta': None,  # Look orientation angle from east; 0deg East,
+            'phi': 0.,    # Look incident angle from vertical in degree
+            'theta': 0.,  # Look orientation angle from east; 0deg East,
                             # 90deg North
             'displacement': None,  # Displacement towards LOS
             'frame': {
@@ -103,6 +103,9 @@ class Matlab(SceneIO):
         c = self.container
 
         mat = scipy.io.loadmat(filename)
+
+        utm_e = utm_n = None
+
         for mat_k, v in mat.iteritems():
             for io_k in c.iterkeys():
                 if io_k in mat_k:
@@ -113,6 +116,12 @@ class Matlab(SceneIO):
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
                     utm_n = mat[mat_k].flatten()
+
+        if not (num.all(utm_e) or num.all(utm_n)):
+            self._log.warning(
+                'Could not find referencing UTM vectors in .mat file')
+            utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
+            utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
