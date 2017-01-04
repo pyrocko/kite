@@ -551,8 +551,7 @@ class Quadtree(object):
 
     @property_cached
     def leafs(self):
-        """
-        :getter: List of leafs for current configuration.
+        """:getter: List of leafs for current configuration.
         :type: (list or :class:`~kite.quadtree.QuadNode` s)
         """
         t0 = time.time()
