@@ -36,9 +36,13 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.githubpages',
     'sphinx.ext.coverage',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx'
+
 ]
 
+intersphinx_mapping = {'numpy': ('https://docs.scipy.org/doc/numpy-1.11.0/', None),
+                       'pyrocko': ('http://pyrocko.org/v0.3/', None)}
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 

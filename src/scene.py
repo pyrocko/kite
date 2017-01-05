@@ -340,7 +340,7 @@ class Scene(object):
 
         :setter: Set the unwrapped InSAR displacement.
         :getter: Return the displacement matrix.
-        :type: :class:`numpy.array`, ``NxM``
+        :type: :class:`numpy.ndarray`, ``NxM``
         """
         return self._displacement
 
@@ -354,7 +354,7 @@ class Scene(object):
     @property_cached
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
-        :type: :class:`numpy.array`, dtype :class:`numpy.bool`
+        :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
         return num.isnan(self.displacement)
 
@@ -372,7 +372,7 @@ class Scene(object):
 
         :setter: Set the phi matrix for scene's displacement, can be int
                  for static look vector.
-        :type: :class:`numpy.array`, size same as
+        :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
         """
         return self._phi
@@ -400,7 +400,7 @@ class Scene(object):
 
         :setter: Set the theta matrix for scene's displacement, can be int
                  for static look vector.
-        :type: :class:`numpy.array`, size same as
+        :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
         """
         return self._theta
@@ -417,7 +417,7 @@ class Scene(object):
     def thetaDeg(self):
         """ LOS incident angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.theta)
 
@@ -425,7 +425,7 @@ class Scene(object):
     def phiDeg(self):
         """ LOS incident angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.phi)
 
@@ -487,7 +487,7 @@ class Scene(object):
         Saves the current scene meta information and UTM frame to a YAML
         (``.yml``) file. Numerical data (:attr:`~kite.Scene.displacement`,
         :attr:`~kite.Scene.theta` and :attr:`~kite.Scene.phi`)
-        are saved as binary files from :class:`numpy.array`.
+        are saved as binary files from :class:`numpy.ndarray`.
 
         :param filename: Filenames to save scene to, defaults to
             ' :attr:`~kite.Scene.meta.scene_id` ``_``
@@ -623,7 +623,7 @@ class LOSUnitVectors(object):
     def unitE(self):
         """ Unit vector in East, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         """
         return num.cos(self._scene.phi) * num.sin(self._scene.theta)
 
@@ -631,7 +631,7 @@ class LOSUnitVectors(object):
     def unitN(self):
         """ Unit vector in North, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         """
         return num.sin(self._scene.phi) * num.sin(self._scene.theta)
 
@@ -639,7 +639,7 @@ class LOSUnitVectors(object):
     def unitU(self):
         """ Unit vector Up, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         """
         return num.cos(self._scene.theta)
 
@@ -702,8 +702,11 @@ class SceneTest(Scene):
                       amplitude=1.):
         scene = cls()
         scene.meta.title =\
-            'Synthetic Disaplcement | Fractal Noise (Hanssen, 2001)'
+            'Synthetic Displacement | Fractal Noise (Hanssen, 2001)'
         scene = cls._prepareSceneTest(scene, nx, ny)
+        if (nx+ny) % 2 != 0:
+            raise ArithmeticError('Dimensions of synthetic scene must '
+                                  'both be even!')
 
         rfield = num.random.rand(nx, ny)
         spec = num.fft.fftshift(num.fft.fft2(rfield))

@@ -114,7 +114,7 @@ class QuadNode(object):
     @property_cached
     def displacement(self):
         ''' Displacement array, slice from :attr:`kite.Scene.displacement`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         '''
         return self.scene.displacement[self._slice_rows, self._slice_cols]
 
@@ -122,7 +122,7 @@ class QuadNode(object):
     def displacement_masked(self):
         ''' Masked displacement,
             see :attr:`~kite.quadtree.QuadNode.displacement`
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         '''
         return num.ma.masked_array(self.displacement,
                                    self.displacement_mask,
@@ -132,7 +132,7 @@ class QuadNode(object):
     def displacement_mask(self):
         ''' Displacement nan mask of
             :attr:`~kite.quadtree.QuadNode.displacement`
-        :type: :class:`numpy.array`, dtype :class:`numpy.bool`
+        :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
 
         .. todo ::
 
@@ -160,7 +160,7 @@ class QuadNode(object):
     def gridE(self):
         ''' Grid holding local east coordinates,
             see :attr:`kite.scene.Frame.gridE`.
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         '''
         return self.scene.frame.gridE[self._slice_rows, self._slice_cols]
 
@@ -168,7 +168,7 @@ class QuadNode(object):
     def gridN(self):
         ''' Grid holding local north coordinates,
             see :attr:`kite.scene.Frame.gridN`.
-        :type: :class:`numpy.array`
+        :type: :class:`numpy.ndarray`
         '''
         return self.scene.frame.gridN[self._slice_rows, self._slice_cols]
 
