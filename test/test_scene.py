@@ -5,7 +5,18 @@ import numpy as num
 from kite import Scene, SceneTest
 
 
-class TestGaussScene(unittest.TestCase):
+class TestSyntheticsGenerators(unittest.TestCase):
+    def testGauss(self):
+        SceneTest.createGauss()
+
+    def testFractal(self):
+        SceneTest.createFractal()
+
+    def testSine(self):
+        SceneTest.createSine()
+
+
+class TestSyntheticScene(unittest.TestCase):
     def setUp(self):
         self.sc = SceneTest.createGauss()
         self.sc.setLogLevel('ERROR')

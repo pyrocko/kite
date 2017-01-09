@@ -143,8 +143,10 @@
      <string>Tools</string>
     </property>
     <addaction name="actionTransect"/>
+    <addaction name="separator"/>
     <addaction name="actionCovariance_Noise"/>
     <addaction name="actionCovariance_Matrix"/>
+    <addaction name="actionCovariance_Noise_Synthetic"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -348,6 +350,14 @@
    </property>
    <property name="text">
     <string>Covariance Weight Matrix</string>
+   </property>
+  </action>
+  <action name="actionCovariance_Noise_Synthetic">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Covariance Synthetic Noise</string>
    </property>
   </action>
  </widget>

@@ -47,6 +47,7 @@ class QKitePlot(pg.PlotWidget):
         pg.PlotWidget.__init__(self)
         self.scene_proxy = scene_proxy
         self.draw_time = 0.
+        self._data = None
 
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(None,
@@ -111,12 +112,17 @@ class QKitePlot(pg.PlotWidget):
 
     @property
     def data(self):
-        _data = self.components_available[self.component][1](self.scene_proxy)
-        return _data  # num.nan_to_num(_data)
+        if self._data is None:
+            self._data = self.components_available[self.component][1](
+                self.scene_proxy)
+        return self._data
+        # return self._data  # num.nan_to_num(_data)
 
     @QtCore.Slot()
     def update(self):
+        self._data = None
         ts = time.time()
+
         self.image.updateImage(self.data.T)
         self.draw_time = time.time() - ts
 

@@ -697,26 +697,37 @@ class SceneTest(Scene):
         return scene
 
     @classmethod
-    def createFractal(cls, nx=1024, ny=1024,
+    def createFractal(cls, nE=1024, nN=1024,
                       beta=[5./3, 8./3, 2./3], regime=[.15, .99, 1.],
                       amplitude=1.):
         scene = cls()
         scene.meta.title =\
             'Synthetic Displacement | Fractal Noise (Hanssen, 2001)'
-        scene = cls._prepareSceneTest(scene, nx, ny)
-        if (nx+ny) % 2 != 0:
+        scene = cls._prepareSceneTest(scene, nE, nN)
+        if (nE+nN) % 2 != 0:
             raise ArithmeticError('Dimensions of synthetic scene must '
                                   'both be even!')
 
-        rfield = num.random.rand(nx, ny)
-        spec = num.fft.fftshift(num.fft.fft2(rfield))
+        dE, dN = (scene.frame.dE, scene.frame.dN)
 
-        X, Y = num.meshgrid(num.arange(-ny/2, ny/2),
-                            num.arange(-nx/2, nx/2))
-        k = num.sqrt(X**2 + Y**2)
+        rfield = num.random.rand(nE, nN)
+        spec = num.fft.fft2(rfield)
+
+        kE = num.fft.fftfreq(nE, dE) * nE
+        kN = num.fft.fftfreq(nN, dN) * nN
+        k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
+
+        regime = num.array(regime)
+        k0 = 0.
+        k1 = regime[0] * kN.max()
+        k2 = regime[1] * kN.max()
+        k3 = k_rad.max()
+
+        r0 = num.logical_and(k_rad > k0, k_rad <= k1)
+        r1 = num.logical_and(k_rad >= k1, k_rad <= k2)
+        r2 = num.logical_and(k_rad >= k2, k_rad <= k3)
 
         beta = num.array(beta)
-
         # From Hanssen (2000)
         #   beta+1 is used as beta, since, the power exponent
         #   is defined for a 1D slice of the 2D spectrum:
@@ -733,23 +744,13 @@ class SceneTest(Scene):
         #   so we should take sqrt( k.^beta) = k.^(beta/2)  RH
         beta /= 2.
 
-        regime = num.array(regime)
-        k0 = 0.
-        k1 = regime[0] * X.max()
-        k2 = regime[1] * X.max()
-        k3 = k.max()
+        amplif = num.zeros_like(k_rad)
+        amplif[r0] = k_rad[r0] ** beta[0]
 
-        r0 = num.logical_and(k > k0, k <= k1)
-        r1 = num.logical_and(k >= k1, k <= k2)
-        r2 = num.logical_and(k >= k2, k <= k3)
-
-        amplif = num.zeros_like(k)
-        amplif[r0] = k[r0] ** beta[0]
-
-        amplif[r1] = k[r1] ** beta[1]
+        amplif[r1] = k_rad[r1] ** beta[1]
         amplif[r1] = amplif[r1] / amplif[r1].min() * amplif[r0].max()
 
-        amplif[r2] = k[r2] ** beta[2] * amplif[r1].max()
+        amplif[r2] = k_rad[r2] ** beta[2] * amplif[r1].max()
         amplif[r2] = amplif[r2] / amplif[r2].min() * amplif[r1].max()
 
         amplif[amplif == 0.] = 1.
@@ -767,16 +768,17 @@ class SceneTest(Scene):
         self.displacement += noise
 
     @staticmethod
-    def _prepareSceneTest(scene, nx=512, ny=512):
+    def _prepareSceneTest(scene, nE=512, nN=512):
         scene.frame.llLat = 0.
         scene.frame.llLon = 0.
         scene.frame.dLat = 5e-4
         scene.frame.dLon = 5e-4
-        # scene.frame.E = num.arange(nx) * 50.
-        # scene.frame.N = num.arange(ny) * 50.
+        # scene.frame.E = num.arange(nE) * 50.
+        # scene.frame.N = num.arange(nN) * 50.
         scene.theta = num.repeat(
-            num.linspace(0.8, 0.85, nx), ny).reshape((nx, ny))
+            num.linspace(0.8, 0.85, nE), nN).reshape((nE, nN))
         scene.phi = num.rot90(scene.theta)
+        scene.displacement = num.zeros((nE, nN))
         return scene
 
     @staticmethod

@@ -40,14 +40,14 @@ def modelCovariance(distance, a, b):
     return a * num.exp(-distance/b)
 
 
-def modelPowerspec(k, a, b):
+def modelPowerspec(k, beta, D):
     """Exponential Linear model to estimate a log-linear powerspectrum
 
     We assume the following log-linear model for the measured powerspectrum
 
     .. math::
 
-        pow(k) = \\frac{k^a}{b}
+        pow(k) = \\frac{k^\\beta}{D}
 
 
     :param k: Wavenumber
@@ -57,7 +57,7 @@ def modelPowerspec(k, a, b):
     :param b: Fractional model factor
     :type b: float
     """
-    return (k**a)/b
+    return (k**beta)/D
 
 
 class CovarianceConfig(guts.Object):
@@ -449,7 +449,7 @@ class Covariance(object):
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
-    def syntheticNoise(self, shape=[1024, 1024], dEdN=None):
+    def syntheticNoise(self, shape=(1024, 1024), dEdN=None):
         """Create random synthetic noise with the same character as defined
             in :attr:`noise_data`.
 
@@ -459,8 +459,8 @@ class Covariance(object):
         :attr:`kite.scene.Frame.dE` and :attr:`kite.scene.Frame.dN`. And can be
         overwritten.
         :param shape: shape of the desired noise patch.
-            Pixels in northing and easting [`nE`, `nN`],
-            defaults to `[64, 64]`.
+            Pixels in northing and easting (`nE`, `nN`),
+            defaults to `(1024, 1024)`.
         :type shape: tuple, optional
         :param dEdN: The sampling distance in easting, defaults to
             (:attr:`kite.scene.Frame.dE`, :attr:`kite.scene.Frame.dN`).
@@ -468,14 +468,16 @@ class Covariance(object):
         :returns: Noise patch
         :rtype: :class:`numpy.ndarray`
         """
-        if len(shape) != 2 or num.sum(shape) % 2 != 0:
-            raise ArithmeticError('Dimensions of synthetic noise must '
-                                  'both be even!')
-        nE, nN = shape
+        if (shape[0] + shape[1]) % 2 != 0:
+            self._log.warning('Patch dimensions must be even, '
+                              'ceiling dimensions!')
+        nE = shape[0] + (shape[0] % 2)
+        nN = shape[1] + (shape[1] % 2)
         pspec, k, _, k_bin, _, _, _ = self.powerspecNoise()
 
-        rfield = num.random.rand(*shape)
+        rfield = num.random.rand(nE, nN)
         spec = num.fft.fft2(rfield)
+        # spec /= num.sqrt(spec.size)
 
         if not dEdN:
             dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
@@ -484,25 +486,19 @@ class Covariance(object):
         k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
 
         amp = num.zeros_like(k_rad)
-        r_prev = None
-        for i in xrange(k_bin.size-1):
+        for i in xrange(k.size):
             k_min = k_bin[i]
             k_max = k_bin[i+1]
             r = num.logical_and(k_rad >= k_min, k_rad < k_max)
-            if i == (k_bin.size-2):
+            if i == (k.size-1):
                 r = k_rad > k_min
+            amp[r] = pspec[i]
 
-            # See :func:`kite.SceneTest.fractal` for details
-            beta = (num.log(pspec[i])/num.log(k[i]) + 1)/2.
-            amp[r] = k_rad[r] ** beta
-            if i != 0:
-                amp[r] = amp[r] / amp[r].min() * amp[r_prev].max()
-            r_prev = r
-
-        spec[amp != 0] /= amp[amp != 0]
-        disp = num.abs(num.fft.ifft2(spec))
-        disp -= num.mean(disp)
-        return disp
+        # spec[amp != 0] /= amp[amp != 0]
+        spec *= num.sqrt(amp)
+        noise = num.abs(num.fft.ifft2(spec))
+        noise -= num.mean(noise)
+        return noise
 
     def powerspecNoise(self, data=None):
         """Get the noise spectrum from
@@ -521,7 +517,7 @@ class Covariance(object):
             noise = data.copy()
 
         spectrum = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        power_spec = num.abs(spectrum)**2 / spectrum.size
+        power_spec = num.abs(spectrum)**2
 
         kE = num.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dE)
         kN = num.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dN)
@@ -537,13 +533,18 @@ class Covariance(object):
             k = kN
 
         k = k[k > 0]
-        k = k[k < min(kE.max(), kN.max())]
+        # k = k[k < min(kE.max(), kN.max())]
         k_bin = num.insert(k + k[0]/2, 0, 0)
 
         binned_spec, _, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                       power_spec.flatten(),
-                                                      statistic='sum',
+                                                      statistic='mean',
                                                       bins=k_bin)
+        # binned_spec /= (k.size*2)**2 # Quatsch
+        # binned_spec /= k_bin.size
+        # binned_spec = binned_spec**2
+        binned_spec /= k_bin.size*2
+
         bin_center = k
         self._noise_spectrum_cached = binned_spec, bin_center, dk, k_bin,\
             spectrum, kN, kE
@@ -559,7 +560,8 @@ class Covariance(object):
 
         try:
             return sp.optimize.curve_fit(modelPowerspec,
-                                         k[regime], power_spec[regime])
+                                         k[regime], power_spec[regime],
+                                         p0=(self.variance, 2000))
         except RuntimeError:
             self._log.warning('Could not fit the powerspectrum model.')
             return (0., 0.), 0.
@@ -712,8 +714,8 @@ class Covariance(object):
         power_spec, k, _, _, _, _, _ = self.powerspecNoise()
 
         if self.config.variance is None:
-            self.config.variance = float(num.mean(self.structure_func[0]))
-            self.config.variance = float(num.mean(power_spec[:-3]))
+            # self.config.variance = float(num.mean(self.structure_func[0]))
+            self.config.variance = float(num.mean(power_spec[:-1]))
         return self.config.variance
 
     def export_weight_matrix(self, filename):
