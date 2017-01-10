@@ -713,19 +713,18 @@ class SceneTest(Scene):
         rfield = num.random.rand(nE, nN)
         spec = num.fft.fft2(rfield)
 
-        kE = num.fft.fftfreq(nE, dE) * nE
-        kN = num.fft.fftfreq(nN, dN) * nN
+        kE = num.fft.fftfreq(nE, dE)
+        kN = num.fft.fftfreq(nN, dN)
         k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
 
         regime = num.array(regime)
         k0 = 0.
-        k1 = regime[0] * kN.max()
-        k2 = regime[1] * kN.max()
-        k3 = k_rad.max()
+        k1 = regime[0] * k_rad.max()
+        k2 = regime[1] * k_rad.max()
 
-        r0 = num.logical_and(k_rad > k0, k_rad <= k1)
-        r1 = num.logical_and(k_rad >= k1, k_rad <= k2)
-        r2 = num.logical_and(k_rad >= k2, k_rad <= k3)
+        r0 = num.logical_and(k_rad > k0, k_rad < k1)
+        r1 = num.logical_and(k_rad >= k1, k_rad < k2)
+        r2 = k_rad >= k2
 
         beta = num.array(beta)
         # From Hanssen (2000)
@@ -742,20 +741,21 @@ class SceneTest(Scene):
         #   density is proportional to the amplitude squared
         #   Here we work with the amplitude, instead of the power
         #   so we should take sqrt( k.^beta) = k.^(beta/2)  RH
-        beta /= 2.
+        # beta /= 2.
 
-        amplif = num.zeros_like(k_rad)
-        amplif[r0] = k_rad[r0] ** beta[0]
+        amp = num.zeros_like(k_rad)
+        amp[r0] = k_rad[r0] ** -beta[0]
+        amp[r0] /= amp[r0].max()
 
-        amplif[r1] = k_rad[r1] ** beta[1]
-        amplif[r1] = amplif[r1] / amplif[r1].min() * amplif[r0].max()
+        amp[r1] = k_rad[r1] ** -beta[1]
+        amp[r1] /= amp[r1].max() / amp[r0].min()
 
-        amplif[r2] = k_rad[r2] ** beta[2] * amplif[r1].max()
-        amplif[r2] = amplif[r2] / amplif[r2].min() * amplif[r1].max()
+        amp[r2] = k_rad[r2] ** -beta[2]
+        amp[r2] /= amp[r2].max() / amp[r1].min()
 
-        amplif[amplif == 0.] = 1.
+        amp[k_rad == 0.] = amp.max()
 
-        spec = amplitude * spec / amplif
+        spec *= num.sqrt(amp)
         disp = num.abs(num.fft.ifft2(spec))
         disp -= num.mean(disp)
 

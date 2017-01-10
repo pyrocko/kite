@@ -175,6 +175,11 @@ def calcPrecission(data):
 
 
 def formatScalar(v, ndigits=7):
+    if num.isinf(v):
+        return 'inf'
+    elif num.isnan(v):
+        return 'nan'
+
     if v % 1 == 0.:
         return '{value:d}'.format(value=v)
 

@@ -477,7 +477,6 @@ class Covariance(object):
 
         rfield = num.random.rand(nE, nN)
         spec = num.fft.fft2(rfield)
-        # spec /= num.sqrt(spec.size)
 
         if not dEdN:
             dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
@@ -486,15 +485,25 @@ class Covariance(object):
         k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
 
         amp = num.zeros_like(k_rad)
+        beta = num.log(pspec)/num.log(k) + 1.
+        r_prev = None
+
         for i in xrange(k.size):
             k_min = k_bin[i]
             k_max = k_bin[i+1]
-            r = num.logical_and(k_rad >= k_min, k_rad < k_max)
+            r = num.logical_and(k_rad > k_min, k_rad <= k_max)
             if i == (k.size-1):
                 r = k_rad > k_min
-            amp[r] = pspec[i]
 
-        # spec[amp != 0] /= amp[amp != 0]
+            amp[r] = k_rad[r] ** beta[i]
+            if i != 0:
+                amp[r] /= amp[r].max() / amp[r_prev].min()
+            else:
+                amp[r] /= amp[r].max()
+            r_prev = r
+            # amp[r] = pspec[i]
+        amp[amp == 0.] = amp.max()
+
         spec *= num.sqrt(amp)
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
@@ -517,7 +526,7 @@ class Covariance(object):
             noise = data.copy()
 
         spectrum = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        power_spec = num.abs(spectrum)**2
+        power_spec = (num.abs(spectrum)/spectrum.size)**2
 
         kE = num.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dE)
         kN = num.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dN)
@@ -533,17 +542,16 @@ class Covariance(object):
             k = kN
 
         k = k[k > 0]
-        # k = k[k < min(kE.max(), kN.max())]
         k_bin = num.insert(k + k[0]/2, 0, 0)
 
         binned_spec, _, _ = sp.stats.binned_statistic(k_rad.flatten(),
                                                       power_spec.flatten(),
                                                       statistic='mean',
                                                       bins=k_bin)
-        # binned_spec /= (k.size*2)**2 # Quatsch
-        # binned_spec /= k_bin.size
-        # binned_spec = binned_spec**2
-        binned_spec /= k_bin.size*2
+        binned_spec /= binned_spec.size * 4
+        binned_spec = k ** (num.log(binned_spec)/num.log(k) - 1)
+        # binned_spec /= binned_spec.size
+        # binned_spec /= power_spec.size * 4
 
         bin_center = k
         self._noise_spectrum_cached = binned_spec, bin_center, dk, k_bin,\

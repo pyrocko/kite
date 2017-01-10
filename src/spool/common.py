@@ -58,8 +58,8 @@ class QKitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(bottom={'Easting', 'm'},
-                       left={'Northing', 'm'},)
+        self.setLabels(bottom={'Easting', 'meter'},
+                       left={'Northing', 'meter'})
 
         self.hint = {
             'east': 0.,
