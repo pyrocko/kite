@@ -502,7 +502,7 @@ class Covariance(object):
             else:
                 amp[r] /= amp[r].max()
             r_prev = r
-            # amp[r] = pspec[i]
+            amp[r] = pspec[i]
         amp[amp == 0.] = amp.max()
 
         spec *= num.sqrt(amp)
@@ -549,7 +549,7 @@ class Covariance(object):
                                                       power_spec.flatten(),
                                                       statistic='mean',
                                                       bins=k_bin)
-        binned_spec /= binned_spec.size * 2
+        binned_spec /= binned_spec.size
         # binned_spec = k ** (num.log(binned_spec)/num.log(k) - 1.)
 
         bin_center = k
