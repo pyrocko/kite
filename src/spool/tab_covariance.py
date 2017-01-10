@@ -397,7 +397,8 @@ class QKiteToolSyntheticNoise(QtGui.QDialog):
             self.components_available = {
                 'synthetic_noise': [
                   'Noise',
-                  lambda sp: sp.covariance.syntheticNoise((1024, 1024))
+                  lambda sp: sp.covariance.syntheticNoise(
+                    sp.covariance.noise_data.shape)
                 ]}
 
             self._component = 'synthetic_noise'

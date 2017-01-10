@@ -469,8 +469,9 @@ class Covariance(object):
         :rtype: :class:`numpy.ndarray`
         """
         if (shape[0] + shape[1]) % 2 != 0:
-            self._log.warning('Patch dimensions must be even, '
-                              'ceiling dimensions!')
+            # self._log.warning('Patch dimensions must be even, '
+            #                   'ceiling dimensions!')
+            pass
         nE = shape[0] + (shape[0] % 2)
         nN = shape[1] + (shape[1] % 2)
         pspec, k, _, k_bin, _, _, _ = self.powerspecNoise()
@@ -526,7 +527,7 @@ class Covariance(object):
             noise = data.copy()
 
         spectrum = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        power_spec = (num.abs(spectrum)/spectrum.size)**2
+        power_spec = (num.abs(spectrum)/(spectrum.size))**2
 
         kE = num.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dE)
         kN = num.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dN)
@@ -548,10 +549,8 @@ class Covariance(object):
                                                       power_spec.flatten(),
                                                       statistic='mean',
                                                       bins=k_bin)
-        binned_spec /= binned_spec.size * 4
-        binned_spec = k ** (num.log(binned_spec)/num.log(k) - 1)
-        # binned_spec /= binned_spec.size
-        # binned_spec /= power_spec.size * 4
+        binned_spec /= binned_spec.size * 2
+        # binned_spec = k ** (num.log(binned_spec)/num.log(k) - 1.)
 
         bin_center = k
         self._noise_spectrum_cached = binned_spec, bin_center, dk, k_bin,\
