@@ -160,7 +160,7 @@ class QKiteNoisePowerspec(_QKiteSubplotPlot):
 
     def update(self):
         covariance = self.scene_proxy.covariance
-        spec, k, _, _, _, _, _ = covariance.powerspecNoise()
+        spec, k, _, _, _, _ = covariance.powerspecNoise()
         self.power.setData(k, spec)
         self.power_lin.setData(
             k, covariance.powerspecModel(k))

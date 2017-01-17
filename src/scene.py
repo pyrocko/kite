@@ -755,7 +755,7 @@ class SceneTest(Scene):
 
         amp[k_rad == 0.] = amp.max()
 
-        spec *= num.sqrt(amp)
+        spec *= amplitude * num.sqrt(amp)
         disp = num.abs(num.fft.ifft2(spec))
         disp -= num.mean(disp)
 

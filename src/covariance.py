@@ -254,6 +254,7 @@ class Covariance(object):
     def noise_data(self, data):
         data = data.copy()
         data = derampMatrix(trimMatrix(data))  # removes nans or 0.
+        data = trimMatrix(data)
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
@@ -472,22 +473,23 @@ class Covariance(object):
             # self._log.warning('Patch dimensions must be even, '
             #                   'ceiling dimensions!')
             pass
-        nE = shape[0] + (shape[0] % 2)
-        nN = shape[1] + (shape[1] % 2)
-        pspec, k, _, k_bin, _, _, _ = self.powerspecNoise()
+        nE = shape[1] + (shape[1] % 2)
+        nN = shape[0] + (shape[0] % 2)
+        pspec, k, _, _, _, _ = self.powerspecNoise()
 
-        rfield = num.random.rand(nE, nN)
-        spec = num.fft.fft2(rfield)
+        rfield = num.random.rand(nN, nE)
+        spec = num.fft.fft2(rfield) - .5
 
         if not dEdN:
             dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
         kE = num.fft.fftfreq(nE, dE)
         kN = num.fft.fftfreq(nN, dN)
-        k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
+        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
         amp = num.zeros_like(k_rad)
-        beta = num.log(pspec)/num.log(k) + 1.
+        beta = num.log(pspec)/num.log(k) - 1.
         r_prev = None
+        k_bin = num.insert(k + k[0]/2, 0, 0)
 
         for i in xrange(k.size):
             k_min = k_bin[i]
@@ -495,22 +497,26 @@ class Covariance(object):
             r = num.logical_and(k_rad > k_min, k_rad <= k_max)
             if i == (k.size-1):
                 r = k_rad > k_min
+            if num.sum(r) == 0:
+                continue
 
             amp[r] = k_rad[r] ** beta[i]
             if i != 0:
                 amp[r] /= amp[r].max() / amp[r_prev].min()
             else:
-                amp[r] /= amp[r].max()
+                amp[r] /= amp[r].max() / pspec[0]
             r_prev = r
-            amp[r] = pspec[i]
-        amp[amp == 0.] = amp.max()
+            # amp[r] = pspec[i]
+        # amp[amp == 0] = self.variance
+        amp[amp == 0.] = 0.
+        amp[k_rad == 0.] = self.variance
 
         spec *= num.sqrt(amp)
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
         return noise
 
-    def powerspecNoise(self, data=None):
+    def powerspecNoise(self, data=None, N=512):
         """Get the noise spectrum from
         :attr:`kite.Covariance.noise_data`.
 
@@ -525,40 +531,50 @@ class Covariance(object):
             noise = self.noise_data
         else:
             noise = data.copy()
+        shift = num.fft.fftshift
 
-        spectrum = num.fft.fft2(noise, axes=(0, 1), norm=None)
-        power_spec = (num.abs(spectrum)/(spectrum.size))**2
+        spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
+        power_spec = num.abs(spectrum)**2
+        kE = shift(num.fft.fftfreq(power_spec.shape[1],
+                                   d=self.quadtree.frame.dE))
+        kN = shift(num.fft.fftfreq(power_spec.shape[0],
+                                   d=self.quadtree.frame.dN))
+        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
+        power_spec[k_rad == 0.] = 0.
 
-        kE = num.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dE)
-        kN = num.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dN)
+        power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
+
+        def power1d(k, Ndeg=512):
+            theta = num.linspace(-num.pi, num.pi, N, False)
+            power = num.empty_like(k)
+            for i in xrange(k.size):
+                kE = num.cos(theta) * k[i]
+                kN = num.sin(theta) * k[i]
+                power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
+                    * (num.pi/2)
+            return power
+
+        def power2d(k, N=512):
+            """ Mean 2D Power works! """
+            theta = num.linspace(-num.pi, num.pi, N, False)
+            power = num.empty_like(k)
+            for i in xrange(k.size):
+                kE = num.sin(theta) * k[i]
+                kN = num.cos(theta) * k[i]
+                power[i] = num.mean(power_interp.ev(kN, kE) * 4. * num.pi)
+                # Median is more stable than the mean here
+            return power / power_spec.size
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
+        k = num.linspace(k_rad[k_rad > 0].min(),
+                         k_rad.max(), N)
+        dk = (1./k.min() - 1./k.max()) / N
 
-        _, _, sizeE, sizeN = self.noise_coord
-        if self.quadtree.frame.dE < self.quadtree.frame.dN:
-            dk = self.quadtree.frame.dE
-            k = kE
-        else:
-            dk = self.quadtree.frame.dN
-            k = kN
-
-        k = k[k > 0]
-        k_bin = num.insert(k + k[0]/2, 0, 0)
-
-        binned_spec, _, _ = sp.stats.binned_statistic(k_rad.flatten(),
-                                                      power_spec.flatten(),
-                                                      statistic='mean',
-                                                      bins=k_bin)
-        binned_spec /= binned_spec.size
-        # binned_spec = k ** (num.log(binned_spec)/num.log(k) - 1.)
-
-        bin_center = k
-        self._noise_spectrum_cached = binned_spec, bin_center, dk, k_bin,\
-            spectrum, kN, kE
+        self._noise_spectrum_cached = power1d(k), k, dk, spectrum, kN, kE
         return self._noise_spectrum_cached
 
     def _powerspecFit(self, regime=3):
-        power_spec, k, _, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -591,7 +607,7 @@ class Covariance(object):
             and :class:`~kite.Covariance.powerspec_model``
         :type: float
         '''
-        power_spec, k, _, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
         power_spec_mod = self.powerspecModel(k)
         return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
 
@@ -607,24 +623,22 @@ class Covariance(object):
         p = self.powerspec_model
         return modelPowerspec(k, *p)
 
-    def _powerCosineTransform(self, p_spec, k):
-        if k.sum() == num.nan:
-            self._log.warning('Wavenumber infested with nan values')
+    def _powerCosineTransform(self, p_spec):
         cos = sp.fftpack.dct(p_spec, type=2)
-        cos /= 2*p_spec.size
+        # cos /= cos.max()
 
-        return cos, k
+        return cos
 
     @property_cached
     def covariance_func(self):
         ''' Covariance function derived from powerspectrum of
             displacement noise patch.
         :type: tuple, :class:`numpy.ndarray` (covariance, distance) '''
-        power_spec, k, dk, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise()
         # power_spec -= self.variance
 
         d = num.arange(1, power_spec.size+1) * dk
-        cov, _ = self._powerCosineTransform(power_spec, k)
+        cov = self._powerCosineTransform(power_spec)
 
         return cov, d
 
@@ -635,13 +649,13 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
         '''
-        _, k, dk, _, kN, kE, _ = self.powerspecNoise()
+        _, k, dk, _, kN, kE = self.powerspecNoise()
         (a, b) = self.powerspec_model
 
         spec = modelPowerspec(k, a, b)
         d = num.arange(1, spec.size+1) * dk
 
-        cos, _ = self._powerCosineTransform(spec, k)
+        cos = self._powerCosineTransform(spec)
         return cos, d
 
     @property
@@ -685,7 +699,7 @@ class Covariance(object):
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
-        power_spec, k, dk, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise()
         d = num.arange(1, power_spec.size+1) * dk
 
         def structure_func(power_spec, d, k):
@@ -718,7 +732,7 @@ class Covariance(object):
 
     @variance.getter
     def variance(self):
-        power_spec, k, _, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, _, _, _, _ = self.powerspecNoise()
 
         if self.config.variance is None:
             # self.config.variance = float(num.mean(self.structure_func[0]))
