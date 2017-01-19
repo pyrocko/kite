@@ -3,6 +3,24 @@ import numpy as num
 import scipy as sp
 
 
+def squareMatrix(mat):
+    if mat.shape[0] == mat.shape[1]:
+        return mat
+    min_a = num.argmin(mat.shape)
+    max_a = num.argmax(mat.shape)
+
+    width = mat.shape[max_a] - mat.shape[min_a]
+
+    if min_a == 0:
+        padding = ((width, 0), (0, 0))
+    elif min_a == 1:
+        padding = ((0, 0), (0, width))
+    return num.pad(mat,
+                   pad_width=padding,
+                   mode='constant',
+                   constant_values=0.)
+
+
 def derampMatrix(displ):
     """ Deramp through fitting a bilinear plane
     Data is also de-meaned
@@ -24,42 +42,6 @@ def derampMatrix(displ):
     data = displ - (rx[num.newaxis, :] + ry[:, num.newaxis])
     data -= num.nanmean(data)
     return data
-
-
-def derampMatrix2(displ):
-    """ Deramp through fitting a bilinear plane
-    using scipy.stats.linregress
-    """
-    if displ.ndim != 2:
-        raise TypeError('Displacement has to be 2-dim array')
-
-    c_grid = num.mgrid[0:displ.shape[0], 0:displ.shape[1]]
-
-    # separate and flatten coordinate grid into x and y vectors for each !point
-    ix = c_grid[0].flatten()
-    iy = c_grid[1].flatten()
-    displ_f = displ.flatten()
-
-    # reduce vectors taking out all NaN's
-    displ_nonan = displ_f[num.isfinite(displ_f)]
-    ix = ix[num.isfinite(displ_f)]
-    iy = iy[num.isfinite(displ_f)]
-
-    dx, cx, _, _, _ = sp.stats.linregress(ix, displ_nonan)
-    dy, cy, _, _, _ = sp.stats.linregress(iy, displ_nonan)
-
-    rx = (ix * dx + cx)
-    ry = (iy * dy + cy)
-
-    ramp_x = num.multiply(displ_f, 0.)
-    ramp_y = num.multiply(displ_f, 0.)
-    # insert ramp values in full vectors
-    num.place(ramp_x, num.isfinite(displ_f), num.array(rx).flatten())
-    num.place(ramp_y, num.isfinite(displ_f), num.array(ry).flatten())
-    ramp_x = ramp_x.reshape(*displ.shape)
-    ramp_y = ramp_y.reshape(*displ.shape)
-
-    return displ - ramp_x - ramp_y
 
 
 def derampGMatrix(displ):

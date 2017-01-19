@@ -13,6 +13,21 @@ from os import path
 logging.basicConfig(level=20)
 
 
+def read(filename):
+    scene = Scene()
+    try:
+        scene.load(filename)
+        return scene
+    except ImportError:
+        pass
+    try:
+        scene.import_data(filename)
+        return scene
+    except ImportError:
+        pass
+    raise ImportError('Could not read file %s' % filename)
+
+
 def _setDataNumpy(obj, variable, value):
     if isinstance(value, num.ndarray):
         return obj.__setattr__(variable, value)
@@ -715,7 +730,7 @@ class SceneTest(Scene):
 
         kE = num.fft.fftfreq(nE, dE)
         kN = num.fft.fftfreq(nN, dN)
-        k_rad = num.sqrt(kE[:, num.newaxis]**2 + kN[num.newaxis, :]**2)
+        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
         regime = num.array(regime)
         k0 = 0.

@@ -7,7 +7,8 @@ import time
 import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
-from kite.meta import Subject, property_cached, trimMatrix, derampMatrix
+from kite.meta import Subject, property_cached, trimMatrix, derampMatrix,\
+    squareMatrix
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
@@ -253,7 +254,7 @@ class Covariance(object):
     @noise_data.setter
     def noise_data(self, data):
         data = data.copy()
-        data = derampMatrix(trimMatrix(data))  # removes nans or 0.
+        data = squareMatrix(derampMatrix(trimMatrix(data)))
         data = trimMatrix(data)
         data[num.isnan(data)] = 0.
         self._noise_data = data
@@ -506,7 +507,7 @@ class Covariance(object):
             else:
                 amp[r] /= amp[r].max() / pspec[0]
             r_prev = r
-            # amp[r] = pspec[i]
+            amp[r] = pspec[i]
         # amp[amp == 0] = self.variance
         amp[amp == 0.] = 0.
         amp[k_rad == 0.] = self.variance
@@ -551,7 +552,7 @@ class Covariance(object):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
-                    * (num.pi/2)
+                    * num.pi * 4
             return power
 
         def power2d(k, N=512):
