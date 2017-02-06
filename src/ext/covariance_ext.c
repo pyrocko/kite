@@ -58,7 +58,17 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
-static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, uint32_t adaptive_subsampling, float64_t *cov_arr) {
+static void calc_covariance_matrix(
+                float64_t *E,
+                float64_t *N,
+                npy_intp *shape_coord,
+                uint32_t *map,
+                uint32_t nleafs,
+                float64_t ma,
+                float64_t mb,
+                uint32_t nthreads,
+                uint32_t adaptive_subsampling,
+                float64_t *cov_arr) {
     npy_intp l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
     npy_intp icl1, icl2, nrows, ncols;

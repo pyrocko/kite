@@ -22,6 +22,24 @@
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>30</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>40</height>
+      </size>
+     </property>
      <property name="text">
       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;The &lt;span style='font-family: monospace'&gt;syntheticNoise&lt;/span&gt; is calculated through spectral analysis of the noise patch (Hanssen, 2001).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
@@ -44,7 +62,7 @@
      <item>
       <widget class="QPushButton" name="generateNoise">
        <property name="text">
-        <string>Generate noise</string>
+        <string>Generate new noise</string>
        </property>
       </widget>
      </item>

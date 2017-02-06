@@ -119,7 +119,8 @@ class Covariance(object):
         self.quadtree = scene.quadtree
         self.scene = scene
         self._noise_data = None
-        self._noise_spectrum_cached = None
+        self._powerspec1d_cached = None
+        self._powerspec2d_cached = None
         self._initialized = False
         self._nthreads = 0
         self._log = scene._log.getChild('Covariance')
@@ -164,7 +165,8 @@ class Covariance(object):
 
         if spectrum:
             self.structure_func = None
-            self._noise_spectrum_cached = None
+            self._powerspec1d_cached = None
+            self._powerspec2d_cached = None
 
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
@@ -225,7 +227,7 @@ class Covariance(object):
 
         :setter: Set the noise patch to analyze the covariance.
         :getter: If the noise data has not been set manually, we grab data
-                 through :func:`~kite.Covariance.getNoiseNode`.
+                 through :func:`~kite.Covariance.selectNoiseNode`.
         :type: :class:`numpy.ndarray`
         '''
         return self._noise_data
@@ -245,7 +247,7 @@ class Covariance(object):
             self.noise_data = self.scene.displacement[slice_N, slice_E]
         else:
             self._log.info('Selecting noise_data from Quadtree...')
-            node = self.getNoiseNode()
+            node = self.selectNoiseNode()
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,
                                 node.sizeE, node.sizeN]
@@ -254,13 +256,13 @@ class Covariance(object):
     @noise_data.setter
     def noise_data(self, data):
         data = data.copy()
-        data = squareMatrix(derampMatrix(trimMatrix(data)))
+        data = derampMatrix(trimMatrix(data))
         data = trimMatrix(data)
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
 
-    def getNoiseNode(self):
+    def selectNoiseNode(self):
         """ Choose noise node from quadtree
         the biggest :class:`~kite.quadtree.QuadNode` from
         :class:`~kite.Quadtree`.
@@ -451,7 +453,8 @@ class Covariance(object):
         weight_mat = self.weight_matrix_focal
         return num.mean(weight_mat, axis=0)[nl]
 
-    def syntheticNoise(self, shape=(1024, 1024), dEdN=None):
+    def syntheticNoise(self, shape=(1024, 1024), dEdN=None,
+                       anisotropic=False):
         """Create random synthetic noise with the same character as defined
             in :attr:`noise_data`.
 
@@ -476,7 +479,7 @@ class Covariance(object):
             pass
         nE = shape[1] + (shape[1] % 2)
         nN = shape[0] + (shape[0] % 2)
-        pspec, k, _, _, _, _ = self.powerspecNoise()
+        noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
 
         rfield = num.random.rand(nN, nE)
         spec = num.fft.fft2(rfield) - .5
@@ -488,8 +491,6 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
         amp = num.zeros_like(k_rad)
-        beta = num.log(pspec)/num.log(k) - 1.
-        r_prev = None
         k_bin = num.insert(k + k[0]/2, 0, 0)
 
         for i in xrange(k.size):
@@ -500,24 +501,28 @@ class Covariance(object):
                 r = k_rad > k_min
             if num.sum(r) == 0:
                 continue
-
-            amp[r] = k_rad[r] ** beta[i]
-            if i != 0:
-                amp[r] /= amp[r].max() / amp[r_prev].min()
-            else:
-                amp[r] /= amp[r].max() / pspec[0]
-            r_prev = r
-            amp[r] = pspec[i]
-        # amp[amp == 0] = self.variance
-        amp[amp == 0.] = 0.
+            amp[r] = noise_pspec[i]
         amp[k_rad == 0.] = self.variance
+        amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
 
         spec *= num.sqrt(amp)
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
         return noise
 
-    def powerspecNoise(self, data=None, N=512):
+    def powerspecNoise1D(self, data=None, ndeg=512, nk=512):
+        if self._powerspec1d_cached is None:
+            self._powerspec1d_cached = self._powerspecNoise(
+                data, norm='1d', ndeg=ndeg, nk=nk)
+        return self._powerspec1d_cached
+
+    def powerspecNoise2D(self, data=None, ndeg=512, nk=512):
+        if self._powerspec2d_cached is None:
+            self._powerspec2d_cached = self._powerspecNoise(
+                data, norm='2d', ndeg=ndeg, nk=nk)
+        return self._powerspec2d_cached
+
+    def _powerspecNoise(self, data=None, norm='1d', ndeg=512, nk=512):
         """Get the noise spectrum from
         :attr:`kite.Covariance.noise_data`.
 
@@ -526,12 +531,14 @@ class Covariance(object):
         :returns: `(power_spec, k, f_spectrum, kN, kE)`
         :rtype: tuple
         """
-        if self._noise_spectrum_cached is not None:
-            return self._noise_spectrum_cached
         if data is None:
             noise = self.noise_data
         else:
             noise = data.copy()
+        if norm not in ['1d', '2d']:
+            raise AttributeError('norm must be either 1d or 2d')
+
+        noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
@@ -545,8 +552,8 @@ class Covariance(object):
 
         power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
 
-        def power1d(k, Ndeg=512):
-            theta = num.linspace(-num.pi, num.pi, N, False)
+        def power1d(k):
+            theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
             for i in xrange(k.size):
                 kE = num.cos(theta) * k[i]
@@ -555,9 +562,9 @@ class Covariance(object):
                     * num.pi * 4
             return power
 
-        def power2d(k, N=512):
+        def power2d(k):
             """ Mean 2D Power works! """
-            theta = num.linspace(-num.pi, num.pi, N, False)
+            theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
             for i in xrange(k.size):
                 kE = num.sin(theta) * k[i]
@@ -566,16 +573,19 @@ class Covariance(object):
                 # Median is more stable than the mean here
             return power / power_spec.size
 
+        power = power1d
+        if norm == '2d':
+            power = power2d
+
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         k = num.linspace(k_rad[k_rad > 0].min(),
-                         k_rad.max(), N)
-        dk = (1./k.min() - 1./k.max()) / N
+                         k_rad.max(), nk)
+        dk = (1./k.min() - 1./k.max()) / nk
 
-        self._noise_spectrum_cached = power1d(k), k, dk, spectrum, kN, kE
-        return self._noise_spectrum_cached
+        return power(k), k, dk, spectrum, kN, kE
 
     def _powerspecFit(self, regime=3):
-        power_spec, k, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -604,11 +614,11 @@ class Covariance(object):
     @property
     def powerspec_model_rms(self):
         '''
-        :getter: RMS missfit between :class:`~kite.Covariance.powerspecNoise`
+        :getter: RMS missfit between :class:`~kite.Covariance.powerspecNoise1D`
             and :class:`~kite.Covariance.powerspec_model``
         :type: float
         '''
-        power_spec, k, _, _, _, _ = self.powerspecNoise()
+        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
         power_spec_mod = self.powerspecModel(k)
         return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
 
@@ -635,7 +645,7 @@ class Covariance(object):
         ''' Covariance function derived from powerspectrum of
             displacement noise patch.
         :type: tuple, :class:`numpy.ndarray` (covariance, distance) '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         # power_spec -= self.variance
 
         d = num.arange(1, power_spec.size+1) * dk
@@ -650,7 +660,7 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
         '''
-        _, k, dk, _, kN, kE = self.powerspecNoise()
+        _, k, dk, _, kN, kE = self.powerspecNoise1D()
         (a, b) = self.powerspec_model
 
         spec = modelPowerspec(k, a, b)
@@ -700,7 +710,7 @@ class Covariance(object):
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         d = num.arange(1, power_spec.size+1) * dk
 
         def structure_func(power_spec, d, k):
@@ -733,11 +743,8 @@ class Covariance(object):
 
     @variance.getter
     def variance(self):
-        power_spec, k, _, _, _, _ = self.powerspecNoise()
-
         if self.config.variance is None:
-            # self.config.variance = float(num.mean(self.structure_func[0]))
-            self.config.variance = float(num.mean(power_spec[:-1]))
+            self.config.variance = float(num.mean(self.structure_func[0][:-3]))
         return self.config.variance
 
     def export_weight_matrix(self, filename):

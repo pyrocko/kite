@@ -3,6 +3,7 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 import numpy as num
 import pyqtgraph as pg
+from pyqtgraph import dockarea
 
 from os import path
 from PySide import QtGui, QtCore
@@ -160,7 +161,7 @@ class QKiteNoisePowerspec(_QKiteSubplotPlot):
 
     def update(self):
         covariance = self.scene_proxy.covariance
-        spec, k, _, _, _, _ = covariance.powerspecNoise()
+        spec, k, _, _, _, _ = covariance.powerspecNoise1D()
         self.power.setData(k, spec)
         self.power_lin.setData(
             k, covariance.powerspecModel(k))
@@ -288,8 +289,20 @@ class QKiteToolNoiseData(QtGui.QDialog):
         self.noise_patch = self.noise_plot(scene_proxy)
         noise_colormap = QKiteToolColormap(self.noise_patch)
 
-        self.horizontalLayoutPlot.addWidget(self.noise_patch)
-        self.horizontalLayoutPlot.addWidget(noise_colormap)
+        self.dockarea = dockarea.DockArea(self)
+        self.dockarea.addDock(
+            dockarea.Dock('Covariance.noise_data',
+                          widget=self.noise_patch,
+                          size=(4, 4),
+                          autoOrientation=False,),
+            position='left')
+        self.dockarea.addDock(
+            dockarea.Dock('Colormap',
+                          widget=noise_colormap,
+                          size=(1, 1),
+                          autoOrientation=False,),
+            position='right')
+        self.horizontalLayoutPlot.addWidget(self.dockarea)
 
     def closeEvent(self, ev):
         self.noise_patch.proxy_disconnect()
@@ -379,7 +392,14 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
                                  QtGui.QStyle.SP_DialogCloseButton))
 
         self.weight_matrix = self.weight_plot(scene_proxy)
-        self.horizontalLayoutPlot.addWidget(self.weight_matrix)
+        self.dockarea = dockarea.DockArea(self)
+        self.dockarea.addDock(
+            dockarea.Dock('Covariance.weight_matrix_focal',
+                          widget=self.weight_matrix,
+                          size=(4, 4),
+                          autoOrientation=False,),
+            position='left')
+        self.horizontalLayoutPlot.addWidget(self.dockarea)
 
     def closeEvent(self, ev):
         self.weight_matrix.proxy_disconnect()
@@ -422,12 +442,47 @@ class QKiteToolSyntheticNoise(QtGui.QDialog):
                                    QtGui.QStyle.SP_BrowserReload))
 
         self.noise_syn = self.noise_plot(scene_proxy)
+        self.params = self.getParameterTree()
         noise_colormap = QKiteToolColormap(self.noise_syn)
 
         self.generateNoise.released.connect(self.noise_syn.update)
 
-        self.horizontalLayoutPlot.addWidget(self.noise_syn)
-        self.horizontalLayoutPlot.addWidget(noise_colormap)
+        self.dockarea = dockarea.DockArea(self)
+        self.dockarea.addDock(
+            dockarea.Dock('Covariance.syntheticNoise',
+                          widget=self.noise_syn,
+                          size=(4, 4),
+                          autoOrientation=False,),
+            position='left')
+        self.dockarea.addDock(
+            dockarea.Dock('Colormap',
+                          widget=noise_colormap,
+                          size=(1, 1),
+                          autoOrientation=False,),
+            position='right')
+        self.dockarea.addDock(
+            dockarea.Dock('Synthetic Noise Parameters',
+                          widget=self.params,
+                          size=(1, 1),
+                          autoOrientation=False,),
+            position='left')
+        self.horizontalLayoutPlot.addWidget(self.dockarea)
+
+    def getParameterTree(self):
+        pt = pg.parametertree
+        pTypes = pt.parameterTypes
+        tree = pt.ParameterTree()
+        p = pTypes.WidgetParameterItem(name='Width', type='int')
+        tree.addChild(p)
+        return tree
+
+    def update_params(self):
+        self.noise_syn.components_available = {
+            'synthetic_noise': [
+              'Noise',
+              lambda sp: sp.covariance.syntheticNoise(
+                sp.covariance.noise_data.shape)
+            ]}
 
     def closeEvent(self, ev):
         self.noise_syn.proxy_disconnect()

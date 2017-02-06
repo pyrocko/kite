@@ -38,11 +38,15 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
     'sphinx.ext.intersphinx'
-
 ]
 
-intersphinx_mapping = {'numpy': ('https://docs.scipy.org/doc/numpy-1.11.0/', None),
-                       'pyrocko': ('http://pyrocko.org/v0.3/', None)}
+
+intersphinx_mapping = {'numpy': ('https://docs.scipy.org/doc/numpy/',
+                                 None),
+                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/',
+                                 None),
+                       'pyrocko': ('http://pyrocko.org/v0.3/',
+                                   None)}
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -175,8 +179,8 @@ html_theme_path = [sphinx_sleekcat_theme.get_html_theme_path()]
 # html_logo = None
 
 # The name of an image file (relative to this directory) to use as a favicon of
-# the docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
-# pixels large.
+# the docs.  This file should be a Windows icon file (.ico) being 16x16 or
+# 32x32 pixels large.
 #
 # html_favicon = None
 
@@ -347,7 +351,8 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'Kite', u'Kite Documentation',
-     author, 'Kite', 'InSAR displacement processing towards earthquake parametrization.',
+     author, 'Kite', 'InSAR displacement processing towards '
+                     'earthquake parametrization.',
      'Science,Geology,Earthquake'),
 ]
 
@@ -367,7 +372,9 @@ texinfo_documents = [
 #
 # texinfo_no_detailmenu = False
 
-def process_signature(app, what, name, obj, options, signature, return_annotation):
+
+def process_signature(app, what, name, obj, options, signature,
+                      return_annotation):
     from pyrocko import guts
     if what == 'attribute' and isinstance(obj, guts.TBase):
             return '', str(obj)

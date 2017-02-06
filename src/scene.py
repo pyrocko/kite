@@ -382,8 +382,8 @@ class Scene(object):
 
             Kite convention is:
 
-            * ``0`` is **East**
-            * ``pi/2`` is **North**!
+            * :math:`0` is **East**
+            * :math:`\\frac{\\pi}{2}` is **North**!
 
         :setter: Set the phi matrix for scene's displacement, can be int
                  for static look vector.
@@ -410,8 +410,8 @@ class Scene(object):
 
             Kite convention!
 
-            * ``-pi/2`` is **Down**
-            * ``pi/2`` is **Up**
+            * :math:`-\\frac{\\pi}{2}` is **Down**
+            * :math:`\\frac{\\pi}{2}` is **Up**
 
         :setter: Set the theta matrix for scene's displacement, can be int
                  for static look vector.

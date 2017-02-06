@@ -27,7 +27,7 @@ def main(args=None):
     parser.add_argument('file', type=str,
                         help='Load Kite native container (*.npz/*.yml)',
                         default=None, nargs='?')
-    parser.add_argument('--imp', metavar='file', type=str,
+    parser.add_argument('--load', metavar='file', type=str,
                         default=None,
                         help='''Import file or directory
 Supported formats are:
@@ -35,7 +35,7 @@ Supported formats are:
  * GAMMA  (*.* and *.par in same directory)
  * GMTSAR (*.grd and binary *.los.* file)
  * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data)''')
-    parser.add_argument('--syn', type=str, default=None,
+    parser.add_argument('--synthetic', type=str, default=None,
                         choices=['fractal', 'sine', 'gauss'],
                         help='''Synthetic Tests
 Available Synthetic Displacement:
@@ -45,18 +45,18 @@ Available Synthetic Displacement:
 ''')
 
     ns = parser.parse_args(args)
-    if ns.imp is None and ns.syn is None and ns.file is None:
+    if ns.load is None and ns.synthetic is None and ns.file is None:
         parser.print_help()
         sys.exit(0)
 
     sc = None
-    if ns.syn is not None:
+    if ns.synthetic is not None:
         from kite import SceneTest
-        if ns.syn == 'fractal':
+        if ns.synthetic == 'fractal':
             sc = SceneTest.createFractal()
-        elif ns.syn == 'sine':
+        elif ns.synthetic == 'sine':
             sc = SceneTest.createSine()
-        elif ns.syn == 'gauss':
+        elif ns.synthetic == 'gauss':
             sc = SceneTest.createFractal()
         else:
             parser.print_help()
@@ -64,8 +64,8 @@ Available Synthetic Displacement:
 
     if sc:
         spool = Spool(scene=sc)
-    elif ns.imp is not None:
-        spool = Spool(import_data=ns.imp)
+    elif ns.load is not None:
+        spool = Spool(import_data=ns.load)
     elif ns.file is not None:
         spool = Spool(load_file=ns.file)
     spool.spool_win.buildViews()
