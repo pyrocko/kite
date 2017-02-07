@@ -10,7 +10,9 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
+#if defined(_OPENMP)
+    #include <omp.h>
+#endif
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
@@ -76,6 +78,7 @@ static void calc_covariance_matrix(
     uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
     float64_t cov;
 
+    (void) tid;
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
 
@@ -95,15 +98,17 @@ static void calc_covariance_matrix(
     // printf("subsampling: %d\n", subsampling);
     // printf("nthreads: %d\n", nthreads);
     Py_BEGIN_ALLOW_THREADS
-    #pragma omp parallel \
-        shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
-        private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
-                 l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
-                 npx, cov, l1hit, l2hit, tid) \
-        num_threads (nthreads)
-    {
-        tid = omp_get_thread_num();
-        #pragma omp for schedule (dynamic)
+    #if defined(_OPENMP)
+        #pragma omp parallel \
+            shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
+            private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
+                     l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
+                     npx, cov, l1hit, l2hit, tid) \
+            num_threads (nthreads)
+        {
+            tid = omp_get_thread_num();
+            #pragma omp for schedule (dynamic)
+    #endif
         for (il1=0; il1<nleafs; il1++) {
             l1row_beg = map[il1*4+0];
             l1row_end = map[il1*4+1];
@@ -145,8 +150,10 @@ static void calc_covariance_matrix(
                             }
                         }
                     }
-                    #pragma omp critical
-                    {
+                    #if defined(_OPENMP)
+                        #pragma omp critical
+                        {
+                    #endif
                         if (! l1hit) {
                             leaf_subsampling[il1] = floor(leaf_subsampling[il1]/2);
                             printf("no hit!\n");
@@ -155,13 +162,17 @@ static void calc_covariance_matrix(
                             leaf_subsampling[il2] = floor(leaf_subsampling[il2]/2);
                             printf("no hit!\n");
                         }
-                    }
+                    #if defined(_OPENMP)
+                        }
+                    #endif
                 }
                 cov_arr[il1*(nleafs)+il2] = ma * (cov/npx);
                 cov_arr[il2*(nleafs)+il1] = cov_arr[il1*(nleafs)+il2];
             }
         }
-    }
+    #if defined(_OPENMP)
+        }
+    #endif
     Py_END_ALLOW_THREADS
 }
 

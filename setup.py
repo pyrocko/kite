@@ -1,6 +1,7 @@
 #!/bin/python
 from setuptools import setup, Extension
 from os.path import join as pjoin
+import time
 try:
     import numpy
 except ImportError:
@@ -11,11 +12,44 @@ except ImportError:
         @classmethod
         def get_include(self):
             return ''
-import time
+
+
+def xcode_version_str():
+    from subprocess import Popen, PIPE
+    try:
+        version = Popen(['xcodebuild', '-version'], stdout=PIPE, shell=False)\
+            .communicate()[0].split()[1]
+    except IndexError:
+        version = None
+    return version
+
+
+def support_omp():
+    import platform
+    from distutils.version import StrictVersion
+    if platform.mac_ver() == ('', ('', '', ''), ''):
+        return True
+    else:
+        v_string = xcode_version_str()
+        if v_string is None:
+            return False
+        else:
+            v = StrictVersion(v_string)
+            return v < StrictVersion('4.2.0')
+
+
+if support_omp():
+    omp_arg = ['-fopenmp']
+    omp_lib = ['-lgomp']
+    print('OpenMP found')
+else:
+    omp_arg = []
+    omp_lib = []
+    print('OpenMP not found')
 
 setup(
     name='kite',
-    version='0.0.2-%s' % time.strftime('%Y%m%d'),
+    version='0.0.2.post%s' % time.strftime('%Y%m%d'),
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'
            'BRiDGES Emmily Noether-Programm (DFG)',
@@ -46,8 +80,7 @@ setup(
                                     'src/spool/ui/about.ui',
                                     'src/spool/ui/logging.ui',
                                     'src/spool/ui/transect.ui',
-                                    'src/spool/ui/covariance_noise.ui',
-                                    'src/spool/ui/covariance_noise-synthetic.ui',
+                                    'src/spool/ui/noise_dialog.ui',
                                     'src/spool/ui/covariance_matrix.ui',
                                     'src/spool/ui/boxkite-sketch.jpg',
                                     'src/spool/ui/radar_splash.png'])],
@@ -65,8 +98,8 @@ setup(
                   libraries=None,
                   runtime_library_dirs=None,
                   extra_objects=None,
-                  extra_compile_args=['-fopenmp'],
-                  extra_link_args=['-lgomp'],
+                  extra_compile_args=[] + omp_arg,
+                  extra_link_args=[] + omp_lib,
                   export_symbols=None,
                   swig_opts=None,
                   depends=None,
