@@ -121,6 +121,7 @@ class Covariance(object):
         self._noise_data = None
         self._powerspec1d_cached = None
         self._powerspec2d_cached = None
+        self._powerspec3d_cached = None
         self._initialized = False
         self._nthreads = 0
         self._log = scene._log.getChild('Covariance')
@@ -479,10 +480,9 @@ class Covariance(object):
             pass
         nE = shape[1] + (shape[1] % 2)
         nN = shape[0] + (shape[0] % 2)
-        noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
 
         rfield = num.random.rand(nN, nE)
-        spec = num.fft.fft2(rfield) - .5
+        spec = num.fft.fft2(rfield)
 
         if not dEdN:
             dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
@@ -491,19 +491,38 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
 
         amp = num.zeros_like(k_rad)
-        k_bin = num.insert(k + k[0]/2, 0, 0)
 
-        for i in xrange(k.size):
-            k_min = k_bin[i]
-            k_max = k_bin[i+1]
-            r = num.logical_and(k_rad > k_min, k_rad <= k_max)
-            if i == (k.size-1):
-                r = k_rad > k_min
-            if num.sum(r) == 0:
-                continue
-            amp[r] = noise_pspec[i]
-        amp[k_rad == 0.] = self.variance
-        amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
+        if not anisotropic:
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
+            k_bin = num.insert(k + k[0]/2, 0, 0)
+
+            for i in xrange(k.size):
+                k_min = k_bin[i]
+                k_max = k_bin[i+1]
+                r = num.logical_and(k_rad > k_min, k_rad <= k_max)
+                if i == (k.size-1):
+                    r = k_rad > k_min
+                if num.sum(r) == 0:
+                    continue
+                amp[r] = noise_pspec[i]
+            amp[k_rad == 0.] = self.variance
+            amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
+
+        elif anisotropic:
+            interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
+            kE = num.fft.fftshift(kE)
+            kN = num.fft.fftshift(kN)
+            mkE = num.logical_and(kE >= skE.min(), kE <= skE.max())
+            mkN = num.logical_and(kN >= skN.min(), kN <= skN.max())
+            mkRad = num.where(
+                k_rad < num.sqrt(kN[mkN].max()**2 + kE[mkE].max()**2))
+            res = interp_pspec(kN[mkN, num.newaxis],
+                               kE[num.newaxis, mkE], grid=True)
+            print amp.shape, res.shape
+            print kN.size, kE.size
+            amp = res
+            amp = num.fft.fftshift(amp)
+            print amp.min(), amp.max()
 
         spec *= num.sqrt(amp)
         noise = num.abs(num.fft.ifft2(spec))
@@ -522,6 +541,12 @@ class Covariance(object):
                 data, norm='2d', ndeg=ndeg, nk=nk)
         return self._powerspec2d_cached
 
+    def powerspecNoise3D(self, data=None):
+        if self._powerspec3d_cached is None:
+            self._powerspec3d_cached = self._powerspecNoise(
+                data, norm='3d')
+        return self._powerspec3d_cached
+
     def _powerspecNoise(self, data=None, norm='1d', ndeg=512, nk=512):
         """Get the noise spectrum from
         :attr:`kite.Covariance.noise_data`.
@@ -535,8 +560,8 @@ class Covariance(object):
             noise = self.noise_data
         else:
             noise = data.copy()
-        if norm not in ['1d', '2d']:
-            raise AttributeError('norm must be either 1d or 2d')
+        if norm not in ['1d', '2d', '3d']:
+            raise AttributeError('norm must be either 1d, 2d or 3d')
 
         noise = squareMatrix(noise)
         shift = num.fft.fftshift
@@ -573,16 +598,21 @@ class Covariance(object):
                 # Median is more stable than the mean here
             return power / power_spec.size
 
+        def power3d(k):
+            return power_interp
+
         power = power1d
         if norm == '2d':
             power = power2d
+        elif norm == '3d':
+            power = power3d
 
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         k = num.linspace(k_rad[k_rad > 0].min(),
                          k_rad.max(), nk)
         dk = (1./k.min() - 1./k.max()) / nk
 
-        return power(k), k, dk, spectrum, kN, kE
+        return power(k), k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
         power_spec, k, _, _, _, _ = self.powerspecNoise1D()

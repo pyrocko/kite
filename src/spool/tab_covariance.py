@@ -20,6 +20,7 @@ pen_variance = pg.mkPen((94, 151, 50, 200), width=2.5,
                         style=QtCore.Qt.DashLine)
 pen_green_dash = pg.mkPen((45, 136, 45, 200), width=2.5,
                           style=QtCore.Qt.DashLine)
+pen_roi = pg.mkPen((45, 136, 45), width=3)
 
 
 class QKiteCovariance(QKiteView):
@@ -42,25 +43,18 @@ class QKiteCovariance(QKiteView):
         self.param_covariance = QKiteParamCovariance(scene_proxy)
         self.parameters = [self.param_covariance]
 
-        self.dialogCovarianceNoise = QKiteToolNoiseData(scene_proxy, spool)
+        self.dialogCovarianceNoise = QKiteToolNoise(scene_proxy, spool)
         self.dialogCovarianceMatrix = QKiteToolWeightMatrix(scene_proxy, spool)
-        self.dialogCovarianceNoiseSyn =\
-            QKiteToolSyntheticNoise(scene_proxy, spool)
-        self.dialogCovarianceNoise.showSynthetic.released.connect(
-            self.dialogCovarianceNoiseSyn.show)
 
-        spool.actionCovariance_Noise.triggered.connect(
+        spool.actionNoise_Inspection.triggered.connect(
             self.dialogCovarianceNoise.show)
         covariance_plot.roi.sigClicked.connect(
             self.dialogCovarianceNoise.show)
         spool.actionCovariance_Matrix.triggered.connect(
             self.dialogCovarianceMatrix.show)
-        spool.actionCovariance_Noise_Synthetic.triggered.connect(
-            self.dialogCovarianceNoiseSyn.show)
 
-        spool.actionCovariance_Noise.setEnabled(True)
+        spool.actionNoise_Inspection.setEnabled(True)
         spool.actionCovariance_Matrix.setEnabled(True)
-        spool.actionCovariance_Noise_Synthetic.setEnabled(True)
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
@@ -89,10 +83,10 @@ class QKiteNoisePlot(QKitePlot):
         QKitePlot.__init__(self, scene_proxy=scene_proxy)
 
         llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
-        roi_pen = pg.mkPen((45, 136, 45), width=3)
-        self.roi = pg.RectROI((llE, llN), (sizeE, sizeN),
+        self.roi = pg.RectROI(pos=(llE, llN),
+                              size=(sizeE, sizeN),
                               sideScalers=True,
-                              pen=roi_pen)
+                              pen=pen_roi)
         self.roi.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
@@ -253,8 +247,8 @@ class QKiteStructureFunction(_QKiteSubplotPlot):
         covariance.variance = inf_line.getYPos()
 
 
-class QKiteToolNoiseData(QtGui.QDialog):
-    class noise_plot(QKitePlot):
+class QKiteToolNoise(QtGui.QDialog):
+    class NoisePlot(QKitePlot):
         def __init__(self, scene_proxy):
             self.components_available = {
                 'noise_data': [
@@ -277,45 +271,138 @@ class QKiteToolNoiseData(QtGui.QDialog):
         def proxy_disconnect(self):
             self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
 
+    class NoiseSyntheticPlot(QKitePlot):
+        def __init__(self, scene_proxy):
+            sp = scene_proxy
+            _, _, sizeE, sizeN = sp.covariance.noise_coord
+
+            self.patch_size_roi = pg.RectROI(
+                pos=(0., 0.),
+                size=(sizeE, sizeN),
+                sideScalers=True,
+                movable=False,
+                pen=pen_roi)
+            self.patch_size_roi.sigRegionChangeFinished.connect(self.update)
+
+            self._anisotropic = False
+            self.components_available = {
+                'synthetic_noise': [
+                  'Noise',
+                  lambda sp: sp.covariance.syntheticNoise(
+                    self.sizePatchPx(), anisotropic=self.anisotropic)
+                ]}
+
+            self._component = 'synthetic_noise'
+            QKitePlot.__init__(self, scene_proxy=scene_proxy)
+
+            self.addItem(self.patch_size_roi)
+
+        @property
+        def anisotropic(self):
+            return self._anisotropic
+
+        def enableAnisotropic(self, value):
+            self._anisotropic = value
+            self.update()
+
+        def resetSize(self):
+            _, _, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
+            self.patch_size_roi.setSize((sizeE, sizeN))
+
+        def sizePatchPx(self):
+            sp = self.scene_proxy
+            sizeE, sizeN = self.patch_size_roi.size()
+            return int(sizeN / sp.frame.dN), int(sizeE / sp.frame.dE)
+
+        def setGradientEditor(self, gradient_editor):
+            ge = gradient_editor
+            image = self.image
+
+            hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
+            image.setLookupTable(ge.getLookupTable)
+
+            def updateLevels():
+                image.setLevels(ge.region.getRegion())
+
+            ge.sigLevelChangeFinished.connect(updateLevels)
+            ge.sigLevelsChanged.connect(updateLevels)
+            updateLevels()
+
+            def updateHistogram():
+                h = image.getHistogram()
+                if h[0] is None:
+                    return
+                ge.hist_syn.setData(*h)
+
+            ge.hist_syn = pg.PlotDataItem(pen=hist_pen)
+            ge.hist_syn.rotate(90.)
+            ge.vb.addItem(ge.hist_syn)
+            updateHistogram()
+
+            image.sigImageChanged.connect(updateHistogram)
+
+        def proxy_connect(self):
+            self.scene_proxy.sigCovarianceChanged.connect(self.update)
+
+        def proxy_disconnect(self):
+            self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
+
     def __init__(self, scene_proxy, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
         cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/covariance_noise.ui')
+                           'ui/noise_dialog.ui')
         loadUi(cov_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
+        self.setWindowFlags(QtCore.Qt.Window)
 
-        self.noise_patch = self.noise_plot(scene_proxy)
-        noise_colormap = QKiteToolColormap(self.noise_patch)
+        self.noise_patch = self.NoisePlot(scene_proxy)
+        self.noise_synthetic = self.NoiseSyntheticPlot(scene_proxy)
+
+        colormap = QKiteToolColormap(self.noise_patch)
+        self.noise_synthetic.setGradientEditor(colormap)
 
         self.dockarea = dockarea.DockArea(self)
         self.dockarea.addDock(
             dockarea.Dock('Covariance.noise_data',
                           widget=self.noise_patch,
-                          size=(4, 4),
+                          size=(6, 6),
                           autoOrientation=False,),
-            position='left')
+            position='top')
+        self.dockarea.addDock(
+            dockarea.Dock('Covariance.syntheticNoise',
+                          widget=self.noise_synthetic,
+                          size=(6, 6),
+                          autoOrientation=False,),
+            position='bottom')
         self.dockarea.addDock(
             dockarea.Dock('Colormap',
-                          widget=noise_colormap,
+                          widget=colormap,
                           size=(1, 1),
                           autoOrientation=False,),
             position='right')
         self.horizontalLayoutPlot.addWidget(self.dockarea)
 
+        self.resetSizeButton.released.connect(self.noise_synthetic.resetSize)
+        self.anisotropicCB.toggled.connect(
+            lambda b: self.noise_synthetic.enableAnisotropic(b))
+
     def closeEvent(self, ev):
         self.noise_patch.proxy_disconnect()
+        self.noise_synthetic.proxy_disconnect()
         ev.accept()
 
     def showEvent(self, ev):
         self.noise_patch.update()
         self.noise_patch.proxy_connect()
+        self.noise_synthetic.update()
+        self.noise_synthetic.proxy_connect()
         ev.accept()
 
 
 class QKiteToolWeightMatrix(QtGui.QDialog):
-    class weight_plot(QKitePlot):
+    class MatrixPlot(QKitePlot):
         def __init__(self, scene_proxy):
             from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
             self._component = 'weight'
@@ -391,7 +478,7 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
 
-        self.weight_matrix = self.weight_plot(scene_proxy)
+        self.weight_matrix = self.MatrixPlot(scene_proxy)
         self.dockarea = dockarea.DockArea(self)
         self.dockarea.addDock(
             dockarea.Dock('Covariance.weight_matrix_focal',
@@ -408,89 +495,6 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
     def showEvent(self, ev):
         self.weight_matrix.update()
         self.weight_matrix.proxy_connect()
-        ev.accept()
-
-
-class QKiteToolSyntheticNoise(QtGui.QDialog):
-    class noise_plot(QKitePlot):
-        def __init__(self, scene_proxy):
-            self.components_available = {
-                'synthetic_noise': [
-                  'Noise',
-                  lambda sp: sp.covariance.syntheticNoise(
-                    sp.covariance.noise_data.shape)
-                ]}
-
-            self._component = 'synthetic_noise'
-            QKitePlot.__init__(self, scene_proxy=scene_proxy)
-
-        def proxy_connect(self):
-            self.scene_proxy.sigCovarianceChanged.connect(self.update)
-
-        def proxy_disconnect(self):
-            self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
-
-    def __init__(self, scene_proxy, parent=None):
-        QtGui.QDialog.__init__(self, parent)
-
-        cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/covariance_noise-synthetic.ui')
-        loadUi(cov_ui, baseinstance=self)
-        self.closeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogCloseButton))
-        self.generateNoise.setIcon(self.style().standardPixmap(
-                                   QtGui.QStyle.SP_BrowserReload))
-
-        self.noise_syn = self.noise_plot(scene_proxy)
-        self.params = self.getParameterTree()
-        noise_colormap = QKiteToolColormap(self.noise_syn)
-
-        self.generateNoise.released.connect(self.noise_syn.update)
-
-        self.dockarea = dockarea.DockArea(self)
-        self.dockarea.addDock(
-            dockarea.Dock('Covariance.syntheticNoise',
-                          widget=self.noise_syn,
-                          size=(4, 4),
-                          autoOrientation=False,),
-            position='left')
-        self.dockarea.addDock(
-            dockarea.Dock('Colormap',
-                          widget=noise_colormap,
-                          size=(1, 1),
-                          autoOrientation=False,),
-            position='right')
-        self.dockarea.addDock(
-            dockarea.Dock('Synthetic Noise Parameters',
-                          widget=self.params,
-                          size=(1, 1),
-                          autoOrientation=False,),
-            position='left')
-        self.horizontalLayoutPlot.addWidget(self.dockarea)
-
-    def getParameterTree(self):
-        pt = pg.parametertree
-        pTypes = pt.parameterTypes
-        tree = pt.ParameterTree()
-        p = pTypes.WidgetParameterItem(name='Width', type='int')
-        tree.addChild(p)
-        return tree
-
-    def update_params(self):
-        self.noise_syn.components_available = {
-            'synthetic_noise': [
-              'Noise',
-              lambda sp: sp.covariance.syntheticNoise(
-                sp.covariance.noise_data.shape)
-            ]}
-
-    def closeEvent(self, ev):
-        self.noise_syn.proxy_disconnect()
-        ev.accept()
-
-    def showEvent(self, ev):
-        self.noise_syn.update()
-        self.noise_syn.proxy_connect()
         ev.accept()
 
 

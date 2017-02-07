@@ -144,9 +144,8 @@
     </property>
     <addaction name="actionTransect"/>
     <addaction name="separator"/>
-    <addaction name="actionCovariance_Noise"/>
+    <addaction name="actionNoise_Inspection"/>
     <addaction name="actionCovariance_Matrix"/>
-    <addaction name="actionCovariance_Noise_Synthetic"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -302,12 +301,15 @@
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="actionCovariance_Noise">
+  <action name="actionNoise_Inspection">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Covariance Noise Data</string>
+    <string>Noise inspection</string>
+   </property>
+   <property name="iconText">
+    <string>Noise inspection</string>
    </property>
    <property name="toolTip">
     <string>Scene.Covariance noise_data</string>
@@ -349,7 +351,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Covariance Weight Matrix</string>
+    <string>Covariance weight matrix</string>
    </property>
   </action>
   <action name="actionCovariance_Noise_Synthetic">

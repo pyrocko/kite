@@ -81,7 +81,7 @@ python setup.py build
     return False
 
 
-if _check_for_openmp():
+if False: # _check_for_openmp():
     omp_arg = ['-fopenmp']
     omp_lib = ['-lgomp']
 else:
