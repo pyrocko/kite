@@ -45,7 +45,9 @@ int main() {
 
     try:
         with open(os.devnull, 'w') as fnull:
-            exit_code = subprocess.call([compiler, '-fopenmp', tmpfile],
+            exit_code = subprocess.call([compiler, '-fopenmp', '-o%s'
+                                         % pjoin(tmpdir, 'check_openmp'),
+                                         tmpfile],
                                         stdout=fnull, stderr=fnull)
     except OSError:
         exit_code = 1
@@ -81,7 +83,7 @@ python setup.py build
     return False
 
 
-if False: # _check_for_openmp():
+if _check_for_openmp():
     omp_arg = ['-fopenmp']
     omp_lib = ['-lgomp']
 else:

@@ -103,11 +103,20 @@ class QSceneProxy(QtCore.QObject):
         self.scene._log.addHandler(self._log_handler)
 
     @QtCore.Slot(str)
-    def exportCovariance(self, filename):
+    def exportWeightMatrix(self, filename):
         self.sigProcessingStarted.emit(
-            'Calculating full <span style="font-family: monospace">'
+            'Calculating <span style="font-family: monospace">'
             'Covariance.weight_matrix</span>, this can take a few minutes...')
         self.scene.covariance.export_weight_matrix(filename)
+        self.sigProcessingFinished.emit()
+
+    @QtCore.Slot()
+    def calculateWeightMatrix(self):
+        self.sigProcessingStarted.emit(
+            'Calculating <span style="font-family: monospace">'
+            'Covariance.weight_matrix</span>,'
+            ' this can take a few minutes...')
+        self.scene.covariance.weight_matrix
         self.sigProcessingFinished.emit()
 
     @QtCore.Slot(str)

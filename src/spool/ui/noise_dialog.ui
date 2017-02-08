@@ -73,7 +73,7 @@
      <item>
       <widget class="QCheckBox" name="anisotropicCB">
        <property name="text">
-        <string>Anisotropic synthetics</string>
+        <string>Anisotropic synthetics (EXPERIMENTAL)</string>
        </property>
       </widget>
      </item>

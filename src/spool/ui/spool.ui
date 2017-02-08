@@ -127,7 +127,7 @@
     <addaction name="separator"/>
     <addaction name="actionImport_scene"/>
     <addaction name="actionExport_quadtree"/>
-    <addaction name="actionExport_covariance_weights"/>
+    <addaction name="actionExport_weights"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -144,8 +144,9 @@
     </property>
     <addaction name="actionTransect"/>
     <addaction name="separator"/>
-    <addaction name="actionNoise_Inspection"/>
-    <addaction name="actionCovariance_Matrix"/>
+    <addaction name="actionInspect_Noise"/>
+    <addaction name="actionInspect_Weights"/>
+    <addaction name="actionCalculate_WeightMatrix"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -176,7 +177,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>About Spool</string>
+    <string>About spool</string>
    </property>
   </action>
   <action name="actionHelp">
@@ -189,7 +190,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>Online Help</string>
+    <string>Online help</string>
    </property>
    <property name="toolTip">
     <string>http://pyrocko.org</string>
@@ -278,7 +279,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>Export Quadtree</string>
+    <string>Export quadtree</string>
    </property>
    <property name="toolTip">
     <string>Scene.quadtree.export(filename)</string>
@@ -301,12 +302,12 @@
     <string>Ctrl+L</string>
    </property>
   </action>
-  <action name="actionNoise_Inspection">
+  <action name="actionInspect_Noise">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Noise inspection</string>
+    <string>Inspect noise</string>
    </property>
    <property name="iconText">
     <string>Noise inspection</string>
@@ -323,7 +324,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Import Scene</string>
+    <string>Import scene</string>
    </property>
    <property name="toolTip">
     <string>Import Data from Gamma, ISCE, GMT5SAR, Matlab
@@ -333,25 +334,28 @@
     <string>Ctrl+I</string>
    </property>
   </action>
-  <action name="actionExport_covariance_weights">
+  <action name="actionExport_weights">
    <property name="icon">
     <iconset theme="application-export">
      <normaloff/>
     </iconset>
    </property>
    <property name="text">
-    <string>Export Covariance Weights</string>
+    <string>Export weight matrix</string>
    </property>
    <property name="toolTip">
     <string>Covariance.export_weight_matrix(filename)</string>
    </property>
   </action>
-  <action name="actionCovariance_Matrix">
+  <action name="actionInspect_Weights">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Covariance weight matrix</string>
+    <string>Inspect weight matrix</string>
+   </property>
+   <property name="toolTip">
+    <string>Inspect focal weight matrix</string>
    </property>
   </action>
   <action name="actionCovariance_Noise_Synthetic">
@@ -360,6 +364,17 @@
    </property>
    <property name="text">
     <string>Covariance Synthetic Noise</string>
+   </property>
+  </action>
+  <action name="actionCalculate_WeightMatrix">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Calculate weight matrix</string>
+   </property>
+   <property name="toolTip">
+    <string>Calculate comlete weight matrix (Covaraince.weight_matrix)</string>
    </property>
   </action>
  </widget>

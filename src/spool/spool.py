@@ -29,7 +29,7 @@ def validateFilename(filename):
 
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None, import_data=None, load_file=None):
-        QtGui.QApplication.__init__(self, ['KiteSpool'])
+        QtGui.QApplication.__init__(self, ['spool'])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
@@ -80,7 +80,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
     sigImportFile = QtCore.Signal(str)
     sigLoadFile = QtCore.Signal(str)
     sigLoadConfig = QtCore.Signal(str)
-    sigExportCovariance = QtCore.Signal(str)
+    sigExportWeightMatrix = QtCore.Signal(str)
     sigLoadingModule = QtCore.Signal(str)
 
     def __init__(self, *args, **kwargs):
@@ -99,7 +99,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.sigLoadFile.connect(self.scene_proxy.loadFile)
         self.sigImportFile.connect(self.scene_proxy.importFile)
         self.sigLoadConfig.connect(self.scene_proxy.loadConfig)
-        self.sigExportCovariance.connect(self.scene_proxy.exportCovariance)
+        self.sigExportWeightMatrix.connect(
+            self.scene_proxy.exportWeightMatrix)
 
         self.log_model = SceneLogModel(self)
         self.log = SceneLog(self)
@@ -117,8 +118,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
             self.onImportScene)
         self.actionExport_quadtree.triggered.connect(
             self.onExportQuadtree)
-        self.actionExport_covariance_weights.triggered.connect(
-            self.onExportCovarianceWeight)
+        self.actionExport_weights.triggered.connect(
+            self.onExportWeightMatrix)
 
         self.actionAbout_Spool.triggered.connect(
             self.about.show)
@@ -131,6 +132,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.progress.setValue(0)
         self.progress.closeEvent = lambda e: e.ignore()
         self.progress.setMinimumWidth(400)
+        self.progress.setWindowTitle('processing...')
         self.scene_proxy.sigProcessingFinished.connect(self.progress.reset)
 
     @property
@@ -223,13 +225,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
             return
         self.scene_proxy.quadtree.export(filename)
 
-    def onExportCovarianceWeight(self):
+    def onExportWeightMatrix(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='Text File *.txt (*.txt)',
             caption='Export Covariance Weights',)
         if not validateFilename(filename):
             return
-        self.sigExportCovariance.emit(filename)
+        self.sigExportWeightMatrix.emit(filename)
 
     def exit(self):
         pass

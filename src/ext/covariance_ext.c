@@ -18,6 +18,11 @@ typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
 typedef npy_uint32 uint32_t;
 
+typedef enum {
+    SUCCESS = 0,
+    SAUBSAMPLING_SPARSE_ERROR
+} state_covariance;
+
 static PyObject *CovarianceExtError;
 
 int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_intp* shape_want) {
@@ -60,7 +65,7 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
-static void calc_covariance_matrix(
+static state_covariance calc_covariance_matrix(
                 float64_t *E,
                 float64_t *N,
                 npy_intp *shape_coord,
@@ -156,11 +161,9 @@ static void calc_covariance_matrix(
                     #endif
                         if (! l1hit) {
                             leaf_subsampling[il1] = floor(leaf_subsampling[il1]/2);
-                            printf("no hit!\n");
                         }
                         if (! l2hit) {
                             leaf_subsampling[il2] = floor(leaf_subsampling[il2]/2);
-                            printf("no hit!\n");
                         }
                     #if defined(_OPENMP)
                         }
@@ -174,6 +177,7 @@ static void calc_covariance_matrix(
         }
     #endif
     Py_END_ALLOW_THREADS
+    return SUCCESS;
 }
 
 static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
@@ -184,6 +188,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     uint32_t *map, nthreads, adaptive_subsampling;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
+    state_covariance err;
 
     if (! PyArg_ParseTuple(args, "OOOddII", &E_arr, &N_arr, &map_arr, &ma, &mb, &nthreads, &adaptive_subsampling)) {
         PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads, adaptive_subsampling)");
@@ -222,7 +227,11 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
-    calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, adaptive_subsampling, covs);
+    err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, adaptive_subsampling, covs);
+    if (err != SUCCESS) {
+        PyErr_SetString(CovarianceExtError, "Calculating covariance failed!");
+        return NULL;
+    }
     return (PyObject*) cov_arr;
 }
 

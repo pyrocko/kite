@@ -43,18 +43,22 @@ class QKiteCovariance(QKiteView):
         self.param_covariance = QKiteParamCovariance(scene_proxy)
         self.parameters = [self.param_covariance]
 
-        self.dialogCovarianceNoise = QKiteToolNoise(scene_proxy, spool)
-        self.dialogCovarianceMatrix = QKiteToolWeightMatrix(scene_proxy, spool)
+        self.dialogInspectNoise = QKiteToolNoise(scene_proxy, spool)
+        self.dialogInspectCovariance = QKiteToolWeightMatrix(
+            scene_proxy, spool)
 
-        spool.actionNoise_Inspection.triggered.connect(
-            self.dialogCovarianceNoise.show)
+        spool.actionInspect_Noise.triggered.connect(
+            self.dialogInspectNoise.show)
         covariance_plot.roi.sigClicked.connect(
-            self.dialogCovarianceNoise.show)
-        spool.actionCovariance_Matrix.triggered.connect(
-            self.dialogCovarianceMatrix.show)
+            self.dialogInspectNoise.show)
+        spool.actionInspect_Weights.triggered.connect(
+            self.dialogInspectCovariance.show)
+        spool.actionCalculate_WeightMatrix.triggered.connect(
+            lambda: QCalculateWeightMatrix(scene_proxy, spool))
 
-        spool.actionNoise_Inspection.setEnabled(True)
-        spool.actionCovariance_Matrix.setEnabled(True)
+        spool.actionInspect_Noise.setEnabled(True)
+        spool.actionInspect_Weights.setEnabled(True)
+        spool.actionCalculate_WeightMatrix.setEnabled(True)
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
@@ -496,6 +500,28 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
         self.weight_matrix.update()
         self.weight_matrix.proxy_connect()
         ev.accept()
+
+
+class QCalculateWeightMatrix(QtCore.QObject):
+    sigCalculateWeightMatrix = QtCore.Signal()
+
+    def __init__(self, scene_proxy, parent):
+        QtCore.QObject.__init__(self)
+        self.sigCalculateWeightMatrix.connect(
+            scene_proxy.calculateWeightMatrix)
+
+        ret = QtGui.QMessageBox.information(
+            parent,
+            'Calculate full weight matrix',
+            '''<html><head/><body><p>
+This will calculate the quadtree's full weight matrix
+(<span style='font-family: monospace'>Covariance.weight_matrix</span>)
+for this noise/covariance configuration.</p><p>
+The calculation is expensive and may take several minutes.
+</p></body></html>
+''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
+        if ret == QtGui.QMessageBox.Ok:
+            self.sigCalculateWeightMatrix.emit()
 
 
 class QKiteParamCovariance(QKiteParameterGroup):
