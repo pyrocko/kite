@@ -96,14 +96,14 @@ static state_covariance calc_covariance_matrix(
            leaf_subsampling[il1] = 1;
         }
     }
-    if (nthreads == 0)
-        nthreads = omp_get_num_procs();
 
     // printf("coord_matrix: %ldx%ld\n", nrows, ncols);
     // printf("subsampling: %d\n", subsampling);
     // printf("nthreads: %d\n", nthreads);
     Py_BEGIN_ALLOW_THREADS
     #if defined(_OPENMP)
+        if (nthreads == 0)
+            nthreads = omp_get_num_procs();
         #pragma omp parallel \
             shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
             private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
