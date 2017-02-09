@@ -16,7 +16,6 @@
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
-typedef npy_uint32 uint32_t;
 
 typedef enum {
     SUCCESS = 0,
@@ -84,6 +83,7 @@ static state_covariance calc_covariance_matrix(
     float64_t cov;
 
     (void) tid;
+    (void) nthreads;
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
 
