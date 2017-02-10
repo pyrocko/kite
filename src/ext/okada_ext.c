@@ -301,7 +301,6 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
   output_arr = (PyArrayObject*) PyArray_ZEROS(2, output_dims, NPY_FLOAT64, 0);
   output = PyArray_DATA(output_arr);
 
-  printf("Calculating %d // %d\n", nstations, ndislocations);
   Disloc(output, models, coords, nu, (int) nstations, (int) ndislocations);
 
   return (PyObject*) output_arr;
