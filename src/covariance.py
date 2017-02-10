@@ -493,7 +493,7 @@ class Covariance(object):
         amp = num.zeros_like(k_rad)
 
         if not anisotropic:
-            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise1D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
             for i in xrange(k.size):
@@ -507,6 +507,7 @@ class Covariance(object):
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
             amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
+            amp = num.sqrt(amp * max(self.noise_data.shape)**2)
 
         elif anisotropic:
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
@@ -514,7 +515,7 @@ class Covariance(object):
             kN = num.fft.fftshift(kN)
             mkE = num.logical_and(kE >= skE.min(), kE <= skE.max())
             mkN = num.logical_and(kN >= skN.min(), kN <= skN.max())
-            mkRad = num.where(
+            mkRad = num.where(  # noqa
                 k_rad < num.sqrt(kN[mkN].max()**2 + kE[mkE].max()**2))
             res = interp_pspec(kN[mkN, num.newaxis],
                                kE[num.newaxis, mkE], grid=True)
@@ -524,7 +525,7 @@ class Covariance(object):
             amp = num.fft.fftshift(amp)
             print amp.min(), amp.max()
 
-        spec *= num.sqrt(amp)
+        spec *= amp
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
         return noise
@@ -577,15 +578,24 @@ class Covariance(object):
 
         power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
 
+        # def power1d(k):
+        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
+        #     power = num.empty_like(k)
+        #     for i in xrange(k.size):
+        #         kE = num.cos(theta) * k[i]
+        #         kN = num.sin(theta) * k[i]
+        #         power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
+        #             * num.pi * 4
+        #     return power
+
         def power1d(k):
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
             for i in xrange(k.size):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
-                    * num.pi * 4
-            return power
+                power[i] = num.median(power_interp.ev(kN, kE))
+            return (power * num.pi * 4) / (power_spec.size**2)
 
         def power2d(k):
             """ Mean 2D Power works! """
@@ -665,9 +675,7 @@ class Covariance(object):
         return modelPowerspec(k, *p)
 
     def _powerCosineTransform(self, p_spec):
-        cos = sp.fftpack.dct(p_spec, type=2)
-        # cos /= cos.max()
-
+        cos = sp.fftpack.idct(p_spec, type=3)
         return cos
 
     @property_cached
@@ -774,7 +782,11 @@ class Covariance(object):
     @variance.getter
     def variance(self):
         if self.config.variance is None:
-            self.config.variance = float(num.mean(self.structure_func[0][:-3]))
+            power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
+            cov, _ = self.covariance_func
+            ps = power_spec
+            var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[0]
+            self.config.variance = float(var)
         return self.config.variance
 
     def export_weight_matrix(self, filename):
