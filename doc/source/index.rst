@@ -1,22 +1,31 @@
-.. Kite documentation master file, created by
-   sphinx-quickstart on Thu Oct  6 17:05:40 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Kite Manual
+===========
 
-Welcome to Kite's documentation!
-================================
+Kite is an open source toolbox and library for processing and analyzing InSAR displacement.
 
-Contents:
+
+Features
+--------
+
+.. raw:: html
+
+    <div class="keywords">
+        <span>InSAR displacement analysis</span>
+        <span>displacement processing</span>
+        <span>quadtree calculation and parametrisation</span>
+        <span>InSAR noise analysis</span>
+        <span>covariance calculation</span>
+        <span>error estimation</span>
+    </div>
+
+Overview
+--------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   installation
+   examples
+   spool
+   modules
+   contributing

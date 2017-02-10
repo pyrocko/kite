@@ -1,47 +1,102 @@
 #!/usr/bin/python2
-from PySide import QtGui
 import pyqtgraph as pg
 import numpy as num
-from .tab import QKiteDock, QKiteToolComponents, QKitePlot
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
-__all__ = ['QKiteSceneDock']
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from .utils_qt import loadUi
+from collections import OrderedDict
+from PySide import QtGui
+from os import path
+
+__all__ = ['QKiteScene']
 
 
-class QKiteSceneDock(QKiteDock):
-    def __init__(self, scene):
-        self.title = 'Scene.displacement'
-        self.main_widget = QKiteScenePlot
+class QKiteScene(QKiteView):
+    title = 'Scene'
+
+    def __init__(self, spool):
+        scene_proxy = spool.scene_proxy
+
+        scene_plot = QKiteScenePlot(scene_proxy)
+        self.main_widget = scene_plot
         self.tools = {
-            'Components': QKiteToolComponents,
-            # 'Colormap': QKiteToolGradient,
-            'Displacement Transect': QKiteToolTransect,
-            # 'Histogram': QKiteToolHistogram,
+            # 'Components': QKiteToolComponents(self.main_widget),
+            # 'Displacement Transect': QKiteToolTransect(self.main_widget),
         }
 
-        QKiteDock.__init__(self, scene)
+        self.param_scene = QKiteParamScene(scene_proxy, scene_plot)
+        self.param_frame = QKiteParamSceneFrame(scene_proxy, expanded=False)
+        self.param_meta = QKiteParamSceneMeta(scene_proxy, expanded=False)
+
+        self.param_scene.addChild(self.param_frame)
+        self.param_scene.addChild(self.param_meta)
+
+        self.parameters = [self.param_scene]
+
+        self.dialogTransect = QKiteToolTransect(scene_plot, spool)
+        spool.actionTransect.triggered.connect(self.dialogTransect.show)
+        spool.actionTransect.setEnabled(True)
+
+        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
+
+        QKiteView.__init__(self)
+
+    def modelChanged(self):
+        self.main_widget.update()
+        self.main_widget.transFromFrame()
+
+        self.param_scene.updateValues()
+        self.param_frame.updateValues()
+        self.param_meta.updateValues()
+
+        self.dialogTransect.close()
 
 
 class QKiteScenePlot(QKitePlot):
-    def __init__(self, scene):
-
+    def __init__(self, scene_proxy):
         self.components_available = {
-            'displacement': ['Scene.displacement', lambda sc: sc.displacement],
-            'theta': ['Scene.theta', lambda sc: sc.theta],
-            'phi': ['Scene.phi', lambda sc: sc.phi],
-            'thetaDeg': ['Scene.thetaDeg', lambda sc: sc.thetaDeg],
-            'phiDeg': ['Scene.phiDeg', lambda sc: sc.phiDeg],
-            'unitE': ['Scene.los.unitE', lambda sc: sc.los.unitE],
-            'unitN': ['Scene.los.unitN', lambda sc: sc.los.unitN],
-            'unitU': ['Scene.los.unitU', lambda sc: sc.los.unitU],
+            'displacement':
+                ['Scene.displacement', lambda sp: sp.scene.displacement],
+            'theta':
+                ['Scene.theta', lambda sp: sp.scene.theta],
+            'phi':
+                ['Scene.phi', lambda sp: sp.scene.phi],
+            'thetaDeg':
+                ['Scene.thetaDeg', lambda sp: sp.scene.thetaDeg],
+            'phiDeg':
+                ['Scene.phiDeg', lambda sp: sp.scene.phiDeg],
+            'unitE':
+                ['Scene.los.unitE', lambda sp: sp.scene.los.unitE],
+            'unitN':
+                ['Scene.los.unitN', lambda sp: sp.scene.los.unitN],
+            'unitU':
+                ['Scene.los.unitU', lambda sp: sp.scene.los.unitU],
         }
         self._component = 'displacement'
 
-        QKitePlot.__init__(self, container=scene)
+        QKitePlot.__init__(self, scene_proxy=scene_proxy)
+        scene_proxy.sigFrameChanged.connect(self.onFrameChange)
+        scene_proxy.sigSceneModelChanged.connect(self.update)
+
+    def onFrameChange(self):
+        self.update()
+        self.transFromFrame()
 
 
-class QKiteToolTransect(QtGui.QWidget):
-    def __init__(self, plot):
-        QtGui.QWidget.__init__(self)
+class QKiteToolTransect(QtGui.QDialog):
+    def __init__(self, plot, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        trans_ui = path.join(path.dirname(path.realpath(__file__)),
+                             'ui/transect.ui')
+        loadUi(trans_ui, baseinstance=self)
+        self.closeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogCloseButton))
+        self.createButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_ArrowUp))
+        self.removeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogDiscardButton))
+
         self.plot = plot
         self.poly_line = None
 
@@ -52,55 +107,43 @@ class QKiteToolTransect(QtGui.QWidget):
 
         self.plt_wdgt = pg.PlotWidget()
         self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
-                                left={'Displacement', 'm'})
+                                left='Displacement [m]')
         self.plt_wdgt.showGrid(True, True, alpha=.5)
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
 
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.plt_wdgt)
-        self.layout.addWidget(self.getPolyControl())
-
+        self.layoutPlot.addWidget(self.plt_wdgt)
         self.plot.image.sigImageChanged.connect(self.updateTransPlot)
-        # self.plot.image.sigImageChanged.connect(self.addPolyLine)
+        self.createButton.released.connect(self.addPolyLine)
+        self.removeButton.released.connect(self.removePolyLine)
 
-    def getPolyControl(self):
-        wdgt = QtGui.QWidget()
+        parent.scene_proxy.sigConfigChanged.connect(self.close)
 
-        def addPolyLine():
-            [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
-            self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
-                                                        ymin+(ymax-ymin)*.4),
-                                                       (xmin+(xmax-xmin)*.6,
-                                                        ymin+(ymax-ymin)*.6)],
-                                            pen=pg.mkPen('g', width=2))
-            self.plot.addItem(self.poly_line)
-            self.updateTransPlot()
-            self.poly_line.sigRegionChangeFinished.connect(
-                self.updateTransPlot)
+    def addPolyLine(self):
+        [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
+        self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
+                                                    ymin+(ymax-ymin)*.4),
+                                                   (xmin+(xmax-xmin)*.6,
+                                                    ymin+(ymax-ymin)*.6)],
+                                        pen=pg.mkPen('g', width=2))
+        self.plot.addItem(self.poly_line)
+        self.updateTransPlot()
+        self.poly_line.sigRegionChangeFinished.connect(
+            self.updateTransPlot)
 
-        def clearPolyLine():
-            try:
-                self.plot.removeItem(self.poly_line)
-                self.poly_line = None
-                self.updateTransPlot()
-            except Exception as e:
-                print e
+    def removePolyLine(self):
+        if self.poly_line is None:
+            return
 
-        btn_addPoly = QtGui.QPushButton('Create Transsect')
-        btn_addPoly.clicked.connect(addPolyLine)
-        btn_clearPoly = QtGui.QPushButton('Clear Transsect')
-        btn_clearPoly.clicked.connect(clearPolyLine)
+        self.plot.removeItem(self.poly_line)
+        self.poly_line = None
+        self.updateTransPlot()
 
-        layout = QtGui.QHBoxLayout(wdgt)
-        layout.addWidget(btn_addPoly)
-        layout.addWidget(btn_clearPoly)
-
-        return wdgt
+    def closeEvent(self, event):
+        self.removePolyLine()
 
     def updateTransPlot(self):
         if self.poly_line is None:
-            self.trans_plot.setData((0))
             return
 
         transect = num.ndarray((0))
@@ -120,3 +163,107 @@ class QKiteToolTransect(QtGui.QWidget):
         self.plt_wdgt.setLimits(xMin=length.min(), xMax=length.max(),
                                 yMin=transect.min(), yMax=transect.max()*1.1)
         return
+
+
+class QKiteParamScene(QKiteParameterGroup):
+    def __init__(self, scene_proxy, plot, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene'
+        self.plot = plot
+
+        self.parameters = {
+            'min value': lambda plot: num.nanmin(plot.data),
+            'max value': lambda plot: num.nanmax(plot.data),
+            'mean value': lambda plot: num.nanmean(plot.data),
+        }
+
+        self.plot.image.sigImageChanged.connect(self.updateValues)
+
+        QKiteParameterGroup.__init__(self,
+                                     model=self.plot,
+                                     model_attr=None,
+                                     **kwargs)
+
+        def changeComponent(parameter):
+            self.plot.component = parameter.value()
+
+        p = {'name': 'display',
+             'values': {
+                 'displacement': 'displacement',
+                 'theta': 'theta',
+                 'phi': 'phi',
+                 'thetaDeg': 'thetaDeg',
+                 'phiDeg': 'phiDeg',
+                 'los.unitE': 'unitE',
+                 'los.unitN': 'unitN',
+                 'los.unitU': 'unitU',
+                 },
+             'value': 'displacement'}
+        component = pTypes.ListParameter(**p)
+        component.sigValueChanged.connect(changeComponent)
+        self.pushChild(component)
+
+
+class QKiteParamSceneFrame(QKiteParameterGroup):
+    def __init__(self, scene_proxy, **kwargs):
+        kwargs['type'] = 'group'
+        kwargs['name'] = '.frame'
+
+        self.parameters = OrderedDict([
+            ('cols', None),
+            ('rows', None),
+            ('llLat', None),
+            ('llLon', None),
+            ('dLat', None),
+            ('dLon', None),
+            ('extentE', None),
+            ('extentN', None),
+            ('spherical_distortion', None),
+            ('dN', None),
+            ('dE', None),
+            ('llNutm', None),
+            ('llEutm', None),
+            ('utm_zone', None),
+            ('utm_zone_letter', None),
+            ])
+
+        scene_proxy.sigFrameChanged.connect(self.updateValues)
+
+        QKiteParameterGroup.__init__(self,
+                                     model=scene_proxy,
+                                     model_attr='frame',
+                                     **kwargs)
+
+
+class QKiteParamSceneMeta(QKiteParameterGroup):
+    def __init__(self, scene_proxy, **kwargs):
+        from datetime import datetime as dt
+        kwargs['type'] = 'group'
+        kwargs['name'] = '.meta'
+
+        def str_to_time(d, fmt='%Y-%m-%d %H:%M:%S'):
+            return dt.strftime(dt.fromtimestamp(d), fmt)
+
+        self.parameters = OrderedDict([
+            ('scene_title',
+             lambda sc: sc.meta.scene_title),
+            ('scene_id',
+             lambda sc: sc.meta.scene_id),
+            ('satellite_name',
+             lambda sc: sc.meta.satellite_name),
+            ('orbit_direction',
+             lambda sc: sc.meta.orbit_direction),
+            ('time_master',
+             lambda sc: str_to_time(sc.meta.time_master)),
+            ('time_slave',
+             lambda sc: str_to_time(sc.meta.time_slave)),
+            ('time_separation',
+             lambda sc: '%s' % sc.meta.time_separation),
+            ])
+
+        scene_proxy.sigConfigChanged.connect(self.updateValues)
+
+        QKiteParameterGroup.__init__(self,
+                                     model=scene_proxy,
+                                     model_attr='scene',
+                                     **kwargs)

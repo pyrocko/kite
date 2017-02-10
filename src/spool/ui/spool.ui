@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>MainWindow</class>
- <widget class="QMainWindow" name="MainWindow">
+ <class>SpoolMainWindow</class>
+ <widget class="QMainWindow" name="SpoolMainWindow">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1108</width>
-    <height>655</height>
+    <width>1164</width>
+    <height>700</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -18,8 +18,8 @@
   </property>
   <property name="minimumSize">
    <size>
-    <width>700</width>
-    <height>500</height>
+    <width>1000</width>
+    <height>700</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -34,25 +34,75 @@
    </property>
    <property name="minimumSize">
     <size>
-     <width>0</width>
-     <height>0</height>
+     <width>700</width>
+     <height>500</height>
+    </size>
+   </property>
+   <property name="maximumSize">
+    <size>
+     <width>16777215</width>
+     <height>16777215</height>
     </size>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
     <item>
-     <widget class="QTabWidget" name="tabs">
+     <widget class="QSplitter" name="splitter">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
+        <horstretch>1</horstretch>
+        <verstretch>1</verstretch>
        </sizepolicy>
       </property>
       <property name="minimumSize">
        <size>
-        <width>300</width>
-        <height>300</height>
+        <width>1151</width>
+        <height>651</height>
        </size>
       </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <property name="orientation">
+       <enum>Qt::Horizontal</enum>
+      </property>
+      <widget class="QTabWidget" name="tabs">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>16777215</width>
+         <height>16777215</height>
+        </size>
+       </property>
+       <property name="tabPosition">
+        <enum>QTabWidget::North</enum>
+       </property>
+       <property name="tabShape">
+        <enum>QTabWidget::Rounded</enum>
+       </property>
+       <property name="documentMode">
+        <bool>false</bool>
+       </property>
+       <property name="movable">
+        <bool>true</bool>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -62,16 +112,24 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1108</width>
+     <width>1164</width>
      <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
     <property name="title">
-     <string>Actions</string>
+     <string>File</string>
     </property>
+    <addaction name="actionLoad_scene"/>
+    <addaction name="actionLoad_config"/>
+    <addaction name="actionSave_scene"/>
+    <addaction name="actionSave_config"/>
+    <addaction name="separator"/>
+    <addaction name="actionImport_scene"/>
+    <addaction name="actionExport_quadtree"/>
+    <addaction name="actionExport_weights"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
-    <addaction name="actionSave_Scene"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -80,10 +138,28 @@
     <addaction name="actionHelp"/>
     <addaction name="actionAbout_Spool"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionTransect"/>
+    <addaction name="separator"/>
+    <addaction name="actionInspect_Noise"/>
+    <addaction name="actionInspect_Weights"/>
+    <addaction name="actionCalculate_WeightMatrix"/>
+    <addaction name="separator"/>
+    <addaction name="actionLog"/>
+   </widget>
    <addaction name="menuActions"/>
+   <addaction name="menuTools"/>
    <addaction name="menuAbout"/>
   </widget>
   <action name="actionExit">
+   <property name="icon">
+    <iconset theme="application-exit">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
     <string>Exit</string>
    </property>
@@ -92,21 +168,213 @@
    </property>
   </action>
   <action name="actionAbout_Spool">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="help-about">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
-    <string>About Spool</string>
+    <string>About spool</string>
    </property>
   </action>
   <action name="actionHelp">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="help-contents">
+     <normaloff/>
+    </iconset>
+   </property>
    <property name="text">
-    <string>Help</string>
+    <string>Online help</string>
+   </property>
+   <property name="toolTip">
+    <string>http://pyrocko.org</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+H</string>
+    <string>F1</string>
    </property>
   </action>
-  <action name="actionSave_Scene">
+  <action name="actionSave_scene">
    <property name="text">
-    <string>Save Scene</string>
+    <string>Save scene</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.save(filename)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
+  </action>
+  <action name="actionSave_config">
+   <property name="icon">
+    <iconset theme="document-export">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Save scene config (*.yml)</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.save_config(filename)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+S</string>
+   </property>
+  </action>
+  <action name="actionLoad_scene">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Load scene</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+  </action>
+  <action name="actionLoad_config">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset theme="document-import">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Load scene config</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.load_config(filename)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+O</string>
+   </property>
+  </action>
+  <action name="actionTransect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string notr="true">Scene Transect</string>
+   </property>
+   <property name="iconText">
+    <string>Scene Transect</string>
+   </property>
+  </action>
+  <action name="actionExport_quadtree">
+   <property name="icon">
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Export quadtree</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.quadtree.export(filename)</string>
+   </property>
+  </action>
+  <action name="actionLog">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Logger</string>
+   </property>
+   <property name="iconText">
+    <string>Logger</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene._log</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+  </action>
+  <action name="actionInspect_Noise">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Inspect noise</string>
+   </property>
+   <property name="iconText">
+    <string>Noise inspection</string>
+   </property>
+   <property name="toolTip">
+    <string>Scene.Covariance noise_data</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionImport_scene">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Import scene</string>
+   </property>
+   <property name="toolTip">
+    <string>Import Data from Gamma, ISCE, GMT5SAR, Matlab
+&lt;b&gt;Scene.import_data(filename)&lt;/b&gt;</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+I</string>
+   </property>
+  </action>
+  <action name="actionExport_weights">
+   <property name="icon">
+    <iconset theme="application-export">
+     <normaloff/>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Export weight matrix</string>
+   </property>
+   <property name="toolTip">
+    <string>Covariance.export_weight_matrix(filename)</string>
+   </property>
+  </action>
+  <action name="actionInspect_Weights">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Inspect weight matrix</string>
+   </property>
+   <property name="toolTip">
+    <string>Inspect focal weight matrix</string>
+   </property>
+  </action>
+  <action name="actionCovariance_Noise_Synthetic">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Covariance Synthetic Noise</string>
+   </property>
+  </action>
+  <action name="actionCalculate_WeightMatrix">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Calculate weight matrix</string>
+   </property>
+   <property name="toolTip">
+    <string>Calculate comlete weight matrix (Covaraince.weight_matrix)</string>
    </property>
   </action>
  </widget>
