@@ -158,7 +158,8 @@ class Gamma(SceneIO):
 
         * Binary file from gamma (:file:`*`)
         * Parameter file (:file:`*par`), including ``corner_lat, corner_lon,
-          nlines, width, post_lat, post_lon``
+          nlines, width, post_lat, post_lon or for UTM corner_east, post_east
+          corner_north and post_north``
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))
@@ -178,8 +179,9 @@ class Gamma(SceneIO):
         import re
 
         params = {}
-        required = ['corner_lat', 'corner_lon', 'nlines', 'width',
-                    'post_lat', 'post_lon']
+        required = ['nlines', 'width']
+        
+        
         rc = re.compile(r'^(\w*):\s*([a-zA-Z0-9+-.*]*\s[a-zA-Z0-9_]*).*')
 
         with open(par_file, mode='r') as par:
@@ -272,18 +274,71 @@ class Gamma(SceneIO):
 
         # LatLon UTM Conversion
         c = self.container
-        c['displacement'] = displ*1e-2
-        c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
-        c['frame']['llLon'] = par['corner_lon']
-        c['frame']['dLon'] = par['post_lon']
-        c['frame']['dLat'] = par['post_lat']
-        c['theta'] = theta
-        c['phi'] = phi
+        print par['projection_name'] 
 
-        c['meta']['title'] = par.get('title', None)
-        c['bin_file'] = filename
-        c['par_file'] = par_file
-        return self.container
+
+
+        if par['DEM_projection'] == 'UTM':
+            import utm
+    
+            c['displacement'] = displ*1e-2
+            
+            
+            utm_zone = par['projection_zone']
+            utm_zone_letter = 'N'
+            
+            utm_e = utm_n = None
+            post_n = par['post_north']
+            post_e = par['post_east']
+            utm_corn_e = par['corner_east']
+            utm_corn_n = par['corner_north']
+            
+            utm_corn_eo = utm_corn_e+(post_e* (c['displacement'].shape[0]))
+            utm_corn_no = utm_corn_n+(post_n* (c['displacement'].shape[1]))
+            
+            utm_e = num.linspace(utm_corn_e,utm_corn_eo , c['displacement'].shape[0])
+            utm_n = num.linspace(utm_corn_n, utm_corn_no , c['displacement'].shape[1])
+            
+            c['frame']['llLat'], c['frame']['llLon'] =\
+                utm.to_latlon(utm_e.min(), utm_n.min(),
+                              utm_zone, utm_zone_letter)
+            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
+                                         utm_zone, utm_zone_letter)
+            c['frame']['dLat'] =\
+                (urlat - c['frame']['llLat']) /\
+                c['displacement'].shape[0]
+
+            c['frame']['dLon'] =\
+                (urlon - c['frame']['llLon']) /\
+                c['displacement'].shape[1]
+                
+            c['theta'] = theta
+            c['phi'] = phi
+    
+            c['meta']['title'] = par.get('title', None)
+            c['bin_file'] = filename
+            c['par_file'] = par_file
+            return self.container
+        
+        else:
+            c['displacement'] = displ*1e-2
+            c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
+            c['frame']['llLon'] = par['corner_lon']
+            c['frame']['dLon'] = par['post_lon']
+            c['frame']['dLat'] = par['post_lat']
+            c['theta'] = theta
+            c['phi'] = phi
+    
+            c['meta']['title'] = par.get('title', None)
+            c['bin_file'] = filename
+            c['par_file'] = par_file
+            return self.container
+
+            
+            
+
+        
+            
 
 
 class ISCEXMLParser(object):
@@ -469,3 +524,4 @@ class GMTSAR(SceneIO):
             c['phi'] = 0.
 
         return c
+
