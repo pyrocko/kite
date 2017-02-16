@@ -7,7 +7,7 @@ from kite.meta import Subject, property_cached
 
 class QuadNode(object):
     """
-    A node (Syn. tile) in the Quadtree.
+    A node (Syn. tile, box) in the Quadtree.
     """
     def __init__(self, quadtree, llx, lly, length):
         self.llx = int(llx)
@@ -191,14 +191,18 @@ class QuadtreeConfig(guts.Object):
 
 
 class Quadtree(object):
-    """Quadtree for simplifying InSAR displacement data held in
+    """Quadtree for irregular subsampling InSAR displacement data held in
     :py:class:`kite.scene.Scene`
 
-    Post-earthquake InSAR displacement scenes can hold a vast amount of data,
-    which is unsuiteable for use with modelling code. By simplifying the data
-    systematically through a parametrized quadtree we can reduce the dataset to
-    significant displacements and have high-resolution where it matters and
-    lower resolution at regions with less or constant deformation.
+    InSAR displacement scenes can hold a vast amount of data points,
+    which is often highly redundant and unsuitably large for the use in 
+    inverse modeling. By subsampling and therefore decimating the data points
+    systematically through a parametrized quadtree we can reduce the dataset 
+    without significant loss of displacement information. Quadtree subsampling
+    keeps a high spatial resolution where displacement gradients are high and 
+    efficiently reduces data point density in regions with small displacement 
+    variations. The product is a managable dataset size with good representation
+    of the original data.
     """
     def __init__(self, scene, config=QuadtreeConfig()):
         self._split_methods = {
@@ -236,10 +240,16 @@ class Quadtree(object):
     def setSplitMethod(self, split_method, parallel=False):
         """Set splitting method for quadtree tiles
 
+        The spliting criterium is derived from: 
+
         * ``mean_std`` tiles standard deviation from tile's mean is evaluated
         * ``median_std`` tiles standard deviation from tile's median is
         evaluated
         * ``std`` tiles standard deviation is evaluated
+        
+        The first to lead to gradient-based subsampling, the third to
+        amplitude-based subsampling.
+
 
         :param split_method: Choose from methods
         ``['mean_std', 'median_std', 'std']``
@@ -272,7 +282,11 @@ class Quadtree(object):
 
     @property
     def epsilon(self):
-        """ Threshold for quadtree splitting its ``QuadNode``
+        """ Threshold for quadtree splitting its ``QuadNode``.
+        
+        The threshold is the maximum standard deviation of Leaf mean, 
+        median or simly its values (see ''SetSplitMethod'') allowed to
+        not further split a "QuadNode". 
         """
         return self.config.epsilon
 
@@ -303,8 +317,8 @@ class Quadtree(object):
 
     @property
     def nan_allowed(self):
-        """Fraction of allowed ``NaN`` values allwed in quadtree leafs, if
-        value is exceeded the leaf is kicked out.
+        """Fraction of allowed ``NaN`` values in quadtree leafs. If
+        value is exceeded the leaf is kicked out entirely.
         """
         return self.config.nan_allowed
 
@@ -321,7 +335,9 @@ class Quadtree(object):
 
     @property
     def tile_size_lim(self):
-        """Limiting tile size - smaller tiles are joined, bigger tiles
+        """Forcing minimum and maximum tile size.
+        
+        Smaller tiles are joined, bigger tiles
         split. Takes ``tuple(min, max)`` in **meter**.
         """
         return self.config.tile_size_lim
