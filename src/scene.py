@@ -531,7 +531,7 @@ class Scene(object):
     @dynamicmethod
     def _load(self, filename):
         """ Load a kite scene from file ``filename.[npz,yml]``
-        structure
+        structure.
 
         :param filename: Filenames the scene data is saved under
         :type filename: str

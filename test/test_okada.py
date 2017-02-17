@@ -21,13 +21,13 @@ class TestOkada(unittest.TestCase):
         models[:, 0] = 5.  # length
         models[:, 1] = 2.  # width
         models[:, 2] = 5.  # depth
-        models[:, 3] = 0.  # opening?
-        models[:, 4] = 40.  # Angle in deg
+        models[:, 3] = 0.  # Strike
+        models[:, 4] = 40.  # Dip
         models[:, 5] = (num.random.rand(nmodels) - .5) * 10 # X
         models[:, 6] = (num.random.rand(nmodels) - .5) * 10 # Y
         models[:, 7] = 0.  # SS Strike-Slip
         models[:, 8] = 1.  # DS Dip-Slip
-        models[:, 9] = 0.  # TS
+        models[:, 9] = 0.  # TS Tensional-Slip
 
         nu = 1.2512
         @benchmark
