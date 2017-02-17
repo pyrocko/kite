@@ -1,7 +1,7 @@
-Spool GUI
-=========
+The Spool module
+================
 
-The ``spool`` GUI is written in Qt4 (``pyside``), the plots are generated through pyqtgraph (http://www.pyqtgraph.org).
+The ``spool`` user interface is written in ``Qt4`` (using ``pyside``), the plots are generated through ``pyqtgraph`` (http://www.pyqtgraph.org).
 
 .. automodule:: kite.spool
     :members:

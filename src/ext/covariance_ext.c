@@ -1,5 +1,6 @@
 #define NPY_NO_DEPRECATED_API 7
-#define SQR(a)  ( a * a)
+#define SQR(a)  ( (a) * (a) )
+#define LOG2(a)  ( (log(a)) * 1.44269504088896340736 )
 
 #include "Python.h"
 #include "numpy/arrayobject.h"
@@ -9,11 +10,17 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <omp.h>
+#if defined(_OPENMP)
+    #include <omp.h>
+#endif
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
-typedef npy_uint32 uint32_t;
+
+typedef enum {
+    SUCCESS = 0,
+    SAUBSAMPLING_SPARSE_ERROR
+} state_covariance;
 
 static PyObject *CovarianceExtError;
 
@@ -57,7 +64,17 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
-static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_coord, uint32_t *map, uint32_t nleafs, float64_t ma, float64_t mb, uint32_t nthreads, float64_t *cov_arr) {
+static state_covariance calc_covariance_matrix(
+                float64_t *E,
+                float64_t *N,
+                npy_intp *shape_coord,
+                uint32_t *map,
+                uint32_t nleafs,
+                float64_t ma,
+                float64_t mb,
+                uint32_t nthreads,
+                uint32_t adaptive_subsampling,
+                float64_t *cov_arr) {
     npy_intp l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col;
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
     npy_intp icl1, icl2, nrows, ncols;
@@ -65,36 +82,44 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
     uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
     float64_t cov;
 
+    (void) tid;
+    (void) nthreads;
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
 
     // Defining adaptive subsampling
     for (il1=0; il1<nleafs; il1++) {
-        l_length = map[il1*4+1] - map[il1*4+0];
-        leaf_subsampling[il1] = ceil(sqrt(l_length)/2);
-        // leaf_subsampling[il1] = 1;
+        if (adaptive_subsampling) {
+            l_length = map[il1*4+1] - map[il1*4+0];
+            leaf_subsampling[il1] = ceil(LOG2(l_length));
+        } else {
+           leaf_subsampling[il1] = 1;
+        }
     }
-    if (nthreads == 0)
-        nthreads = omp_get_num_procs();
 
     // printf("coord_matrix: %ldx%ld\n", nrows, ncols);
     // printf("subsampling: %d\n", subsampling);
     // printf("nthreads: %d\n", nthreads);
-    #pragma omp parallel \
-        shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
-        private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
-                 l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
-                 npx, cov, l1hit, l2hit, tid) \
-        num_threads (nthreads)
-    {
-        tid = omp_get_thread_num();
-        #pragma omp for schedule (dynamic)
+    Py_BEGIN_ALLOW_THREADS
+    #if defined(_OPENMP)
+        if (nthreads == 0)
+            nthreads = omp_get_num_procs();
+        #pragma omp parallel \
+            shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
+            private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
+                     l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
+                     npx, cov, l1hit, l2hit, tid) \
+            num_threads (nthreads)
+        {
+            tid = omp_get_thread_num();
+            #pragma omp for schedule (dynamic)
+    #endif
         for (il1=0; il1<nleafs; il1++) {
             l1row_beg = map[il1*4+0];
             l1row_end = map[il1*4+1];
             l1col_beg = map[il1*4+2];
             l1col_end = map[il1*4+3];
-            //printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
+            // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
             for (il2=il1; il2<nleafs; il2++) {
                 l2row_beg = map[il2*4+0];
                 l2row_end = map[il2*4+1];
@@ -107,7 +132,7 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
                 cov = 0.;
                 npx = 0;
                 while(! (l1hit && l2hit)) {
-                    //printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
+                    // printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
                     for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
                         if (il1row > nrows) continue;
                         for (il1col=l1col_beg; il1col<l1col_end; il1col+=leaf_subsampling[il1]) {
@@ -130,78 +155,89 @@ static void calc_covariance_matrix(float64_t *E, float64_t *N, npy_intp *shape_c
                             }
                         }
                     }
-                    #pragma omp critical
-                    {
+                    #if defined(_OPENMP)
+                        #pragma omp critical
+                        {
+                    #endif
                         if (! l1hit) {
                             leaf_subsampling[il1] = floor(leaf_subsampling[il1]/2);
-                            printf("no hit!\n");
                         }
                         if (! l2hit) {
                             leaf_subsampling[il2] = floor(leaf_subsampling[il2]/2);
-                            printf("no hit!\n");
                         }
-                    }
+                    #if defined(_OPENMP)
+                        }
+                    #endif
                 }
                 cov_arr[il1*(nleafs)+il2] = ma * (cov/npx);
                 cov_arr[il2*(nleafs)+il1] = cov_arr[il1*(nleafs)+il2];
             }
         }
-    }
+    #if defined(_OPENMP)
+        }
+    #endif
+    Py_END_ALLOW_THREADS
+    return SUCCESS;
 }
 
 static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
-    PyObject *x_arr, *y_arr, *map_arr;
-    PyArrayObject *c_x_arr, *c_y_arr, *c_map_arr, *cov_arr;
+    PyObject *E_arr, *N_arr, *map_arr;
+    PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
     float64_t *x, *y, *covs, ma, mb;
-    uint32_t *map, nthreads;
+    uint32_t *map, nthreads, adaptive_subsampling;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
+    state_covariance err;
 
-    if (! PyArg_ParseTuple(args, "OOOddI", &x_arr, &y_arr, &map_arr, &ma, &mb, &nthreads)) {
-        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads)");
+    if (! PyArg_ParseTuple(args, "OOOddII", &E_arr, &N_arr, &map_arr, &ma, &mb, &nthreads, &adaptive_subsampling)) {
+        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads, adaptive_subsampling)");
         return NULL;
     }
 
-    if (! good_array(x_arr, NPY_FLOAT64, -1, 2, NULL))
+    if (! good_array(E_arr, NPY_FLOAT64, -1, 2, NULL))
         return NULL;
-    if (! good_array(y_arr, NPY_FLOAT64, -1, 2, NULL))
+    if (! good_array(N_arr, NPY_FLOAT64, -1, 2, NULL))
         return NULL;
     if (! good_array(map_arr, NPY_UINT32, -1, 2, shape_want_map))
         return NULL;
 
-    c_x_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) x_arr);
-    c_y_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) y_arr);
+    c_E_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) E_arr);
+    c_N_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) N_arr);
     c_map_arr = PyArray_GETCONTIGUOUS((PyArrayObject*) map_arr);
 
 
-    if (PyArray_SIZE(c_x_arr) != PyArray_SIZE(c_y_arr)) {
+    if (PyArray_SIZE(c_E_arr) != PyArray_SIZE(c_N_arr)) {
         PyErr_SetString(CovarianceExtError, "X and Y must have the same size!");
         return NULL;
     }
 
-    x = PyArray_DATA(c_x_arr);
-    y = PyArray_DATA(c_y_arr);
+    x = PyArray_DATA(c_E_arr);
+    y = PyArray_DATA(c_N_arr);
     map = PyArray_DATA(c_map_arr);
     nleafs = PyArray_SIZE(c_map_arr)/4;
 
-    shape_coord[0] = (npy_intp) PyArray_DIMS(c_x_arr)[0];
-    shape_coord[1] = (npy_intp) PyArray_DIMS(c_x_arr)[1];
+    shape_coord[0] = (npy_intp) PyArray_DIMS(c_E_arr)[0];
+    shape_coord[1] = (npy_intp) PyArray_DIMS(c_E_arr)[1];
     shape_dist[0] = nleafs;
     shape_dist[1] = nleafs;
 
     cov_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
     // printf("size distance matrix: %lu\n", PyArray_SIZE(cov_arr));
-    // printf("size coord matrix: %lu\n", PyArray_SIZE(x_arr));
+    // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
-    calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, covs);
+    err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, nthreads, adaptive_subsampling, covs);
+    if (err != SUCCESS) {
+        PyErr_SetString(CovarianceExtError, "Calculating covariance failed!");
+        return NULL;
+    }
     return (PyObject*) cov_arr;
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
-    {"leaf_distances", w_calc_covariance_matrix, METH_VARARGS,
-     "Calculates mean distances between quadtree leafs." },
+    {"covariance_matrix", w_calc_covariance_matrix, METH_VARARGS,
+     "Calculates the covariance matrix for full resolution." },
 
     {NULL, NULL, 0, NULL}         /* Sentinel */
 };

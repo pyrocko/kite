@@ -1,25 +1,31 @@
-Kite Documentation
-================================
-Welcome to the documentation of **Kite**! Here we want to give an overview of the frameworks' structure, features and the inner workings.
-You will find :doc:`examples` how to utilize this container as well as a *modular overview* of the framework.
+Kite Manual
+===========
+
+Kite is an open source toolbox and library for processing and analyzing InSAR displacement.
 
 
-Contents:
+Features
+--------
+
+.. raw:: html
+
+    <div class="keywords">
+        <span>InSAR displacement analysis</span>
+        <span>displacement processing</span>
+        <span>quadtree calculation and parametrisation</span>
+        <span>InSAR noise analysis</span>
+        <span>covariance calculation</span>
+        <span>error estimation</span>
+    </div>
+
+Overview
+--------
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    installation
    examples
    spool
    modules
-
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+   contributing

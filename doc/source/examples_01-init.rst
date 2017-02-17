@@ -2,7 +2,7 @@ Scene import/initialization
 ===========================
 
 Import unwrapped displacement scene from ``GMT5SAR``, ``GAMMA`` or ``ISCE``.
-See module documentation for file structure definition
+See module documentation for file structure definition.
 
 ::
 
@@ -13,7 +13,7 @@ See module documentation for file structure definition
     sc.plot()
 
 
-Manual initialisation of a generic binary dataset is also possible:
+Manual initialisation of a generic binary dataset is also possible. Here the fundamental frame has to be initialized manually.
 
 ::
 
@@ -29,8 +29,16 @@ Manual initialisation of a generic binary dataset is also possible:
     sc.frame.dLon = .00012
 
 
-Start :doc:spool for scene inspection and manipulation
+Start :doc:`spool` for scene inspection and manipulation
 
 ::
 
+    from kite import Scene
+    sc = Scene.import_file('unwrap_ll.grd')
     sc.spool()
+
+Alternatively the ``spool`` can be started from commandline
+
+.. code-block :: sh
+
+    spool unwrap_ll.grd

@@ -1,272 +1,251 @@
 #!/usr/bin/python2
-from PySide import QtGui
+from __future__ import division, absolute_import, print_function, \
+    unicode_literals
+
 from PySide import QtCore
-from utils_qt import QDoubleSlider
-from .tab import QKiteDock, QKiteToolComponents, QKitePlot
-from .tab_scene import QKiteSceneParamMeta, QKiteSceneParamFrame
-import pyqtgraph.parametertree.parameterTypes as pTypes
+from .utils_qt import SliderWidgetParameterItem
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from ..quadtree import QuadtreeConfig
+from collections import OrderedDict
 
 import pyqtgraph as pg
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
-class QKiteQuadtreeDock(QKiteDock):
-    def __init__(self, quadtree):
-        self.title = 'Scene.quadtree'
-        self.main_widget = QKiteQuadtreePlot(quadtree)
-        self.tools = {
-            'Quadtree Parameters': QKiteToolQuadtree(quadtree),
-            'Components': QKiteToolComponents(self.main_widget),
-            # 'Histogram': QKiteToolHistogram,
-        }
+class QKiteQuadtree(QKiteView):
+    title = 'Scene.quadtree'
 
-        self.parameters = [
-            QKiteSceneParamFrame(quadtree._scene, expanded=False),
-            QKiteSceneParamMeta(quadtree._scene, expanded=False),
-        ]
+    def __init__(self, spool):
+        scene_proxy = spool.scene_proxy
+        self.main_widget = QKiteQuadtreePlot(scene_proxy)
+        self.tools = {}
 
-        QKiteDock.__init__(self, quadtree)
+        self.param_quadtree = QKiteParamQuadtree(scene_proxy,
+                                                 self.main_widget,
+                                                 expanded=True)
+        self.parameters = [self.param_quadtree]
+
+        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
+
+        QKiteView.__init__(self)
+
+    def modelChanged(self):
+        self.main_widget.update()
+        self.main_widget.transFromFrame()
+        self.main_widget.updateFocalPoints()
+
+        self.param_quadtree.updateValues()
+        self.param_quadtree.onConfigUpdate()
+        self.param_quadtree.updateEpsilonLimits()
 
 
 class QKiteQuadtreePlot(QKitePlot):
-    def __init__(self, quadtree):
+    def __init__(self, scene_proxy):
 
         self.components_available = {
-            'mean': ['Node.mean displacement',
-                     lambda qt: qt.leaf_matrix_means],
-            'median': ['Node.median displacement',
-                       lambda qt: qt.leaf_matrix_medians],
-            'weight': ['Node.weight covariance',
-                       lambda qt: qt.leaf_matrix_weights],
+            'mean':
+            ['Node.mean displacement',
+             lambda sp: sp.quadtree.leaf_matrix_means],
+            'median':
+            ['Node.median displacement',
+             lambda sp: sp.quadtree.leaf_matrix_medians],
+            'weight':
+            ['Node.weight covariance',
+             lambda sp: sp.quadtree.leaf_matrix_weights],
         }
+
         self._component = 'median'
 
-        QKitePlot.__init__(self, container=quadtree)
-        self.quadtree = self.container
+        QKitePlot.__init__(self, scene_proxy=scene_proxy)
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
         # focalpoint_outline_color = (255, 255, 255, 200)
         focalpoint_outline_color = (3, 212, 3)
-        self.focal_points = pg.ScatterPlotItem(
-                                size=3.,
-                                pen=pg.mkPen(focalpoint_outline_color,
-                                             width=.5),
-                                brush=pg.mkBrush(focalpoint_color))
+        self.focal_points =\
+            pg.ScatterPlotItem(size=3.,
+                               pen=pg.mkPen(focalpoint_outline_color,
+                                            width=.5),
+                               brush=pg.mkBrush(focalpoint_color),
+                               antialias=True)
 
         self.addItem(self.focal_points)
+
+        def covarianceChanged():
+            if self._component == 'weight':
+                self.update()
+
+        self.scene_proxy.sigQuadtreeChanged.connect(self.update)
+        self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        self.scene_proxy.sigCovarianceChanged.connect(covarianceChanged)
+
+        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrame)
+        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrameScatter)
+
         self.updateFocalPoints()
 
-        self.quadtree.treeUpdate.subscribe(self.update)
-        self.quadtree.treeUpdate.subscribe(self.updateFocalPoints)
+    def transFromFrameScatter(self):
+        self.focal_points.resetTransform()
+        self.focal_points.scale(
+            self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
 
     def updateFocalPoints(self):
-        self.focal_points.setData(pos=self.quadtree.leaf_focal_points,
-                                  pxMode=True)
+        if self.scene_proxy.quadtree.leaf_focal_points.size == 0:
+            self.focal_points.clear()
+        else:
+            self.focal_points.setData(
+                pos=self.scene_proxy.quadtree.leaf_focal_points,
+                pxMode=True)
 
 
-class QKiteQuadtreeParam(pTypes.GroupParameter):
-    def __init__(self, *args, **kwargs):
+class QKiteParamQuadtree(QKiteParameterGroup):
+    sigEpsilon = QtCore.Signal(float)
+    sigNanFraction = QtCore.Signal(float)
+    sigTileMaximum = QtCore.Signal(float)
+    sigTileMinimum = QtCore.Signal(float)
+
+    def __init__(self, scene_proxy, plot, *args, **kwargs):
+        self.plot = plot
+        self.sig_guard = True
+        self.sp = scene_proxy
+
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
-        pTypes.GroupParameter.__init__(self, **kwargs)
+        self.parameters = OrderedDict(
+                          [('nleafs', None),
+                           ('reduction_rms', None),
+                           ('reduction_efficiency', None),
+                           ('epsilon_min', None),
+                           ('nnodes', None),
+                           ])
 
-        self.addChild('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
-        self.addChild('Epsilon current', '%0.3f' % self.quadtree.epsilon),
-        self.addChild('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
-        self.addChild('Allowed NaN fraction',
-            '%d%%' % int(self.quadtree.nan_allowed * 100)
-            if self.quadtree.nan_allowed != -9999. else 'inf'),
-        self.addChild('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
-        self.addChild('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
-            if self.quadtree.tile_size_lim[1] != -9999. else 'inf')
+        QKiteParameterGroup.__init__(self,
+                                     model=scene_proxy,
+                                     model_attr='quadtree',
+                                     **kwargs)
 
+        scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
+        scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
 
-class QKiteToolQuadtree(QtGui.QWidget):
-    def __init__(self, quadtree):
-        QtGui.QWidget.__init__(self)
-        self.quadtree = quadtree
+        self.sigEpsilon.connect(scene_proxy.qtproxy.setEpsilon)
+        self.sigNanFraction.connect(scene_proxy.qtproxy.setNanFraction)
+        self.sigTileMaximum.connect(scene_proxy.qtproxy.setTileMaximum)
+        self.sigTileMinimum.connect(scene_proxy.qtproxy.setTileMinimum)
 
-        self.layout = QtGui.QVBoxLayout(self)
-        self.layout.addWidget(self.getEpsilonChanger())
-        self.layout.addWidget(self.getNaNFractionChanger())
-        self.layout.addWidget(self.getTileSizeChanger())
-        self.layout.addWidget(self.getMethodsChanger())
-        self.layout.addWidget(self.getInfoPanel())
-        self.layout.addStretch(3)
+        def updateGuard(func):
+            def wrapper(*args, **kwargs):
+                if not self.sig_guard:
+                    func()
+            return wrapper
 
-    def getEpsilonChanger(self):
-        layout = QtGui.QHBoxLayout()
+        # Epsilon control
+        @updateGuard
+        def updateEpsilon():
+            self.sigEpsilon.emit(self.epsilon.value())
 
-        slider = QDoubleSlider(QtCore.Qt.Horizontal)
-        spin = QtGui.QDoubleSpinBox()
+        p = {'name': 'epsilon',
+             'value': scene_proxy.quadtree.epsilon,
+             'type': 'float',
+             'default': scene_proxy.quadtree._epsilon_init,
+             'step': round((scene_proxy.quadtree.epsilon -
+                            scene_proxy.quadtree.epsilon_min)*.1, 3),
+             'limits': (scene_proxy.quadtree.epsilon_min,
+                        3*scene_proxy.quadtree._epsilon_init),
+             'editable': True}
+        self.epsilon = pTypes.SimpleParameter(**p)
+        self.epsilon.itemClass = SliderWidgetParameterItem
+        self.epsilon.sigValueChanged.connect(updateEpsilon)
 
-        def changeEpsilon():
-            epsilon = round(spin.value(), 3)
-            self.quadtree.epsilon = epsilon
-            slider.setValue(epsilon)
+        # Epsilon control
+        @updateGuard
+        def updateNanFrac():
+            self.sigNanFraction.emit(self.nan_allowed.value())
 
-        def updateRange():
-            for wdgt in [slider, spin]:
-                wdgt.setValue(self.quadtree.epsilon)
-                wdgt.setRange(self.quadtree._epsilon_limit,
-                              3*self.quadtree.epsilon)
-                wdgt.setSingleStep(round((self.quadtree.epsilon -
-                                          self.quadtree._epsilon_limit)*.2, 3))
+        p = {'name': 'nan_allowed',
+             'value': scene_proxy.quadtree.nan_allowed,
+             'default': QuadtreeConfig.nan_allowed.default(),
+             'type': 'float',
+             'step': 0.05,
+             'limits': (0., 1.),
+             'editable': True, }
+        self.nan_allowed = pTypes.SimpleParameter(**p)
+        self.nan_allowed.itemClass = SliderWidgetParameterItem
+        self.nan_allowed.sigValueChanged.connect(updateNanFrac)
 
-        spin.setDecimals(3)
-        updateRange()
+        # Tile size controls
+        @updateGuard
+        def updateTileSizeMin():
+            self.sigTileMinimum.emit(self.tile_size_min.value())
 
-        self.quadtree.splitMethodChanged.subscribe(updateRange)
-        spin.valueChanged.connect(changeEpsilon)
-        slider.valueChanged.connect(lambda: spin.setValue(round(slider.value(),
-                                                                3)))
+        p = {'name': 'tile_size_min',
+             'value': scene_proxy.quadtree.tile_size_min,
+             'default': QuadtreeConfig.tile_size_min.default(),
+             'type': 'int',
+             'limits': (50, 50000),
+             'step': 100,
+             'editable': True,
+             'suffix': 'm'}
+        self.tile_size_min = pTypes.SimpleParameter(**p)
+        self.tile_size_min.itemClass = SliderWidgetParameterItem
 
-        layout.addWidget(spin)
-        layout.addWidget(slider)
+        @updateGuard
+        def updateTileSizeMax():
+            self.sigTileMaximum.emit(self.tile_size_max.value())
 
-        group = QtGui.QGroupBox('Scene.quadtree.epsilon')
-        group.setToolTip('''<p>Standard deviation/split
-                        method of each tile is >= epsilon</p>''')
-        group.setLayout(layout)
+        p.update({'name': 'tile_size_max',
+                  'value': scene_proxy.quadtree.tile_size_max,
+                  'default': QuadtreeConfig.tile_size_max.default()})
+        self.tile_size_max = pTypes.SimpleParameter(**p)
+        self.tile_size_max.itemClass = SliderWidgetParameterItem
 
-        return group
+        self.tile_size_min.sigValueChanged.connect(updateTileSizeMin)
+        self.tile_size_max.sigValueChanged.connect(updateTileSizeMax)
 
-    def getNaNFractionChanger(self):
-        layout = QtGui.QHBoxLayout()
+        # Component control
+        def changeComponent():
+            self.plot.component = self.components.value()
 
-        slider = QDoubleSlider(QtCore.Qt.Horizontal)
-        spin = QtGui.QDoubleSpinBox()
+        p = {'name': 'display',
+             'values': {
+                'QuadNode.mean': 'mean',
+                'QuadNode.median': 'median',
+                'QuadNode.weight': 'weight',
+             },
+             'value': 'mean'}
+        self.components = pTypes.ListParameter(**p)
+        self.components.sigValueChanged.connect(changeComponent)
 
-        def changeNaNFraction():
-            nan_allowed = round(spin.value(), 3)
-            self.quadtree.nan_allowed = nan_allowed
-            slider.setValue(nan_allowed)
+        def changeCorrection():
+            scene_proxy.quadtree.setCorrection(correction_method.value())
+            self.updateEpsilonLimits()
 
-        for wdgt in [slider, spin]:
-            wdgt.setValue(self.quadtree.nan_allowed or 1.)
-            wdgt.setRange(0., 1.)
-            wdgt.setSingleStep(.05)
+        p = {'name': 'setCorrection',
+             'values': {
+                'Mean (Jonsson, 2002)': 'mean',
+                'Median (Jonsson, 2002)': 'median',
+                'Bilinear (Jonsson, 2002)': 'bilinear',
+                'SD (Jonsson, 2002)': 'std',
+             },
+             'value': QuadtreeConfig.correction.default()}
+        correction_method = pTypes.ListParameter(**p)
+        correction_method.sigValueChanged.connect(changeCorrection)
 
-        spin.setDecimals(2)
+        self.sig_guard = False
+        self.pushChild(correction_method)
+        self.pushChild(self.tile_size_max)
+        self.pushChild(self.tile_size_min)
+        self.pushChild(self.nan_allowed)
+        self.pushChild(self.epsilon)
+        self.pushChild(self.components)
 
-        spin.valueChanged.connect(changeNaNFraction)
-        slider.valueChanged.connect(lambda: spin.setValue(round(slider.value(),
-                                                                3)))
+    def onConfigUpdate(self):
+        self.sig_guard = True
+        for p in ['epsilon', 'nan_allowed',
+                  'tile_size_min', 'tile_size_max']:
+            param = getattr(self, p)
+            param.setValue(getattr(self.sp.quadtree, p))
+        self.sig_guard = False
 
-        layout.addWidget(spin)
-        layout.addWidget(slider)
-
-        group = QtGui.QGroupBox('Scene.quadtree.nan_allowed (NaN as fraction)')
-        group.setToolTip('''<p>Maximum <b>NaN pixel
-            fraction allowed</b> per tile</p>''')
-        group.setLayout(layout)
-
-        return group
-
-    def getTileSizeChanger(self):
-        layout = QtGui.QGridLayout()
-
-        slider_smin = QtGui.QSlider(QtCore.Qt.Horizontal)
-        spin_smin = QtGui.QSpinBox()
-        slider_smax = QtGui.QSlider(QtCore.Qt.Horizontal)
-        spin_smax = QtGui.QSpinBox()
-
-        def changeTileLimits():
-            smin, smax = spin_smin.value(), spin_smax.value()
-            if smax == spin_smax.maximum() or smax == 0.:
-                smax = -9999.
-
-            self.quadtree.tile_size_lim = (smin, smax)
-            slider_smin.setValue(spin_smin.value())
-            slider_smax.setValue(spin_smax.value())
-
-        for wdgt in [slider_smax, slider_smin, spin_smax, spin_smin]:
-            wdgt.setRange(0, 25000)
-            wdgt.setSingleStep(50)
-
-        for wdgt in [slider_smin, spin_smin]:
-            wdgt.setValue(self.quadtree.tile_size_lim[0])
-        slider_smin.valueChanged.connect(
-            lambda: spin_smin.setValue(slider_smin.value()))
-        spin_smin.valueChanged.connect(changeTileLimits)
-        spin_smin.setSuffix(' m')
-
-        for wdgt in [slider_smax, spin_smax]:
-            wdgt.setValue(self.quadtree.tile_size_lim[1])
-        slider_smax.valueChanged.connect(
-            lambda: spin_smax.setValue(slider_smax.value()))
-        spin_smax.valueChanged.connect(changeTileLimits)
-        spin_smax.setSpecialValueText('inf')
-        spin_smax.setSuffix(' m')
-
-        layout.addWidget(QtGui.QLabel('Min',
-                                      toolTip='Minimum tile size in meter'),
-                         1, 1)
-        layout.addWidget(spin_smin, 1, 2)
-        layout.addWidget(slider_smin, 1, 3)
-
-        layout.addWidget(QtGui.QLabel('Max',
-                                      toolTip='Maximum tile size in meter'),
-                         2, 1)
-        layout.addWidget(spin_smax, 2, 2)
-        layout.addWidget(slider_smax, 2, 3)
-
-        group = QtGui.QGroupBox('Scene.quadtree.tile_size_lim')
-        group.setToolTip('<p>Tile size limits, '
-                         'overwrites the desired epsilon parameter</p>')
-        group.setLayout(layout)
-
-        return group
-
-    def getMethodsChanger(self):
-        from functools import partial
-
-        layout = QtGui.QVBoxLayout()
-
-        def changeMethod(method):
-            self.quadtree.setSplitMethod(method)
-
-        for method in self.quadtree._split_methods.keys():
-            btn = QtGui.QRadioButton()
-            btn.setText(self.quadtree._split_methods[method][0])
-            btn.setChecked(method == self.quadtree.config.split_method)
-            btn.clicked.connect(partial(changeMethod, method))
-
-            layout.addWidget(btn)
-
-        group = QtGui.QGroupBox('Scene.quadtree.setSplitMethod')
-        group.setLayout(layout)
-
-        return group
-
-    def getInfoPanel(self):
-        layout = QtGui.QVBoxLayout()
-        info_text = QtGui.QLabel()
-
-        def updateInfoText():
-            infos = [
-                ('Leaf Count', '<b>%d</b>' % len(self.quadtree.leafs)),
-                ('Epsilon current', '%0.3f' % self.quadtree.epsilon),
-                ('Epsilon limit', '%0.3f' % self.quadtree._epsilon_limit),
-                ('Allowed NaN fraction',
-                    '%d%%' % int(self.quadtree.nan_allowed * 100)
-                    if self.quadtree.nan_allowed != -9999. else 'inf'),
-                ('Min tile size', '%d m' % self.quadtree.tile_size_lim[0]),
-                ('Max tile size', '%d m' % self.quadtree.tile_size_lim[1]
-                    if self.quadtree.tile_size_lim[1] != -9999. else 'inf'),
-            ]
-            _text = '<table>'
-            for (param, value) in infos:
-                _text += '''<tr><td style='padding-right: 10px'>%s:</td>
-                    <td><b>%s</td></tr>''' % (param, value)
-            _text += '</table>'
-            info_text.setText(_text)
-
-        updateInfoText()
-        self.quadtree.treeUpdate.subscribe(updateInfoText)
-
-        layout.addWidget(info_text)
-        group = QtGui.QGroupBox('Quadtree Information')
-        group.setLayout(layout)
-
-        return group
+    def updateEpsilonLimits(self):
+        self.epsilon.setLimits((self.sp.quadtree.epsilon_min,
+                                3*self.sp.quadtree._epsilon_init))

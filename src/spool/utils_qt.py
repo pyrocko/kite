@@ -1,46 +1,14 @@
 #!/usr/bin/python2
 from __future__ import (print_function, division, unicode_literals,
                         absolute_import)
-from PySide import QtGui
-
 import os
 
+import numpy as num
+from pyqtgraph.Qt import QtGui, QtCore
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 from PySide.QtCore import QMetaObject
 from PySide.QtUiTools import QUiLoader
 
-
-# -*- coding: utf-8 -*-
-# Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
-# Modifications by Charl Botha <cpbotha@vxlabs.com>
-# * customWidgets support (registerCustomWidget() causes segfault in
-#   pyside 1.1.2 on Ubuntu 12.04 x86_64)
-# * workingDirectory support in loadUi
-
-# found this here:
-# https://github.com/lunaryorn/snippets/blob/master/qt4/designer/pyside_dynamic.py
-
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
-"""
-    How to load a user interface dynamically with PySide.
-    .. moduleauthor::  Sebastian Wiesner  <lunaryorn@gmail.com>
-"""
 
 SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -109,6 +77,40 @@ _viridis_data = [[68, 1, 84],
                  [236, 228, 26],
                  [246, 230, 31]]
 _viridis_data.reverse()
+
+
+# -*- coding: utf-8 -*-
+# Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
+# Modifications by Charl Botha <cpbotha@vxlabs.com>
+# * customWidgets support (registerCustomWidget() causes segfault in
+#   pyside 1.1.2 on Ubuntu 12.04 x86_64)
+# * workingDirectory support in loadUi
+
+# found this here:
+# https://github.com/lunaryorn/snippets/blob/master/qt4/designer/pyside_dynamic.py
+
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+"""
+    How to load a user interface dynamically with PySide.
+    .. moduleauthor::  Sebastian Wiesner  <lunaryorn@gmail.com>
+"""
 
 
 class UiLoader(QUiLoader):
@@ -213,45 +215,112 @@ def loadUi(uifile, baseinstance=None, customWidgets=None,
     return widget
 
 
-class QDoubleSlider(QtGui.QSlider):
-    ''' DoublePrecision slider for Qt
+class SliderWidget(QtGui.QWidget):
     '''
-    def __init__(self, *args, **kwargs):
-        QtGui.QSlider.__init__(self, *args, **kwargs)
+    shows a horizontal/vertical slider with a label showing its value
+    '''
+    sigValueChanged = QtCore.Signal(object)  # value
 
-        super(QDoubleSlider, self).setMinimum(0)
-        self._max_int = 10000
-        super(QDoubleSlider, self).setMaximum(self._max_int)
+    def __init__(self, horizontal=True, parent=None):
+        '''
+        horizontal -> True/False
+        '''
+        QtGui.QWidget.__init__(self, parent)
+        self.mn, self.mx = None, None
+        self.precission = 0
+        self.step = 100
+        self.valueLen = 2
+        self.suffix = None
 
-        self._min_value = 0.0
-        self._max_value = 100.0
+        self.label = QtGui.QLabel()
+        self.label.setFont(QtGui.QFont('Courier'))
+        self.slider = QtGui.QSlider(QtCore.Qt.Orientation(
+                        1 if horizontal else 0), self)  # 1...horizontal
+        self.slider.setTickPosition(
+            QtGui.QSlider.TicksAbove if horizontal
+            else QtGui.QSlider.TicksLeft)
+        # self.slider.setRange (0, 100)
+        self.slider.sliderMoved.connect(self._updateLabel)
+        self._updateLabel(self.slider.value())
 
-    @property
-    def _value_range(self):
-        return self._max_value - self._min_value
+        layout = QtGui.QHBoxLayout() if horizontal else QtGui.QVBoxLayout()
+        self.setLayout(layout)
+        layout.addWidget(self.slider)
+        layout.addWidget(self.label)
 
     def value(self):
-        return float(super(QDoubleSlider, self).value()) \
-            / self._max_int * self._value_range
+        return self._value
 
-    def setValue(self, value):
-        super(QDoubleSlider, self).setValue(int(value /
-                                            self._value_range * self._max_int))
+    def setValue(self, val):
+        if val is None:
+            val = self.mn
+        if self.mn is not None:
+            val = (val-self.mn) / (self.mx-self.mn)
+            val *= 99.0
+            val = int(round(val))
+        self.slider.setValue(val)
+        self._updateLabel(val)
 
-    def setMinimum(self, value):
-        self.setRange(value, self._max_value)
+    def setRange(self, mn, mx):
+        '''
+        mn, mx -> arbitrary values that are not equal
+        '''
+        if mn == mx:
+            raise ValueError('limits must be different values')
+        self.mn = float(min(mn, mx))
+        self.mx = float(max(mn, mx))
+        self._calcPrecission()
+        self._updateLabel(self.slider.value())
 
-    def setMaximum(self, value):
-        self.setRange(self._min_value, value)
+    def _calcPrecission(self):
+        # number of floating points:
+        self.precission = int(round(num.log10(
+                (self.step / (self.mx-self.mn)))))
+        if self.precission < 0:
+            self.precission = 0
+        # length of the number in the label:
+        self.valueLen = max(len(str(int(self.mn))), len(str(int(self.mx))))\
+            + self.precission
 
-    def setRange(self, minimum, maximum):
-        old_value = self.value()
-        self._min_value = minimum
-        self._max_value = maximum
-        self.setValue(old_value)
+    def setOpts(self, bounds=None):
+        if bounds is not None:
+            self.setRange(*bounds)
 
-    def proportion(self):
-        return (self.value() - self._min_value) / self._value_range
+    def setSuffix(self, suffix=None):
+        self.suffix = suffix
+
+    def _updateLabel(self, val):
+        if self.mn is not None:
+            val /= 99.0  # val->0...1
+            val = val * (self.mx-self.mn) + self.mn
+
+        self._value = round(val, self.precission)
+        self.sigValueChanged.emit(self._value)
+
+        text = format(self._value, '%s.%sf'
+                      % (self.valueLen, self.precission))
+        if self.suffix is not None:
+            text += ' %s' % self.suffix
+        self.label.setText(text)
+
+
+class SliderWidgetParameterItem(WidgetParameterItem):
+    ''' Enabling Slider widget for Parameter
+    '''
+    def makeWidget(self):
+        opts = self.param.opts
+        w = SliderWidget()
+        w.sigChanged = w.sigValueChanged
+        w.sigChanging = w.sigValueChanged
+        l = opts.get('limits')
+        if l:
+            w.setRange(*l)
+        v = opts.get('value')
+        if l:
+            w.setValue(v)
+        w.setSuffix(opts.get('suffix', None))
+        self.hideWidget = False
+        return w
 
 
 class QSceneLogger(QtGui.QWidget):

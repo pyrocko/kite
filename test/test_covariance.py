@@ -16,7 +16,7 @@ class TestCovariance(unittest.TestCase):
          os.path.abspath(os.path.dirname(__file__)),
          'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
 
-        self.sc = Scene.import_file(file)
+        self.sc = Scene.import_data(file)
         self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
         self.sc._log.setLevel('CRITICAL')
 
@@ -28,16 +28,16 @@ class TestCovariance(unittest.TestCase):
         self.sc = SceneTest.createGauss()
         # self.sc._log.setLevel('CRITICAL')
 
-    @unittest.skip('Skipped')
+    # @unittest.skip('Skipped')
     def testCovariance(self):
-        self.sc.quadtree.epsilon = .02
-        self.sc.quadtree.covariance.subsampling = 24
-        cov = self.sc.quadtree.covariance
+        cov = self.sc.covariance
+        cov.epsilon = .02
+        cov.subsampling = 24
 
         d = []
-        d.append(('Full', cov._calcDistanceMatrix(method='full',
+        d.append(('Full', cov._calcCovarianceMatrix(method='full',
                  nthreads=0)))
-        d.append(('Focal', cov._calcDistanceMatrix(method='focal')))
+        d.append(('Focal', cov._calcCovarianceMatrix(method='focal')))
 
         for _, c1 in d:
             for _, c2 in d:
@@ -45,33 +45,33 @@ class TestCovariance(unittest.TestCase):
                                             rtol=200, atol=2e3, verbose=True)
 
     @benchmark
-    # @unittest.skip('Skip!')
+    @unittest.skip('Skip!')
     def testCovariancParallel(self):
-        cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='full', nthreads=12)
+        cov = self.sc.covariance
+        cov._calcCovarianceMatrix(method='full', nthreads=12)
 
     @benchmark
     @unittest.skip('Skip!')
     def testCovariancSingle(self):
-        cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='full', nthreads=1)
+        cov = self.sc.covariance
+        cov._calcCovarianceMatrix(method='full', nthreads=1)
 
     @benchmark
-    # @unittest.skip('Skip!')
+    @unittest.skip('Skip!')
     def testCovariancFocal(self):
-        cov = self.sc.quadtree.covariance
-        cov._calcDistanceMatrix(method='focal')
+        cov = self.sc.covariance
+        cov._calcCovarianceMatrix(method='focal')
 
     @unittest.skip('Skip!')
     def testCovarianceVisual(self):
-        self.sc.quadtree.epsilon = .02
-        cov = self.sc.quadtree.covariance
+        cov = self.sc.covariance
+        cov.epsilon = .02
         cov.subsampling = 10
         # l = self.sc.quadtree.leafs[0]
         d = []
-        d.append(('Full', cov._calcDistanceMatrix(method='full',
+        d.append(('Full', cov._calcCovarianceMatrix(method='full',
                  nthreads=0)))
-        d.append(('Focal', cov._calcDistanceMatrix(method='focal')))
+        d.append(('Focal', cov._calcCovarianceMatrix(method='focal')))
 
         fig, _ = plt.subplots(1, len(d))
         for i, (title, mat) in enumerate(d):
