@@ -378,7 +378,7 @@ class Scene(object):
         """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
         in radians
 
-        .. note ::
+        .. important ::
 
             Kite convention is:
 
@@ -406,7 +406,7 @@ class Scene(object):
         in radians. Matrix of theta towards satellite's
         :abbr:`line of sight (LOS)`.
 
-        .. note ::
+        .. important ::
 
             Kite convention!
 
