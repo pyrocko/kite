@@ -309,8 +309,8 @@ class Gamma(SceneIO):
             utm_corn_e = par['corner_east']
             utm_corn_n = par['corner_north']
 
-            utm_corn_eo = utm_corn_e + dE * displ.shape[0]
-            utm_corn_no = utm_corn_n + dN * displ.shape[1]
+            utm_corn_eo = utm_corn_e + dE * displ.shape[1]
+            utm_corn_no = utm_corn_n + dN * displ.shape[0]
 
             utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
             utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
