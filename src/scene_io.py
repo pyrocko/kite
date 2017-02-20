@@ -19,7 +19,7 @@ class SceneIO(object):
         self.container = {
             'phi': 0.,    # Look incident angle from vertical in degree
             'theta': 0.,  # Look orientation angle from east; 0deg East,
-                          # 90deg North
+            # 90deg North
             'displacement': None,  # Displacement towards LOS
             'frame': {
                 'llLon': None,  # Lower left corner latitude
@@ -158,7 +158,8 @@ class Gamma(SceneIO):
 
         * Binary file from gamma (:file:`*`)
         * Parameter file (:file:`*par`), including ``corner_lat, corner_lon,
-          nlines, width, post_lat, post_lon``
+          nlines, width, post_lat, post_lon or for UTM corner_east, post_east
+          corner_north and post_north``
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))
@@ -178,8 +179,11 @@ class Gamma(SceneIO):
         import re
 
         params = {}
-        required = ['corner_lat', 'corner_lon', 'nlines', 'width',
-                    'post_lat', 'post_lon']
+        required_utm = ['post_north', 'post_east', 'corner_east',
+                        'corner_north', 'nlines', 'width']
+        required_lat_lon = ['corner_lat', 'corner_lon', 'nlines', 'width',
+                            'post_lat', 'post_lon']
+
         rc = re.compile(r'^(\w*):\s*([a-zA-Z0-9+-.*]*\s[a-zA-Z0-9_]*).*')
 
         with open(par_file, mode='r') as par:
@@ -194,12 +198,18 @@ class Gamma(SceneIO):
                 except ValueError:
                     params[groups[0]] = groups[1].strip()
 
-        for r in required:
-            if r not in params:
-                raise ImportError(
-                    'Parameter file does not hold required parameter %s' % r)
+        def check_required(required, params):
+            for r in required:
+                if r not in params:
+                    return False
+            return True
 
-        return params
+        if check_required(required_utm, params)\
+           or check_required(required_lat_lon, params):
+            return params
+
+        raise ImportError(
+            'Parameter file does not hold required parameters')
 
     def validate(self, filename, **kwargs):
         try:
@@ -273,16 +283,54 @@ class Gamma(SceneIO):
         # LatLon UTM Conversion
         c = self.container
         c['displacement'] = displ*1e-2
-        c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
-        c['frame']['llLon'] = par['corner_lon']
-        c['frame']['dLon'] = par['post_lon']
-        c['frame']['dLat'] = par['post_lat']
         c['theta'] = theta
         c['phi'] = phi
 
-        c['meta']['title'] = par.get('title', None)
+        c['meta']['title'] = par.get('title', 'None')
         c['bin_file'] = filename
         c['par_file'] = par_file
+
+        if par['DEM_projection'] == 'UTM':
+            self._log.info('Parameter file provides UTM reference')
+            import utm
+
+            utm_zone = par['projection_zone']
+            try:
+                utm_zone_letter = utm.latitude_to_zone_letter(
+                    par['center_latitude'])
+            except ValueError:
+                self._log.warning('Could not parse UTM Zone letter,'
+                                  ' defaulting to N!')
+                utm_zone_letter = 'N'
+
+            utm_e = utm_n = None
+            dN = par['post_north']
+            dE = par['post_east']
+            utm_corn_e = par['corner_east']
+            utm_corn_n = par['corner_north']
+
+            utm_corn_eo = utm_corn_e + dE * displ.shape[1]
+            utm_corn_no = utm_corn_n + dN * displ.shape[0]
+
+            utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
+            utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
+
+            c['frame']['llLat'], c['frame']['llLon'] =\
+                utm.to_latlon(utm_e.min(), utm_n.min(),
+                              utm_zone, utm_zone_letter)
+            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
+                                         utm_zone, utm_zone_letter)
+            c['frame']['dLat'] =\
+                (urlat - c['frame']['llLat']) / displ.shape[0]
+
+            c['frame']['dLon'] =\
+                (urlon - c['frame']['llLon']) / displ.shape[1]
+        else:
+            self._log.info('Parameter file provides Lat/Lon reference')
+            c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
+            c['frame']['llLon'] = par['corner_lon']
+            c['frame']['dLon'] = par['post_lon']
+            c['frame']['dLat'] = par['post_lat']
         return self.container
 
 
@@ -372,11 +420,11 @@ class ISCE(SceneIO):
             (nlat * coord_lat['delta'])
         c['frame']['llLon'] = coord_lon['startingvalue']
 
-        displacement = num.memmap(self._getDisplacementFile(path),
-                                  dtype='<f4')\
+        displ = num.memmap(self._getDisplacementFile(path),
+                           dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
-        displacement[displacement == 0.] = num.nan
-        c['displacement'] = displacement*1e-2
+        displ[displ == 0.] = num.nan
+        c['displacement'] = displ*1e-2
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
