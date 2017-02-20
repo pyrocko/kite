@@ -429,7 +429,7 @@ class ISCE(SceneIO):
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
         c['phi'] = los_data[:, :nlon]
-        c['theta'] = los_data[:, nlon:] + 90.
+        c['theta'] = los_data[:, nlon:] + num.pi/2
 
         return c
 
@@ -512,8 +512,9 @@ class GMTSAR(SceneIO):
             c['phi'] = phi
             c['theta'] = theta
         except ImportError:
-            self._log.warning('Defaulting theta and phi to 0')
-            c['theta'] = 0.
+            self._log.warning(self.__doc__)
+            self._log.warning('Defaulting theta and phi to 0./2*pi')
+            c['theta'] = num.pi/2
             c['phi'] = 0.
 
         return c
