@@ -179,6 +179,7 @@ class Frame(object):
     def gridE(self):
         """ UTM grid holding eastings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
+            
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
@@ -190,6 +191,7 @@ class Frame(object):
     def gridN(self):
         """ UTM grid holding northings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
+            
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
@@ -281,7 +283,7 @@ class Meta(guts.Object):
 
 class SceneConfig(guts.Object):
     """ Configuration object, gathering ``kite.Scene`` and
-    sub-objects configuration.
+        sub-objects configuration.
     """
     meta = Meta.T(
         default=Meta(),
@@ -369,6 +371,7 @@ class Scene(object):
     @property_cached
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
+        
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
         return num.isnan(self.displacement)
@@ -376,7 +379,7 @@ class Scene(object):
     @property
     def phi(self):
         """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-        in radians
+            in radians
 
         .. important ::
 
@@ -403,8 +406,8 @@ class Scene(object):
     @property
     def theta(self):
         """ Theta is look vector elevation angle towards satellite from horizon
-        in radians. Matrix of theta towards satellite's
-        :abbr:`line of sight (LOS)`.
+            in radians. Matrix of theta towards satellite's
+            :abbr:`line of sight (LOS)`.
 
         .. important ::
 
@@ -430,16 +433,18 @@ class Scene(object):
 
     @property_cached
     def thetaDeg(self):
-        """ LOS incident angle in degree, ``NxM`` matrix like
+        """ LOS elevation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
+            
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.theta)
 
     @property_cached
     def phiDeg(self):
-        """ LOS incident angle in degree, ``NxM`` matrix like
+        """ LOS horizontal orientation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
+            
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.phi)
@@ -447,6 +452,7 @@ class Scene(object):
     @property_cached
     def quadtree(self):
         """ Instanciates the scene's quadtree.
+        
         :type: :class:`kite.quadtree.Quadtree`
         """
         self._log.debug('Creating kite.Quadtree instance')
@@ -456,6 +462,7 @@ class Scene(object):
     @property_cached
     def covariance(self):
         """ Instanciates the scene's covariance attribute.
+        
         :type: :class:`kite.covariance.Covariance`
         """
         self._log.debug('Creating kite.Covariance instance')
@@ -622,8 +629,8 @@ class Scene(object):
 
 
 class LOSUnitVectors(object):
-    """ Decomposed Line Of Sight vectors (LOS) derived from
-    :attr:`~kite.Scene.displacement`.
+    """ Decompose line-of-sight (LOS) angles derived from
+    :attr:`~kite.Scene.displacement` to unit vector.
     """
     def __init__(self, scene):
         self._scene = scene
@@ -636,7 +643,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitE(self):
-        """ Unit vector in East, ``NxM`` matrix like
+        """ Unit vector east component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -644,7 +651,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitN(self):
-        """ Unit vector in North, ``NxM`` matrix like
+        """ Unit vector north component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -652,7 +659,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitU(self):
-        """ Unit vector Up, ``NxM`` matrix like
+        """ Unit vector vertical (up) component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -742,7 +749,7 @@ class SceneTest(Scene):
         r2 = k_rad >= k2
 
         beta = num.array(beta)
-        # From Hanssen (2000)
+        # From Hanssen (2001)
         #   beta+1 is used as beta, since, the power exponent
         #   is defined for a 1D slice of the 2D spectrum:
         #   austin94: "Adler, 1981, shows that the surface profile
@@ -751,7 +758,7 @@ class SceneTest(Scene):
         #   a fractal dimension  equal to that of the 2D
         #   surface decreased by one."
         beta += 1.
-        # From Hanssen (2000)
+        # From Hanssen (2001)
         #   The power beta/2 is used because the power spectral
         #   density is proportional to the amplitude squared
         #   Here we work with the amplitude, instead of the power

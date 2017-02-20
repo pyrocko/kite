@@ -296,14 +296,18 @@ class QuadtreeConfig(guts.Object):
 
 
 class Quadtree(object):
-    """Quadtree for simplifying InSAR displacement data held in
-    :class:`kite.scene.Scene`
+    """Quadtree for irregular subsampling InSAR displacement data held in
+    :py:class:`kite.scene.Scene`
 
-    Post-earthquake InSAR displacement scenes can hold a vast amount of data,
-    which is unsuiteable for use with modelling code. By simplifying the data
-    systematicallc through a parametrized quadtree we can reduce the dataset to
-    significant displacements and have high-resolution where it matters and
-    lower resolution at regions with less or constant deformation.
+    InSAR displacement scenes can hold a vast amount of data points,
+    which is often highly redundant and unsuitably large for the use in 
+    inverse modeling. By subsampling and therefore decimating the data points
+    systematically through a parametrized quadtree we can reduce the dataset 
+    without significant loss of displacement information. Quadtree subsampling
+    keeps a high spatial resolution where displacement gradients are high and 
+    efficiently reduces data point density in regions with small displacement 
+    variations. The product is a managable dataset size with good representation
+    of the original data.
 
     The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
     is evaluated against different corrections:
@@ -354,7 +358,7 @@ class Quadtree(object):
         self.displacement = self.scene.displacement
         self.frame = self.scene.frame
 
-        # Cached matrizes
+        # Cached matrices
         self._leaf_matrix_means = num.empty_like(self.displacement)
         self._leaf_matrix_medians = num.empty_like(self.displacement)
         self._leaf_matrix_weights = num.empty_like(self.displacement)
@@ -424,9 +428,12 @@ class Quadtree(object):
 
     @property
     def epsilon(self):
-        """ Epsilon threshold where :class:`~kite.quadtree.QuadNode` is split.
-        Synonym could be ``std_max`` or ``std_split``.
-
+        """ Threshold for quadtree splitting its ``QuadNode``.
+        
+        The threshold is the maximum standard deviation of leaf mean, 
+        median or simply its values (see ''SetSplitMethod'') allowed to
+        not further split a "QuadNode". 
+      
         :setter: Sets the epsilon/RMS threshold
         :getter: Returns the current epsilon
         :type: float
@@ -463,8 +470,8 @@ class Quadtree(object):
 
     @property
     def nan_allowed(self):
-        """ Fraction of allowed ``NaN`` values allwed in quadtree leafs, if
-        value is exceeded the leaf is kicked out.
+        """Fraction of allowed ``NaN`` values in quadtree leafs. If
+        value is exceeded the leaf is kicked out entirely.
 
         :setter: Fraction  ``0. <= fraction <= 1``.
         :type: float
@@ -707,7 +714,7 @@ class Quadtree(object):
         The formatting is::
 
             # node_id, focal_point_E, focal_point_N, theta, phi, \
-mean_displacement, median_displacement, absolute_weight
+            mean_displacement, median_displacement, absolute_weight
 
         :param filename: export to path
         :type filename: string

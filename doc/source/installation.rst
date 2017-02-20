@@ -12,7 +12,7 @@ Debian / Ubuntu
     sudo pip install .
 
 MacOS (Sierra, MacPorts)
---------------
+------------------------
 
 Install without root, installing `pyrocko` is a prerequisite. Please visit http://pyrocko.org/v0.3/install_mac.html
 
