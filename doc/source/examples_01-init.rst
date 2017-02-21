@@ -1,8 +1,8 @@
 Scene import/initialization
 ===========================
 
-Import unwrapped displacement scene from ``GMT5SAR``, ``GAMMA`` or ``ISCE``.
-See module documentation for file structure definition.
+Import unwrapped displacement scene from `GMT5SAR <http://gmt.soest.hawaii.edu/projects/gmt5sar>`_, `GAMMA Software <http://www.gamma-rs.ch/no_cache/software.html>`_, `ROI_PAC <http://roipac.org/cgi-bin/moin.cgi>`_ or `ISCE <https://winsar.unavco.org/isce.html>`_.
+See :module:`kite.scene_io` for required file structure definitions of respective formats.
 
 ::
 
