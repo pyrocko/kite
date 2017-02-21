@@ -3,7 +3,21 @@ import glob
 import scipy.io
 import numpy as num
 
-__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR']
+__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC']
+
+
+def check_required(required, params):
+    for r in required:
+        if r not in params:
+            return False
+    return True
+
+
+def safe_cast(val, to_type, default=None):
+    try:
+        return to_type(val)
+    except (ValueError, TypeError):
+        return default
 
 
 class SceneIO(object):
@@ -152,13 +166,15 @@ class Matlab(SceneIO):
 
 class Gamma(SceneIO):
     """
-    .. warning :: Data has to be georeferenced to latitude/longitude!
+    .. warning :: Data has to be georeferenced to latitude/longitude or UTM!
 
     Expects two files:
 
-        * Binary file from gamma (:file:`*`)
-        * Parameter file (:file:`*par`), including ``corner_lat, corner_lon,
+        * Binary file from Gamma (:file:`*`)
+        * Parameter file (:file:`*par`) describing ``corner_lat, corner_lon,
           nlines, width, post_lat, post_lon``
+          or ``'post_north', 'post_east', 'corner_east',
+          'corner_north', 'nlines', 'width'``
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))
@@ -178,8 +194,10 @@ class Gamma(SceneIO):
         import re
 
         params = {}
-        required = ['corner_lat', 'corner_lon', 'nlines', 'width',
-                    'post_lat', 'post_lon']
+        required_utm = ['post_north', 'post_east', 'corner_east',
+                        'corner_north', 'nlines', 'width']
+        required_lat_lon = ['corner_lat', 'corner_lon', 'nlines',
+                            'width', 'post_lat', 'post_lon']
         rc = re.compile(r'^(\w*):\s*([a-zA-Z0-9+-.*]*\s[a-zA-Z0-9_]*).*')
 
         with open(par_file, mode='r') as par:
@@ -189,17 +207,15 @@ class Gamma(SceneIO):
                     continue
 
                 groups = parsed.groups()
-                try:
-                    params[groups[0]] = float(groups[1])
-                except ValueError:
-                    params[groups[0]] = groups[1].strip()
+                params[groups[0]] = safe_cast(groups[1], float,
+                                              default=groups[1].strip())
 
-        for r in required:
-            if r not in params:
-                raise ImportError(
-                    'Parameter file does not hold required parameter %s' % r)
+        if check_required(required_utm, params)\
+           or check_required(required_lat_lon, params):
+            return params
 
-        return params
+        raise ImportError(
+                    'Parameter file does not hold required parameters')
 
     def validate(self, filename, **kwargs):
         try:
@@ -242,12 +258,8 @@ class Gamma(SceneIO):
         par = self._parseParameterFile(par_file)
         fill = None
 
-        try:
-            nrows = int(par['width'])
-            nlines = int(par['nlines'])
-        except:
-            raise ImportError('Error parsing width and nlines from %s' %
-                              par_file)
+        nrows = int(par['width'])
+        nlines = int(par['nlines'])
 
         displ = num.fromfile(filename, dtype='>f4')
         # Resize array if last line is not scanned completely
@@ -283,6 +295,108 @@ class Gamma(SceneIO):
         c['meta']['title'] = par.get('title', None)
         c['bin_file'] = filename
         c['par_file'] = par_file
+        return self.container
+
+
+class ROI_PAC(SceneIO):
+    """
+    .. warning :: Data has to be georeferenced to latitude/longitude!
+
+    Expects two files:
+
+        * Binary file from ROI_PAC (:file:`*`)
+        * Parameter file (:file:`<binary_file>.rsc`)
+          describing ``'WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
+          'Y_STEP'``
+    """
+
+    def validate(self, filename, **kwargs):
+        try:
+            par_file = kwargs.pop('par_file',
+                                  self._getParameterFile(filename))
+            self._parseParameterFile(par_file)
+            return True
+        except ImportError:
+            return False
+
+    def _getParameterFile(self, bin_file):
+        par_file = os.path.realpath(bin_file) + '.rsc'
+        try:
+            self._parseParameterFile(par_file)
+            self._log.debug('Found parameter file %s' % file)
+            return par_file
+        except (ImportError, IOError):
+            raise ImportError('Could not find ROI_PAC parameter file (%s)'
+                              % par_file)
+
+    @staticmethod
+    def _parseParameterFile(par_file):
+        import re
+
+        params = {}
+        required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
+                    'Y_STEP']
+
+        rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
+        with open(par_file, 'r') as par:
+            for line in par:
+                parsed = rc.match(line)
+                if parsed is None:
+                    continue
+                groups = parsed.groups()
+                params[groups[0]] = safe_cast(groups[1], float,
+                                              default=groups[1].strip())
+
+        if check_required(required, params):
+            return params
+
+        raise ImportError(
+            'Parameter file does not hold required parameters')
+
+    def read(self, filename, **kwargs):
+        """
+        :param filename: ROI_PAC binary file
+        :type filename: str
+        :param par_file: Corresponding parameter (:file:`*rsc`) file.
+                         (optional)
+        :type par_file: str
+        :returns: Import dictionary
+        :rtype: dict
+        :raises: ImportError
+        """
+        par_file = kwargs.pop('par_file',
+                              self._getParameterFile(filename))
+        par = self._parseParameterFile(par_file)
+
+        nlines = int(par['FILE_LENGTH'])
+        nrows = int(par['WIDTH'])
+
+        data = num.memmap(filename, dtype='<f4')
+        data = data.reshape(nlines, nrows*2)
+
+        displ = data[:, nrows:]
+        displ[displ == -0.] = num.nan
+
+        z_scale = par.get('Z_SCALE', 1.)
+        z_offset = par.get('Z_OFFSET', 0.)
+        displ += z_offset
+        displ *= z_scale
+
+        c = self.container
+        c['displacement'] = displ
+        c['theta'] = 2 * num.pi
+        c['phi'] = 0.
+        self._log.warning('NOT IMPLEMENTED - '
+                          'Theta and phi are defaulting to vertical incident!')
+
+        c['meta']['title'] = par.get('TITLE', 'None')
+        c['bin_file'] = filename
+        c['par_file'] = par_file
+
+        c['frame']['llLat'] = par['Y_FIRST'] + par['Y_STEP'] * nrows
+        c['frame']['llLon'] = par['X_FIRST']
+        c['frame']['dLon'] = par['X_STEP']
+        c['frame']['dLat'] = par['Y_STEP']
         return self.container
 
 

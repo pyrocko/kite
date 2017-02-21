@@ -148,20 +148,5 @@ setup(
                   swig_opts=None,
                   depends=None,
                   language=None),
-        Extension('okada_ext',
-                  sources=[pjoin('src/ext', 'okada_ext.c')],
-                  include_dirs=[numpy.get_include()],
-                  define_macros=None,
-                  undef_macros=None,
-                  library_dirs=None,
-                  libraries=None,
-                  runtime_library_dirs=None,
-                  extra_objects=None,
-                  extra_compile_args=None,
-                  extra_link_args=None,
-                  export_symbols=None,
-                  swig_opts=None,
-                  depends=None,
-                  language=None)
     ]
 )
