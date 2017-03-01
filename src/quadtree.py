@@ -598,16 +598,33 @@ class Quadtree(object):
     def leaf_focal_points(self):
         """
         :getter: Leaf focal points in local coordinates.
-        :type: :class:`numpy.ndarray`, size ``(2,N)``
+        :type: :class:`numpy.ndarray`, size ``(2, N)``
         """
         return num.array([l.focal_point for l in self.leafs])
+
+    @property
+    def leaf_phis(self):
+        """
+        :getter: Median leaf LOS phi angle. :attr:`kite.Scene.phi`
+        :type: :class:`numpy.ndarray`, size ``(N)``
+        """
+        return num.array([l.phi for l in self.leafs])
+
+    @property
+    def leaf_thetas(self):
+        """
+        :getter: Median leaf LOS theta angle. :attr:`kite.Scene.theta`
+        :type: :class:`numpy.ndarray`, size ``(N)``
+        """
+        return num.array([l.theta for l in self.leafs])
+
 
     @property
     def leaf_matrix_means(self):
         """
         :getter: Leaf mean displacements casted to
             :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_means,
                                         method='mean')
@@ -617,7 +634,7 @@ class Quadtree(object):
         """
         :getter: Leaf median displacements casted to
             :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_medians,
                                         method='median')
@@ -626,7 +643,7 @@ class Quadtree(object):
     def leaf_matrix_weights(self):
         """
         :getter: Leaf weights casted to :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_weights,
                                         method='weight')

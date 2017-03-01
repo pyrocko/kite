@@ -118,15 +118,14 @@ class Matlab(SceneIO):
         c = self.container
 
         mat = scipy.io.loadmat(filename)
-
         utm_e = utm_n = None
 
         for mat_k, v in mat.iteritems():
             for io_k in c.iterkeys():
                 if io_k in mat_k:
-                    c[io_k] = mat[mat_k]
+                    c[io_k] = num.rot90(mat[mat_k])
                 elif 'ig_' in mat_k:
-                    c['displacement'] = mat[mat_k]
+                    c['displacement'] = num.rot90(mat[mat_k])
                 elif 'xx' in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
@@ -141,8 +140,8 @@ class Matlab(SceneIO):
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
-        utm_zone = 32
-        utm_zone_letter = 'N'
+        utm_zone = 47
+        utm_zone_letter = 'Q'
         try:
             c['frame']['llLat'], c['frame']['llLon'] =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
@@ -274,6 +273,7 @@ class Gamma(SceneIO):
 
         displ = displ.reshape(nlines, nrows)
         displ[displ == -0.] = num.nan
+        displ = num.fliplr(displ)
 
         phi = self._getAngle(filename, '*phi*')
         theta = self._getAngle(filename, '*theta*')

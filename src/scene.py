@@ -254,6 +254,9 @@ class Meta(guts.Object):
     satellite_name = guts.String.T(
         default='Undefined',
         help='Satellite mission name')
+    wavelength = guts.Float.T(
+        optional=True,
+        help='Wavelength in [m]')
     orbit_direction = guts.StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',

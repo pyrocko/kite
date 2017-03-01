@@ -42,7 +42,69 @@ class QKiteView(dockarea.DockArea):
         self.addDock(dock_colormap, position='right')
 
 
+class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
+
+    def __init__(self, theta=0., phi=0., parent=None):
+        pg.GraphicsWidget.__init__(self, parent)
+        pg.GraphicsWidgetAnchor.__init__(self)
+
+        angle = 180. - num.rad2deg(phi)
+        theta_f = theta / (num.pi/2)
+
+        tipAngle = 30. + theta_f * 20.
+        tailLen = 10 + theta_f * 15.
+
+        self.item = pg.ArrowItem(
+            angle=angle,
+            tipAngle=tipAngle,
+            tailLen=tailLen,
+            tailWidth=4,
+            brush=(200, 200, 200, 0),
+            pen=(255, 255, 255),
+            parent=self)
+
+        self.updateMin()
+        self.resizeEvent(None)
+        self.updateGeometry()
+
+    def resizeEvent(self, ev):
+        self.item.setPos(0, 0)
+        bounds = self.itemRect()
+        left = self.mapFromItem(
+            self.item,
+            (QtCore.QPointF(0, 0)
+             - self.mapFromItem(self.item, QtCore.QPointF(1, 0))))
+        rect = self.rect()
+
+        if left.x() != 0:
+            bounds.moveLeft(rect.left())
+        if left.y() < 0:
+            bounds.moveTop(rect.top())
+        elif left.y() > 0:
+            bounds.moveBottom(rect.bottom())
+
+        self.item.setPos(bounds.topLeft() - self.itemRect().topLeft())
+        self.updateMin()
+
+    def updateMin(self):
+        bounds = self.itemRect()
+        self.setMinimumWidth(bounds.width())
+        self.setMinimumHeight(bounds.height())
+
+        self._sizeHint = {
+            QtCore.Qt.MinimumSize: (bounds.width(), bounds.height()),
+            QtCore.Qt.PreferredSize: (bounds.width(), bounds.height()),
+            QtCore.Qt.MaximumSize: (-1, -1),
+            QtCore.Qt.MinimumDescent: (0, 0)  # ?? what is this?
+        }
+        self.updateGeometry()
+
+    def itemRect(self):
+        return self.item.mapRectToParent(self.item.boundingRect())
+
+
 class QKitePlot(pg.PlotWidget):
+
     def __init__(self, scene_proxy):
         pg.PlotWidget.__init__(self)
         self.scene_proxy = scene_proxy
@@ -88,6 +150,15 @@ class QKitePlot(pg.PlotWidget):
                                         rateLimit=25, slot=self.mouseMoved)
         # self.addIsocurve()
         # self.scalebar()
+
+    def addLOSArrow(self):
+        self.los_arrow = LOSArrow(
+            phi=num.nanmean(self.scene_proxy.scene.phi),
+            theta=num.nanmean(self.scene_proxy.scene.theta),
+            parent=self.plotItem)
+        self.los_arrow.anchor(itemPos=(0., 1.), parentPos=(1., 0.))
+        self.getViewBox().addItem(self.los_arrow,
+                                  ignoreBounds=True)
 
     def transFromFrame(self):
         self.image.resetTransform()

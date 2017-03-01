@@ -317,9 +317,17 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
         """
-        if not self.config.covariance_matrix:
+        if not isinstance(self.config.covariance_matrix, num.ndarray):
             self.config.covariance_matrix =\
                 self._calcCovarianceMatrix(method='full')
+        elif self.config.covariance_matrix.ndim == 1:
+            try:
+                nl = self.quadtree.nleafs
+                self.config.covariance_matrix =\
+                    self.config.covariance_matrix.reshape(nl, nl)
+            except ValueError:
+                self.config.covariance = None
+                return self.covariance_matrix
         return self.config.covariance_matrix
 
     @property_cached
@@ -335,7 +343,7 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from full covariance :math:`cov^{-1}`.
+        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
@@ -344,12 +352,30 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix_focal(self):
-        """ Weight matrix from fast focal method :math:`cov_{focal}^{-1}`.
+        """ Weight matrix from fast focal method
+            :math:`\\sqrt{cov_{focal}^{-1}}`.
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
         """
         return num.linalg.inv(self.covariance_matrix_focal)
+
+    @property_cached
+    def weight_vector(self):
+        """ Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleafs`)
+        """
+        return num.sum(self.weight_matrix, axis=1)
+
+    @property_cached
+    def weight_vector_focal(self):
+        """ Weight vector from fast focal method
+            :math:`\\sqrt{cov_{focal}^{-1}}`.
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleafs`)
+        """
+        return num.sum(self.weight_matrix_focal, axis=1)
 
     def _calcCovarianceMatrix(self, method='focal'):
         """Calculates the covariance matrix.
@@ -389,11 +415,14 @@ class Covariance(object):
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
+
+            nleafs = self.quadtree.nleafs
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, self.nthreads,
-                            self.config.adaptive_subsampling)
+                            self.config.adaptive_subsampling)\
+                .reshape(nleafs, nleafs)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
@@ -785,7 +814,7 @@ class Covariance(object):
             power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
             ps = power_spec
-            var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[0]
+            var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[-1]
             self.config.variance = float(var)
         return self.config.variance
 

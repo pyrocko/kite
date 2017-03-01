@@ -76,6 +76,8 @@ class QKiteScenePlot(QKitePlot):
         self._component = 'displacement'
 
         QKitePlot.__init__(self, scene_proxy=scene_proxy)
+        self.addLOSArrow()
+
         scene_proxy.sigFrameChanged.connect(self.onFrameChange)
         scene_proxy.sigSceneModelChanged.connect(self.update)
 
