@@ -210,6 +210,10 @@ class Subject(object):
         except:
             raise AttributeError('%s was not subscribed to ')
 
+    def unsubscribeAll(self):
+        for l in self._listeners:
+            self.unsubscribe(l)
+
     def notify(self, *args, **kwargs):
         if self._mute:
             return
@@ -225,6 +229,14 @@ class Subject(object):
         except AttributeError:
             kwargs = {}
         func(*args, **kwargs)
+
+
+class ADict(dict):
+    def __getattribute__(self, attr):
+        return self[attr]
+
+    def __setattr__(self, attr, value):
+        self[attr] = value
 
 
 __all__ = '''

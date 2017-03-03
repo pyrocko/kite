@@ -10,7 +10,9 @@ from .covariance import CovarianceConfig
 from .meta import Subject, property_cached, greatCircleDistance
 from . import scene_io
 from os import path
+
 logging.basicConfig(level=20)
+guts_prefix = 'kite'
 
 
 def read(filename):
