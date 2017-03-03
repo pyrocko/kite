@@ -404,6 +404,7 @@ class Quadtree(object):
         self._corr_func = self._corrections[correction][1]
 
         # Clearing cached properties through None
+        self.leaf_center_distance = None
         self.leafs = None
         self.nodes = None
         self.epsilon_min = None
@@ -602,6 +603,18 @@ class Quadtree(object):
         """
         return num.array([l.focal_point for l in self.leafs])
 
+    @property_cached
+    def leaf_center_distance(self):
+        """
+        :getter: Leaf distance to center point of the quadtree
+        :type: :class:`numpy.ndarray`, size ``(2, N)``
+        """
+        distances = num.zeros_like(self.focal_points)
+        center = self.center_point
+        distances[0, :] = self.leaf_focal_points[0, :] - center[0]
+        distances[1, :] = self.leaf_focal_points[1, :] - center[1]
+        return distances
+
     @property
     def leaf_phis(self):
         """
@@ -617,7 +630,6 @@ class Quadtree(object):
         :type: :class:`numpy.ndarray`, size ``(N)``
         """
         return num.array([l.theta for l in self.leafs])
-
 
     @property
     def leaf_matrix_means(self):
@@ -661,6 +673,10 @@ class Quadtree(object):
         array[self.scene.displacement_mask] = num.nan
         # print time.time()-t0, method
         return array
+
+    @property
+    def center_point(self):
+        return num.mean(self.leaf_focal_points, axis=1)
 
     @property
     def reduction_efficiency(self):
