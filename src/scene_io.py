@@ -99,6 +99,9 @@ class Matlab(SceneIO):
         Scene.frame.x      ``xx``
         Scene.frame.y      ``yy``
         ================== ====================
+        
+    Displacement is expected to be in meters.
+    
     """
     def validate(self, filename, **kwargs):
         if filename[-4:] == '.mat':
@@ -170,13 +173,13 @@ class Gamma(SceneIO):
 
     Expects two files:
 
-        * Binary file from Gamma (:file:`*`)
+        * Binary file from Gamma (:file:`*`) with displacement in radians. 
+          Displacements are translated to meters using the `radar_frequency` 
+          in [Hz] is given in the :file:`*.par` file.
         * Parameter file (:file:`*par`) describing `corner_lat, corner_lon,
           nlines, width, post_lat, post_lon`
           or `'post_north', 'post_east', 'corner_east',
           'corner_north', 'nlines', 'width'`
-        * when `radar_frequency` in [Hz] is given in the :file:`*.par` file,
-          the displacement is expected to be in radians and will be scaled.
     """
     def _getParameterFile(self, path):
         path = os.path.dirname(os.path.realpath(path))
@@ -352,8 +355,8 @@ class ROI_PAC(SceneIO):
     """
     .. warning :: Data has to be georeferenced to latitude/longitude!
 
-    The unwrapped displacement is expected in radians and will be scaled by
-    `WAVELENGTH` parsed from the :file:`*.rsc` file.
+    The unwrapped displacement is expected in radians and will be scaled 
+    to meters by `WAVELENGTH` parsed from the :file:`*.rsc` file.
 
     Expects two files:
 
@@ -491,6 +494,10 @@ class ISCE(SceneIO):
         * Unwrapped displacement binary (:file:`*.unw.geo`)
         * Metadata XML (:file:`*.unw.geo.xml`)
         * LOS binary data (:file:`*.rdr.geo`)
+        
+     .. warning:: data are in radians but no transformation to
+        meters yet, as 'wavelength' or at least sensor name is not 
+        provided in the XML file.
     """
     def validate(self, filename, **kwargs):
         try:
@@ -568,7 +575,8 @@ class GMTSAR(SceneIO):
 
     Expects two binary files:
 
-        * Displacement grid (NetCDF, :file:`*los_ll.grd`)
+        * Displacement grid (NetCDF, :file:`*los_ll.grd`) in cm 
+          (get transformed to meters)
         * LOS binary data (see instruction, :file:`*los.enu`)
 
     """
