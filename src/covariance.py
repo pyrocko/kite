@@ -813,7 +813,7 @@ class Covariance(object):
     @variance.getter
     def variance(self):
         if self.config.variance is None:
-            power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
+            power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
             cov, _ = self.covariance_func
             ps = power_spec
             var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[-1]

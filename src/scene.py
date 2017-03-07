@@ -19,7 +19,7 @@ def read(filename):
     try:
         scene.load(filename)
         return scene
-    except ImportError:
+    except (ImportError, UserIOWarning):
         pass
     try:
         scene.import_data(filename)
