@@ -599,7 +599,7 @@ class Quadtree(object):
     def leaf_focal_points(self):
         """
         :getter: Leaf focal points in local coordinates.
-        :type: :class:`numpy.ndarray`, size ``(2, N)``
+        :type: :class:`numpy.ndarray`, size ``(N, 2)``
         """
         return num.array([l.focal_point for l in self.leafs])
 
@@ -607,12 +607,13 @@ class Quadtree(object):
     def leaf_center_distance(self):
         """
         :getter: Leaf distance to center point of the quadtree
-        :type: :class:`numpy.ndarray`, size ``(2, N)``
+        :type: :class:`numpy.ndarray`, size ``(N, 3)``
         """
-        distances = num.zeros_like(self.focal_points)
+        distances = num.zeros((self.nleafs, 3))
         center = self.center_point
-        distances[0, :] = self.leaf_focal_points[0, :] - center[0]
-        distances[1, :] = self.leaf_focal_points[1, :] - center[1]
+        distances[:, 0] = self.leaf_focal_points[:, 0] - center[0]
+        distances[:, 1] = self.leaf_focal_points[:, 1] - center[1]
+        distances[:, 2] = num.sqrt(distances[:, 1]**2 + distances[:, 1]**2)
         return distances
 
     @property
@@ -676,7 +677,7 @@ class Quadtree(object):
 
     @property
     def center_point(self):
-        return num.mean(self.leaf_focal_points, axis=1)
+        return num.median(self.leaf_focal_points, axis=0)
 
     @property
     def reduction_efficiency(self):

@@ -12,7 +12,6 @@ from . import scene_io
 from os import path
 
 logging.basicConfig(level=20)
-guts_prefix = 'kite'
 
 
 def read(filename):

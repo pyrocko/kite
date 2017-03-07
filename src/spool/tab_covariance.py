@@ -174,7 +174,6 @@ class QKiteCovariogram(_QKiteSubplotPlot):
         self.cov = pg.PlotDataItem(antialias=True)
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
-        self.cov_lin_pow = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
         self.variance = pg.InfiniteLine(
             pen=pen_variance,
             angle=0, movable=True, hoverPen=None,
@@ -182,10 +181,15 @@ class QKiteCovariogram(_QKiteSubplotPlot):
             labelOpts={'position': .975,
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
+
+        self.variance.sigPositionChangeFinished.connect(self.setVariance)
+
         self.addItem(self.variance)
 
         self.addItem(self.cov)
         self.addItem(self.cov_model)
+        # self.cov_lin_pow = pg.PlotDataItem(antialias=True,
+        #                                    pen=pen_green_dash)
         # self.addItem(self.cov_lin_pow)
 
         self.legend = pg.LegendItem(offset=(0., .5))
@@ -199,6 +203,9 @@ class QKiteCovariogram(_QKiteSubplotPlot):
 
         self.update()
 
+    def setVariance(self):
+        self.scene_proxy.covariance.variance = self.variance.value()
+
     def update(self):
         covariance = self.scene_proxy.covariance
         cov, dist = covariance.covariance_func
@@ -206,8 +213,8 @@ class QKiteCovariogram(_QKiteSubplotPlot):
         self.cov.setData(dist, cov)
         self.cov_model.setData(
             dist, modelCovariance(dist, *covariance.covariance_model))
-        self.cov_lin_pow.setData(
-            dist, covariance.covarianceAnalytical(3)[0])
+        # self.cov_lin_pow.setData(
+        #     dist, covariance.covarianceAnalytical(3)[0])
 
         self.legend.items[-1][1].setText(
             self.legend.template.format(

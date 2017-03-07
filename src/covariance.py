@@ -522,7 +522,7 @@ class Covariance(object):
         amp = num.zeros_like(k_rad)
 
         if not anisotropic:
-            noise_pspec, k, _, _, _, _ = self.powerspecNoise1D()
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
             for i in xrange(k.size):
@@ -536,7 +536,8 @@ class Covariance(object):
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
             amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
-            amp = num.sqrt(amp * max(self.noise_data.shape)**2)
+            amp = num.sqrt(amp)
+            # amp = num.sqrt(amp * max(self.noise_data.shape)**2)
 
         elif anisotropic:
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
@@ -807,6 +808,7 @@ class Covariance(object):
     def variance(self, value):
         self.config.variance = float(value)
         self._clear(config=False, spectrum=False)
+        self.evChanged.notify()
 
     @variance.getter
     def variance(self):
