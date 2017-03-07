@@ -283,9 +283,9 @@ class Gamma(SceneIO):
         theta = num.cos(theta)
 
         if isinstance(phi, num.ndarray):
-            phi.reshape(nlines, nrows)
+            phi=phi.reshape(nlines, nrows)
         if isinstance(theta, num.ndarray):
-            theta.reshape(nlines, nrows)
+            theta=theta.reshape(nlines, nrows)
 
         if fill is not None:
             theta = num.append(theta, fill)
