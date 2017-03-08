@@ -54,9 +54,9 @@ class FrameConfig(guts.Object):
     llLon = guts.Float.T(default=0.,
                          help='Scene longitude of lower left corner')
     dLat = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in x direction (degree)')
+                        help='Scene pixel spacing in x direction [deg]')
     dLon = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in y direction (degree)')
+                        help='Scene pixel spacing in y direction [deg]')
 
 
 class Frame(object):
