@@ -84,7 +84,7 @@ class QKiteNoisePlot(QKitePlot):
         }
         self._component = 'displacement'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy)
+        QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
 
         llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
         self.roi = pg.RectROI(pos=(llE, llN),

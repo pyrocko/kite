@@ -85,7 +85,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
 class QKitePlot(pg.PlotWidget):
 
-    def __init__(self, scene_proxy):
+    def __init__(self, scene_proxy, los_arrow=False):
         pg.PlotWidget.__init__(self)
         self.scene_proxy = scene_proxy
         self.draw_time = 0.
@@ -128,6 +128,10 @@ class QKitePlot(pg.PlotWidget):
         self.transFromFrame()
         self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
                                         rateLimit=25, slot=self.mouseMoved)
+
+        if los_arrow:
+            self.addLOSArrow()
+
         # self.addIsocurve()
         # self.scalebar()
 
