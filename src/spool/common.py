@@ -44,40 +44,44 @@ class QKiteView(dockarea.DockArea):
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
-    def __init__(self, theta=0., phi=0., offset=None):
+    def __init__(self, scene_proxy):
         pg.GraphicsWidget.__init__(self)
         pg.GraphicsWidgetAnchor.__init__(self)
 
-        self.offset = offset
+        self.scene_proxy = scene_proxy
 
-        # angle = 180. - num.rad2deg(phi)
+        self.arrow = pg.ArrowItem(
+            parent=self,
+            angle=0.,
+            brush=(0, 0, 0, 180),
+            pen=(255, 255, 255),
+            pxMode=True)
+        self.orientArrow()
+
+        self.scene_proxy.sigSceneChanged.connect(self.orientArrow)
+        self.setFlag(self.ItemIgnoresTransformations)
+
+    @QtCore.Slot()
+    def orientArrow(self):
+        phi = num.median(self.scene_proxy.scene.phi)
+        theta = num.median(self.scene_proxy.scene.theta)
+
         angle = -num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
         tailLen = 15 + theta_f * 15.
 
-        self.item = pg.ArrowItem(
-            parent=self,
+        self.arrow.setStyle(
             angle=angle,
             tipAngle=tipAngle,
             tailLen=tailLen,
             tailWidth=6,
-            headLen=25,
-            brush=(0, 0, 0, 180),
-            pen=(255, 255, 255))
-
-        self.setFlag(self.ItemIgnoresTransformations)
+            headLen=25)
+        self.arrow.setRotation(self.arrow.opts['angle'])
 
     def setParentItem(self, parent):
-        ret = pg.GraphicsWidget.setParentItem(self, parent)
-        if self.offset is not None:
-            offset = pg.Point(self.offset)
-            anchorx = 1 if offset[0] <= 0 else 0
-            anchory = 1 if offset[1] <= 0 else 0
-            anchor = (anchorx, anchory)
-            self.anchor(itemPos=anchor, parentPos=anchor, offset=offset)
-        return ret
+        pg.GraphicsWidget.setParentItem(self, parent)
 
     def boundingRect(self):
         return QtCore.QRectF(0, 0, self.width(), self.height())
@@ -136,9 +140,7 @@ class QKitePlot(pg.PlotWidget):
         # self.scalebar()
 
     def addLOSArrow(self):
-        self.los_arrow = LOSArrow(
-            phi=num.nanmean(self.scene_proxy.scene.phi),
-            theta=num.nanmean(self.scene_proxy.scene.theta),)
+        self.los_arrow = LOSArrow(self.scene_proxy)
         self.los_arrow.setParentItem(self.graphicsItem())
         self.los_arrow.anchor(itemPos=(1., 0.), parentPos=(1, 0.),
                               offset=(-10., 40.))
