@@ -62,9 +62,9 @@ class QKiteScenePlot(QKitePlot):
                 ['Scene.theta', lambda sp: sp.scene.theta],
             'phi':
                 ['Scene.phi', lambda sp: sp.scene.phi],
-            'thetaDeg':
+            'degTheta':
                 ['Scene.thetaDeg', lambda sp: sp.scene.thetaDeg],
-            'phiDeg':
+            'degPhi':
                 ['Scene.phiDeg', lambda sp: sp.scene.phiDeg],
             'unitE':
                 ['Scene.los.unitE', lambda sp: sp.scene.los.unitE],
