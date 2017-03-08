@@ -21,6 +21,11 @@ Manual initialisation of a generic binary dataset is also possible. Here the fun
 
     sc = Scene()
     sc.displacement = num.empty((2048, 2048))
+    
+    # dummy line-of-sight vectors
+    sc.theta = num.ones((2048, 2048))*192.
+    sc.phi = num.ones((2048, 2048))*67.
+
 
     # Frame the scene
     sc.frame.llLat = 38.2095
