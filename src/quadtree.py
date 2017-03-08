@@ -449,6 +449,7 @@ class Quadtree(object):
                 (value, self.epsilon_min))
             return
         self.leafs = None
+        self.clearLeafBlacklist()
         self.config.epsilon = value
 
         self.evChanged.notify()
@@ -483,6 +484,7 @@ class Quadtree(object):
             return
 
         self.leafs = None
+        self.clearLeafBlacklist()
         self.config.nan_allowed = value
         self.evChanged.notify()
 
@@ -527,6 +529,7 @@ class Quadtree(object):
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
         self.leafs = None
+        self.clearLeafBlacklist()
         self.evChanged.notify()
 
     @property_cached
@@ -554,7 +557,10 @@ class Quadtree(object):
         """
         return len(self.nodes)
 
-    def blacklist_leafs(self, leafs):
+    def clearLeafBlacklist(self):
+        self.config.leaf_blacklist = []
+
+    def blacklistLeafs(self, leafs):
         self.config.leaf_blacklist.extend(leafs)
         self.leafs = None
         self.evChanged.notify()
