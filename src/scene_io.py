@@ -310,7 +310,7 @@ class Gamma(SceneIO):
         if par['DEM_projection'] == 'UTM':
             self._log.info('Parameter file provides UTM reference')
             import utm
-            c['displacement'] = num.transpose(displ)
+            c['displacement'] = num.transpose(displ/100)
             c['theta'] = num.transpose(theta)
             c['phi'] = num.transpose(phi)
             utm_zone = par['projection_zone']
