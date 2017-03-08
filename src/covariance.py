@@ -624,8 +624,8 @@ class Covariance(object):
             for i in xrange(k.size):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE))
-            return (power * num.pi * 4) / (power_spec.size**2)
+                power[i] = num.median(power_interp.ev(kN, kE)) * k[i]
+            return (power * num.pi * 4) / (power_spec.size**2) / k.size
 
         def power2d(k):
             """ Mean 2D Power works! """
@@ -634,9 +634,9 @@ class Covariance(object):
             for i in xrange(k.size):
                 kE = num.sin(theta) * k[i]
                 kN = num.cos(theta) * k[i]
-                power[i] = num.mean(power_interp.ev(kN, kE) * 4. * num.pi)
+                power[i] = num.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
-            return power / power_spec.size
+            return (power * 4. * num.pi) / power_spec.size / k.size
 
         def power3d(k):
             return power_interp
@@ -813,7 +813,7 @@ class Covariance(object):
     @variance.getter
     def variance(self):
         if self.config.variance is None:
-            power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
+            power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
             ps = power_spec
             var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[-1]
