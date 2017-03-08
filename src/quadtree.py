@@ -293,6 +293,10 @@ class QuadtreeConfig(guts.Object):
     tile_size_max = guts.Float.T(
         default=25e3,
         help='Maximum allowed tile size in *meter*')
+    leaf_blacklist = guts.List.T(
+        optional=True,
+        default=[],
+        help='Blacklist of excluded leafs')
 
 
 class Quadtree(object):
@@ -550,6 +554,11 @@ class Quadtree(object):
         """
         return len(self.nodes)
 
+    def blacklist_leafs(self, leafs):
+        self.config.leaf_blacklist.extend(leafs)
+        self.leafs = None
+        self.evChanged.notify()
+
     @property_cached
     def leafs(self):
         """:getter: List of leafs for current configuration.
@@ -559,7 +568,8 @@ class Quadtree(object):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafs()
-                          if l.nan_fraction < self.nan_allowed])
+                          if l.nan_fraction < self.nan_allowed and
+                          l.id not in self.config.leaf_blacklist])
         self._log.debug(
             'Gathering leafs for epsilon %.4f (nleafs=%d) [%0.8f s]' %
             (self.epsilon, len(leafs), time.time() - t0))

@@ -4,6 +4,7 @@ import numpy as num
 import utm
 
 from pyrocko import guts
+from pyrocko.orthodrome import latlon_to_ne  # noqa
 from datetime import datetime as dt
 from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
@@ -82,6 +83,9 @@ class Frame(object):
         self.N = None
         self.E = None
 
+        self.offsetE = 0.
+        self.offsetN = 0.
+
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
         self._scene.evChanged.subscribe(self._updateExtent)
@@ -124,8 +128,8 @@ class Frame(object):
 
         self.dE = (self.extentE + extentE_top) / (2*self.cols)
         self.dN = self.extentN / self.rows
-        self.E = num.arange(self.cols) * self.dE
-        self.N = num.arange(self.rows) * self.dN
+        self.E = num.arange(self.cols) * self.dE + self.offsetE
+        self.N = num.arange(self.rows) * self.dN + self.offsetN
 
         self.llE = 0
         self.llN = 0
@@ -197,6 +201,21 @@ class Frame(object):
         gridN = num.repeat(self.N[:, num.newaxis],
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
+
+    def setENOffset(self, east, north):
+        """Set scene offsets in local cartesian coordinates.
+
+        :param east: East offset in [m]
+        :type east: float, :class:`numpy.ndarray` or None
+        :param north: North offset in [m]
+        :type north: float, :class:`numpy.ndarray` or None
+        """
+        self.offsetE = east
+        self.offsetN = north
+        self._updateExtent()
+
+    def setLatLonReference(self, lat, lon):
+        pass
 
     def mapMatrixEN(self, row, col):
         """ Maps matrix row, column to local easting and northing.
