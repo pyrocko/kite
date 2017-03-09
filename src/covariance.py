@@ -599,7 +599,6 @@ class Covariance(object):
 
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
         power_spec = (num.abs(spectrum)/spectrum.size)**2
-        
 
         kE = shift(num.fft.fftfreq(power_spec.shape[1],
                                    d=self.quadtree.frame.dE))
@@ -608,7 +607,7 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         power_spec[k_rad == 0.] = 0.
 
-        power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
+        # power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
 
         # def power1d(k):
         #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
@@ -620,41 +619,61 @@ class Covariance(object):
         #             * num.pi * 4
         #     return power
 
-        def power1d(k):
-            theta = num.linspace(-num.pi, num.pi, ndeg, False)
-            power = num.empty_like(k)
-            for i in xrange(k.size):
-                kE = num.cos(theta) * k[i]
-                kN = num.sin(theta) * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE))
-            return (power * num.pi * 4) 
+        # def power1d(k):
+        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
+        #     power = num.empty_like(k)
+        #     for i in xrange(k.size):
+        #         kE = num.cos(theta) * k[i]
+        #         kN = num.sin(theta) * k[i]
+        #         power[i] = num.median(power_interp.ev(kN, kE))
+        #     return (power * num.pi * 4)
 
-        def power2d(k):
-            """ Mean 2D Power works! """
-            theta = num.linspace(-num.pi, num.pi, ndeg, False)
-            power = num.empty_like(k)
-            for i in xrange(k.size):
-                kE = num.sin(theta) * k[i]
-                kN = num.cos(theta) * k[i]
-                power[i] = num.mean(power_interp.ev(kN, kE))
-                # Median is more stable than the mean here
-            return power 
+        # def power2d(k):
+        #     """ Mean 2D Power works! """
+        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
+        #     power = num.empty_like(k)
+        #     for i in xrange(k.size):
+        #         kE = num.sin(theta) * k[i]
+        #         kN = num.cos(theta) * k[i]
+        #         power[i] = num.mean(power_interp.ev(kN, kE))
+        #         # Median is more stable than the mean here
+        #     return power
 
-        def power3d(k):
-            return power_interp
+        # def power3d(k):
+        #     return power_interp
 
-        power = power1d
-        if norm == '2d':
-            power = power2d
-        elif norm == '3d':
-            power = power3d
+        # power = power1d
+        # if norm == '2d':
+        #     power = power2d
+        # elif norm == '3d':
+        #     power = power3d
 
-        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
-        k = num.linspace(k_rad[k_rad > 0].min(),
-                         k_rad.max(), nk)
-        dk = 1./k.min()  / (2. * nk)
+        # k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
+        # k = num.linspace(k_rad[k_rad > 0].min(),
+        #                  k_rad.max(), nk)
+        # dk = 1./k.min() / (2. * nk)
+        # return power(k), k, dk, spectrum, kE, kN
 
-        return power(k), k, dk, spectrum, kE, kN
+        def power1Ddisc():
+            self._log.info('Using discrete summation')
+            ps = power_spec
+            d = num.abs(num.arange(-ps.shape[0]/2,
+                                   ps.shape[0]/2))
+            rm = num.sqrt(d[:, num.newaxis]**2 + d[num.newaxis, :]**2)
+
+            axis = num.argmax(ps.shape)
+            k_ref = kN if axis == 0 else kE
+            p = num.empty(ps.shape[axis]/2)
+            k = num.empty(ps.shape[axis]/2)
+            for r in xrange(ps.shape[axis]/2):
+                mask = num.logical_and(rm >= r-.5, rm < r+.5)
+                k[r] = k_ref[(k_ref.size/2)+r]
+                p[r] = num.median(ps[mask]) * 4 * num.pi
+            return p, k
+
+        power, k = power1Ddisc()
+        dk = k[1] - k[0]
+        return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
         power_spec, k, _, _, _, _ = self.powerspecNoise1D()
