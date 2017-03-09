@@ -7,8 +7,8 @@ import time
 import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
-from kite.meta import Subject, property_cached, trimMatrix, derampMatrix,\
-    squareMatrix
+from kite.meta import (Subject, property_cached,  # noqa
+                       trimMatrix, derampMatrix, squareMatrix)
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
@@ -531,7 +531,7 @@ class Covariance(object):
                 r = num.logical_and(k_rad > k_min, k_rad <= k_max)
                 if i == (k.size-1):
                     r = k_rad > k_min
-                if num.sum(r) == 0:
+                if r.sum() == 0:
                     continue
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
@@ -594,7 +594,7 @@ class Covariance(object):
         if norm not in ['1d', '2d', '3d']:
             raise AttributeError('norm must be either 1d, 2d or 3d')
 
-        noise = squareMatrix(noise)
+        # noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
@@ -607,7 +607,7 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         power_spec[k_rad == 0.] = 0.
 
-        # power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
+        power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
 
         # def power1d(k):
         #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
@@ -619,40 +619,40 @@ class Covariance(object):
         #             * num.pi * 4
         #     return power
 
-        # def power1d(k):
-        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
-        #     power = num.empty_like(k)
-        #     for i in xrange(k.size):
-        #         kE = num.cos(theta) * k[i]
-        #         kN = num.sin(theta) * k[i]
-        #         power[i] = num.median(power_interp.ev(kN, kE))
-        #     return (power * num.pi * 4)
+        def power1d(k):
+            theta = num.linspace(-num.pi, num.pi, ndeg, False)
+            power = num.empty_like(k)
+            for i in xrange(k.size):
+                kE = num.cos(theta) * k[i]
+                kN = num.sin(theta) * k[i]
+                power[i] = num.median(power_interp.ev(kN, kE))
+            return (power * num.pi * 4)
 
-        # def power2d(k):
-        #     """ Mean 2D Power works! """
-        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
-        #     power = num.empty_like(k)
-        #     for i in xrange(k.size):
-        #         kE = num.sin(theta) * k[i]
-        #         kN = num.cos(theta) * k[i]
-        #         power[i] = num.mean(power_interp.ev(kN, kE))
-        #         # Median is more stable than the mean here
-        #     return power
+        def power2d(k):
+            """ Mean 2D Power works! """
+            theta = num.linspace(-num.pi, num.pi, ndeg, False)
+            power = num.empty_like(k)
+            for i in xrange(k.size):
+                kE = num.sin(theta) * k[i]
+                kN = num.cos(theta) * k[i]
+                power[i] = num.mean(power_interp.ev(kN, kE))
+                # Median is more stable than the mean here
+            return power
 
-        # def power3d(k):
-        #     return power_interp
+        def power3d(k):
+            return power_interp
 
-        # power = power1d
-        # if norm == '2d':
-        #     power = power2d
-        # elif norm == '3d':
-        #     power = power3d
+        power = power1d
+        if norm == '2d':
+            power = power2d
+        elif norm == '3d':
+            power = power3d
 
-        # k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
-        # k = num.linspace(k_rad[k_rad > 0].min(),
-        #                  k_rad.max(), nk)
-        # dk = 1./k.min() / (2. * nk)
-        # return power(k), k, dk, spectrum, kE, kN
+        k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
+        k = num.linspace(k_rad[k_rad > 0].min(),
+                         k_rad.max(), nk)
+        dk = 1./k.min() / (2. * nk)
+        return power(k), k, dk, spectrum, kE, kN
 
         def power1Ddisc():
             self._log.info('Using discrete summation')
@@ -676,7 +676,7 @@ class Covariance(object):
         return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
-        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
+        power_spec, k, _, _, _, _ = self.powerspecNoise2D()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -709,7 +709,7 @@ class Covariance(object):
             and :class:`~kite.Covariance.powerspec_model``
         :type: float
         '''
-        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
+        power_spec, k, _, _, _, _ = self.powerspecNoise2D()
         power_spec_mod = self.powerspecModel(k)
         return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
 
@@ -734,7 +734,7 @@ class Covariance(object):
         ''' Covariance function derived from powerspectrum of
             displacement noise patch.
         :type: tuple, :class:`numpy.ndarray` (covariance, distance) '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
         # power_spec -= self.variance
 
         d = num.arange(1, power_spec.size+1) * dk
@@ -749,7 +749,7 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
         '''
-        _, k, dk, _, kN, kE = self.powerspecNoise1D()
+        _, k, dk, _, kN, kE = self.powerspecNoise2D()
         (a, b) = self.powerspec_model
 
         spec = modelPowerspec(k, a, b)
@@ -799,7 +799,7 @@ class Covariance(object):
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
         d = num.arange(1, power_spec.size+1) * dk
 
         def structure_func(power_spec, d, k):
