@@ -522,7 +522,7 @@ class Covariance(object):
         amp = num.zeros_like(k_rad)
 
         if not anisotropic:
-            noise_pspec, k, _, _, _, _ = self.powerspecNoise1D()
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
             for i in xrange(k.size):
@@ -536,8 +536,7 @@ class Covariance(object):
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
             amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
-            amp = num.sqrt(amp)
-            # amp = num.sqrt(amp * max(self.noise_data.shape)**2)
+            amp = num.sqrt(amp * self.noise_data.size * num.pi * 4)
 
         elif anisotropic:
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
@@ -626,7 +625,7 @@ class Covariance(object):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
-            return (power * num.pi * 4)
+            return power
 
         def power2d(k):
             """ Mean 2D Power works! """
@@ -635,7 +634,7 @@ class Covariance(object):
             for i in xrange(k.size):
                 kE = num.sin(theta) * k[i]
                 kN = num.cos(theta) * k[i]
-                power[i] = num.mean(power_interp.ev(kN, kE))
+                power[i] = num.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
             return power
 
@@ -654,26 +653,26 @@ class Covariance(object):
         dk = 1./k.min() / (2. * nk)
         return power(k), k, dk, spectrum, kE, kN
 
-        def power1Ddisc():
-            self._log.info('Using discrete summation')
-            ps = power_spec
-            d = num.abs(num.arange(-ps.shape[0]/2,
-                                   ps.shape[0]/2))
-            rm = num.sqrt(d[:, num.newaxis]**2 + d[num.newaxis, :]**2)
+        # def power1Ddisc():
+        #     self._log.info('Using discrete summation')
+        #     ps = power_spec
+        #     d = num.abs(num.arange(-ps.shape[0]/2,
+        #                            ps.shape[0]/2))
+        #     rm = num.sqrt(d[:, num.newaxis]**2 + d[num.newaxis, :]**2)
 
-            axis = num.argmax(ps.shape)
-            k_ref = kN if axis == 0 else kE
-            p = num.empty(ps.shape[axis]/2)
-            k = num.empty(ps.shape[axis]/2)
-            for r in xrange(ps.shape[axis]/2):
-                mask = num.logical_and(rm >= r-.5, rm < r+.5)
-                k[r] = k_ref[(k_ref.size/2)+r]
-                p[r] = num.median(ps[mask]) * 4 * num.pi
-            return p, k
+        #     axis = num.argmax(ps.shape)
+        #     k_ref = kN if axis == 0 else kE
+        #     p = num.empty(ps.shape[axis]/2)
+        #     k = num.empty(ps.shape[axis]/2)
+        #     for r in xrange(ps.shape[axis]/2):
+        #         mask = num.logical_and(rm >= r-.5, rm < r+.5)
+        #         k[r] = k_ref[(k_ref.size/2)+r]
+        #         p[r] = num.median(ps[mask]) * 4 * num.pi
+        #     return p, k
 
-        power, k = power1Ddisc()
-        dk = k[1] - k[0]
-        return power, k, dk, spectrum, kE, kN
+        # power, k = power1Ddisc()
+        # dk = k[1] - k[0]
+        # return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
         power_spec, k, _, _, _, _ = self.powerspecNoise1D()
@@ -840,7 +839,7 @@ class Covariance(object):
             ps = power_spec * spectrum.size
             # print spectrum.size
             # print num.mean(ps[-int(ps.size/9.):-1])
-            var = num.mean(ps[-int(ps.size/9.):-1]) + cov[1]
+            var = num.median(ps[-int(ps.size/9.):]) + cov[1]
             self.config.variance = float(var)
         return self.config.variance
 
