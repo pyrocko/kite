@@ -4,3 +4,4 @@ dist/
 *.egg*/
 *.sublime-*
 gh-pages
+*swp
