@@ -119,18 +119,12 @@ setup(
                       'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
-    data_files=[('kite/spool/ui/', ['src/spool/ui/spool.ui',
-                                    'src/spool/ui/about.ui',
-                                    'src/spool/ui/logging.ui',
-                                    'src/spool/ui/transect.ui',
-                                    'src/spool/ui/noise_dialog.ui',
-                                    'src/spool/ui/covariance_matrix.ui',
-                                    'src/spool/ui/boxkite-sketch.jpg',
-                                    'src/spool/ui/radar_splash.png'])],
+    package_data={'kite': ['spool/ui/*']},
     entry_points={
         'console_scripts': ['spool = kite.spool.__main__:main'],
     },
 
+    ext_package='kite',
     ext_modules=[
         Extension('covariance_ext',
                   sources=[pjoin('src/ext', 'covariance_ext.c')],
@@ -146,6 +140,6 @@ setup(
                   export_symbols=None,
                   swig_opts=None,
                   depends=None,
-                  language=None)
+                  language=None),
     ]
 )

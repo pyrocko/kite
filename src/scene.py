@@ -4,12 +4,14 @@ import numpy as num
 import utm
 
 from pyrocko import guts
+from pyrocko.orthodrome import latlon_to_ne  # noqa
 from datetime import datetime as dt
 from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
 from .meta import Subject, property_cached, greatCircleDistance
 from . import scene_io
 from os import path
+
 logging.basicConfig(level=20)
 
 
@@ -18,7 +20,7 @@ def read(filename):
     try:
         scene.load(filename)
         return scene
-    except ImportError:
+    except (ImportError, UserIOWarning):
         pass
     try:
         scene.import_data(filename)
@@ -52,9 +54,9 @@ class FrameConfig(guts.Object):
     llLon = guts.Float.T(default=0.,
                          help='Scene longitude of lower left corner')
     dLat = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in x direction (degree)')
+                        help='Scene pixel spacing in x direction [deg]')
     dLon = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in y direction (degree)')
+                        help='Scene pixel spacing in y direction [deg]')
 
 
 class Frame(object):
@@ -80,6 +82,9 @@ class Frame(object):
         self.llE = None
         self.N = None
         self.E = None
+
+        self.offsetE = 0.
+        self.offsetN = 0.
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
@@ -123,8 +128,8 @@ class Frame(object):
 
         self.dE = (self.extentE + extentE_top) / (2*self.cols)
         self.dN = self.extentN / self.rows
-        self.E = num.arange(self.cols) * self.dE
-        self.N = num.arange(self.rows) * self.dN
+        self.E = num.arange(self.cols) * self.dE + self.offsetE
+        self.N = num.arange(self.rows) * self.dN + self.offsetN
 
         self.llE = 0
         self.llN = 0
@@ -179,6 +184,7 @@ class Frame(object):
     def gridE(self):
         """ UTM grid holding eastings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
+            
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
@@ -190,12 +196,28 @@ class Frame(object):
     def gridN(self):
         """ UTM grid holding northings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
+            
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
         gridN = num.repeat(self.N[:, num.newaxis],
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
+
+    def setENOffset(self, east, north):
+        """Set scene offsets in local cartesian coordinates.
+
+        :param east: East offset in [m]
+        :type east: float, :class:`numpy.ndarray` or None
+        :param north: North offset in [m]
+        :type north: float, :class:`numpy.ndarray` or None
+        """
+        self.offsetE = east
+        self.offsetN = north
+        self._updateExtent()
+
+    def setLatLonReference(self, lat, lon):
+        pass
 
     def mapMatrixEN(self, row, col):
         """ Maps matrix row, column to local easting and northing.
@@ -254,6 +276,9 @@ class Meta(guts.Object):
     satellite_name = guts.String.T(
         default='Undefined',
         help='Satellite mission name')
+    wavelength = guts.Float.T(
+        optional=True,
+        help='Wavelength in [m]')
     orbit_direction = guts.StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',
@@ -281,7 +306,7 @@ class Meta(guts.Object):
 
 class SceneConfig(guts.Object):
     """ Configuration object, gathering ``kite.Scene`` and
-    sub-objects configuration.
+        sub-objects configuration.
     """
     meta = Meta.T(
         default=Meta(),
@@ -369,6 +394,7 @@ class Scene(object):
     @property_cached
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
+        
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
         return num.isnan(self.displacement)
@@ -376,9 +402,9 @@ class Scene(object):
     @property
     def phi(self):
         """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-        in radians
+            in radians
 
-        .. note ::
+        .. important ::
 
             Kite convention is:
 
@@ -403,10 +429,10 @@ class Scene(object):
     @property
     def theta(self):
         """ Theta is look vector elevation angle towards satellite from horizon
-        in radians. Matrix of theta towards satellite's
-        :abbr:`line of sight (LOS)`.
+            in radians. Matrix of theta towards satellite's
+            :abbr:`line of sight (LOS)`.
 
-        .. note ::
+        .. important ::
 
             Kite convention!
 
@@ -430,16 +456,18 @@ class Scene(object):
 
     @property_cached
     def thetaDeg(self):
-        """ LOS incident angle in degree, ``NxM`` matrix like
+        """ LOS elevation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
+            
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.theta)
 
     @property_cached
     def phiDeg(self):
-        """ LOS incident angle in degree, ``NxM`` matrix like
+        """ LOS horizontal orientation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
+            
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.phi)
@@ -447,6 +475,7 @@ class Scene(object):
     @property_cached
     def quadtree(self):
         """ Instanciates the scene's quadtree.
+        
         :type: :class:`kite.quadtree.Quadtree`
         """
         self._log.debug('Creating kite.Quadtree instance')
@@ -456,6 +485,7 @@ class Scene(object):
     @property_cached
     def covariance(self):
         """ Instanciates the scene's covariance attribute.
+        
         :type: :class:`kite.covariance.Covariance`
         """
         self._log.debug('Creating kite.Covariance instance')
@@ -531,7 +561,7 @@ class Scene(object):
     @dynamicmethod
     def _load(self, filename):
         """ Load a kite scene from file ``filename.[npz,yml]``
-        structure
+        structure.
 
         :param filename: Filenames the scene data is saved under
         :type filename: str
@@ -622,8 +652,8 @@ class Scene(object):
 
 
 class LOSUnitVectors(object):
-    """ Decomposed Line Of Sight vectors (LOS) derived from
-    :attr:`~kite.Scene.displacement`.
+    """ Decompose line-of-sight (LOS) angles derived from
+    :attr:`~kite.Scene.displacement` to unit vector.
     """
     def __init__(self, scene):
         self._scene = scene
@@ -636,7 +666,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitE(self):
-        """ Unit vector in East, ``NxM`` matrix like
+        """ Unit vector east component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -644,7 +674,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitN(self):
-        """ Unit vector in North, ``NxM`` matrix like
+        """ Unit vector north component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -652,7 +682,7 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitU(self):
-        """ Unit vector Up, ``NxM`` matrix like
+        """ Unit vector vertical (up) component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
@@ -742,7 +772,7 @@ class SceneTest(Scene):
         r2 = k_rad >= k2
 
         beta = num.array(beta)
-        # From Hanssen (2000)
+        # From Hanssen (2001)
         #   beta+1 is used as beta, since, the power exponent
         #   is defined for a 1D slice of the 2D spectrum:
         #   austin94: "Adler, 1981, shows that the surface profile
@@ -751,7 +781,7 @@ class SceneTest(Scene):
         #   a fractal dimension  equal to that of the 2D
         #   surface decreased by one."
         beta += 1.
-        # From Hanssen (2000)
+        # From Hanssen (2001)
         #   The power beta/2 is used because the power spectral
         #   density is proportional to the amplitude squared
         #   Here we work with the amplitude, instead of the power

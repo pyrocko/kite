@@ -1,8 +1,8 @@
 Scene import/initialization
 ===========================
 
-Import unwrapped displacement scene from ``GMT5SAR``, ``GAMMA`` or ``ISCE``.
-See module documentation for file structure definition.
+Import unwrapped displacement scene from `GMT5SAR <http://gmt.soest.hawaii.edu/projects/gmt5sar>`_, `GAMMA Software <http://www.gamma-rs.ch/no_cache/software.html>`_, `ROI_PAC <http://roipac.org/cgi-bin/moin.cgi>`_ or `ISCE <https://winsar.unavco.org/isce.html>`_.
+See :module:`kite.scene_io` for required file structure definitions of respective formats.
 
 ::
 
@@ -21,6 +21,11 @@ Manual initialisation of a generic binary dataset is also possible. Here the fun
 
     sc = Scene()
     sc.displacement = num.empty((2048, 2048))
+    
+    # dummy line-of-sight vectors
+    sc.theta = num.ones((2048, 2048))*192.
+    sc.phi = num.ones((2048, 2048))*67.
+
 
     # Frame the scene
     sc.frame.llLat = 38.2095

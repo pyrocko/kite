@@ -33,7 +33,7 @@ class Spool(QtGui.QApplication):
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
-                      'ui/boxkite-sketch.jpg'))\
+                      'ui/spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         self.splash = QtGui.QSplashScreen(splash_img,
                                           QtCore.Qt.WindowStaysOnTopHint)
@@ -45,6 +45,9 @@ class Spool(QtGui.QApplication):
         self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
+        self.aboutToQuit.connect(self.spool_win.scene_proxy.worker_thread.quit)
+        self.aboutToQuit.connect(self.spool_win.scene_proxy.deleteLater)
+        self.aboutToQuit.connect(self.splash.deleteLater)
         self.aboutToQuit.connect(self.deleteLater)
 
         if scene is not None:
@@ -56,7 +59,8 @@ class Spool(QtGui.QApplication):
 
         self.splash.finish(self.spool_win)
         self.spool_win.show()
-        sys.exit(self.exec_())
+        rc = self.exec_()
+        sys.exit(rc)
 
     @QtCore.Slot(str)
     def updateSplashMessage(self, msg=''):
