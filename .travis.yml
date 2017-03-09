@@ -1,0 +1,43 @@
+language: python
+
+env:
+    global:
+        - OMP_NUM_THREADS=4
+
+matrix:
+    include:
+        - os: linux
+          sudo: required
+          python: 2.7
+          cache: pip
+          virtualenv:
+              system_site_packages: true
+
+addons:
+    apt:
+        packages: [ python-dev, python-pyside,
+            python-scipy, python-matplotlib, python-yaml,
+            python-tk, libyaml-dev, xvfb ]
+
+before_install:
+    - pip install setuptools flake8 pyyaml coveralls
+    - easy_install pyavl
+
+before_script:
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sh -e /etc/init.d/xvfb start ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sleep 3 ; fi
+
+install:
+    - sudo python setup.py install
+
+script:
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python test/test_all.py ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=kite test/test_all.py ; fi
+
+after_success:
+    - coveralls
+
+notifications:
+    email: false
