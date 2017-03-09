@@ -1,4 +1,7 @@
 # KITE
+[![Build Status](https://travis-ci.org/pyrocko/kite.svg?branch=master)](https://travis-ci.org/pyrocko/kite)
+
+
 ## Introduction
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org) and Grond.
 
