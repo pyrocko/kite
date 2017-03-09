@@ -30,3 +30,6 @@ scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 # Inspection of covariance parameters
 scene.quadtree.covariance.plot()
 ```
+
+## Documentation
+Find the documentation at https://pyrocko.github.io/kite/.
