@@ -68,7 +68,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Kite'
-copyright = u'2016, IfG University of Kiel, BriDGes - Marius Paul Isken, '\
+copyright = u'2016, IfG University of Kiel, BridGeS project - Marius Paul Isken, '\
              'Henriette Sudhaus, Andreas Steinberg, Sebastian Heimann'
 author = u'Marius Isken'
 

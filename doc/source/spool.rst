@@ -99,6 +99,6 @@ The covariance of the InSAR scene is a measure for the noise which affects our d
     **Right click** on the noise spectrum or :menuselection:`Tools --> Covariance &Noise Data` brings up the noise inspection window showing :attr:`~kite.Covariance.noise_data`. Before the Fouriere transformation the data is deramped in 2D as well as demeaned.
 
 
-.. rubric:: Footnotes
+.. rubric:: References
 
 .. [#f1]  Sudhaus, Henriette and Gomba, Giorgio (2016) Influences of ionospheric disturbances in L-band InSAR data on earthquake source modelling. Living Planet Symposium 2016, 9-13 May 2016, Prague, Czech Republic. 
