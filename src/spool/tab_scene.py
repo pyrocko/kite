@@ -62,9 +62,9 @@ class QKiteScenePlot(QKitePlot):
                 ['Scene.theta', lambda sp: sp.scene.theta],
             'phi':
                 ['Scene.phi', lambda sp: sp.scene.phi],
-            'thetaDeg':
+            'degTheta':
                 ['Scene.thetaDeg', lambda sp: sp.scene.thetaDeg],
-            'phiDeg':
+            'degPhi':
                 ['Scene.phiDeg', lambda sp: sp.scene.phiDeg],
             'unitE':
                 ['Scene.los.unitE', lambda sp: sp.scene.los.unitE],
@@ -75,7 +75,8 @@ class QKiteScenePlot(QKitePlot):
         }
         self._component = 'displacement'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy)
+        QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+
         scene_proxy.sigFrameChanged.connect(self.onFrameChange)
         scene_proxy.sigSceneModelChanged.connect(self.update)
 

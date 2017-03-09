@@ -293,6 +293,10 @@ class QuadtreeConfig(guts.Object):
     tile_size_max = guts.Float.T(
         default=25e3,
         help='Maximum allowed tile size in *meter*')
+    leaf_blacklist = guts.List.T(
+        optional=True,
+        default=[],
+        help='Blacklist of excluded leafs')
 
 
 class Quadtree(object):
@@ -408,6 +412,7 @@ class Quadtree(object):
         self._corr_func = self._corrections[correction][1]
 
         # Clearing cached properties through None
+        self.leaf_center_distance = None
         self.leafs = None
         self.nodes = None
         self.epsilon_min = None
@@ -451,6 +456,7 @@ class Quadtree(object):
                 (value, self.epsilon_min))
             return
         self.leafs = None
+        self.clearLeafBlacklist()
         self.config.epsilon = value
 
         self.evChanged.notify()
@@ -485,6 +491,7 @@ class Quadtree(object):
             return
 
         self.leafs = None
+        self.clearLeafBlacklist()
         self.config.nan_allowed = value
         self.evChanged.notify()
 
@@ -529,6 +536,7 @@ class Quadtree(object):
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
         self.leafs = None
+        self.clearLeafBlacklist()
         self.evChanged.notify()
 
     @property_cached
@@ -556,6 +564,14 @@ class Quadtree(object):
         """
         return len(self.nodes)
 
+    def clearLeafBlacklist(self):
+        self.config.leaf_blacklist = []
+
+    def blacklistLeafs(self, leafs):
+        self.config.leaf_blacklist.extend(leafs)
+        self.leafs = None
+        self.evChanged.notify()
+
     @property_cached
     def leafs(self):
         """:getter: List of leafs for current configuration.
@@ -565,7 +581,8 @@ class Quadtree(object):
         leafs = []
         for b in self._base_nodes:
             leafs.extend([l for l in b.iterLeafs()
-                          if l.nan_fraction < self.nan_allowed])
+                          if l.nan_fraction < self.nan_allowed and
+                          l.id not in self.config.leaf_blacklist])
         self._log.debug(
             'Gathering leafs for epsilon %.4f (nleafs=%d) [%0.8f s]' %
             (self.epsilon, len(leafs), time.time() - t0))
@@ -605,16 +622,45 @@ class Quadtree(object):
     def leaf_focal_points(self):
         """
         :getter: Leaf focal points in local coordinates.
-        :type: :class:`numpy.ndarray`, size ``(2,N)``
+        :type: :class:`numpy.ndarray`, size ``(N, 2)``
         """
         return num.array([l.focal_point for l in self.leafs])
+
+    @property_cached
+    def leaf_center_distance(self):
+        """
+        :getter: Leaf distance to center point of the quadtree
+        :type: :class:`numpy.ndarray`, size ``(N, 3)``
+        """
+        distances = num.zeros((self.nleafs, 3))
+        center = self.center_point
+        distances[:, 0] = self.leaf_focal_points[:, 0] - center[0]
+        distances[:, 1] = self.leaf_focal_points[:, 1] - center[1]
+        distances[:, 2] = num.sqrt(distances[:, 1]**2 + distances[:, 1]**2)
+        return distances
+
+    @property
+    def leaf_phis(self):
+        """
+        :getter: Median leaf LOS phi angle. :attr:`kite.Scene.phi`
+        :type: :class:`numpy.ndarray`, size ``(N)``
+        """
+        return num.array([l.phi for l in self.leafs])
+
+    @property
+    def leaf_thetas(self):
+        """
+        :getter: Median leaf LOS theta angle. :attr:`kite.Scene.theta`
+        :type: :class:`numpy.ndarray`, size ``(N)``
+        """
+        return num.array([l.theta for l in self.leafs])
 
     @property
     def leaf_matrix_means(self):
         """
         :getter: Leaf mean displacements casted to
             :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_means,
                                         method='mean')
@@ -624,7 +670,7 @@ class Quadtree(object):
         """
         :getter: Leaf median displacements casted to
             :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_medians,
                                         method='median')
@@ -633,7 +679,7 @@ class Quadtree(object):
     def leaf_matrix_weights(self):
         """
         :getter: Leaf weights casted to :attr:`kite.Scene.displacement`.
-        :type: :class:`numpy.ndarray`, size ``(N,M)``
+        :type: :class:`numpy.ndarray`, size ``(N, M)``
         """
         return self._getLeafsNormMatrix(self._leaf_matrix_weights,
                                         method='weight')
@@ -651,6 +697,10 @@ class Quadtree(object):
         array[self.scene.displacement_mask] = num.nan
         # print time.time()-t0, method
         return array
+
+    @property
+    def center_point(self):
+        return num.median(self.leaf_focal_points, axis=0)
 
     @property
     def reduction_efficiency(self):

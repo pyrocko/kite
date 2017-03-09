@@ -4,12 +4,14 @@ import numpy as num
 import utm
 
 from pyrocko import guts
+from pyrocko.orthodrome import latlon_to_ne  # noqa
 from datetime import datetime as dt
 from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
 from .meta import Subject, property_cached, greatCircleDistance
 from . import scene_io
 from os import path
+
 logging.basicConfig(level=20)
 
 
@@ -18,7 +20,7 @@ def read(filename):
     try:
         scene.load(filename)
         return scene
-    except ImportError:
+    except (ImportError, UserIOWarning):
         pass
     try:
         scene.import_data(filename)
@@ -52,9 +54,9 @@ class FrameConfig(guts.Object):
     llLon = guts.Float.T(default=0.,
                          help='Scene longitude of lower left corner')
     dLat = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in x direction (degree)')
+                        help='Scene pixel spacing in x direction [deg]')
     dLon = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in y direction (degree)')
+                        help='Scene pixel spacing in y direction [deg]')
 
 
 class Frame(object):
@@ -80,6 +82,9 @@ class Frame(object):
         self.llE = None
         self.N = None
         self.E = None
+
+        self.offsetE = 0.
+        self.offsetN = 0.
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
@@ -123,8 +128,8 @@ class Frame(object):
 
         self.dE = (self.extentE + extentE_top) / (2*self.cols)
         self.dN = self.extentN / self.rows
-        self.E = num.arange(self.cols) * self.dE
-        self.N = num.arange(self.rows) * self.dN
+        self.E = num.arange(self.cols) * self.dE + self.offsetE
+        self.N = num.arange(self.rows) * self.dN + self.offsetN
 
         self.llE = 0
         self.llN = 0
@@ -199,6 +204,21 @@ class Frame(object):
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
+    def setENOffset(self, east, north):
+        """Set scene offsets in local cartesian coordinates.
+
+        :param east: East offset in [m]
+        :type east: float, :class:`numpy.ndarray` or None
+        :param north: North offset in [m]
+        :type north: float, :class:`numpy.ndarray` or None
+        """
+        self.offsetE = east
+        self.offsetN = north
+        self._updateExtent()
+
+    def setLatLonReference(self, lat, lon):
+        pass
+
     def mapMatrixEN(self, row, col):
         """ Maps matrix row, column to local easting and northing.
 
@@ -256,6 +276,9 @@ class Meta(guts.Object):
     satellite_name = guts.String.T(
         default='Undefined',
         help='Satellite mission name')
+    wavelength = guts.Float.T(
+        optional=True,
+        help='Wavelength in [m]')
     orbit_direction = guts.StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',

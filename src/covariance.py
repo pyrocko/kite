@@ -7,8 +7,8 @@ import time
 import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
-from kite.meta import Subject, property_cached, trimMatrix, derampMatrix,\
-    squareMatrix
+from kite.meta import (Subject, property_cached,  # noqa
+                       trimMatrix, derampMatrix, squareMatrix)
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
@@ -320,9 +320,17 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
         """
-        if not self.config.covariance_matrix:
+        if not isinstance(self.config.covariance_matrix, num.ndarray):
             self.config.covariance_matrix =\
                 self._calcCovarianceMatrix(method='full')
+        elif self.config.covariance_matrix.ndim == 1:
+            try:
+                nl = self.quadtree.nleafs
+                self.config.covariance_matrix =\
+                    self.config.covariance_matrix.reshape(nl, nl)
+            except ValueError:
+                self.config.covariance = None
+                return self.covariance_matrix
         return self.config.covariance_matrix
 
     @property_cached
@@ -339,8 +347,8 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from fully propagated covariance :math:`cov^{-1}`.
-        
+        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
@@ -350,13 +358,30 @@ class Covariance(object):
     @property_cached
     def weight_matrix_focal(self):
         """ Approximated weight matrix from fast focal method 
-            :math:`cov_{focal}^{-1}`.
-        
+            :math:`\\sqrt{cov_{focal}^{-1}}`.
+
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleafs` x
             :class:`~kite.Quadtree.nleafs`)
         """
         return num.linalg.inv(self.covariance_matrix_focal)
+
+    @property_cached
+    def weight_vector(self):
+        """ Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleafs`)
+        """
+        return num.sum(self.weight_matrix, axis=1)
+
+    @property_cached
+    def weight_vector_focal(self):
+        """ Weight vector from fast focal method
+            :math:`\\sqrt{cov_{focal}^{-1}}`.
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleafs`)
+        """
+        return num.sum(self.weight_matrix_focal, axis=1)
 
     def _calcCovarianceMatrix(self, method='focal'):
         """Constructs the covariance matrix.
@@ -395,11 +420,14 @@ class Covariance(object):
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
+
+            nleafs = self.quadtree.nleafs
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, self.nthreads,
-                            self.config.adaptive_subsampling)
+                            self.config.adaptive_subsampling)\
+                .reshape(nleafs, nleafs)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
@@ -501,7 +529,7 @@ class Covariance(object):
         amp = num.zeros_like(k_rad)
 
         if not anisotropic:
-            noise_pspec, k, _, _, _, _ = self.powerspecNoise1D()
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
             for i in xrange(k.size):
@@ -510,12 +538,12 @@ class Covariance(object):
                 r = num.logical_and(k_rad > k_min, k_rad <= k_max)
                 if i == (k.size-1):
                     r = k_rad > k_min
-                if num.sum(r) == 0:
+                if r.sum() == 0:
                     continue
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
             amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
-            amp = num.sqrt(amp * max(self.noise_data.shape)**2)
+            amp = num.sqrt(amp * self.noise_data.size * num.pi * 4)
 
         elif anisotropic:
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
@@ -572,11 +600,12 @@ class Covariance(object):
         if norm not in ['1d', '2d', '3d']:
             raise AttributeError('norm must be either 1d, 2d or 3d')
 
-        noise = squareMatrix(noise)
+        # noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
-        power_spec = num.abs(spectrum)**2
+        power_spec = (num.abs(spectrum)/spectrum.size)**2
+
         kE = shift(num.fft.fftfreq(power_spec.shape[1],
                                    d=self.quadtree.frame.dE))
         kN = shift(num.fft.fftfreq(power_spec.shape[0],
@@ -603,7 +632,7 @@ class Covariance(object):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
-            return (power * num.pi * 4) / (power_spec.size**2)
+            return power
 
         def power2d(k):
             """ Mean 2D Power works! """
@@ -612,9 +641,9 @@ class Covariance(object):
             for i in xrange(k.size):
                 kE = num.sin(theta) * k[i]
                 kN = num.cos(theta) * k[i]
-                power[i] = num.mean(power_interp.ev(kN, kE) * 4. * num.pi)
+                power[i] = num.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
-            return power / power_spec.size
+            return power
 
         def power3d(k):
             return power_interp
@@ -628,9 +657,29 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         k = num.linspace(k_rad[k_rad > 0].min(),
                          k_rad.max(), nk)
-        dk = (1./k.min() - 1./k.max()) / nk
-
+        dk = 1./k.min() / (2. * nk)
         return power(k), k, dk, spectrum, kE, kN
+
+        # def power1Ddisc():
+        #     self._log.info('Using discrete summation')
+        #     ps = power_spec
+        #     d = num.abs(num.arange(-ps.shape[0]/2,
+        #                            ps.shape[0]/2))
+        #     rm = num.sqrt(d[:, num.newaxis]**2 + d[num.newaxis, :]**2)
+
+        #     axis = num.argmax(ps.shape)
+        #     k_ref = kN if axis == 0 else kE
+        #     p = num.empty(ps.shape[axis]/2)
+        #     k = num.empty(ps.shape[axis]/2)
+        #     for r in xrange(ps.shape[axis]/2):
+        #         mask = num.logical_and(rm >= r-.5, rm < r+.5)
+        #         k[r] = k_ref[(k_ref.size/2)+r]
+        #         p[r] = num.median(ps[mask]) * 4 * num.pi
+        #     return p, k
+
+        # power, k = power1Ddisc()
+        # dk = k[1] - k[0]
+        # return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
         """Fitting a function to data noise power spectrum. 
@@ -807,15 +856,19 @@ class Covariance(object):
     def variance(self, value):
         self.config.variance = float(value)
         self._clear(config=False, spectrum=False)
+        self.evChanged.notify()
 
     @variance.getter
     def variance(self):
         
         if self.config.variance is None:
-            power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
+            power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
-            ps = power_spec
-            var = num.mean(ps[:-int(ps.size/8)])/ps.size + cov[0]
+            # print cov[1]
+            ps = power_spec * spectrum.size
+            # print spectrum.size
+            # print num.mean(ps[-int(ps.size/9.):-1])
+            var = num.median(ps[-int(ps.size/9.):]) + cov[1]
             self.config.variance = float(var)
         return self.config.variance
 

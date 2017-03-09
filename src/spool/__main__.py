@@ -63,9 +63,9 @@ Available Synthetic Displacement:
             sys.exit(0)
 
     if sc:
-        spool = Spool(scene=sc)
+        Spool(scene=sc)
     elif ns.load is not None:
-        spool = Spool(import_data=ns.load)
+        Spool(import_data=ns.load)
     elif ns.file is not None:
-        spool = Spool(load_file=ns.file)
-    spool.spool_win.buildViews()
+        Spool(load_file=ns.file)
+    sys.exit(0)
