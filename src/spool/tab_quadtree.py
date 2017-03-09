@@ -41,6 +41,9 @@ class QKiteQuadtree(QKiteView):
 
 class QQuadLeaf(QtCore.QRectF):
 
+    leaf_outline = pg.mkPen((202, 60, 60), width=1)
+    leaf_fill = pg.mkBrush(202, 60, 60, 120)
+
     def __init__(self, leaf):
         self.id = leaf.id
         QtCore.QRectF.__init__(
@@ -50,8 +53,8 @@ class QQuadLeaf(QtCore.QRectF):
 
     def getRectItem(self):
         item = QtGui.QGraphicsRectItem(self)
-        item.setPen(pg.mkPen((202, 60, 60), width=1))
-        item.setBrush(pg.mkBrush(202, 60, 60, 120))
+        item.setPen(self.leaf_outline)
+        item.setBrush(self.leaf_fill)
         item.setZValue(1e9)
         return item
 
@@ -92,7 +95,9 @@ class QKiteQuadtreePlot(QKitePlot):
         self.selected_leafs = []
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
-        self.eraseBox.setPen(pg.mkPen((202, 60, 60), width=1))
+        self.eraseBox.setPen(pg.mkPen((202, 60, 60),
+                                      width=1,
+                                      style=QtCore.Qt.DotLine))
         self.eraseBox.setBrush(pg.mkBrush(202, 60, 60, 40))
         self.eraseBox.setZValue(1e9)
         self.eraseBox.hide()
