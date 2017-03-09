@@ -21,6 +21,7 @@ addons:
 
 before_install:
     - pip install setuptools flake8 pyyaml coveralls
+    - pip install https://github.com/pyrocko/pyrocko.git
     - easy_install pyavl
 
 before_script:
@@ -34,7 +35,7 @@ install:
 
 script:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python test/test_all.py ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=kite test/test_all.py ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=kite test/test_scene.py ; fi
 
 after_success:
     - coveralls
