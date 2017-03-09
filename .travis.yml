@@ -16,12 +16,12 @@ matrix:
 addons:
     apt:
         packages: [ python-dev, python-pyside,
-            python-scipy, python-matplotlib, python-yaml,
-            python-tk, libyaml-dev, xvfb ]
+             python-scipy, gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
+             python-matplotlib, python-yaml, python-tk, xvfb ]
 
 before_install:
     - pip install setuptools flake8 pyyaml coveralls
-    - pip install https://github.com/pyrocko/pyrocko/archive/master.zip
+    - pip install git+https://github.com/pyrocko/pyrocko.git
     - easy_install pyavl
 
 before_script:
