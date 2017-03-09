@@ -522,7 +522,7 @@ class Covariance(object):
         amp = num.zeros_like(k_rad)
 
         if not anisotropic:
-            noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
+            noise_pspec, k, _, _, _, _ = self.powerspecNoise1D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
             for i in xrange(k.size):
@@ -676,7 +676,7 @@ class Covariance(object):
         return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
-        power_spec, k, _, _, _, _ = self.powerspecNoise2D()
+        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
 
         def selectRegime(k, k1, k2):
             return num.logical_and(k > k1, k < k2)
@@ -709,7 +709,7 @@ class Covariance(object):
             and :class:`~kite.Covariance.powerspec_model``
         :type: float
         '''
-        power_spec, k, _, _, _, _ = self.powerspecNoise2D()
+        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
         power_spec_mod = self.powerspecModel(k)
         return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
 
@@ -734,7 +734,7 @@ class Covariance(object):
         ''' Covariance function derived from powerspectrum of
             displacement noise patch.
         :type: tuple, :class:`numpy.ndarray` (covariance, distance) '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         # power_spec -= self.variance
 
         d = num.arange(1, power_spec.size+1) * dk
@@ -749,7 +749,7 @@ class Covariance(object):
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
         '''
-        _, k, dk, _, kN, kE = self.powerspecNoise2D()
+        _, k, dk, _, kN, kE = self.powerspecNoise1D()
         (a, b) = self.powerspec_model
 
         spec = modelPowerspec(k, a, b)
@@ -799,7 +799,7 @@ class Covariance(object):
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         '''
-        power_spec, k, dk, _, _, _ = self.powerspecNoise2D()
+        power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         d = num.arange(1, power_spec.size+1) * dk
 
         def structure_func(power_spec, d, k):
@@ -834,7 +834,7 @@ class Covariance(object):
     @variance.getter
     def variance(self):
         if self.config.variance is None:
-            power_spec, k, dk, spectrum, _, _ = self.powerspecNoise2D()
+            power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
             # print cov[1]
             ps = power_spec * spectrum.size
