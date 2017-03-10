@@ -17,9 +17,20 @@ Kite features simple and efficient handling of displacement data:
 
 ```sh
 sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
-git clone https://gitext.gfz-potsdam.de/isken/kite.git
+git clone https://github.com/pyqtgraph/pyqtgraph.git
+cd pyqtgraph
+sudo python setup.py install
+git clone https://github.com/pyrocko/kite.git
 cd kite
-sudo pip install .
+sudo python setup.py install
+```
+
+Alternative installation through pip
+
+```sh
+sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
+pip install git+https://github.com/pyqtgraph/pyqtgraph.git
+pip install git+https://github.com/pyrocko/kite.git
 ```
 
 ## Example
