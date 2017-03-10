@@ -95,7 +95,7 @@ setup(
     version='0.0.2.post%s' % time.strftime('%Y%m%d'),
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'
-           'BRiDGES Emmily Noether-Programm (DFG)',
+           'BriDGes Emmily Noether-Programm (DFG)',
     author_email='misken@geophysik.uni-kiel.de',
 
     license='GPL',
@@ -115,7 +115,7 @@ setup(
         ],
     keywords=['insar satellite radar earthquake optimization'],
 
-    install_requires=['numpy>=1.9.0', 'pyrocko', 'scipy', 'pyyaml',
+    install_requires=['numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
                       'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
     packages=['kite', 'kite.spool'],
     package_dir={'kite': 'src'},
