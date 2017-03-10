@@ -1,7 +1,4 @@
 # KITE
-[![Build Status](https://travis-ci.org/pyrocko/kite.svg?branch=master)](https://travis-ci.org/pyrocko/kite)
-
-
 ## Introduction
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org) and Grond.
 
@@ -15,8 +12,26 @@ Kite features simple and efficient handling of displacement data:
 
 ## Installation and Requirement
 
+### Requires libraries
+
+* PySide with OpenGL support (Qt4)
+* pyQtGraph
+* NumPy
+* SciPy
+* pyyaml
+* OpenMP
+* pyrocko
+
+Installation on Debian based distributions with `apt`
+
 ```sh
-sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
+sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
+  python-yaml python-scipy python-numpy libomp-dev
+```
+
+### Native installation
+
+```sh
 git clone https://github.com/pyqtgraph/pyqtgraph.git
 cd pyqtgraph
 sudo python setup.py install
@@ -25,12 +40,11 @@ cd kite
 sudo python setup.py install
 ```
 
-Alternative installation through pip
+### Installation through pip
 
 ```sh
-sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
-pip install git+https://github.com/pyqtgraph/pyqtgraph.git
-pip install git+https://github.com/pyrocko/kite.git
+sudo pip install git+https://github.com/pyqtgraph/pyqtgraph.git
+sudo pip install git+https://github.com/pyrocko/kite.git
 ```
 
 ## Example
