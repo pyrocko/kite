@@ -2,6 +2,7 @@
 import logging
 import numpy as num
 import utm
+import os.path as op
 
 from pyrocko import guts
 from pyrocko.orthodrome import latlon_to_ne  # noqa
@@ -10,7 +11,6 @@ from .quadtree import QuadtreeConfig
 from .covariance import CovarianceConfig
 from .meta import Subject, property_cached, greatCircleDistance
 from . import scene_io
-from os import path
 
 logging.basicConfig(level=20)
 
@@ -184,7 +184,7 @@ class Frame(object):
     def gridE(self):
         """ UTM grid holding eastings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
-            
+
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
@@ -196,7 +196,7 @@ class Frame(object):
     def gridN(self):
         """ UTM grid holding northings of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
-            
+
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
         valid_data = num.isnan(self._scene.displacement)
@@ -272,7 +272,7 @@ class Meta(guts.Object):
         help='Scene title')
     scene_id = guts.String.T(
         default='None',
-        help='Scene identification (uid, unused)')
+        help='Scene identification')
     satellite_name = guts.String.T(
         default='Undefined',
         help='Satellite mission name')
@@ -394,7 +394,7 @@ class Scene(object):
     @property_cached
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
-        
+
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
         return num.isnan(self.displacement)
@@ -458,7 +458,7 @@ class Scene(object):
     def thetaDeg(self):
         """ LOS elevation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
-            
+
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.theta)
@@ -467,7 +467,7 @@ class Scene(object):
     def phiDeg(self):
         """ LOS horizontal orientation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
-            
+
         :type: :class:`numpy.ndarray`
         """
         return num.rad2deg(self.phi)
@@ -475,7 +475,7 @@ class Scene(object):
     @property_cached
     def quadtree(self):
         """ Instanciates the scene's quadtree.
-        
+
         :type: :class:`kite.quadtree.Quadtree`
         """
         self._log.debug('Creating kite.Quadtree instance')
@@ -485,7 +485,7 @@ class Scene(object):
     @property_cached
     def covariance(self):
         """ Instanciates the scene's covariance attribute.
-        
+
         :type: :class:`kite.covariance.Covariance`
         """
         self._log.debug('Creating kite.Covariance instance')
@@ -541,7 +541,7 @@ class Scene(object):
         """
         filename = filename or '%s_%s' % (self.meta.scene_id,
                                           self.meta.scene_view)
-        _file, ext = path.splitext(filename)
+        _file, ext = op.splitext(filename)
         filename = _file if ext in ['yml', 'npz'] else filename
 
         components = ['displacement', 'theta', 'phi']
@@ -552,7 +552,7 @@ class Scene(object):
         self.save_config('%s.yml' % filename)
 
     def save_config(self, filename):
-        _file, ext = path.splitext(filename)
+        _file, ext = op.splitext(filename)
         filename = _file if ext in ['yml'] else filename
         self._log.info('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
@@ -571,7 +571,7 @@ class Scene(object):
         scene = self
         components = ['displacement', 'theta', 'phi']
 
-        basename = path.splitext(filename)[0]
+        basename = op.splitext(filename)[0]
         scene._log.info('Loading from %s[.npz,.yml]' % basename)
         try:
             data = num.load('%s.npz' % basename)
@@ -585,6 +585,7 @@ class Scene(object):
         except IOError:
             raise UserIOWarning('Could not load %s.yml' % basename)
 
+        scene.meta.filename = op.basename(filename)
         scene._testImport()
         return scene
 
@@ -610,8 +611,7 @@ class Scene(object):
         :raises: TypeError
         """
         scene = self
-        import os
-        if not os.path.isfile(path) or os.path.isdir(path):
+        if not op.isfile(path) or op.isdir(path):
             raise ImportError('File %s does not exist!' % path)
         data = None
 
@@ -636,6 +636,7 @@ class Scene(object):
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
 
+        scene.meta.filename = op.basename(path)
         scene._testImport()
         return scene
 
