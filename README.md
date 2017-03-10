@@ -4,7 +4,7 @@ This framework is streamlining InSAR displacement processing routines for earthq
 
 Kite features simple and efficient handling of displacement data:
 
-* Import InSAR displacement data from GAMMA, ISCE, GMTSAR and Matlab
+* Import InSAR displacement data from GAMMA, ISCE, GMTSAR, ROI_PAC and Matlab
 * Efficient quadtree implementation
 * Covariance estimation from noise
 * Interactive GUI
