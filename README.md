@@ -18,11 +18,9 @@ Kite features simple and efficient handling of displacement data:
 * pyQtGraph
 * NumPy
 * SciPy
-* pyyaml
 * OpenMP
-* pyrocko
 
-Installation on Debian based distributions with `apt`
+Installation on Debian based distributions through `apt`
 
 ```sh
 sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
@@ -33,11 +31,9 @@ sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
 
 ```sh
 git clone https://github.com/pyqtgraph/pyqtgraph.git
-cd pyqtgraph
-sudo python setup.py install
+cd pyqtgraph; sudo python setup.py install
 git clone https://github.com/pyrocko/kite.git
-cd kite
-sudo python setup.py install
+cd kite; sudo python setup.py install
 ```
 
 ### Installation through pip
@@ -47,7 +43,10 @@ sudo pip install git+https://github.com/pyqtgraph/pyqtgraph.git
 sudo pip install git+https://github.com/pyrocko/kite.git
 ```
 
-## Example
+# Documentation
+Find the documentation at https://pyrocko.github.io/kite/.
+
+## Short Example
 ```python
 from kite import Scene
 
@@ -58,6 +57,3 @@ scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 # Inspection of covariance parameters
 scene.quadtree.covariance.plot()
 ```
-
-## Documentation
-Find the documentation at https://pyrocko.github.io/kite/.
