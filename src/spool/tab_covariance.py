@@ -68,8 +68,7 @@ class QKiteCovariance(QKiteView):
             dock.setStretch(10, .5)
 
     def modelChanged(self):
-        self.dialogInspectCovariance.close()
-        self.dialogInspectNoise.close()
+        self.dialogCovariance.close()
         self.main_widget.onConfigChanged()
 
         self.param_covariance.updateValues()
@@ -333,7 +332,6 @@ class QKiteToolNoise(QtGui.QDialog):
             hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
             image.setLookupTable(ge.getLookupTable)
 
-            @QtCore.Slot()
             def updateLevels():
                 image.setLevels(ge.region.getRegion())
 
@@ -341,7 +339,6 @@ class QKiteToolNoise(QtGui.QDialog):
             ge.sigLevelsChanged.connect(updateLevels)
             updateLevels()
 
-            @QtCore.Slot()
             def updateHistogram():
                 h = image.getHistogram()
                 if h[0] is None:
@@ -403,12 +400,9 @@ class QKiteToolNoise(QtGui.QDialog):
             lambda b: self.noise_synthetic.enableAnisotropic(b))
 
     def closeEvent(self, ev):
+        self.noise_patch.proxy_disconnect()
+        self.noise_synthetic.proxy_disconnect()
         ev.accept()
-        try:
-            self.noise_patch.proxy_disconnect()
-            self.noise_synthetic.proxy_disconnect()
-        except RuntimeError:
-            pass
 
     def showEvent(self, ev):
         self.noise_patch.update()
@@ -452,13 +446,11 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
 
             self.update()
 
-        @QtCore.Slot()
         def update(self):
             self.image.updateImage(
                 self.scene_proxy.covariance.weight_matrix_focal.T,
                 autoLevels=True)
 
-        @QtCore.Slot()
         def transFromFrame(self):
             # self.resetTransform()
             self.setRange(xRange=(0, self.scene_proxy.quadtree.nleafs),
@@ -507,15 +499,10 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
             position='left')
         self.horizontalLayoutPlot.addWidget(self.dockarea)
 
-    @QtCore.Slot()
     def closeEvent(self, ev):
+        self.weight_matrix.proxy_disconnect()
         ev.accept()
-        try:
-            self.weight_matrix.proxy_disconnect()
-        except RuntimeError:
-            pass
 
-    @QtCore.Slot()
     def showEvent(self, ev):
         self.weight_matrix.update()
         self.weight_matrix.proxy_connect()
