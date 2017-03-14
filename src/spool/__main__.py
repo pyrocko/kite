@@ -8,9 +8,13 @@ def main(args=None):
     '''
     Spool app deployed through setuptools
     '''
-    epilog = 'Spool is part of the kite InSAR framework.'
-    epilog += '\nMore at http://pyrocko.org'
-    epilog += '\n\n - Marius Isken (marius.isken@gfz-potsdam.de)'
+    epilog = '''Spool is part of the kite InSAR framework.
+More at http://pyrocko.org, http://github.com/pyrocko
+
+BriDGes DFG Project, University of Kiel
+
+ Marius Isken (marius.isken@gfz-potsdam.de)
+ Henriette Sudhaus'''
     desc = 'InSAR deformation inspector, quadtree and covariance'
     parser = ap.ArgumentParser(
         prog='spool',
@@ -25,21 +29,22 @@ def main(args=None):
         conflict_handler='resolve',
         add_help=True)
     parser.add_argument('file', type=str,
-                        help='Load Kite native container (*.npz/*.yml)',
+                        help='Load native kite container (.npz & .yml)',
                         default=None, nargs='?')
     parser.add_argument('--load', metavar='file', type=str,
                         default=None,
                         help='''Import file or directory
 Supported formats are:
- * Matlab (*.mat)
- * GAMMA  (*.* and *.par in same directory)
- * GMTSAR (*.grd and binary *.los.* file)
- * ISCE   (*.unw.geo, *.unw.geo.xml and *.rdr.geo for LOS data)''')
+ * Matlab  (*.mat)
+ * GAMMA   (* binary and *.par file)
+ * GMTSAR  (*.grd binary and *.los.* file)
+ * ISCE    (*.unw.geo with *.unw.geo.xml and; *.rdr.geo for LOS data)
+ * ROI_PAC (* binary and *.rsc file''')
     parser.add_argument('--synthetic', type=str, default=None,
                         choices=['fractal', 'sine', 'gauss'],
                         help='''Synthetic Tests
 Available Synthetic Displacement:
- * fractal (Atmospheric model, after Hanssen, 2001)
+ * fractal (Atmospheric model; after Hanssen, 2001)
  * sine
  * gauss
 ''')

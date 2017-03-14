@@ -158,6 +158,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.buildViews()
 
     def buildViews(self):
+        self.setWindowTitle('Spool - %s'
+                            % self.scene_proxy.scene.meta.filename)
         if self.scene_proxy.scene is None or self.tabs.count() != 0:
             return
         for v in self.views:

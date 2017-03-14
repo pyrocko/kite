@@ -410,6 +410,7 @@ class Covariance(object):
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
             cov_matrix = modelCovariance(dist_matrix, ma, mb)
+            num.fill_diagonal(cov_matrix, self.variance)
 
         elif method == 'full':
             leaf_map = num.empty((len(self.quadtree.leafs), 4),
@@ -425,14 +426,13 @@ class Covariance(object):
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
-                            leaf_map, ma, mb, self.nthreads,
+                            leaf_map, ma, mb, self.variance, self.nthreads,
                             self.config.adaptive_subsampling)\
                 .reshape(nleafs, nleafs)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
 
-        num.fill_diagonal(cov_matrix, self.variance)
         self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
                         (method, time.time()-t0))
         return cov_matrix
