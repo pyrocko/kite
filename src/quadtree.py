@@ -1,6 +1,6 @@
 import numpy as num
 import time
-from pyrocko import guts
+import guts
 
 from .meta import Subject, property_cached, derampMatrix
 
@@ -304,14 +304,14 @@ class Quadtree(object):
     :py:class:`kite.scene.Scene`
 
     InSAR displacement scenes can hold a vast amount of data points,
-    which is often highly redundant and unsuitably large for the use in 
+    which is often highly redundant and unsuitably large for the use in
     inverse modeling. By subsampling and therefore decimating the data points
-    systematically through a parametrized quadtree we can reduce the dataset 
+    systematically through a parametrized quadtree we can reduce the dataset
     without significant loss of displacement information. Quadtree subsampling
-    keeps a high spatial resolution where displacement gradients are high and 
-    efficiently reduces data point density in regions with small displacement 
-    variations. The product is a managable dataset size with good representation
-    of the original data.
+    keeps a high spatial resolution where displacement gradients are high and
+    efficiently reduces data point density in regions with small displacement
+    variations. The product is a managable dataset size with good
+    representation of the original data.
 
     The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
     is evaluated against different corrections:
@@ -434,11 +434,11 @@ class Quadtree(object):
     @property
     def epsilon(self):
         """ Threshold for quadtree splitting its ``QuadNode``.
-        
-        The threshold is the maximum standard deviation of leaf mean, 
+
+        The threshold is the maximum standard deviation of leaf mean,
         median or simply its values (see ''SetSplitMethod'') allowed to
-        not further split a "QuadNode". 
-      
+        not further split a "QuadNode".
+
         :setter: Sets the epsilon/RMS threshold
         :getter: Returns the current epsilon
         :type: float
