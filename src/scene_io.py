@@ -98,6 +98,7 @@ class Matlab(SceneIO):
         Scene.theta        ``theta``            n x m array
         Scene.frame.x      ``xx``               n x 1 vector
         Scene.frame.y      ``yy``               m x 1 vector
+        Scene.utm_zone     ``utm_zone``         str ('33T')
         ================== ==================== ============
 
     Displacement is expected to be in meters.
@@ -133,6 +134,8 @@ class Matlab(SceneIO):
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
                     utm_n = mat[mat_k].flatten()
+		elif 'utm_zone' in mat_k:
+                    utm_zone, utm_zone_letter=int(mat['utm_zone'][0][:-1]), str(mat['utm_zone'][0][-1])
 
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
@@ -143,14 +146,13 @@ class Matlab(SceneIO):
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
-        utm_zone = 47
-        utm_zone_letter = 'Q'
-        self._log.warning('Defaulting to UTM Zone %d%s' %
-                          (utm_zone, utm_zone_letter))
+        #self._log.warning('Defaulting to UTM Zone %d%s' %
+        #                  (utm_zone, utm_zone_letter))
         try:
             c['frame']['llLat'], c['frame']['llLon'] =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
                               utm_zone, utm_zone_letter)
+
             urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
                                          utm_zone, utm_zone_letter)
             c['frame']['dLat'] =\
