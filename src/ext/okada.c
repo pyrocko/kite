@@ -7,6 +7,7 @@
 
    Date          Programmer            Description of Change
    ====          ==========            =====================
+   14/02/2017    Marius Isken          Implemented OpenMP parallel processing of targets
    10/28/2000    Peter Cervelli        Removed seldom used 'reference station' option; improved
                                        detection of dip = integer multiples of pi/2.
    09/01/2000    Peter Cervelli        Fixed a bug that incorrectly returned an integer absolute value
@@ -17,12 +18,16 @@
 
 
 */
+
 #define NPY_NO_DEPRECATED_API 7
 
 #include <math.h>
 #include "Python.h"
 #include "numpy/arrayobject.h"
 #include <numpy/npy_math.h>
+#if defined(_OPENMP)
+  #include <omp.h>
+#endif
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
@@ -39,6 +44,8 @@ void Okada(double *pSS, double *pDS, double *pTS, double alp, double sd, double 
      double depsd, depcd, x, y, ala[2], awa[2], et, et2, xi, xi2, q2, r, r2, r3, p, q, sign;
      double a1, a3, a4, a5, d, ret, rd, tt, re, dle, rrx, rre, rxq, rd2, td, a2, req, sdcd, sdsd, mult;
      int j, k;
+
+     (void) r3;
 
      ala[0] = len;
      ala[1] = 0.0;
@@ -66,7 +73,7 @@ void Okada(double *pSS, double *pDS, double *pTS, double alp, double sd, double 
                q2 = q * q;
                r2 = xi2 + et2 + q2;
                r = sqrt(r2);
-               r3 = r * r2;
+               /*r3 = r * r2;*/
                d = et * sd - q * cd;
                y = et * cd + q * sd;
                ret = r + et;
@@ -141,7 +148,7 @@ void Okada(double *pSS, double *pDS, double *pTS, double alp, double sd, double 
      }
 }
 
-void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int NumStat, int NumDisl)
+void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int NumStat, int NumDisl, int nthreads)
 {
      int i,j, sIndex, dIndex, kIndex;
      double sd, cd, Angle, cosAngle, sinAngle, SS[3],DS[3],TS[3], x, y;
@@ -153,7 +160,6 @@ void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int Num
      for (i=0; i < NumDisl; i++)
      {
           dIndex=i*10;
-          /*printf("Caluclating disloc %d\n", i);*/
 
           cd = cos(pModel[dIndex+3] * DEG2RAD);
           sd = sin(pModel[dIndex+3] * DEG2RAD);
@@ -177,58 +183,67 @@ void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int Num
           cosAngle = cos(Angle);
           sinAngle = sin(Angle);
 
-          /*Loop through stations*/
-
-          for(j=0; j < NumStat; j++)
-          {
-            /* printf("Calculating station %d\n", j);*/
-            SS[0] = SS[1] = SS[2] = 0;
-            DS[0] = DS[1] = DS[2] = 0;
-            TS[0] = TS[1] = TS[2] = 0;
-
-            sIndex = j*2;
-            kIndex = j*3;
-
-            Okada(&SS[0],&DS[0],&TS[0],1 - 2 * nu,sd,cd,pModel[dIndex],pModel[dIndex+1],pModel[dIndex+2],
-                 cosAngle * (pCoords[sIndex] - pModel[dIndex+5]) - sinAngle * (pCoords[sIndex + 1] - pModel[dIndex+6]) +  0.5 * pModel[dIndex],
-                 sinAngle * (pCoords[sIndex] - pModel[dIndex+5]) + cosAngle * (pCoords[sIndex + 1] - pModel[dIndex+6]),
-                 pModel[dIndex+7], pModel[dIndex+8], pModel[dIndex+9]);
-
-            if (pModel[dIndex+7])
+          #if defined(_OPENMP)
+            Py_BEGIN_ALLOW_THREADS
+            if (nthreads == 0)
+              nthreads = omp_get_num_procs();
+            #pragma omp parallel\
+              shared(pModel, pOutput, pCoords, cd, sd, dIndex, NumStat, NumDisl, cosAngle, sinAngle, Angle, nthreads)\
+              private(SS, DS, TS, sIndex, kIndex, x, y)\
+              num_threads(nthreads)
             {
-                x=SS[0];
-                y=SS[1];
-                SS[0] = cosAngle * x + sinAngle * y;
-                SS[1] = -sinAngle * x + cosAngle * y;
-                pOutput[kIndex]+=SS[0];
-                pOutput[kIndex+1]+=SS[1];
-                pOutput[kIndex+2]+=SS[2];
-            }
+              #pragma omp for schedule(static) nowait
+            #endif
+            for(j=0; j < NumStat; j++) {
+              SS[0] = SS[1] = SS[2] = 0;
+              DS[0] = DS[1] = DS[2] = 0;
+              TS[0] = TS[1] = TS[2] = 0;
 
-            if (pModel[dIndex+8])
-            {
-                x=DS[0];
-                y=DS[1];
-                DS[0] = cosAngle * x + sinAngle * y;
-                DS[1] = -sinAngle * x + cosAngle * y;
-                pOutput[kIndex]+=DS[0];
-                pOutput[kIndex+1]+=DS[1];
-                pOutput[kIndex+2]+=DS[2];
-            }
+              sIndex = j*2;
+              kIndex = j*3;
 
-            if (pModel[dIndex+9])
-            {
-                x=TS[0];
-                y=TS[1];
-                TS[0] = cosAngle * x + sinAngle * y;
-                TS[1] = -sinAngle * x + cosAngle * y;
-                pOutput[kIndex]+=TS[0];
-                pOutput[kIndex+1]+=TS[1];
-                pOutput[kIndex+2]+=TS[2];
+              Okada(&SS[0], &DS[0], &TS[0], 1 - 2*nu, sd, cd, pModel[dIndex], pModel[dIndex+1], pModel[dIndex+2],
+                   cosAngle * (pCoords[sIndex] - pModel[dIndex+5]) - sinAngle * (pCoords[sIndex + 1] - pModel[dIndex+6]) +  0.5 * pModel[dIndex],
+                   sinAngle * (pCoords[sIndex] - pModel[dIndex+5]) + cosAngle * (pCoords[sIndex + 1] - pModel[dIndex+6]),
+                   pModel[dIndex+7], pModel[dIndex+8], pModel[dIndex+9]);
 
+              if (pModel[dIndex+7])
+              {
+                  x=SS[0];
+                  y=SS[1];
+                  SS[0] = cosAngle * x + sinAngle * y;
+                  SS[1] = -sinAngle * x + cosAngle * y;
+                  pOutput[kIndex]+=SS[0];
+                  pOutput[kIndex+1]+=SS[1];
+                  pOutput[kIndex+2]+=SS[2];
+              }
+
+              if (pModel[dIndex+8])
+              {
+                  x=DS[0];
+                  y=DS[1];
+                  DS[0] = cosAngle * x + sinAngle * y;
+                  DS[1] = -sinAngle * x + cosAngle * y;
+                  pOutput[kIndex]+=DS[0];
+                  pOutput[kIndex+1]+=DS[1];
+                  pOutput[kIndex+2]+=DS[2];
+              }
+
+              if (pModel[dIndex+9])
+              {
+                  x=TS[0];
+                  y=TS[1];
+                  TS[0] = cosAngle * x + sinAngle * y;
+                  TS[1] = -sinAngle * x + cosAngle * y;
+                  pOutput[kIndex]+=TS[0];
+                  pOutput[kIndex+1]+=TS[1];
+                  pOutput[kIndex+2]+=TS[2];
+              }
             }
-/*printf("%f, %f, %f", pOutput[kIndex], pOutput[kIndex+1], pOutput[kIndex+2]);*/
-          }
+          #if defined(_OPENMP)
+            }
+            Py_END_ALLOW_THREADS
+          #endif
      }
 }
 
@@ -277,11 +292,13 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
 static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
   int nstations, ndislocations;
   PyObject *output_arr, *coords_arr, *models_arr;
-  /*PyArrayObject *c_output_arr, *c_coords_arr, *c_models_arr;*/
-  npy_intp *output_dims[2];
+  npy_intp output_dims[2];
+  int nthreads;
   npy_float64 *output, *coords, *models, nu;
+  
+  (void) dummy;
 
-  if (! PyArg_ParseTuple(args, "OOf", &models_arr, &coords_arr, &nu)) {
+  if (! PyArg_ParseTuple(args, "OOfI", &models_arr, &coords_arr, &nu, &nthreads)) {
     PyErr_SetString(OkadaExtError, "usage: disloc(model, targets)");
     return NULL;
   }
@@ -298,10 +315,10 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
 
   output_dims[0] = PyArray_SHAPE((PyArrayObject*) coords_arr)[0];
   output_dims[1] = 3;
-  output_arr = (PyArrayObject*) PyArray_ZEROS(2, output_dims, NPY_FLOAT64, 0);
-  output = PyArray_DATA(output_arr);
+  output_arr = PyArray_ZEROS(2, output_dims, NPY_FLOAT64, 0);
+  output = PyArray_DATA((PyArrayObject*) output_arr);
 
-  Disloc(output, models, coords, nu, (int) nstations, (int) ndislocations);
+  Disloc(output, models, coords, nu, (int) nstations, (int) ndislocations, nthreads);
 
   return (PyObject*) output_arr;
 }
@@ -310,7 +327,7 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
 static PyMethodDef OkadaExtMethods[] = {
   {"disloc", w_disloc, METH_VARARGS,
    "Calculates the static displacement for an Okada Source"},
-  {NULL, NULL, NULL, 0, NULL}
+  {NULL, NULL, 0, 0, NULL}
 };
 
 
