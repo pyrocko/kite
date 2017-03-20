@@ -16,8 +16,6 @@
                                        A genetically related bug incorrectly assigned a value of 1 to
                                        sin(-90 degrees).
    08/25/1998    Peter Cervelli        Original Code
-
-
 */
 
 #define NPY_NO_DEPRECATED_API 7
@@ -36,7 +34,7 @@ typedef npy_float64 float64_t;
 #define DEG2RAD 0.017453292519943295L
 #define PI2INV 0.15915494309189535L
 
-static PyObject *OkadaExtError;
+static PyObject *DislocExtError;
 
 
 void Okada(double *pSS, double *pDS, double *pTS, double alp, double sd, double cd, double len, double wid,
@@ -156,7 +154,7 @@ void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int Num
 
 
      /*Loop through dislocations*/
-     printf("%d, %d\n", NumStat, NumDisl);
+     /*printf("%d, %d\n", NumStat, NumDisl);*/
 
      for (i=0; i < NumDisl; i++)
      {
@@ -180,7 +178,7 @@ void Disloc(double *pOutput, double *pModel, double *pCoords, double nu, int Num
                     sd=0;
           }
 
-          Angle = -(90 - pModel[dIndex+4]) * DEG2RAD;
+          Angle = -(90. - pModel[dIndex+4]) * DEG2RAD;
           cosAngle = cos(Angle);
           sinAngle = sin(Angle);
 
@@ -253,35 +251,35 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     int i;
 
     if (!PyArray_Check(o)) {
-        PyErr_SetString(OkadaExtError, "not a NumPy array" );
+        PyErr_SetString(DislocExtError, "not a NumPy array" );
         return 0;
     }
 
     if (PyArray_TYPE((PyArrayObject*)o) != typenum) {
-        PyErr_SetString(OkadaExtError, "array of unexpected type");
+        PyErr_SetString(DislocExtError, "array of unexpected type");
         return 0;
     }
 
     if (!PyArray_ISCARRAY((PyArrayObject*)o)) {
-        PyErr_SetString(OkadaExtError, "array is not contiguous or not well behaved");
+        PyErr_SetString(DislocExtError, "array is not contiguous or not well behaved");
         return 0;
     }
 
     if (size_want != -1 && size_want != PyArray_SIZE((PyArrayObject*)o)) {
-        PyErr_SetString(OkadaExtError, "array is of unexpected size");
+        PyErr_SetString(DislocExtError, "array is of unexpected size");
         return 0;
     }
 
 
     if (ndim_want != -1 && ndim_want != PyArray_NDIM((PyArrayObject*)o)) {
-        PyErr_SetString(OkadaExtError, "array is of unexpected ndim");
+        PyErr_SetString(DislocExtError, "array is of unexpected ndim");
         return 0;
     }
 
     if (ndim_want != -1 && shape_want != NULL) {
         for (i=0; i<ndim_want; i++) {
             if (shape_want[i] != -1 && shape_want[i] != PyArray_DIMS((PyArrayObject*)o)[i]) {
-                PyErr_SetString(OkadaExtError, "array is of unexpected shape");
+                PyErr_SetString(DislocExtError, "array is of unexpected shape");
                 return 0;
             }
         }
@@ -300,7 +298,7 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
   (void) dummy;
 
   if (! PyArg_ParseTuple(args, "OOfI", &models_arr, &coords_arr, &nu, &nthreads)) {
-    PyErr_SetString(OkadaExtError, "usage: disloc(model, targets)");
+    PyErr_SetString(DislocExtError, "usage: disloc(model, target_coordinates)");
     return NULL;
   }
 
@@ -333,15 +331,15 @@ static PyMethodDef OkadaExtMethods[] = {
 
 
 PyMODINIT_FUNC
-initokada_ext(void) {
+initdisloc_ext(void) {
   PyObject *m;
 
-  m = Py_InitModule("okada_ext", OkadaExtMethods);
+  m = Py_InitModule("disloc_ext", OkadaExtMethods);
   if (m == NULL)
     return;
   import_array();
   
-  OkadaExtError = PyErr_NewException("okada_ext.error", NULL, NULL);
-  Py_INCREF(OkadaExtError);
-  PyModule_AddObject(m, "OkadaExtError", OkadaExtError);
+  DislocExtError = PyErr_NewException("disloc_ext.error", NULL, NULL);
+  Py_INCREF(DislocExtError);
+  PyModule_AddObject(m, "DislocExtError", DislocExtError);
 }

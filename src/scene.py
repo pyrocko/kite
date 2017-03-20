@@ -47,14 +47,18 @@ class SceneError(Exception):
 
 class FrameConfig(guts.Object):
     '''Config object holding :class:`kite.scene.Scene` cobfiguration '''
-    llLat = guts.Float.T(default=0.,
-                         help='Scene latitude of lower left corner')
-    llLon = guts.Float.T(default=0.,
-                         help='Scene longitude of lower left corner')
-    dLat = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in x direction [deg]')
-    dLon = guts.Float.T(default=1.e-3,
-                        help='Scene pixel spacing in y direction [deg]')
+    llLat = guts.Float.T(
+        default=0.,
+        help='Scene latitude of lower left corner')
+    llLon = guts.Float.T(
+        default=0.,
+        help='Scene longitude of lower left corner')
+    dLat = guts.Float.T(
+        default=1.e-3,
+        help='Scene pixel spacing in x direction [deg]')
+    dLon = guts.Float.T(
+        default=1.e-3,
+        help='Scene pixel spacing in y direction [deg]')
 
 
 class Frame(object):
@@ -202,6 +206,15 @@ class Frame(object):
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
+    @property_cached
+    def coordinates(self):
+        coords = num.empty((self.rows*self.cols, 2))
+        coords[:, 0] = num.repeat(self.E[num.newaxis, :],
+                                  self.rows, axis=0).flatten()
+        coords[:, 1] = num.repeat(self.N[:, num.newaxis],
+                                  self.cols, axis=1).flatten()
+        return coords
+
     def setENOffset(self, east, north):
         '''Set scene offsets in local cartesian coordinates.
 
@@ -249,7 +262,7 @@ class Frame(object):
             'Lower right latitude:  {frame.llLat:.4f} N\n'
             'Lower right longitude: {frame.llLon:.4f} E\n'
             '\n\n'
-            'UTM Zone:              {frame.utm_zone}{frame.utm_zone_letter}'
+            'UTM Zone:              {frame.utm_zone}{frame.utm_zone_letter}\n'
             'Lower right easting:   {frame.llE:.4f} m\n'
             'Lower right northing:  {frame.llN:.4f} m'
             '\n\n'
@@ -290,6 +303,8 @@ class Meta(guts.Object):
     extra = guts.Dict.T(
         default={},
         help='Extra header information')
+    filename = guts.String.T(
+        optional=True)
 
     @property
     def time_separation(self):
@@ -350,13 +365,13 @@ class BaseScene(object):
         for fattr in ['llLat', 'llLon', 'dLat', 'dLon']:
             coord = kwargs.pop(fattr, None)
             if coord is not None:
-                frame_config.setattr(fattr, coord)
+                frame_config.__setattr__(fattr, coord)
         self.frame = Frame(scene=self, config=frame_config)
 
         for attr in ['displacement', 'theta', 'phi']:
             data = kwargs.pop(attr, None)
             if data is not None:
-                self.setattr(attr, data)
+                self.__setattr__(attr, data)
 
     def _setupLogging(self):
         logging.basicConfig(level=logging.DEBUG)
@@ -377,7 +392,7 @@ class BaseScene(object):
 
     @property
     def displacement(self):
-        ''' Geodetical displacement in *meter*.
+        ''' Geodetical displacement in [m].
 
         :setter: Set the unwrapped InSAR displacement.
         :getter: Return the displacement matrix.
@@ -403,7 +418,7 @@ class BaseScene(object):
     @property
     def phi(self):
         ''' Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-            in radians
+            in [rad]
 
         .. important ::
 
