@@ -453,8 +453,8 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
 
         def transFromFrame(self):
             # self.resetTransform()
-            self.setRange(xRange=(0, self.scene_proxy.quadtree.nleafs),
-                          yRange=(0, self.scene_proxy.quadtree.nleafs))
+            self.setRange(xRange=(0, self.scene_proxy.quadtree.nleaves),
+                          yRange=(0, self.scene_proxy.quadtree.nleaves))
 
         @QtCore.Slot(object)
         def mouseMoved(self, event=None):

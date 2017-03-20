@@ -20,10 +20,10 @@ noise_regimes = [
 
 
 def modelCovariance(distance, a, b):
-    """Exponential function model to approximate a positive-definite covariance
+    '''Exponential function model to approximate a positive-definite covariance
 
-    We assume the following simple covariance model to describe the empirical noise
-    observations:
+    We assume the following simple covariance model to describe the empirical
+    noise observations:
 
     .. math::
 
@@ -37,12 +37,12 @@ def modelCovariance(distance, a, b):
     :type b: float
     :returns: Covariance at ``distance``
     :rtype: :class:`numpy.ndarray`
-    """
+    '''
     return a * num.exp(-distance/b)
 
 
 def modelPowerspec(k, beta, D):
-    """Exponential linear model to estimate a log-linear power spectrum
+    '''Exponential linear model to estimate a log-linear power spectrum
 
     We assume the following log-linear model for a measured power spectrum:
 
@@ -57,7 +57,7 @@ def modelPowerspec(k, beta, D):
     :type a: float
     :param b: Fractional model factor
     :type b: float
-    """
+    '''
     return (k**beta)/D
 
 
@@ -90,21 +90,20 @@ class CovarianceConfig(guts.Object):
 
 
 class Covariance(object):
-    """Construct the variance-covariance matrix of quadtree subsampled data.
+    '''Construct the variance-covariance matrix of quadtree subsampled data.
 
     Variance and covariance estimates are used to construct the weighting
-    matrix to be used later in an optimization. 
-    
+    matrix to be used later in an optimization.
+
     Two different methods exist to propagate full-resolution data variances
-    and covariances of :class:`kite.Scene.displacement` to the 
+    and covariances of :class:`kite.Scene.displacement` to the
     covariance matrix of the subsampled dataset:
-    
-    
+
     1. The distance between :py:class:`kite.quadtree.QuadNode`
        leaf focal points, :py:class:`kite.covariance.Covariance.matrix_focal`
        defines the approximate covariance of the quadtree leaf pair.
     2. The _accurate_ propagation of covariances by taking the mean of
-       every node pair pixel covariances. This process is computational 
+       every node pair pixel covariances. This process is computational
        very expensive and can take a few minutes.
        :py:class:`kite.covariance.Covariance.matrix_focal`
 
@@ -112,7 +111,7 @@ class Covariance(object):
     :type quadtree: :class:`~kite.Quadtree`
     :param config: Config object
     :type config: :class:`~kite.covariance.CovarianceConfig`
-    """
+    '''
     evChanged = Subject()
     evConfigChanged = Subject()
 
@@ -136,12 +135,12 @@ class Covariance(object):
         return self.getLeafCovariance(*args, **kwargs)
 
     def setConfig(self, config=None):
-        """ Sets and updated the config of the instance
+        ''' Sets and updated the config of the instance
 
         :param config: New config instance, defaults to configuration provided
                        by parent :class:`~kite.Scene`
         :type config: :class:`~kite.covariance.CovarianceConfig`, optional
-        """
+        '''
         if config is None:
             config = self.scene.config.covariance
 
@@ -197,12 +196,12 @@ class Covariance(object):
 
     @property
     def noise_coord(self):
-        """ Coordinates of the noise patch in local coordinates.
+        ''' Coordinates of the noise patch in local coordinates.
 
         :setter: Set the noise coordinates
         :getter: Get the noise coordinates
         :type: :class:`numpy.ndarray`, ``[llE, llN, sizeE, sizeN]``
-        """
+        '''
         if self.config.noise_coord is None:
             self.noise_data
         return self.config.noise_coord
@@ -266,13 +265,13 @@ class Covariance(object):
         self._clear()
 
     def selectNoiseNode(self):
-        """ Choose noise node from quadtree
+        ''' Choose noise node from quadtree
         the biggest :class:`~kite.quadtree.QuadNode` from
         :class:`~kite.Quadtree`.
 
         :returns: A quadnode with the least signal.
         :rtype: :class:`~kite.quadtree.QuadNode`
-        """
+        '''
         t0 = time.time()
 
         stdmax = max([n.std for n in self.quadtree.nodes])  # noqa
@@ -290,8 +289,8 @@ class Covariance(object):
                         % (time.time() - t0))
         return nodes[0]
 
-    def _mapLeafs(self, nx, ny):
-        """ Helper function returning appropriate
+    def _mapLeaves(self, nx, ny):
+        ''' Helper function returning appropriate
             :class:`~kite.quadtree.QuadNode` and for maintaining
             the internal mapping with the matrices.
 
@@ -302,9 +301,9 @@ class Covariance(object):
         :returns: tuple of :class:`~kite.quadtree.QuadNode` s for ``nx``
             and ``ny``
         :rtype: tuple
-        """
-        leaf1 = self.quadtree.leafs[nx]
-        leaf2 = self.quadtree.leafs[ny]
+        '''
+        leaf1 = self.quadtree.leaves[nx]
+        leaf2 = self.quadtree.leaves[ny]
 
         self._leaf_mapping[leaf1.id] = nx
         self._leaf_mapping[leaf2.id] = ny
@@ -313,19 +312,19 @@ class Covariance(object):
 
     @property_cached
     def covariance_matrix(self):
-        """ Covariance matrix calculated from mean of all pixel pairs
+        ''' Covariance matrix calculated from mean of all pixel pairs
             inside the node pairs (full and accurate propagation).
-            
+
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs` x
-            :class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        '''
         if not isinstance(self.config.covariance_matrix, num.ndarray):
             self.config.covariance_matrix =\
                 self._calcCovarianceMatrix(method='full')
         elif self.config.covariance_matrix.ndim == 1:
             try:
-                nl = self.quadtree.nleafs
+                nl = self.quadtree.nleaves
                 self.config.covariance_matrix =\
                     self.config.covariance_matrix.reshape(nl, nl)
             except ValueError:
@@ -335,56 +334,56 @@ class Covariance(object):
 
     @property_cached
     def covariance_matrix_focal(self):
-        """ Approximate Covariance matrix from quadtree leaf pair 
+        ''' Approximate Covariance matrix from quadtree leaf pair
             distance only. Fast, use for intermediate steps only and
             finallly use approach :attr:`~kite.Covariance.covariance_matrix`.
-        
+
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs` x
-            :class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        '''
         return self._calcCovarianceMatrix(method='focal')
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+        ''' Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
 
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs` x
-            :class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        '''
         return num.linalg.inv(self.covariance_matrix)
 
     @property_cached
     def weight_matrix_focal(self):
-        """ Approximated weight matrix from fast focal method 
+        ''' Approximated weight matrix from fast focal method
             :math:`\\sqrt{cov_{focal}^{-1}}`.
 
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs` x
-            :class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        '''
         return num.linalg.inv(self.covariance_matrix_focal)
 
     @property_cached
     def weight_vector(self):
-        """ Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
+        ''' Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves`)
+        '''
         return num.sum(self.weight_matrix, axis=1)
 
     @property_cached
     def weight_vector_focal(self):
-        """ Weight vector from fast focal method
+        ''' Weight vector from fast focal method
             :math:`\\sqrt{cov_{focal}^{-1}}`.
         :type: :class:`numpy.ndarray`,
-            size (:class:`~kite.Quadtree.nleafs`)
-        """
+            size (:class:`~kite.Quadtree.nleaves`)
+        '''
         return num.sum(self.weight_matrix_focal, axis=1)
 
     def _calcCovarianceMatrix(self, method='focal'):
-        """Constructs the covariance matrix.
+        '''Constructs the covariance matrix.
 
         :param method: Either ``focal`` point distances are used - this is
             quick but only an approximation.
@@ -393,10 +392,10 @@ class Covariance(object):
         :type method: str, optional
         :returns: Covariance matrix
         :rtype: thon:numpy.ndarray
-        """
+        '''
         self._initialized = True
 
-        nl = len(self.quadtree.leafs)
+        nl = len(self.quadtree.leaves)
         self._leaf_mapping = {}
 
         t0 = time.time()
@@ -406,29 +405,29 @@ class Covariance(object):
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
 
             for nx, ny in dist_iter:
-                leaf1, leaf2 = self._mapLeafs(nx, ny)
+                leaf1, leaf2 = self._mapLeaves(nx, ny)
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
             cov_matrix = modelCovariance(dist_matrix, ma, mb)
             num.fill_diagonal(cov_matrix, self.variance)
 
         elif method == 'full':
-            leaf_map = num.empty((len(self.quadtree.leafs), 4),
+            leaf_map = num.empty((len(self.quadtree.leaves), 4),
                                  dtype=num.uint32)
-            for nl, leaf in enumerate(self.quadtree.leafs):
-                leaf, _ = self._mapLeafs(nl, nl)
+            for nl, leaf in enumerate(self.quadtree.leaves):
+                leaf, _ = self._mapLeaves(nl, nl)
                 leaf_map[nl, 0], leaf_map[nl, 1] = (leaf._slice_rows.start,
                                                     leaf._slice_rows.stop)
                 leaf_map[nl, 2], leaf_map[nl, 3] = (leaf._slice_cols.start,
                                                     leaf._slice_cols.stop)
 
-            nleafs = self.quadtree.nleafs
+            nleaves = self.quadtree.nleaves
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, self.variance, self.nthreads,
                             self.config.adaptive_subsampling)\
-                .reshape(nleafs, nleafs)
+                .reshape(nleaves, nleaves)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
@@ -457,7 +456,7 @@ class Covariance(object):
             raise KeyError('Unknown quadtree leaf with id %s' % e)
 
     def getLeafCovariance(self, leaf1, leaf2):
-        """Get the covariance between ``leaf1`` and ``leaf2`` from
+        '''Get the covariance between ``leaf1`` and ``leaf2`` from
             distances.
 
         :param leaf1: Leaf one
@@ -466,11 +465,11 @@ class Covariance(object):
         :type leaf2: str of `leaf.id` or :class:`~kite.quadtree.QuadNode`
         :returns: Covariance between ``leaf1`` and ``leaf2``
         :rtype: float
-        """
+        '''
         return self.covariance_matrix[self._leafMapping(leaf1, leaf2)]
 
     def getLeafWeight(self, leaf, model='focal'):
-        ''' Get the total weight of ``leaf``, which is the summation of 
+        ''' Get the total weight of ``leaf``, which is the summation of
             all single pair weights of :attr:`kite.Covariance.weight_matrix`.
 
         .. math ::
@@ -491,15 +490,15 @@ class Covariance(object):
 
     def syntheticNoise(self, shape=(1024, 1024), dEdN=None,
                        anisotropic=False):
-        """Create random synthetic noise from data noise power spectrum.
-        
-        This function uses the power spectrum of the data noise (:attr:`noise_data`)
-        (:func:`powerspecNoise`) to create synthetic noise, e.g. to use
-        it for data pertubation in optinmizations.
+        '''Create random synthetic noise from data noise power spectrum.
+
+        This function uses the power spectrum of the data noise
+        (:attr:`noise_data`) (:func:`powerspecNoise`) to create synthetic
+        noise, e.g. to use it for data pertubation in optinmizations.
         The default sampling distances are taken from
-        :attr:`kite.scene.Frame.dE` and :attr:`kite.scene.Frame.dN`. They can be
-        overwritten.
-        
+        :attr:`kite.scene.Frame.dE` and :attr:`kite.scene.Frame.dN`. They can
+        be overwritten.
+
         :param shape: shape of the desired noise patch.
             Pixels in northing and easting (`nE`, `nN`),
             defaults to `(1024, 1024)`.
@@ -509,7 +508,7 @@ class Covariance(object):
         :type dE: tuple, floats
         :returns: synthetic noise patch
         :rtype: :class:`numpy.ndarray`
-        """
+        '''
         if (shape[0] + shape[1]) % 2 != 0:
             # self._log.warning('Patch dimensions must be even, '
             #                   'ceiling dimensions!')
@@ -585,14 +584,14 @@ class Covariance(object):
         return self._powerspec3d_cached
 
     def _powerspecNoise(self, data=None, norm='1d', ndeg=512, nk=512):
-        """Get the noise power spectrum from
+        '''Get the noise power spectrum from
             :attr:`kite.Covariance.noise_data`.
 
         :param data: Overwrite Covariance.noise_data, defaults to `None`
         :type data: :class:`numpy.ndarray`, optional
         :returns: `(power_spec, k, f_spectrum, kN, kE)`
         :rtype: tuple
-        """
+        '''
         if data is None:
             noise = self.noise_data
         else:
@@ -635,7 +634,7 @@ class Covariance(object):
             return power
 
         def power2d(k):
-            """ Mean 2D Power works! """
+            ''' Mean 2D Power works! '''
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
             for i in xrange(k.size):
@@ -682,8 +681,8 @@ class Covariance(object):
         # return power, k, dk, spectrum, kE, kN
 
     def _powerspecFit(self, regime=3):
-        """Fitting a function to data noise power spectrum. 
-        """
+        '''Fitting a function to data noise power spectrum.
+        '''
         power_spec, k, _, _, _, _ = self.powerspecNoise1D()
 
         def selectRegime(k, k1, k2):
@@ -701,12 +700,12 @@ class Covariance(object):
 
     @property
     def powerspec_model(self):
-        """Fit function to power spectrum based on the spectral model parameters
+        '''Fit function to power spectrum based on the spectral model parameters
             :func:`~kite.covariance.modelPowerspec`
 
         :returns: Model parameters ``a`` and ``b``
         :rtype: tuple, floats
-        """
+        '''
         p, _ = self._powerspecFit()
         return p
 
@@ -734,10 +733,10 @@ class Covariance(object):
         return modelPowerspec(k, *p)
 
     def _powerCosineTransform(self, p_spec):
-        """Calculating the cosine transform of the power spectrum.
-        
+        '''Calculating the cosine transform of the power spectrum.
+
             The cosine transform of the power spectrum is an estimate
-            of the data covariance (see Hanssen, 2001)."""
+            of the data covariance (see Hanssen, 2001).'''
         cos = sp.fftpack.idct(p_spec, type=3)
         return cos
 
@@ -745,7 +744,7 @@ class Covariance(object):
     def covariance_func(self):
         ''' Covariance function estimated directly from the power spectrum of
             displacement noise patch using the cosine transform.
-            
+
         :type: tuple, :class:`numpy.ndarray` (covariance, distance) '''
         power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         # power_spec -= self.variance
@@ -756,16 +755,18 @@ class Covariance(object):
         return cov, d
 
     def covarianceAnalytical(self, regime=0):
-        ''' Empirical Covariance function based on the power spectral model fit
-            and not directly on the power spectrum as in 
-            :func:`~kite.covariance.covariance_func`.
-        
-            from :func:`~kite.covariance.modelPowerspec`
+        '''Caluclate exponential analytical covariance
+
+        Empirical Covariance function based on the power spectral model fit
+        and not directly on the power spectrum as in
+        :func:`~kite.covariance.covariance_func`
+        from :func:`~kite.covariance.modelPowerspec`
+
+        .. warning:: Deprecated!
 
         .. note:: covarianceAnalytical is not a good name for this
-            function, better rename to 'covarianceFromModel', 
-            'covarianceModelBased' or 
-            
+            function, better rename to 'covarianceFromModel',
+            'covarianceModelBased' or
 
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
@@ -787,9 +788,9 @@ class Covariance(object):
 
         .. note:: using this function implies several several model
             fits: fit of the spectrum and fit of the cosine transform.
-            Not sure about the consequences, if this is useful and/or 
+            Not sure about the consequences, if this is useful and/or
             meaningful
-            
+
         :getter: Get the parameters.
         :type: tuple, ``a`` and ``b``
         '''
@@ -815,7 +816,7 @@ class Covariance(object):
         '''
         cov, d = self.covariance_func
         cov_mod = modelCovariance(d, *self.covariance_model)
-        
+
         return num.sqrt(num.mean((cov - cov_mod)**2))
 
     @property_cached
@@ -860,7 +861,7 @@ class Covariance(object):
 
     @variance.getter
     def variance(self):
-        
+
         if self.config.variance is None:
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
@@ -873,17 +874,17 @@ class Covariance(object):
         return self.config.variance
 
     def export_weight_matrix(self, filename):
-        """ Export the full :attr:`~kite.Covariance.weight_matrix` to an ASCII
+        ''' Export the full :attr:`~kite.Covariance.weight_matrix` to an ASCII
             file. The data can be loaded through :func:`numpy.loadtxt`.
 
         :param filename: path to export to
         :type filename: str
-        """
+        '''
         self._log.debug('Exporting Covariance.weight_matrix to %s' % filename)
         header = 'Exported kite.Covariance.weight_matrix, '\
                  'for more information visit http://pyrocko.com\n'\
                  '\nThe matrix is symmetric and ordered by QuadNode.id:\n'
-        header += ', '.join([l.id for l in self.quadtree.leafs])
+        header += ', '.join([l.id for l in self.quadtree.leaves])
         num.savetxt(filename, self.weight_matrix, header=header)
 
     @property_cached

@@ -91,8 +91,8 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self.setMenuEnabled(False)
 
-        self.highlighted_leafs = []
-        self.selected_leafs = []
+        self.highlighted_leaves = []
+        self.selected_leaves = []
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
         self.eraseBox.setPen(pg.mkPen((202, 60, 60),
@@ -105,7 +105,7 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self.vb = self.getViewBox()
         self.vb.mouseDragEvent = self.mouseDragEvent
-        self.vb.keyPressEvent = self.blacklistSelectedLeafs
+        self.vb.keyPressEvent = self.blacklistSelectedLeaves
 
         self.addItem(self.focal_points)
 
@@ -113,7 +113,7 @@ class QKiteQuadtreePlot(QKitePlot):
             if self._component == 'weight':
                 self.update()
 
-        self.scene_proxy.sigQuadtreeChanged.connect(self.unselectLeafs)
+        self.scene_proxy.sigQuadtreeChanged.connect(self.unselectLeaves)
         self.scene_proxy.sigQuadtreeChanged.connect(self.update)
         self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
         self.scene_proxy.sigCovarianceChanged.connect(covarianceChanged)
@@ -153,36 +153,36 @@ class QKiteQuadtreePlot(QKitePlot):
         ev.accept()
         if ev.isFinish():
             self.eraseBox.hide()
-            self.selectLeafs()
+            self.selectLeaves()
         else:
             self.updateEraseBox(ev.buttonDownPos(), ev.pos())
 
-    def getQleafs(self):
-        return [QQuadLeaf(l) for l in self.scene_proxy.quadtree.leafs]
+    def getQleaves(self):
+        return [QQuadLeaf(l) for l in self.scene_proxy.quadtree.leaves]
 
-    def selectLeafs(self):
-        self.unselectLeafs()
+    def selectLeaves(self):
+        self.unselectLeaves()
 
-        self.selected_leafs = [l for l in self.getQleafs()
+        self.selected_leaves = [l for l in self.getQleaves()
                                if self.eraseBox.r.contains(l)]
-        for l in self.selected_leafs:
+        for l in self.selected_leaves:
             rect_leaf = l.getRectItem()
-            self.highlighted_leafs.append(rect_leaf)
+            self.highlighted_leaves.append(rect_leaf)
             self.addItem(rect_leaf)
 
-    def unselectLeafs(self):
-        if self.selected_leafs:
-            for l in self.highlighted_leafs:
+    def unselectLeaves(self):
+        if self.selected_leaves:
+            for l in self.highlighted_leaves:
                 self.removeItem(l)
-            del self.highlighted_leafs
-            del self.selected_leafs
-            self.highlighted_leafs = []
-            self.selected_leafs = []
+            del self.highlighted_leaves
+            del self.selected_leaves
+            self.highlighted_leaves = []
+            self.selected_leaves = []
 
-    def blacklistSelectedLeafs(self, ev):
+    def blacklistSelectedLeaves(self, ev):
         if ev.key() & QtCore.Qt.Key_Delete:
-            self.scene_proxy.quadtree.blacklistLeafs(
-                l.id for l in self.selected_leafs)
+            self.scene_proxy.quadtree.blacklistLeaves(
+                l.id for l in self.selected_leaves)
 
 
 class QKiteParamQuadtree(QKiteParameterGroup):
@@ -199,7 +199,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         self.parameters = OrderedDict(
-                          [('nleafs', None),
+                          [('nleaves', None),
                            ('reduction_rms', None),
                            ('reduction_efficiency', None),
                            ('epsilon_min', None),
