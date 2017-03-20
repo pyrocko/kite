@@ -542,18 +542,18 @@ class Scene(object):
         filename = filename or '%s_%s' % (self.meta.scene_id,
                                           self.meta.scene_view)
         _file, ext = op.splitext(filename)
-        filename = _file if ext in ['yml', 'npz'] else filename
+        filename = _file if ext in ['.yml', '.npz'] else filename
 
         components = ['displacement', 'theta', 'phi']
         self._log.info('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),
                   *[getattr(self, arr) for arr in components])
-        self.save_config('%s.yml' % filename)
+        self.saveConfig('%s.yml' % filename)
 
-    def save_config(self, filename):
+    def saveConfig(self, filename):
         _file, ext = op.splitext(filename)
-        filename = _file if ext in ['yml'] else filename
+        filename = _file if ext in ['.yml'] else filename
         self._log.info('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
