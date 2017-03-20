@@ -186,7 +186,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.save_config(filename)
+        self.scene_proxy.scene.saveConfig(filename)
 
     def onSaveData(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(

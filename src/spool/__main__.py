@@ -56,13 +56,13 @@ Available Synthetic Displacement:
 
     sc = None
     if ns.synthetic is not None:
-        from kite import SceneTest
+        from kite import TestScene
         if ns.synthetic == 'fractal':
-            sc = SceneTest.createFractal()
+            sc = TestScene.createFractal()
         elif ns.synthetic == 'sine':
-            sc = SceneTest.createSine()
+            sc = TestScene.createSine()
         elif ns.synthetic == 'gauss':
-            sc = SceneTest.createFractal()
+            sc = TestScene.createFractal()
         else:
             parser.print_help()
             sys.exit(0)
