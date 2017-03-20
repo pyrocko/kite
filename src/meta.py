@@ -186,6 +186,9 @@ class Subject(object):
         self._listeners = list()
         self._mute = False
 
+    def __call__(self, *args, **kwargs):
+        return self.notify(*args, **kwargs)
+
     def mute(self):
         self._mute = True
 
@@ -213,6 +216,7 @@ class Subject(object):
     def unsubscribeAll(self):
         for l in self._listeners:
             self.unsubscribe(l)
+
 
     def notify(self, *args, **kwargs):
         if self._mute:

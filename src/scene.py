@@ -333,39 +333,10 @@ def dynamicmethod(func):
     return dynclassmethod
 
 
-class Scene(object):
-    '''Scene of unwrapped InSAR ground dispacements measurements
+class BaseScene(object):
 
-    :param config: Configuration object
-    :type config: :class:`SceneConfig`, optional
-
-    Optional parameters
-    -------------------
-
-    :param displacement: Displacement in [m]
-    :type displacement: :class:`numpy.ndarray`, NxM, optional
-    :param theta: Theta look angle, see :attr:`Scene.theta`
-    :type theta: :class:`numpy.ndarray`, NxM, optional
-    :param phi: Phi look angle, see :attr:`Scene.phi`
-    :type phi: :class:`numpy.ndarray`, NxM, optional
-
-    :param llLat: Lower left latitude in [deg]
-    :type llLat: float, optional
-    :param llLon: Lower left longitude in [deg]
-    :type llLon: float, optional
-    :param dLat: Pixel spacing in latitude [deg]
-    :type dLat: float, optional
-    :param dLon: Pixel spacing in longitude [deg]
-    :type dLon: float, optional
-    '''
-    evChanged = Subject()
-    evConfigChanged = Subject()
-
-    def __init__(self, config=SceneConfig(), **kwargs):
-
+    def __init__(self, frame_config, **kwargs):
         self._setupLogging()
-        self.config = config
-        self.meta = self.config.meta
 
         self._displacement = None
         self._phi = None
@@ -374,20 +345,18 @@ class Scene(object):
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
 
+        frame_config = kwargs.pop('frame_config', FrameConfig())
+
         for fattr in ['llLat', 'llLon', 'dLat', 'dLon']:
             coord = kwargs.pop(fattr, None)
             if coord is not None:
-                self.config.frame.setattr(fattr, coord)
-        self.frame = Frame(scene=self, config=self.config.frame)
+                frame_config.setattr(fattr, coord)
+        self.frame = Frame(scene=self, config=frame_config)
 
         for attr in ['displacement', 'theta', 'phi']:
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.setattr(attr, data)
-
-        # Wirering functions
-        self.import_data = self._import_data
-        self.load = self._load
 
     def _setupLogging(self):
         logging.basicConfig(level=logging.DEBUG)
@@ -503,6 +472,45 @@ class Scene(object):
         :type: :class:`numpy.ndarray`
         '''
         return num.rad2deg(self.phi)
+
+
+class Scene(BaseScene):
+    '''Scene of unwrapped InSAR ground dispacements measurements
+
+    :param config: Configuration object
+    :type config: :class:`SceneConfig`, optional
+
+    Optional parameters
+    -------------------
+
+    :param displacement: Displacement in [m]
+    :type displacement: :class:`numpy.ndarray`, NxM, optional
+    :param theta: Theta look angle, see :attr:`Scene.theta`
+    :type theta: :class:`numpy.ndarray`, NxM, optional
+    :param phi: Phi look angle, see :attr:`Scene.phi`
+    :type phi: :class:`numpy.ndarray`, NxM, optional
+
+    :param llLat: Lower left latitude in [deg]
+    :type llLat: float, optional
+    :param llLon: Lower left longitude in [deg]
+    :type llLon: float, optional
+    :param dLat: Pixel spacing in latitude [deg]
+    :type dLat: float, optional
+    :param dLon: Pixel spacing in longitude [deg]
+    :type dLon: float, optional
+    '''
+    evChanged = Subject()
+    evConfigChanged = Subject()
+
+    def __init__(self, config=SceneConfig(), **kwargs):
+        self.config = config
+        self.meta = self.config.meta
+
+        BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
+
+        # wiring special methods
+        self.import_data = self._import_data
+        self.load = self._load
 
     @property_cached
     def quadtree(self):
