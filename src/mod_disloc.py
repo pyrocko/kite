@@ -59,8 +59,8 @@ class OkadaSource(Object):
 
         ss_slip = num.cos(self.rake * d2r) * self.slip
         ds_slip = num.sin(self.rake * d2r) * self.slip
-        print '{:<13}{}\n{:<13}{}'.format(
-            'strike_slip', ss_slip, 'dip_slip', ds_slip)
+        # print '{:<13}{}\n{:<13}{}'.format(
+        #     'strike_slip', ss_slip, 'dip_slip', ds_slip)
         dsrc[7] = ss_slip  # SS Strike-Slip
         dsrc[8] = ds_slip  # DS Dip-Slip
         dsrc[9] = self.opening  # TS Tensional-Slip
@@ -87,15 +87,10 @@ class OkadaSource(Object):
         coords[:, 1] += self.northing
         return coords
 
-
-class OkadaPlane(OkadaSource):
-    nplanes_width = Int.T(
-        help='Number of discrete :class:`OkadaSources`, downdip')
-    nplanes_length = Int.T(
-        help='Number of discrete :class:`OkadaSource`, along strike')
-
-    def disloc_source(self):
-        return num.array([os.disloc_source() for os in self.planes])
+    def split(self):
+        sources = []
+        w = self.width/2
+        l = self.length/2
 
 
 class OkadaTrack(Object):
@@ -145,7 +140,7 @@ class DislocProcessor(object):
             'processor_profile': dict()
         }
 
-        src_arr = num.array([src.disloc_source() for src in sources])
+        src_arr = num.vstack([src.disloc_source() for src in sources])
         res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
 
         result['north'] = res[:, 0]
