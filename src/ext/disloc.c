@@ -8,6 +8,7 @@
    Date          Programmer            Description of Change
    ====          ==========            =====================
    14/02/2017    Marius Isken          Implemented OpenMP parallel processing of targets
+   10/02/2017    Marius Isken          Added Numpy wrapper // python interface
    10/28/2000    Peter Cervelli        Removed seldom used 'reference station' option; improved
                                        detection of dip = integer multiples of pi/2.
    09/01/2000    Peter Cervelli        Fixed a bug that incorrectly returned an integer absolute value
