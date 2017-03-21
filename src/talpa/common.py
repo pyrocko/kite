@@ -5,24 +5,76 @@ import pyqtgraph as pg
 import numpy as num
 
 
-class ModelPerspective(pg.PlotWidget):
+class ModelLayout(pg.GraphicsLayoutWidget):
+    def __init__(self, model, *args, **kwargs):
+        pg.GraphicsLayoutWidget.__init__(self, **kwargs)
+        self.model = model
+
+        self.plots = [
+            ModelPlot(
+                model,
+                title='North',
+                component=lambda m: m.north),
+            ModelPlot(
+                model,
+                title='East',
+                component=lambda m: m.east),
+            ModelPlot(
+                model,
+                title='Down',
+                component=lambda m: m.down),
+            ModelPlot(
+                model,
+                title='LOS',
+                component=lambda m: m.displacement)]
+
+        for ip, plt in enumerate(self.plots):
+            row = ip / 2
+            col = ip % 2 + 1
+
+            self.addItem(plt, row=row, col=col)
+            plt.setTitle(plt.title)
+            plt.hideAxis('bottom')
+            plt.hideAxis('left')
+            if ip != 0:
+                plt.setXLink(self.plots[0])
+                plt.setYLink(self.plots[0])
+
+        def getAxis(plt, orientation, label):
+            axis = pg.AxisItem(
+                orientation=orientation,
+                linkView=plt.vb)
+            axis.setLabel(label, units='m')
+            return axis
+
+        plts = self.plots
+        self.addItem(getAxis(plts[0], 'left', 'Northing'), row=0, col=0)
+        self.addItem(getAxis(plts[1], 'left', 'Northing'), row=1, col=0)
+        self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
+        self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
+
+
+class ModelPlot(pg.PlotItem):
 
     position = 'left'
 
-    def __init__(self, model, component, title='Untitled', position='bottom'):
-        pg.PlotWidget.__init__(self)
+    def __init__(self, model, component, title='Untitled'):
+        pg.PlotItem.__init__(self)
         self.model = model
-        self.position = position
         self.component = component
         self.title = title
 
         self.setAspectLocked(True)
+        self.setLabels(
+            bottom=('Easting', 'm'),
+            left=('Northing', 'm'))
 
         self.image = pg.ImageItem(
             None,
             autoDownsample=False,
             useOpenGL=True)
         self.addItem(self.image)
+
         self.update()
 
         self.transFromFrame()
@@ -44,7 +96,7 @@ class ModelPerspective(pg.PlotWidget):
         ge = gradient_editor
         image = self.image
 
-        hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
+        # hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
         image.setLookupTable(ge.getLookupTable)
 
         def updateLevels():
@@ -68,54 +120,25 @@ class ModelPerspective(pg.PlotWidget):
         # image.sigImageChanged.connect(updateHistogram)
 
 
-class ModelPlots(dockarea.DockArea):
+class ModelDockarea(dockarea.DockArea):
 
     def __init__(self, model, *args, **kwargs):
         dockarea.DockArea.__init__(self)
 
-        plt_docks = []
-        north_plot = ModelPerspective(
-            model,
-            title='North',
-            component=lambda m: m.north)
-        east_plot = ModelPerspective(
-            model,
-            title='East',
-            component=lambda m: m.east)
-        down_plot = ModelPerspective(
-            model,
-            title='Down',
-            component=lambda m: m.down)
-        los_plot = ModelPerspective(
-            model,
-            title='LOS',
-            component=lambda m: m.displacement)
-        plots = [north_plot, east_plot, down_plot, los_plot]
-
-        cmap = ColormapPlots(plot=los_plot)
-        rels = ['right', 'bottom', 'right', 'top']
-        for ip, plot in enumerate(plots):
-            plot.setGradientEditor(cmap)
-
-            if plot is not north_plot:
-                plot.setXLink(north_plot)
-                plot.setYLink(north_plot)
-
-            plt_docks.append(dockarea.Dock(
-                plot.title,
-                widget=plot))
-
-            rel_to = None if len(plt_docks) == 1 else plt_docks[-2]
-            print rel_to, rels[ip]
-            self.addDock(
-                plt_docks[-1],
-                position=rels[ip],
-                realtiveTo=rel_to)
+        layout = ModelLayout(model)
+        cmap = ColormapPlots(plot=layout.plots[0])
+        for plt in layout.plots:
+            plt.setGradientEditor(cmap)
 
         cmap_dock = dockarea.Dock(
             'Colormap',
             widget=cmap)
         cmap_dock.setStretch(1, None)
+
+        layout_dock = dockarea.Dock(
+            'Model Sandbox',
+            widget=layout)
+        self.addDock(layout_dock, position='right')
         self.addDock(cmap_dock, position='right')
 
 

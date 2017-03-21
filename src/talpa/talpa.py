@@ -2,7 +2,7 @@ import sys
 from os import path
 from PySide import QtCore, QtGui
 
-from .common import ModelPlots
+from .common import ModelDockarea
 
 from ..qt_utils import loadUi
 from ..model_scene import ModelScene
@@ -66,7 +66,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
         loadUi(get_resource('talpa.ui'), baseinstance=self)
 
     def openModel(self, model):
-        m = ModelPlots(model)
+        m = ModelDockarea(model)
         self.centralwidget.layout().addWidget(m)
 
     def closeModel(self, model):
