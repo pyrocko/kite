@@ -3,10 +3,11 @@
 import numpy as num
 import scipy as sp
 import time
+import guts
 
 import covariance_ext
-from pyrocko import guts
-from pyrocko.guts_array import Array
+
+from guts_array import Array
 from kite.meta import (Subject, property_cached,  # noqa
                        trimMatrix, derampMatrix, squareMatrix)
 
@@ -22,8 +23,8 @@ noise_regimes = [
 def modelCovariance(distance, a, b):
     """Exponential function model to approximate a positive-definite covariance
 
-    We assume the following simple covariance model to describe the empirical noise
-    observations:
+    We assume the following simple covariance model to describe the empirical
+    noise observations:
 
     .. math::
 

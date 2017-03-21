@@ -21,7 +21,7 @@ addons:
 
 before_install:
     - pip install setuptools flake8 pyyaml coveralls
-    - easy_install https://github.com/pyrocko/pyrocko.git
+    - easy_install https://github.com/emolch/guts.git
 
 before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi

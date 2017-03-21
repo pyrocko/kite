@@ -3,8 +3,8 @@ import logging
 import numpy as num
 import utm
 import os.path as op
+import guts
 
-from pyrocko import guts
 from pyrocko.orthodrome import latlon_to_ne  # noqa
 from datetime import datetime as dt
 from .quadtree import QuadtreeConfig
