@@ -4,7 +4,7 @@ from .scene_proxy import QSceneProxy
 from .tab_scene import QKiteScene
 from .tab_quadtree import QKiteQuadtree  # noqa
 from .tab_covariance import QKiteCovariance  # noqa
-from .utils_qt import loadUi, validateFilename
+from ..qt_utils import loadUi, validateFilename
 from ..scene import Scene
 
 from os import path
@@ -20,7 +20,7 @@ class Spool(QtGui.QApplication):
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(
             path.join(path.dirname(path.realpath(__file__)),
-                      'ui/spool_splash.png'))\
+                      'res/spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         self.splash = QtGui.QSplashScreen(splash_img,
                                           QtCore.Qt.WindowStaysOnTopHint)
@@ -130,13 +130,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
     def about(self):
         self._about = QtGui.QDialog()
         about_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'ui/about.ui')
+                             'res/about.ui')
         loadUi(about_ui, baseinstance=self._about)
         return self._about
 
     def loadUi(self):
         ui_file = path.join(path.dirname(path.realpath(__file__)),
-                            'ui/spool.ui')
+                            'res/spool.ui')
         loadUi(ui_file, baseinstance=self)
         return
 
@@ -317,7 +317,7 @@ class SceneLog(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
 
         log_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/logging.ui')
+                           'res/logging.ui')
         loadUi(log_ui, baseinstance=self)
 
         self.closeButton.setIcon(self.style().standardPixmap(

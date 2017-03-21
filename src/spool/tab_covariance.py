@@ -362,7 +362,7 @@ class QKiteToolNoise(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
 
         cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/noise_dialog.ui')
+                           'res/noise_dialog.ui')
         loadUi(cov_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
@@ -484,7 +484,7 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
         QtGui.QDialog.__init__(self, parent)
 
         cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/covariance_matrix.ui')
+                           'res/covariance_matrix.ui')
         loadUi(cov_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))

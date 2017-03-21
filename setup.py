@@ -126,8 +126,8 @@ setup(
     package_dir={
         'kite': 'src'},
     package_data={
-        'kite': ['spool/ui/*',
-                 'talpa/ui/*']},
+        'kite': ['spool/res/*',
+                 'talpa/res/*']},
     entry_points={
         'console_scripts': ['spool = kite.spool.__main__:main']},
     ext_package='kite',

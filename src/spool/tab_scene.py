@@ -89,7 +89,7 @@ class QKiteToolTransect(QtGui.QDialog):
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
         trans_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'ui/transect.ui')
+                             'res/transect.ui')
         loadUi(trans_ui, baseinstance=self)
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
