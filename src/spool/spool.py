@@ -22,8 +22,8 @@ class Spool(QtGui.QApplication):
             path.join(path.dirname(path.realpath(__file__)),
                       'res/spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        self.splash = QtGui.QSplashScreen(splash_img,
-                                          QtCore.Qt.WindowStaysOnTopHint)
+        self.splash = QtGui.QSplashScreen(
+            splash_img, QtCore.Qt.WindowStaysOnTopHint)
         self.updateSplashMessage('Scene')
         self.splash.show()
         self.processEvents()
