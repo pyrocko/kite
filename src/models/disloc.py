@@ -231,7 +231,7 @@ class DislocProcessor(object):
     __implements__ = 'disloc'
 
     @staticmethod
-    def process(sources, coords, nthreads=1):
+    def process(sources, coords, nthreads=0):
         result = {
             'processor_profile': dict()
         }

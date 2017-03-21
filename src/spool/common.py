@@ -130,7 +130,10 @@ class KitePlot(pg.PlotWidget):
             justify='right', size='8pt',
             parent=self.plotItem)
 
-        self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
+        self.hint_text.anchor(
+            itemPos=(1., 0.),
+            parentPos=(1., 0.))
+
         self.hint_text.template =\
             '<span style="font-family: monospace; color: #fff;'\
             'background-color: #000;">'\
@@ -233,7 +236,6 @@ class KitePlot(pg.PlotWidget):
 class KiteToolColormap(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
-
         self._plot = plot
 
         zero_marker = pg.InfiniteLine(

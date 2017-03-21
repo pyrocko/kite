@@ -38,7 +38,7 @@ class testOkada(unittest.TestCase):
         path.addNode(15000, 28000)
         path.addNode(18000, 32000)
         path.addNode(22000, 34000)
-        path.insertNode(1, 22000, 34000)
+        # path.insertNode(1, 22000, 34000)
         self.ms.addSource(path)
 
         self.plotDisplacement(self.ms)
@@ -50,7 +50,7 @@ class testOkada(unittest.TestCase):
         fig = plt.figure()
         ax = fig.gca()
 
-        ax.imshow(num.flipud(ms.displacement), aspect='equal',
+        ax.imshow(num.flipud(ms.north), aspect='equal',
                   extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()])
         for src in ms.sources:
             for seg in src.segments:

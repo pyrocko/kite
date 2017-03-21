@@ -5,7 +5,7 @@ from meta import Subject, property_cached
 from scene import BaseScene, FrameConfig
 
 # Import the modeling backends
-from .models.disloc import DislocProcessor
+from .models import DislocProcessor
 
 
 processors_available = [DislocProcessor]
@@ -56,12 +56,12 @@ class ModelScene(BaseScene):
         self.cols = east
         self.rows = north
 
-        self.north = num.empty((self.rows, self.cols))
-        self.east = num.empty_like(self.north)
-        self.down = num.empty_like(self.north)
+        self.north = num.zeros((self.rows, self.cols))
+        self.east = num.zeros_like(self.north)
+        self.down = num.zeros_like(self.north)
 
-        self._theta = num.empty_like(self.north)
-        self._phi = num.empty_like(self.north)
+        self._theta = num.zeros_like(self.north)
+        self._phi = num.zeros_like(self.north)
         self._theta.fill(num.pi/2)
         self._phi.fill(0.)
         self._los_factors = None
@@ -108,7 +108,7 @@ class ModelScene(BaseScene):
             sources = [s for s in self.sources
                        if s.__implements__ == processor.__implements__]
             result = processor.process(
-                sources, self.frame.coordinates, nthreads=0)
+                sources, self.frame.coordinates, nthreads=1)
             results.append(result)
 
         for r in results:

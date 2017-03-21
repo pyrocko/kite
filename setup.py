@@ -129,7 +129,9 @@ setup(
         'kite': ['spool/res/*',
                  'talpa/res/*']},
     entry_points={
-        'console_scripts': ['spool = kite.spool.__main__:main']},
+        'console_scripts':
+            ['spool = kite.spool.__main__:main',
+             'talpa = kite.talpa.__main__:main']},
     ext_package='kite',
     ext_modules=[
         Extension(
