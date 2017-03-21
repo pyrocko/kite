@@ -33,9 +33,10 @@ class ModelLayout(pg.GraphicsLayoutWidget):
             col = ip % 2 + 1
 
             self.addItem(plt, row=row, col=col)
-            plt.setTitle(plt.title)
+            plt.showGrid(x=True, y=True)
             plt.hideAxis('bottom')
             plt.hideAxis('left')
+            plt.vb.border = pg.mkPen(50, 50, 50)
             if ip != 0:
                 plt.setXLink(self.plots[0])
                 plt.setYLink(self.plots[0])
@@ -60,9 +61,9 @@ class ModelPlot(pg.PlotItem):
 
     def __init__(self, model, component, title='Untitled'):
         pg.PlotItem.__init__(self)
+        self.title = title
         self.model = model
         self.component = component
-        self.title = title
 
         self.setAspectLocked(True)
         self.setLabels(
@@ -76,7 +77,6 @@ class ModelPlot(pg.PlotItem):
         self.addItem(self.image)
 
         self.update()
-
         self.transFromFrame()
 
     @property
@@ -92,33 +92,6 @@ class ModelPlot(pg.PlotItem):
             self.model.frame.dE,
             self.model.frame.dN)
 
-    def setGradientEditor(self, gradient_editor):
-        ge = gradient_editor
-        image = self.image
-
-        # hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
-        image.setLookupTable(ge.getLookupTable)
-
-        def updateLevels():
-            image.setLevels(ge.region.getRegion())
-
-        ge.sigLevelChangeFinished.connect(updateLevels)
-        ge.sigLevelsChanged.connect(updateLevels)
-        updateLevels()
-
-        # def updateHistogram():
-        #     h = image.getHistogram()
-        #     if h[0] is None:
-        #         return
-        #     ge.hist_syn.setData(*h)
-
-        # ge.hist_syn = pg.PlotDataItem(pen=hist_pen)
-        # ge.hist_syn.rotate(90.)
-        # ge.vb.addItem(ge.hist_syn)
-        # updateHistogram()
-
-        # image.sigImageChanged.connect(updateHistogram)
-
 
 class ModelDockarea(dockarea.DockArea):
 
@@ -128,7 +101,7 @@ class ModelDockarea(dockarea.DockArea):
         layout = ModelLayout(model)
         cmap = ColormapPlots(plot=layout.plots[0])
         for plt in layout.plots:
-            plt.setGradientEditor(cmap)
+            cmap.addPlot(plt)
 
         cmap_dock = dockarea.Dock(
             'Colormap',
@@ -148,7 +121,7 @@ class ColormapPlots(pg.HistogramLUTWidget):
 
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
-        self._plot = plot
+        self.plots = [plot]
 
         self.axis.setLabel('Displacement / m')
 
@@ -177,12 +150,33 @@ class ColormapPlots(pg.HistogramLUTWidget):
                  [.5, (255, 255, 255)],
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
-        lvl_min = num.nanmin(self._plot.data)
-        lvl_max = num.nanmax(self._plot.data)
+
+        lvl_min = lvl_max = 0
+        for plot in self.plots:
+            plt_min = num.nanmin(plot.data)
+            plt_max = num.nanmax(plot.data)
+            lvl_max = lvl_max if plt_max < lvl_max else plt_max
+            lvl_min = lvl_min if plt_min > lvl_min else plt_min
+
         abs_range = max(abs(lvl_min), abs(lvl_max))
 
         self.gradient.restoreState(cmap)
         self.setLevels(-abs_range, abs_range)
+
+    def addPlot(self, plot):
+        self.plots.append(plot)
+        self.setSymColormap()
+        image = plot.image
+
+        # hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
+        image.setLookupTable(self.getLookupTable)
+
+        def updateLevels():
+            image.setLevels(self.region.getRegion())
+
+        self.sigLevelChangeFinished.connect(updateLevels)
+        self.sigLevelsChanged.connect(updateLevels)
+        updateLevels()
 
 
 class SourcesList(QtGui.QDockWidget):
