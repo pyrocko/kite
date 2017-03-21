@@ -13,15 +13,15 @@ from pyqtgraph import dockarea
 from ..qt_utils import _viridis_data
 from ..meta import calcPrecission, formatScalar
 
-__all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
-           'QKiteParameterGroup']
+__all__ = ['KiteView', 'KitePlot', 'KiteToolColormap',
+           'KiteParameterGroup']
 
 
 def get_resource(filename):
     return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
 
 
-class QKiteView(dockarea.DockArea):
+class KiteView(dockarea.DockArea):
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
@@ -33,7 +33,7 @@ class QKiteView(dockarea.DockArea):
         dock_colormap = dockarea.Dock(
             'Colormap',
             autoOrientation=False,
-            widget=QKiteToolColormap(self.main_widget))
+            widget=KiteToolColormap(self.main_widget))
         dock_colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
@@ -94,7 +94,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         return QtCore.QRectF(0, 0, self.width(), self.height())
 
 
-class QKitePlot(pg.PlotWidget):
+class KitePlot(pg.PlotWidget):
 
     def __init__(self, scene_proxy, los_arrow=False):
         pg.PlotWidget.__init__(self)
@@ -230,7 +230,7 @@ class QKitePlot(pg.PlotWidget):
         self.hint_text.setText(self.hint_text.template.format(**self.hint))
 
 
-class QKiteToolColormap(pg.HistogramLUTWidget):
+class KiteToolColormap(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
 
@@ -303,7 +303,7 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
         self.vb.addItem(iso_ctrl)
 
 
-class QKiteParameterGroup(pTypes.GroupParameter):
+class KiteParameterGroup(pTypes.GroupParameter):
     def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
         self.model_attr = model_attr

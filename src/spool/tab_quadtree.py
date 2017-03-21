@@ -4,7 +4,7 @@ from __future__ import division, absolute_import, print_function, \
 
 from collections import OrderedDict
 from PySide import QtCore, QtGui
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from .common import KiteView, KitePlot, KiteParameterGroup
 from ..qt_utils import SliderWidgetParameterItem
 from ..quadtree import QuadtreeConfig
 
@@ -12,15 +12,15 @@ import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
-class QKiteQuadtree(QKiteView):
+class KiteQuadtree(KiteView):
     title = 'Scene.quadtree'
 
     def __init__(self, spool):
         scene_proxy = spool.scene_proxy
-        self.main_widget = QKiteQuadtreePlot(scene_proxy)
+        self.main_widget = KiteQuadtreePlot(scene_proxy)
         self.tools = {}
 
-        self.param_quadtree = QKiteParamQuadtree(
+        self.param_quadtree = KiteParamQuadtree(
             scene_proxy,
             self.main_widget,
             expanded=True)
@@ -28,7 +28,7 @@ class QKiteQuadtree(QKiteView):
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
-        QKiteView.__init__(self)
+        KiteView.__init__(self)
 
     def modelChanged(self):
         self.main_widget.update()
@@ -60,7 +60,7 @@ class QQuadLeaf(QtCore.QRectF):
         return item
 
 
-class QKiteQuadtreePlot(QKitePlot):
+class KiteQuadtreePlot(KitePlot):
     def __init__(self, scene_proxy):
 
         self.components_available = {
@@ -77,7 +77,7 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self._component = 'median'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
@@ -189,7 +189,7 @@ class QKiteQuadtreePlot(QKitePlot):
                 l.id for l in self.selected_leaves)
 
 
-class QKiteParamQuadtree(QKiteParameterGroup):
+class KiteParamQuadtree(KiteParameterGroup):
     sigEpsilon = QtCore.Signal(float)
     sigNanFraction = QtCore.Signal(float)
     sigTileMaximum = QtCore.Signal(float)
@@ -210,7 +210,7 @@ class QKiteParamQuadtree(QKiteParameterGroup):
              ('nnodes', None),
              ])
 
-        QKiteParameterGroup.__init__(
+        KiteParameterGroup.__init__(
             self,
             model=scene_proxy,
             model_attr='quadtree',

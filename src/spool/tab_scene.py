@@ -1,45 +1,45 @@
 #!/usr/bin/python2
 from collections import OrderedDict
 from PySide import QtGui
-from .common import QKiteView, QKitePlot, QKiteParameterGroup, get_resource
+from .common import KiteView, KitePlot, KiteParameterGroup, get_resource
 from ..qt_utils import loadUi
 
 import pyqtgraph as pg
 import numpy as num
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
-__all__ = ['QKiteScene']
+__all__ = ['KiteScene']
 
 
-class QKiteScene(QKiteView):
+class KiteScene(KiteView):
     title = 'Scene'
 
     def __init__(self, spool):
         scene_proxy = spool.scene_proxy
 
-        scene_plot = QKiteScenePlot(scene_proxy)
+        scene_plot = KiteScenePlot(scene_proxy)
         self.main_widget = scene_plot
         self.tools = {
-            # 'Components': QKiteToolComponents(self.main_widget),
-            # 'Displacement Transect': QKiteToolTransect(self.main_widget),
+            # 'Components': KiteToolComponents(self.main_widget),
+            # 'Displacement Transect': KiteToolTransect(self.main_widget),
         }
 
-        self.param_scene = QKiteParamScene(scene_proxy, scene_plot)
-        self.param_frame = QKiteParamSceneFrame(scene_proxy, expanded=False)
-        self.param_meta = QKiteParamSceneMeta(scene_proxy, expanded=False)
+        self.param_scene = KiteParamScene(scene_proxy, scene_plot)
+        self.param_frame = KiteParamSceneFrame(scene_proxy, expanded=False)
+        self.param_meta = KiteParamSceneMeta(scene_proxy, expanded=False)
 
         self.param_scene.addChild(self.param_frame)
         self.param_scene.addChild(self.param_meta)
 
         self.parameters = [self.param_scene]
 
-        self.dialogTransect = QKiteToolTransect(scene_plot, spool)
+        self.dialogTransect = KiteToolTransect(scene_plot, spool)
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
-        QKiteView.__init__(self)
+        KiteView.__init__(self)
 
     def modelChanged(self):
         self.main_widget.update()
@@ -52,7 +52,7 @@ class QKiteScene(QKiteView):
         self.dialogTransect.close()
 
 
-class QKiteScenePlot(QKitePlot):
+class KiteScenePlot(KitePlot):
     def __init__(self, scene_proxy):
         self.components_available = {
             'displacement':
@@ -74,7 +74,7 @@ class QKiteScenePlot(QKitePlot):
         }
         self._component = 'displacement'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
 
         scene_proxy.sigFrameChanged.connect(self.onFrameChange)
         scene_proxy.sigSceneModelChanged.connect(self.update)
@@ -84,7 +84,7 @@ class QKiteScenePlot(QKitePlot):
         self.transFromFrame()
 
 
-class QKiteToolTransect(QtGui.QDialog):
+class KiteToolTransect(QtGui.QDialog):
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
@@ -171,7 +171,7 @@ class QKiteToolTransect(QtGui.QDialog):
         return
 
 
-class QKiteParamScene(QKiteParameterGroup):
+class KiteParamScene(KiteParameterGroup):
     def __init__(self, scene_proxy, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
@@ -185,10 +185,10 @@ class QKiteParamScene(QKiteParameterGroup):
 
         self.plot.image.sigImageChanged.connect(self.updateValues)
 
-        QKiteParameterGroup.__init__(self,
-                                     model=self.plot,
-                                     model_attr=None,
-                                     **kwargs)
+        KiteParameterGroup.__init__(self,
+                                    model=self.plot,
+                                    model_attr=None,
+                                    **kwargs)
 
         def changeComponent(parameter):
             self.plot.component = parameter.value()
@@ -210,7 +210,7 @@ class QKiteParamScene(QKiteParameterGroup):
         self.pushChild(component)
 
 
-class QKiteParamSceneFrame(QKiteParameterGroup):
+class KiteParamSceneFrame(KiteParameterGroup):
     def __init__(self, scene_proxy, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.frame'
@@ -235,13 +235,13 @@ class QKiteParamSceneFrame(QKiteParameterGroup):
 
         scene_proxy.sigFrameChanged.connect(self.updateValues)
 
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='frame',
-                                     **kwargs)
+        KiteParameterGroup.__init__(self,
+                                    model=scene_proxy,
+                                    model_attr='frame',
+                                    **kwargs)
 
 
-class QKiteParamSceneMeta(QKiteParameterGroup):
+class KiteParamSceneMeta(KiteParameterGroup):
     def __init__(self, scene_proxy, **kwargs):
         from datetime import datetime as dt
         kwargs['type'] = 'group'
@@ -269,7 +269,7 @@ class QKiteParamSceneMeta(QKiteParameterGroup):
 
         scene_proxy.sigConfigChanged.connect(self.updateValues)
 
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='scene',
-                                     **kwargs)
+        KiteParameterGroup.__init__(self,
+                                    model=scene_proxy,
+                                    model_attr='scene',
+                                    **kwargs)

@@ -1,9 +1,9 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
 from .scene_proxy import QSceneProxy
-from .tab_scene import QKiteScene
-from .tab_quadtree import QKiteQuadtree  # noqa
-from .tab_covariance import QKiteCovariance  # noqa
+from .tab_scene import KiteScene
+from .tab_quadtree import KiteQuadtree  # noqa
+from .tab_covariance import KiteCovariance  # noqa
 from ..qt_utils import loadUi, validateFilename
 from ..scene import Scene
 from .common import get_resource
@@ -76,9 +76,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
 
-        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
+        self.views = [KiteScene, KiteQuadtree, KiteCovariance]
 
-        self.ptree = QKiteParameterTree(showHeader=True)
+        self.ptree = KiteParameterTree(showHeader=True)
         self.ptree.resize(100, 100)
         self.splitter.insertWidget(0, self.ptree)
 
@@ -223,7 +223,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         pass
 
 
-class QKiteParameterTree(pg.parametertree.ParameterTree):
+class KiteParameterTree(pg.parametertree.ParameterTree):
     pass
 
 
