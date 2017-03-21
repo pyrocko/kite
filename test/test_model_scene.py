@@ -1,9 +1,8 @@
 import unittest
-import time
 import numpy as num
 
 from kite import ModelScene
-from kite.mod_disloc import OkadaSource, OkadaPath
+from kite.models import OkadaSource, OkadaPath
 
 
 class testOkada(unittest.TestCase):

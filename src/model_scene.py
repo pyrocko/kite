@@ -5,7 +5,7 @@ from meta import Subject, property_cached
 from scene import BaseScene, FrameConfig
 
 # Import the modeling backends
-from mod_disloc import DislocProcessor
+from .models.disloc import DislocProcessor
 
 
 processors_available = [DislocProcessor]
