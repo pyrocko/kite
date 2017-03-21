@@ -26,22 +26,23 @@ class QKiteView(dockarea.DockArea):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
 
-        dock_main =\
-            dockarea.Dock(self.title,
-                          autoOrientation=False,
-                          widget=self.main_widget)
-        dock_colormap =\
-            dockarea.Dock('Colormap',
-                          autoOrientation=False,
-                          widget=QKiteToolColormap(self.main_widget))
+        dock_main = dockarea.Dock(
+            self.title,
+            autoOrientation=False,
+            widget=self.main_widget)
+        dock_colormap = dockarea.Dock(
+            'Colormap',
+            autoOrientation=False,
+            widget=QKiteToolColormap(self.main_widget))
         dock_colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             self.tool_docks.append(
-                dockarea.Dock(name,
-                              widget=tool,
-                              size=(2, 2),
-                              autoOrientation=False))
+                dockarea.Dock(
+                    name,
+                    widget=tool,
+                    size=(2, 2),
+                    autoOrientation=False))
             self.addDock(self.tool_docks[-1], position='bottom')
 
         self.addDock(dock_main, position='left')
@@ -102,16 +103,18 @@ class QKitePlot(pg.PlotWidget):
         self._data = None
 
         border_pen = pg.mkPen(255, 255, 255, 50)
-        self.image = pg.ImageItem(None,
-                                  autoDownsample=False,
-                                  border=border_pen,
-                                  useOpenGL=True)
+        self.image = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=border_pen,
+            useOpenGL=True)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(bottom=('Easting', 'm'),
-                       left=('Northing', 'm'))
+        self.setLabels(
+            bottom=('Easting', 'm'),
+            left=('Northing', 'm'))
 
         self.hint = {
             'east': 0.,
@@ -122,9 +125,11 @@ class QKitePlot(pg.PlotWidget):
             'precision': '3',
         }
 
-        self.hint_text = pg.LabelItem(text='',
-                                      justify='right', size='8pt',
-                                      parent=self.plotItem)
+        self.hint_text = pg.LabelItem(
+            text='',
+            justify='right', size='8pt',
+            parent=self.plotItem)
+
         self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
         self.hint_text.template =\
             '<span style="font-family: monospace; color: #fff;'\
@@ -136,8 +141,9 @@ class QKitePlot(pg.PlotWidget):
         self.update()
 
         self.transFromFrame()
-        self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
-                                        rateLimit=25, slot=self.mouseMoved)
+        self._move_sig = pg.SignalProxy(
+            self.image.scene().sigMouseMoved,
+            rateLimit=25, slot=self.mouseMoved)
 
         if los_arrow:
             self.addLOSArrow()
@@ -148,8 +154,9 @@ class QKitePlot(pg.PlotWidget):
     def addLOSArrow(self):
         self.los_arrow = LOSArrow(self.scene_proxy)
         self.los_arrow.setParentItem(self.graphicsItem())
-        self.los_arrow.anchor(itemPos=(1., 0.), parentPos=(1, 0.),
-                              offset=(-10., 40.))
+        self.los_arrow.anchor(
+            itemPos=(1., 0.), parentPos=(1, 0.),
+            offset=(-10., 40.))
 
     def transFromFrame(self):
         self.image.resetTransform()
@@ -157,7 +164,10 @@ class QKitePlot(pg.PlotWidget):
 
     def scalebar(self):
         ''' Not working '''
-        self.scale_bar = pg.ScaleBar(10, width=5, suffix='m')
+        self.scale_bar = pg.ScaleBar(
+            10,
+            width=5,
+            suffix='m')
         self.scale_bar.setParentItem(self.plotItem)
         self.scale_bar.anchor((1, 1), (1, 1), offset=(-20, -20))
 
@@ -226,10 +236,14 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
 
         self._plot = plot
 
-        _zero_marker = pg.InfiniteLine(pos=0, angle=0, pen='w', movable=False)
-        _zero_marker.setValue(0.)
-        _zero_marker.setZValue(1000)
-        self.vb.addItem(_zero_marker)
+        zero_marker = pg.InfiniteLine(
+            pos=0,
+            angle=0,
+            pen='w',
+            movable=False)
+        zero_marker.setValue(0.)
+        zero_marker.setZValue(1000)
+        self.vb.addItem(zero_marker)
 
         self.axis.setLabel('Displacement / m')
         # self.plot.rotate(-90)
@@ -274,7 +288,11 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
                        num.nanmax(self._plot.data))
 
     def isoCurveControl(self):
-        iso_ctrl = pg.InfiniteLine(pos=0, angle=0, pen='g', movable=True)
+        iso_ctrl = pg.InfiniteLine(
+            pos=0,
+            angle=0,
+            pen='g',
+            movable=True)
         iso_ctrl.setValue(0.)
         iso_ctrl.setZValue(1000)
 
