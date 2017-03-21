@@ -4,27 +4,14 @@ from .scene_proxy import QSceneProxy
 from .tab_scene import QKiteScene
 from .tab_quadtree import QKiteQuadtree  # noqa
 from .tab_covariance import QKiteCovariance  # noqa
-from .utils_qt import loadUi
+from .utils_qt import loadUi, validateFilename
 from ..scene import Scene
 
 from os import path
-import os
 import sys
 import time  # noqa
 import logging
 import pyqtgraph as pg
-
-
-def validateFilename(filename):
-    filedir = path.dirname(filename)
-    if filename == '' or filedir == '':
-        return False
-    if path.isdir(filename) or not os.access(filedir, os.W_OK):
-        QtGui.QMessageBox.critical(None, 'Path Error',
-                                   'Could not access file <b>%s</b>'
-                                   % filename)
-        return False
-    return True
 
 
 class Spool(QtGui.QApplication):

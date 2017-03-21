@@ -1,9 +1,10 @@
 import numpy as num
 
 from kite import disloc_ext
-from pyrocko.guts import Object, Float, Int, List, String
+from pyrocko.guts import Object, Float, List, Bool
 
 d2r = num.pi / 180.
+r2d = 180. / num.pi
 
 
 class OkadaSource(Object):
@@ -33,14 +34,14 @@ class OkadaSource(Object):
         default=1.5,
         help='Slip in [m]')
     nu = Float.T(
-        default=.25,
+        default=1.25,
         help='Material parameter Nu in P s^-1')
     opening = Float.T(
         help='Opening of the plane in [m]',
         optional=True,
         default=0.)
 
-    def disloc_source(self, dsrc=None):
+    def dislocSource(self, dsrc=None):
         if dsrc is None:
             dsrc = num.empty(10)
 
@@ -87,48 +88,143 @@ class OkadaSource(Object):
         coords[:, 1] += self.northing
         return coords
 
-    def split(self):
-        sources = []
-        w = self.width/2
-        l = self.length/2
+    @property
+    def segments(self):
+        yield self
 
 
-class OkadaTrack(Object):
+class OkadaSegment(OkadaSource):
+    enabled = Bool.T(
+        default=True,
+        optional=True)
+
+
+class OkadaPath(Object):
 
     __implements__ = 'disloc'
 
-    class OkadaPolyPlane(OkadaPlane):
-        id = String.T()
-
-    planes__ = List.T(optional=True)
+    origin_easting = Float.T(
+        help='Easting of the origin in [m]')
+    origin_northing = Float.T(
+        help='Northing of the origin in [m]')
+    nu = Float.T(
+        default=1.25,
+        help='Material parameter Nu in P s^-1')
+    nodes = List.T(
+        default=[],
+        optional=True,
+        help='Nodes of the segments as (easting, northing) tuple of [m]')
+    segments__ = List.T(
+        default=[],
+        optional=True,
+        help='List of all segments.')
 
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
-        self._planes = []
+        self._segments = []
+
+        if not self.nodes:
+            self.nodes.append(
+                [self.origin_easting, self.origin_northing])
 
     @property
-    def planes(self):
-        pass
+    def segments(self):
+        return self._segments
 
-    @planes.setter
-    def planes(self, planes):
-        self._planes = planes
+    @segments.setter
+    def segments(self, segments):
+        self._segments = segments
 
-    @property
-    def nodes(self):
-        pass
+    @staticmethod
+    def _newSegment(e1, n1, e2, n2, **kwargs):
+        dE = e2 - e1
+        dN = n2 - n1
+        length = (dN**2 + dE**2)**.5
+        '''Width Scaling relation after
 
-    def add_node(self, easting, northing):
-        pass
+        Leonard, M. (2010). Earthquake fault scaling: Relating rupture length,
+            width, average displacement, and moment release, Bull. Seismol.
+            Soc. Am. 100, no. 5, 1971–1988.
+        '''
+        segment = {
+            'northing': n1 + dN/2,
+            'easting': e1 + dE/2,
+            'depth': 0.,
+            'length': length,
+            'width': 15. * length**.66,
+            'strike': num.arccos(dN/length) * r2d,
+            'slip': 45.,
+            'rake': 90.,
+        }
+        segment.update(kwargs)
+        return OkadaSegment(**segment)
 
-    def insert_node(self, easting, northing, pos):
-        pass
+    def _moveSegment(self, pos, e1, n1, e2, n2):
+        dE = e2 - e1
+        dN = n2 - n1
+        length = (dN**2 + dE**2)**.5
+
+        segment_update = {
+            'northing': n1 + dN/2,
+            'easting': e1 + dE/2,
+            'length': length,
+            'width': 15. * length**.66,
+            'strike': num.arccos(dN/length) * r2d,
+        }
+
+        segment = self.segments[pos]
+        for attr, val in segment_update.iteritems():
+            segment.__setattr__(attr, val)
+
+    def addNode(self, easting, northing):
+        self.nodes.append([easting, northing])
+        print self.nodes
+        self.segments.append(
+            self._newSegment(
+                e1=self.nodes[-2][0],
+                n1=self.nodes[-2][1],
+                e2=self.nodes[-1][0],
+                n2=self.nodes[-1][1]))
+
+    def insertNode(self, pos, easting, northing):
+        self.nodes.insert(pos, [easting, northing])
+        self.segments.append(
+            self._newSegment(
+                e1=self.nodes[pos][0],
+                n1=self.nodes[pos][1],
+                e2=self.nodes[pos+1][0],
+                n2=self.nodes[pos+1][1]))
+        self._moveSegment(
+            pos-1,
+            e1=self.nodes[pos-1][0],
+            n1=self.nodes[pos-1][1],
+            e2=self.nodes[pos][0],
+            n2=self.nodes[pos][1],
+            )
+
+    def moveNode(self, pos, easting, northing):
+        self.nodes[pos] = [easting, northing]
+        if pos < len(self):
+            self._moveSegment(
+                pos,
+                e1=self.nodes[pos][0],
+                n1=self.nodes[pos][1],
+                e2=self.nodes[pos+1][0],
+                n2=self.nodes[pos+1][1])
+        if pos != 0:
+            self._moveSegment(
+                pos,
+                e1=self.nodes[pos-1][0],
+                n1=self.nodes[pos-1][1],
+                e2=self.nodes[pos][0],
+                n2=self.nodes[pos][1])
 
     def __len__(self):
-        return len(self.planes)
+        return len(self.segments)
 
-    def disloc_source(self):
-        return num.array([os.disloc_source() for os in self.planes])
+    def dislocSource(self):
+        return num.array([seg.dislocSource() for seg in self.segments
+                          if seg.enabled])
 
 
 class DislocProcessor(object):
@@ -140,7 +236,7 @@ class DislocProcessor(object):
             'processor_profile': dict()
         }
 
-        src_arr = num.vstack([src.disloc_source() for src in sources])
+        src_arr = num.vstack([src.dislocSource() for src in sources])
         res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
 
         result['north'] = res[:, 0]

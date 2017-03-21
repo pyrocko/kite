@@ -217,7 +217,6 @@ class Subject(object):
         for l in self._listeners:
             self.unsubscribe(l)
 
-
     def notify(self, *args, **kwargs):
         if self._mute:
             return

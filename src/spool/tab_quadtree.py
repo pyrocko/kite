@@ -2,11 +2,11 @@
 from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
-from PySide import QtCore, QtGui
-from .utils_qt import SliderWidgetParameterItem
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
-from ..quadtree import QuadtreeConfig
 from collections import OrderedDict
+from PySide import QtCore, QtGui
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from ..qt_utils import SliderWidgetParameterItem
+from ..quadtree import QuadtreeConfig
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -164,7 +164,7 @@ class QKiteQuadtreePlot(QKitePlot):
         self.unselectLeaves()
 
         self.selected_leaves = [l for l in self.getQleaves()
-                               if self.eraseBox.r.contains(l)]
+                                if self.eraseBox.r.contains(l)]
         for l in self.selected_leaves:
             rect_leaf = l.getRectItem()
             self.highlighted_leaves.append(rect_leaf)

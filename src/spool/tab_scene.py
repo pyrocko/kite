@@ -1,13 +1,13 @@
 #!/usr/bin/python2
-import pyqtgraph as pg
-import numpy as num
-import pyqtgraph.parametertree.parameterTypes as pTypes
-
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
-from .utils_qt import loadUi
 from collections import OrderedDict
 from PySide import QtGui
 from os import path
+from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from ..qt_utils import loadUi
+
+import pyqtgraph as pg
+import numpy as num
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 __all__ = ['QKiteScene']
 

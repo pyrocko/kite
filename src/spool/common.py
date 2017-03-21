@@ -8,7 +8,7 @@ import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from pyqtgraph import dockarea
-from .utils_qt import _viridis_data
+from ..qt_utils import _viridis_data
 from ..meta import calcPrecission, formatScalar
 
 __all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',

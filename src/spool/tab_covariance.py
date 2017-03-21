@@ -8,7 +8,7 @@ from pyqtgraph import dockarea
 from os import path
 from PySide import QtGui, QtCore
 from collections import OrderedDict
-from .utils_qt import loadUi
+from ..qt_utils import loadUi
 from ..covariance import modelCovariance
 from .common import (QKiteView, QKitePlot, QKiteParameterGroup,
                      QKiteToolColormap)
