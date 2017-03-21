@@ -20,9 +20,10 @@ class QKiteQuadtree(QKiteView):
         self.main_widget = QKiteQuadtreePlot(scene_proxy)
         self.tools = {}
 
-        self.param_quadtree = QKiteParamQuadtree(scene_proxy,
-                                                 self.main_widget,
-                                                 expanded=True)
+        self.param_quadtree = QKiteParamQuadtree(
+            scene_proxy,
+            self.main_widget,
+            expanded=True)
         self.parameters = [self.param_quadtree]
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
@@ -82,12 +83,13 @@ class QKiteQuadtreePlot(QKitePlot):
         focalpoint_color = (45, 136, 45)
         # focalpoint_outline_color = (255, 255, 255, 200)
         focalpoint_outline_color = (3, 212, 3)
-        self.focal_points =\
-            pg.ScatterPlotItem(size=3.,
-                               pen=pg.mkPen(focalpoint_outline_color,
-                                            width=.5),
-                               brush=pg.mkBrush(focalpoint_color),
-                               antialias=True)
+        self.focal_points = pg.ScatterPlotItem(
+            size=3.,
+            pen=pg.mkPen(
+                focalpoint_outline_color,
+                width=.5),
+            brush=pg.mkBrush(focalpoint_color),
+            antialias=True)
 
         self.setMenuEnabled(False)
 
@@ -95,9 +97,11 @@ class QKiteQuadtreePlot(QKitePlot):
         self.selected_leaves = []
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
-        self.eraseBox.setPen(pg.mkPen((202, 60, 60),
-                                      width=1,
-                                      style=QtCore.Qt.DotLine))
+        self.eraseBox.setPen(
+            pg.mkPen(
+                (202, 60, 60),
+                width=1,
+                style=QtCore.Qt.DotLine))
         self.eraseBox.setBrush(pg.mkBrush(202, 60, 60, 40))
         self.eraseBox.setZValue(1e9)
         self.eraseBox.hide()
@@ -199,17 +203,18 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         self.parameters = OrderedDict(
-                          [('nleaves', None),
-                           ('reduction_rms', None),
-                           ('reduction_efficiency', None),
-                           ('epsilon_min', None),
-                           ('nnodes', None),
-                           ])
+            [('nleaves', None),
+             ('reduction_rms', None),
+             ('reduction_efficiency', None),
+             ('epsilon_min', None),
+             ('nnodes', None),
+             ])
 
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='quadtree',
-                                     **kwargs)
+        QKiteParameterGroup.__init__(
+            self,
+            model=scene_proxy,
+            model_attr='quadtree',
+            **kwargs)
 
         scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
         scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
@@ -334,5 +339,5 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.sig_guard = False
 
     def updateEpsilonLimits(self):
-        self.epsilon.setLimits((self.sp.quadtree.epsilon_min,
-                                3*self.sp.quadtree._epsilon_init))
+        self.epsilon.setLimits(
+            (self.sp.quadtree.epsilon_min, 3*self.sp.quadtree._epsilon_init))

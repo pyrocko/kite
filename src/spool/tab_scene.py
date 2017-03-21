@@ -1,8 +1,7 @@
 #!/usr/bin/python2
 from collections import OrderedDict
 from PySide import QtGui
-from os import path
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
+from .common import QKiteView, QKitePlot, QKiteParameterGroup, get_resource
 from ..qt_utils import loadUi
 
 import pyqtgraph as pg
@@ -88,27 +87,31 @@ class QKiteScenePlot(QKitePlot):
 class QKiteToolTransect(QtGui.QDialog):
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
-        trans_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'res/transect.ui')
-        loadUi(trans_ui, baseinstance=self)
-        self.closeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogCloseButton))
-        self.createButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_ArrowUp))
-        self.removeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogDiscardButton))
+
+        loadUi(get_resource('transect.ui'), baseinstance=self)
+
+        pxmap = self.style().standardPixmap
+
+        self.closeButton.setIcon(
+            pxmap(QtGui.QStyle.SP_DialogCloseButton))
+        self.createButton.setIcon(
+            pxmap(QtGui.QStyle.SP_ArrowUp))
+        self.removeButton.setIcon(
+            pxmap(QtGui.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None
 
-        self.trans_plot = pg.PlotDataItem(antialias=True,
-                                          fillLevel=0.,
-                                          fillBrush=pg.mkBrush(0, 127, 0,
-                                                               150))
+        self.trans_plot = pg.PlotDataItem(
+            antialias=True,
+            fillLevel=0.,
+            fillBrush=pg.mkBrush(0, 127, 0, 150))
 
         self.plt_wdgt = pg.PlotWidget()
-        self.plt_wdgt.setLabels(bottom={'Distance', 'm'},
-                                left='Displacement [m]')
+        self.plt_wdgt.setLabels(
+            bottom={'Distance', 'm'},
+            left='Displacement [m]')
+
         self.plt_wdgt.showGrid(True, True, alpha=.5)
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
@@ -122,13 +125,15 @@ class QKiteToolTransect(QtGui.QDialog):
 
     def addPolyLine(self):
         [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
-        self.poly_line = pg.PolyLineROI(positions=[(xmin+(xmax-xmin)*.4,
-                                                    ymin+(ymax-ymin)*.4),
-                                                   (xmin+(xmax-xmin)*.6,
-                                                    ymin+(ymax-ymin)*.6)],
-                                        pen=pg.mkPen('g', width=2))
+        self.poly_line = pg.PolyLineROI(
+            positions=[(xmin+(xmax-xmin)*.4,
+                        ymin+(ymax-ymin)*.4),
+                       (xmin+(xmax-xmin)*.6,
+                        ymin+(ymax-ymin)*.6)],
+            pen=pg.mkPen('g', width=2))
         self.plot.addItem(self.poly_line)
         self.updateTransPlot()
+
         self.poly_line.sigRegionChangeFinished.connect(
             self.updateTransPlot)
 
@@ -150,9 +155,9 @@ class QKiteToolTransect(QtGui.QDialog):
         transect = num.ndarray((0))
         length = 0
         for line in self.poly_line.segments:
-            transect = num.append(transect,
-                                  line.getArrayRegion(self.plot.image.image,
-                                                      self.plot.image))
+            transect = num.append(
+                transect,
+                line.getArrayRegion(self.plot.image.image, self.plot.image))
             p1, p2 = line.listPoints()
             length += (p2-p1).length()
         # interpolate over NaNs

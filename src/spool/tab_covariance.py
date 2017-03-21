@@ -5,22 +5,23 @@ import numpy as num
 import pyqtgraph as pg
 from pyqtgraph import dockarea
 
-from os import path
 from PySide import QtGui, QtCore
 from collections import OrderedDict
 from ..qt_utils import loadUi
 from ..covariance import modelCovariance
 from .common import (QKiteView, QKitePlot, QKiteParameterGroup,
-                     QKiteToolColormap)
+                     QKiteToolColormap, get_resource)
 
-analy_pen0 = pg.mkPen((51, 53, 119, 0), width=1.5)
-pen_red_dot = pg.mkPen((170, 57, 57, 255), width=2.5,
-                       style=QtCore.Qt.DotLine)
-pen_variance = pg.mkPen((94, 151, 50, 200), width=2.5,
-                        style=QtCore.Qt.DashLine)
-pen_green_dash = pg.mkPen((45, 136, 45, 200), width=2.5,
-                          style=QtCore.Qt.DashLine)
-pen_roi = pg.mkPen((45, 136, 45), width=3)
+analy_pen0 = pg.mkPen(
+    (51, 53, 119, 0), width=1.5)
+pen_red_dot = pg.mkPen(
+    (170, 57, 57, 255), width=2.5, style=QtCore.Qt.DotLine)
+pen_variance = pg.mkPen(
+    (94, 151, 50, 200), width=2.5, style=QtCore.Qt.DashLine)
+pen_green_dash = pg.mkPen(
+    (45, 136, 45, 200), width=2.5, style=QtCore.Qt.DashLine)
+pen_roi = pg.mkPen(
+    (45, 136, 45), width=3)
 
 
 class QKiteCovariance(QKiteView):
@@ -87,10 +88,12 @@ class QKiteNoisePlot(QKitePlot):
         QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
 
         llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
-        self.roi = pg.RectROI(pos=(llE, llN),
-                              size=(sizeE, sizeN),
-                              sideScalers=True,
-                              pen=pen_roi)
+        self.roi = pg.RectROI(
+            pos=(llE, llN),
+            size=(sizeE, sizeN),
+            sideScalers=True,
+            pen=pen_roi)
+
         self.roi.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
@@ -143,8 +146,10 @@ class QKiteNoisePowerspec(_QKiteSubplotPlot):
         self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
 
         self.power.setZValue(10)
-        self.plot.setLabels(bottom='Wavenumber (cycles/m)',
-                            left='Power (m<sup>2</sup>)')
+        self.plot.setLabels(
+            bottom='Wavenumber (cycles/m)',
+            left='Power (m<sup>2</sup>)')
+
         self.plot.setLogMode(x=True, y=True)
 
         self.legend = pg.LegendItem(offset=(0., .5))
@@ -361,11 +366,9 @@ class QKiteToolNoise(QtGui.QDialog):
     def __init__(self, scene_proxy, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
-        cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'res/noise_dialog.ui')
-        loadUi(cov_ui, baseinstance=self)
-        self.closeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogCloseButton))
+        loadUi(get_resource('noise_dialog.ui'), baseinstance=self)
+        self.closeButton.setIcon(
+            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.noise_patch = self.NoisePlot(scene_proxy)
@@ -375,23 +378,29 @@ class QKiteToolNoise(QtGui.QDialog):
         self.noise_synthetic.setGradientEditor(colormap)
 
         self.dockarea = dockarea.DockArea(self)
+
         self.dockarea.addDock(
-            dockarea.Dock('Covariance.noise_data',
-                          widget=self.noise_patch,
-                          size=(6, 6),
-                          autoOrientation=False,),
+            dockarea.Dock(
+                'Covariance.noise_data',
+                widget=self.noise_patch,
+                size=(6, 6),
+                autoOrientation=False,),
             position='top')
+
         self.dockarea.addDock(
-            dockarea.Dock('Covariance.syntheticNoise',
-                          widget=self.noise_synthetic,
-                          size=(6, 6),
-                          autoOrientation=False,),
+            dockarea.Dock(
+                'Covariance.syntheticNoise',
+                widget=self.noise_synthetic,
+                size=(6, 6),
+                autoOrientation=False,),
             position='bottom')
+
         self.dockarea.addDock(
-            dockarea.Dock('Colormap',
-                          widget=colormap,
-                          size=(1, 1),
-                          autoOrientation=False,),
+            dockarea.Dock(
+                'Colormap',
+                widget=colormap,
+                size=(1, 1),
+                autoOrientation=False,),
             position='right')
         self.horizontalLayoutPlot.addWidget(self.dockarea)
 
@@ -423,20 +432,23 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
 
             gradient = Gradients['thermal']
 
-            self.cmap = pg.ColorMap(pos=[c[0] for c in gradient['ticks']],
-                                    color=[c[1] for c in gradient['ticks']],
-                                    mode=gradient['mode'])
+            self.cmap = pg.ColorMap(
+                pos=[c[0] for c in gradient['ticks']],
+                color=[c[1] for c in gradient['ticks']],
+                mode=gradient['mode'])
             self.image.setLookupTable(self.cmap.getLookupTable())
 
-            self.setLabels(bottom={'Leaf #', ''},
-                           left={'Leaf #', ''})
+            self.setLabels(
+                bottom={'Leaf #', ''},
+                left={'Leaf #', ''})
+
             self.setAspectLocked(True)
             self.setMouseEnabled(x=False, y=False)
+
             self.hint = {
                 'leaf1': 0,
                 'leaf2': 0,
-                'weight': num.nan,
-            }
+                'weight': num.nan}
 
             self.hint_text.template =\
                 '<span style="font-family: monospace; color: #fff;'\
@@ -453,8 +465,9 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
 
         def transFromFrame(self):
             # self.resetTransform()
-            self.setRange(xRange=(0, self.scene_proxy.quadtree.nleaves),
-                          yRange=(0, self.scene_proxy.quadtree.nleaves))
+            self.setRange(
+                xRange=(0, self.scene_proxy.quadtree.nleaves),
+                yRange=(0, self.scene_proxy.quadtree.nleaves))
 
         @QtCore.Slot(object)
         def mouseMoved(self, event=None):
@@ -483,20 +496,21 @@ class QKiteToolWeightMatrix(QtGui.QDialog):
     def __init__(self, scene_proxy, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
-        cov_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'res/covariance_matrix.ui')
-        loadUi(cov_ui, baseinstance=self)
-        self.closeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogCloseButton))
+        loadUi(get_resource('covariance_matrix.ui'), baseinstance=self)
+        self.closeButton.setIcon(
+            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
 
         self.weight_matrix = self.MatrixPlot(scene_proxy)
         self.dockarea = dockarea.DockArea(self)
+
         self.dockarea.addDock(
-            dockarea.Dock('Covariance.weight_matrix_focal',
-                          widget=self.weight_matrix,
-                          size=(4, 4),
-                          autoOrientation=False,),
+            dockarea.Dock(
+                'Covariance.weight_matrix_focal',
+                widget=self.weight_matrix,
+                size=(4, 4),
+                autoOrientation=False,),
             position='left')
+
         self.horizontalLayoutPlot.addWidget(self.dockarea)
 
     def closeEvent(self, ev):
@@ -550,7 +564,8 @@ class QKiteParamCovariance(QKiteParameterGroup):
             ])
 
         scene_proxy.sigCovarianceChanged.connect(self.updateValues)
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='covariance',
-                                     **kwargs)
+        QKiteParameterGroup.__init__(
+            self,
+            model=scene_proxy,
+            model_attr='covariance',
+            **kwargs)

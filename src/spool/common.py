@@ -3,16 +3,22 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
 from PySide import QtCore
+from os import path
 import time
 import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
+
 from pyqtgraph import dockarea
 from ..qt_utils import _viridis_data
 from ..meta import calcPrecission, formatScalar
 
 __all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
            'QKiteParameterGroup']
+
+
+def get_resource(filename):
+    return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
 
 
 class QKiteView(dockarea.DockArea):

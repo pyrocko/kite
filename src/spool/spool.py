@@ -6,8 +6,8 @@ from .tab_quadtree import QKiteQuadtree  # noqa
 from .tab_covariance import QKiteCovariance  # noqa
 from ..qt_utils import loadUi, validateFilename
 from ..scene import Scene
+from .common import get_resource
 
-from os import path
 import sys
 import time  # noqa
 import logging
@@ -16,11 +16,9 @@ import pyqtgraph as pg
 
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None, import_data=None, load_file=None):
-        QtGui.QApplication.__init__(self, ['spool'])
+        QtGui.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
-        splash_img = QtGui.QPixmap(
-            path.join(path.dirname(path.realpath(__file__)),
-                      'res/spool_splash.png'))\
+        splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         self.splash = QtGui.QSplashScreen(
             splash_img, QtCore.Qt.WindowStaysOnTopHint)
@@ -129,16 +127,11 @@ class SpoolMainWindow(QtGui.QMainWindow):
     @property
     def about(self):
         self._about = QtGui.QDialog()
-        about_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'res/about.ui')
-        loadUi(about_ui, baseinstance=self._about)
+        loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
     def loadUi(self):
-        ui_file = path.join(path.dirname(path.realpath(__file__)),
-                            'res/spool.ui')
-        loadUi(ui_file, baseinstance=self)
-        return
+        loadUi(get_resource('spool.ui'), baseinstance=self)
 
     def addScene(self, scene):
         self.scene_proxy.setScene(scene)
@@ -315,10 +308,7 @@ class SceneLog(QtGui.QDialog):
 
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
-
-        log_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'res/logging.ui')
-        loadUi(log_ui, baseinstance=self)
+        loadUi(get_resource('logging.ui'), baseinstance=self)
 
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))
