@@ -1,8 +1,18 @@
-from PySide import QtGui
+from PySide import QtGui, QtCore
 from pyqtgraph import dockarea
 import pyqtgraph as pg
 
+from .config import getConfig
+
 import numpy as num
+
+
+config = getConfig()
+
+
+class CursorTracker(QtCore.QObject):
+    sigCursorMoved = QtCore.Signal(object)
+    sigMouseMoved = QtCore.Signal(object)
 
 
 class ModelLayout(pg.GraphicsLayoutWidget):
@@ -10,23 +20,33 @@ class ModelLayout(pg.GraphicsLayoutWidget):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.model = model
 
+        self.cursor_track = CursorTracker()
+
         self.plots = [
             ModelPlot(
                 model,
                 title='North',
+                cursor_track=self.cursor_track,
                 component=lambda m: m.north),
             ModelPlot(
                 model,
                 title='East',
+                cursor_track=self.cursor_track,
                 component=lambda m: m.east),
             ModelPlot(
                 model,
                 title='Down',
+                cursor_track=self.cursor_track,
                 component=lambda m: m.down),
             ModelPlot(
                 model,
                 title='LOS',
+                cursor_track=self.cursor_track,
                 component=lambda m: m.displacement)]
+
+        self._mov_sig = pg.SignalProxy(
+            self.scene().sigMouseMoved,
+            rateLimit=60, slot=self.mouseMoved)
 
         for ip, plt in enumerate(self.plots):
             row = ip / 2
@@ -54,16 +74,37 @@ class ModelLayout(pg.GraphicsLayoutWidget):
         self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
         self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
 
+    @QtCore.Slot(object)
+    def mouseMoved(self, event):
+        self.cursor_track.sigMouseMoved.emit(event)
+
+
+class CursorRect(QtGui.QGraphicsRectItem):
+    pen = pg.mkPen((0, 0, 0, 120), width=1.)
+    cursor = QtCore.QRectF(
+        (QtCore.QPointF(-1.5, -1.5)),
+        (QtCore.QPointF(1.5, 1.5)))
+
+    def __init__(self):
+        QtGui.QGraphicsRectItem.__init__(self, self.cursor)
+        self.setPen(self.pen)
+        self.setZValue(1e9)
+        self.setFlag(QtGui.QGraphicsItem.ItemIgnoresTransformations)
+
 
 class ModelPlot(pg.PlotItem):
 
     position = 'left'
 
-    def __init__(self, model, component, title='Untitled'):
+    def __init__(self, model, component, title='Untitled', cursor_track=None):
         pg.PlotItem.__init__(self)
         self.title = title
         self.model = model
         self.component = component
+
+        self.cursor_track = cursor_track
+        self.cursor = CursorRect()
+        self.addCursor()
 
         self.setAspectLocked(True)
         self.setLabels(
@@ -91,6 +132,25 @@ class ModelPlot(pg.PlotItem):
         self.image.scale(
             self.model.frame.dE,
             self.model.frame.dN)
+
+    def addCursor(self):
+        if config.show_cursor:
+            self.cursor_track.sigCursorMoved.connect(self.drawCursor)
+            self.cursor_track.sigMouseMoved.connect(self.mouseMoved)
+            self.addItem(self.cursor)
+
+    @QtCore.Slot(object)
+    def mouseMoved(self, event):
+        if self.vb.sceneBoundingRect().contains(event[0]):
+            map_pos = self.vb.mapSceneToView(event[0])
+            self.cursor_track.sigCursorMoved.emit(map_pos)
+            self.cursor.hide()
+        else:
+            self.cursor.show()
+
+    @QtCore.Slot(object)
+    def drawCursor(self, pos):
+        self.cursor.setPos(pos)
 
 
 class ModelDockarea(dockarea.DockArea):
@@ -139,14 +199,12 @@ class ColormapPlots(pg.HistogramLUTWidget):
 
     def setSymColormap(self):
         cmap = {'ticks':
-                [[0., (0, 0, 0, 255)],
-                 [1e-3, (106, 0, 31, 255)],
+                [[0, (106, 0, 31, 255)],
                  [.5, (255, 255, 255, 255)],
                  [1., (8, 54, 104, 255)]],
                 'mode': 'rgb'}
         cmap = {'ticks':
-                [[0., (0, 0, 0)],
-                 [1e-3, (172, 56, 56)],
+                [[0, (172, 56, 56)],
                  [.5, (255, 255, 255)],
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
@@ -177,13 +235,3 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.sigLevelChangeFinished.connect(updateLevels)
         self.sigLevelsChanged.connect(updateLevels)
         updateLevels()
-
-
-class SourcesList(QtGui.QDockWidget):
-
-    def __init__(self, model, *args, **kwargs):
-        QtGui.QDockWidget.__init__(self, *args, **kwargs)
-        self.model = model
-
-        self.list = QtGui.QListView(self)
-        self.addWidget(self.list)

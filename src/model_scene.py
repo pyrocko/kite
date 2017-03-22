@@ -17,7 +17,7 @@ class ModelSceneConfig(Object):
         default=FrameConfig(),
         help='Frame/reference configuration')
     extent_north = Int.T(
-        default=600,
+        default=900,
         help='Model size towards north in [px]')
     extent_east = Int.T(
         default=800,
@@ -108,7 +108,7 @@ class ModelScene(BaseScene):
             sources = [s for s in self.sources
                        if s.__implements__ == processor.__implements__]
             result = processor.process(
-                sources, self.frame.coordinates, nthreads=1)
+                sources, self.frame.coordinates, nthreads=0)
             results.append(result)
 
         for r in results:
