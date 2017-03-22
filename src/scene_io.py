@@ -449,6 +449,12 @@ class ROI_PAC(SceneIO):
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
+        heading = par['HEADING_DEG']
+        look_ref1 = par['LOOK_REF1']
+        look_ref2 = par['LOOK_REF2']
+        look_ref3 = par['LOOK_REF3']
+        look_ref4 = par['LOOK_REF4']
+        look = num.mean(num.array([look_ref1,look_ref2,look_ref3,look_ref4]))
 
         data = num.memmap(filename, dtype='<f4')
         data = data.reshape(nlines, nrows*2)
@@ -464,10 +470,8 @@ class ROI_PAC(SceneIO):
 
         c = self.container
         c['displacement'] = displ
-        c['theta'] = 2 * num.pi
-        c['phi'] = 0.
-        self._log.warning('NOT IMPLEMENTED - '
-                          'Theta and phi are defaulting to vertical incident!')
+        c['theta'] = 90. - look
+        c['phi'] = -heading - 180
 
         c['meta']['title'] = par.get('TITLE', 'None')
         c['meta']['wavelength'] = par['WAVELENGTH']
