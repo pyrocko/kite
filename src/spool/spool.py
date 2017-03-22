@@ -1,42 +1,27 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
 from .scene_proxy import QSceneProxy
-from .tab_scene import QKiteScene
-from .tab_quadtree import QKiteQuadtree  # noqa
-from .tab_covariance import QKiteCovariance  # noqa
-from .utils_qt import loadUi
+from .tab_scene import KiteScene
+from .tab_quadtree import KiteQuadtree  # noqa
+from .tab_covariance import KiteCovariance  # noqa
+from ..qt_utils import loadUi, validateFilename
 from ..scene import Scene
+from .common import get_resource
 
-from os import path
-import os
 import sys
 import time  # noqa
 import logging
 import pyqtgraph as pg
 
 
-def validateFilename(filename):
-    filedir = path.dirname(filename)
-    if filename == '' or filedir == '':
-        return False
-    if path.isdir(filename) or not os.access(filedir, os.W_OK):
-        QtGui.QMessageBox.critical(None, 'Path Error',
-                                   'Could not access file <b>%s</b>'
-                                   % filename)
-        return False
-    return True
-
-
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None, import_data=None, load_file=None):
-        QtGui.QApplication.__init__(self, ['spool'])
+        QtGui.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
-        splash_img = QtGui.QPixmap(
-            path.join(path.dirname(path.realpath(__file__)),
-                      'ui/spool_splash.png'))\
+        splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        self.splash = QtGui.QSplashScreen(splash_img,
-                                          QtCore.Qt.WindowStaysOnTopHint)
+        self.splash = QtGui.QSplashScreen(
+            splash_img, QtCore.Qt.WindowStaysOnTopHint)
         self.updateSplashMessage('Scene')
         self.splash.show()
         self.processEvents()
@@ -91,9 +76,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
 
-        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
+        self.views = [KiteScene, KiteQuadtree, KiteCovariance]
 
-        self.ptree = QKiteParameterTree(showHeader=True)
+        self.ptree = KiteParameterTree(showHeader=True)
         self.ptree.resize(100, 100)
         self.splitter.insertWidget(0, self.ptree)
 
@@ -142,24 +127,19 @@ class SpoolMainWindow(QtGui.QMainWindow):
     @property
     def about(self):
         self._about = QtGui.QDialog()
-        about_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'ui/about.ui')
-        loadUi(about_ui, baseinstance=self._about)
+        loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
     def loadUi(self):
-        ui_file = path.join(path.dirname(path.realpath(__file__)),
-                            'ui/spool.ui')
-        loadUi(ui_file, baseinstance=self)
-        return
+        loadUi(get_resource('spool.ui'), baseinstance=self)
 
     def addScene(self, scene):
         self.scene_proxy.setScene(scene)
         self.buildViews()
 
     def buildViews(self):
-        self.setWindowTitle('Spool - %s'
-                            % self.scene_proxy.scene.meta.filename)
+        title = self.scene_proxy.scene.meta.filename or 'Untitled'
+        self.setWindowTitle('Spool - %s' % title)
         if self.scene_proxy.scene is None or self.tabs.count() != 0:
             return
         for v in self.views:
@@ -186,7 +166,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.save_config(filename)
+        self.scene_proxy.scene.saveConfig(filename)
 
     def onSaveData(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -243,7 +223,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         pass
 
 
-class QKiteParameterTree(pg.parametertree.ParameterTree):
+class KiteParameterTree(pg.parametertree.ParameterTree):
     pass
 
 
@@ -328,10 +308,7 @@ class SceneLog(QtGui.QDialog):
 
     def __init__(self, parent=None):
         QtGui.QDialog.__init__(self, parent)
-
-        log_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/logging.ui')
-        loadUi(log_ui, baseinstance=self)
+        loadUi(get_resource('logging.ui'), baseinstance=self)
 
         self.closeButton.setIcon(self.style().standardPixmap(
                                  QtGui.QStyle.SP_DialogCloseButton))

@@ -2,32 +2,33 @@
 from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
-from PySide import QtCore, QtGui
-from .utils_qt import SliderWidgetParameterItem
-from .common import QKiteView, QKitePlot, QKiteParameterGroup
-from ..quadtree import QuadtreeConfig
 from collections import OrderedDict
+from PySide import QtCore, QtGui
+from .common import KiteView, KitePlot, KiteParameterGroup
+from ..qt_utils import SliderWidgetParameterItem
+from ..quadtree import QuadtreeConfig
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
-class QKiteQuadtree(QKiteView):
+class KiteQuadtree(KiteView):
     title = 'Scene.quadtree'
 
     def __init__(self, spool):
         scene_proxy = spool.scene_proxy
-        self.main_widget = QKiteQuadtreePlot(scene_proxy)
+        self.main_widget = KiteQuadtreePlot(scene_proxy)
         self.tools = {}
 
-        self.param_quadtree = QKiteParamQuadtree(scene_proxy,
-                                                 self.main_widget,
-                                                 expanded=True)
+        self.param_quadtree = KiteParamQuadtree(
+            scene_proxy,
+            self.main_widget,
+            expanded=True)
         self.parameters = [self.param_quadtree]
 
         scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
 
-        QKiteView.__init__(self)
+        KiteView.__init__(self)
 
     def modelChanged(self):
         self.main_widget.update()
@@ -59,7 +60,7 @@ class QQuadLeaf(QtCore.QRectF):
         return item
 
 
-class QKiteQuadtreePlot(QKitePlot):
+class KiteQuadtreePlot(KitePlot):
     def __init__(self, scene_proxy):
 
         self.components_available = {
@@ -76,28 +77,31 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self._component = 'median'
 
-        QKitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
         # focalpoint_outline_color = (255, 255, 255, 200)
         focalpoint_outline_color = (3, 212, 3)
-        self.focal_points =\
-            pg.ScatterPlotItem(size=3.,
-                               pen=pg.mkPen(focalpoint_outline_color,
-                                            width=.5),
-                               brush=pg.mkBrush(focalpoint_color),
-                               antialias=True)
+        self.focal_points = pg.ScatterPlotItem(
+            size=3.,
+            pen=pg.mkPen(
+                focalpoint_outline_color,
+                width=.5),
+            brush=pg.mkBrush(focalpoint_color),
+            antialias=True)
 
         self.setMenuEnabled(False)
 
-        self.highlighted_leafs = []
-        self.selected_leafs = []
+        self.highlighted_leaves = []
+        self.selected_leaves = []
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
-        self.eraseBox.setPen(pg.mkPen((202, 60, 60),
-                                      width=1,
-                                      style=QtCore.Qt.DotLine))
+        self.eraseBox.setPen(
+            pg.mkPen(
+                (202, 60, 60),
+                width=1,
+                style=QtCore.Qt.DotLine))
         self.eraseBox.setBrush(pg.mkBrush(202, 60, 60, 40))
         self.eraseBox.setZValue(1e9)
         self.eraseBox.hide()
@@ -105,7 +109,7 @@ class QKiteQuadtreePlot(QKitePlot):
 
         self.vb = self.getViewBox()
         self.vb.mouseDragEvent = self.mouseDragEvent
-        self.vb.keyPressEvent = self.blacklistSelectedLeafs
+        self.vb.keyPressEvent = self.blacklistSelectedLeaves
 
         self.addItem(self.focal_points)
 
@@ -113,7 +117,7 @@ class QKiteQuadtreePlot(QKitePlot):
             if self._component == 'weight':
                 self.update()
 
-        self.scene_proxy.sigQuadtreeChanged.connect(self.unselectLeafs)
+        self.scene_proxy.sigQuadtreeChanged.connect(self.unselectLeaves)
         self.scene_proxy.sigQuadtreeChanged.connect(self.update)
         self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
         self.scene_proxy.sigCovarianceChanged.connect(covarianceChanged)
@@ -153,39 +157,39 @@ class QKiteQuadtreePlot(QKitePlot):
         ev.accept()
         if ev.isFinish():
             self.eraseBox.hide()
-            self.selectLeafs()
+            self.selectLeaves()
         else:
             self.updateEraseBox(ev.buttonDownPos(), ev.pos())
 
-    def getQleafs(self):
-        return [QQuadLeaf(l) for l in self.scene_proxy.quadtree.leafs]
+    def getQleaves(self):
+        return [QQuadLeaf(l) for l in self.scene_proxy.quadtree.leaves]
 
-    def selectLeafs(self):
-        self.unselectLeafs()
+    def selectLeaves(self):
+        self.unselectLeaves()
 
-        self.selected_leafs = [l for l in self.getQleafs()
-                               if self.eraseBox.r.contains(l)]
-        for l in self.selected_leafs:
+        self.selected_leaves = [l for l in self.getQleaves()
+                                if self.eraseBox.r.contains(l)]
+        for l in self.selected_leaves:
             rect_leaf = l.getRectItem()
-            self.highlighted_leafs.append(rect_leaf)
+            self.highlighted_leaves.append(rect_leaf)
             self.addItem(rect_leaf)
 
-    def unselectLeafs(self):
-        if self.selected_leafs:
-            for l in self.highlighted_leafs:
+    def unselectLeaves(self):
+        if self.selected_leaves:
+            for l in self.highlighted_leaves:
                 self.removeItem(l)
-            del self.highlighted_leafs
-            del self.selected_leafs
-            self.highlighted_leafs = []
-            self.selected_leafs = []
+            del self.highlighted_leaves
+            del self.selected_leaves
+            self.highlighted_leaves = []
+            self.selected_leaves = []
 
-    def blacklistSelectedLeafs(self, ev):
+    def blacklistSelectedLeaves(self, ev):
         if ev.key() & QtCore.Qt.Key_Delete:
-            self.scene_proxy.quadtree.blacklistLeafs(
-                l.id for l in self.selected_leafs)
+            self.scene_proxy.quadtree.blacklistLeaves(
+                l.id for l in self.selected_leaves)
 
 
-class QKiteParamQuadtree(QKiteParameterGroup):
+class KiteParamQuadtree(KiteParameterGroup):
     sigEpsilon = QtCore.Signal(float)
     sigNanFraction = QtCore.Signal(float)
     sigTileMaximum = QtCore.Signal(float)
@@ -199,17 +203,18 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
         self.parameters = OrderedDict(
-                          [('nleafs', None),
-                           ('reduction_rms', None),
-                           ('reduction_efficiency', None),
-                           ('epsilon_min', None),
-                           ('nnodes', None),
-                           ])
+            [('nleaves', None),
+             ('reduction_rms', None),
+             ('reduction_efficiency', None),
+             ('epsilon_min', None),
+             ('nnodes', None),
+             ])
 
-        QKiteParameterGroup.__init__(self,
-                                     model=scene_proxy,
-                                     model_attr='quadtree',
-                                     **kwargs)
+        KiteParameterGroup.__init__(
+            self,
+            model=scene_proxy,
+            model_attr='quadtree',
+            **kwargs)
 
         scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
         scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
@@ -334,5 +339,5 @@ class QKiteParamQuadtree(QKiteParameterGroup):
         self.sig_guard = False
 
     def updateEpsilonLimits(self):
-        self.epsilon.setLimits((self.sp.quadtree.epsilon_min,
-                                3*self.sp.quadtree._epsilon_init))
+        self.epsilon.setLimits(
+            (self.sp.quadtree.epsilon_min, 3*self.sp.quadtree._epsilon_init))

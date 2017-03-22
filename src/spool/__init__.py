@@ -1,6 +1,4 @@
 #!/bin/python
 from .spool import Spool
 
-__all__ = '''
-Spool
-'''.split()
+__all__ = ['Spool']

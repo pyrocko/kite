@@ -2,23 +2,23 @@
 import unittest
 import os.path
 import numpy as num
-from kite import Scene, SceneTest
+from kite import Scene, TestScene
 
 
 class TestSyntheticsGenerators(unittest.TestCase):
     def testGauss(self):
-        SceneTest.createGauss()
+        TestScene.createGauss()
 
     def testFractal(self):
-        SceneTest.createFractal()
+        TestScene.createFractal()
 
     def testSine(self):
-        SceneTest.createSine()
+        TestScene.createSine()
 
 
 class TestSyntheticScene(unittest.TestCase):
     def setUp(self):
-        self.sc = SceneTest.createGauss()
+        self.sc = TestScene.createGauss()
         self.sc.setLogLevel('ERROR')
         self.sc.quadtree.epsilon = .02
         self.sc.covariance.subsampling = 24

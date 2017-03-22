@@ -16,11 +16,12 @@ BriDGes DFG Project, University of Kiel
  Marius Isken (marius.isken@gfz-potsdam.de)
  Henriette Sudhaus'''
     desc = 'InSAR deformation inspector, quadtree and covariance'
+
     parser = ap.ArgumentParser(
         prog='spool',
         epilog=epilog,
         description=desc,
-        version='0.0.1',
+        version='0.2',
         parents=[],
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',
@@ -56,13 +57,13 @@ Available Synthetic Displacement:
 
     sc = None
     if ns.synthetic is not None:
-        from kite import SceneTest
+        from kite import TestScene
         if ns.synthetic == 'fractal':
-            sc = SceneTest.createFractal()
+            sc = TestScene.createFractal()
         elif ns.synthetic == 'sine':
-            sc = SceneTest.createSine()
+            sc = TestScene.createSine()
         elif ns.synthetic == 'gauss':
-            sc = SceneTest.createFractal()
+            sc = TestScene.createFractal()
         else:
             parser.print_help()
             sys.exit(0)
@@ -73,4 +74,3 @@ Available Synthetic Displacement:
         Spool(import_data=ns.load)
     elif ns.file is not None:
         Spool(load_file=ns.file)
-    sys.exit(0)

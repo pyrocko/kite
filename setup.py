@@ -97,8 +97,7 @@ setup(
     author='Marius P. Isken, Henriette Sudhaus;'
            'BriDGes Emmily Noether-Programm (DFG)',
     author_email='misken@geophysik.uni-kiel.de',
-
-    license='GPL',
+    license='GPLv3',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
@@ -113,33 +112,59 @@ setup(
         'Operating System :: POSIX',
         'Operating System :: MacOS',
         ],
-    keywords=['insar satellite radar earthquake optimization'],
+    keywords=[
+        'insar satellite radar earthquake optimization'],
 
-    install_requires=['numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
-                      'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
-    packages=['kite', 'kite.spool'],
-    package_dir={'kite': 'src'},
-    package_data={'kite': ['spool/ui/*']},
+    install_requires=[
+        'numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
+        'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
+    packages=[
+        'kite',
+        'kite.models',
+        'kite.spool',
+        'kite.talpa'],
+    package_dir={
+        'kite': 'src'},
+    package_data={
+        'kite': ['spool/res/*',
+                 'talpa/res/*']},
     entry_points={
-        'console_scripts': ['spool = kite.spool.__main__:main'],
-    },
-
+        'console_scripts':
+            ['spool = kite.spool.__main__:main',
+             'talpa = kite.talpa.__main__:main']},
     ext_package='kite',
     ext_modules=[
-        Extension('covariance_ext',
-                  sources=[pjoin('src/ext', 'covariance_ext.c')],
-                  include_dirs=[numpy.get_include()],
-                  define_macros=None,
-                  undef_macros=None,
-                  library_dirs=None,
-                  libraries=None,
-                  runtime_library_dirs=None,
-                  extra_objects=None,
-                  extra_compile_args=[] + omp_arg,
-                  extra_link_args=[] + omp_lib,
-                  export_symbols=None,
-                  swig_opts=None,
-                  depends=None,
-                  language=None),
+        Extension(
+            'covariance_ext',
+            sources=[pjoin('src/ext', 'covariance.c')],
+            include_dirs=[numpy.get_include()],
+            define_macros=None,
+            undef_macros=None,
+            library_dirs=None,
+            libraries=None,
+            runtime_library_dirs=None,
+            extra_objects=None,
+            extra_compile_args=[] + omp_arg,
+            extra_link_args=[] + omp_lib,
+            export_symbols=None,
+            swig_opts=None,
+            depends=None,
+            language=None),
+        Extension(
+            'disloc_ext',
+            sources=[pjoin('src/models/ext', 'disloc.c')],
+            include_dirs=[numpy.get_include()],
+            define_macros=None,
+            undef_macros=None,
+            library_dirs=None,
+            libraries=None,
+            runtime_library_dirs=None,
+            extra_objects=None,
+            extra_compile_args=[] + omp_arg,
+            extra_link_args=[] + omp_lib,
+            export_symbols=None,
+            swig_opts=None,
+            depends=None,
+            language=None),
     ]
 )

@@ -79,6 +79,18 @@ _viridis_data = [[68, 1, 84],
 _viridis_data.reverse()
 
 
+def validateFilename(filename):
+    filedir = os.path.dirname(filename)
+    if filename == '' or filedir == '':
+        return False
+    if os.path.isdir(filename) or not os.access(filedir, os.W_OK):
+        QtGui.QMessageBox.critical(None, 'Path Error',
+                                   'Could not access file <b>%s</b>'
+                                   % filename)
+        return False
+    return True
+
+
 # -*- coding: utf-8 -*-
 # Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
 # Modifications by Charl Botha <cpbotha@vxlabs.com>
