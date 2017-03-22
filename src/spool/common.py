@@ -217,7 +217,7 @@ class KitePlot(pg.PlotWidget):
     @QtCore.Slot(object)
     def mouseMoved(self, event=None):
         if event is None:
-            pass
+            return
         elif self.image.sceneBoundingRect().contains(event[0]):
             map_pos = self.plotItem.vb.mapSceneToView(event[0])
             if not map_pos.isNull():

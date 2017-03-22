@@ -78,9 +78,11 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
         self.views = [KiteScene, KiteQuadtree, KiteCovariance]
 
-        self.ptree = KiteParameterTree(showHeader=True)
-        self.ptree.resize(100, 100)
-        self.splitter.insertWidget(0, self.ptree)
+        self.ptree = KiteParameterTree(showHeader=False)
+        self.ptree_dock = QtGui.QDockWidget('Parameters', self)
+        self.ptree_dock.setWidget(self.ptree)
+        self.addDockWidget(
+            QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
 
         self.scene_proxy = QSceneProxy()
         self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
