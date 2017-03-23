@@ -1,0 +1,1 @@
+PyQtGraphROI = 99999
