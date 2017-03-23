@@ -3,6 +3,7 @@ from pyqtgraph import dockarea
 import pyqtgraph as pg
 
 from .config import getConfig
+from .common import PyQtGraphROI
 
 import numpy as num
 
@@ -10,38 +11,27 @@ import numpy as num
 config = getConfig()
 
 
-class CursorTracker(QtCore.QObject):
-    sigCursorMoved = QtCore.Signal(object)
-    sigMouseMoved = QtCore.Signal(object)
-
-
-class ModelLayout(pg.GraphicsLayoutWidget):
-    def __init__(self, model, *args, **kwargs):
+class PlotLayout(pg.GraphicsLayoutWidget):
+    def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
-        self.model = model
-
-        self.cursor_track = CursorTracker()
+        self.sandbox = sandbox
 
         self.plots = [
-            ModelPlot(
-                model,
+            DisplacementPlot(
+                sandbox,
                 title='North',
-                cursor_track=self.cursor_track,
                 component=lambda m: m.north),
-            ModelPlot(
-                model,
+            DisplacementPlot(
+                sandbox,
                 title='East',
-                cursor_track=self.cursor_track,
                 component=lambda m: m.east),
-            ModelPlot(
-                model,
+            DisplacementPlot(
+                sandbox,
                 title='Down',
-                cursor_track=self.cursor_track,
                 component=lambda m: m.down),
-            ModelPlot(
-                model,
+            DisplacementPlot(
+                sandbox,
                 title='LOS',
-                cursor_track=self.cursor_track,
                 component=lambda m: m.displacement)]
 
         self._mov_sig = pg.SignalProxy(
@@ -76,7 +66,7 @@ class ModelLayout(pg.GraphicsLayoutWidget):
 
     @QtCore.Slot(object)
     def mouseMoved(self, event):
-        self.cursor_track.sigMouseMoved.emit(event)
+        self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
 
 
 class CursorRect(QtGui.QGraphicsRectItem):
@@ -92,17 +82,16 @@ class CursorRect(QtGui.QGraphicsRectItem):
         self.setFlag(QtGui.QGraphicsItem.ItemIgnoresTransformations)
 
 
-class ModelPlot(pg.PlotItem):
+class DisplacementPlot(pg.PlotItem):
 
     position = 'left'
 
-    def __init__(self, model, component, title='Untitled', cursor_track=None):
+    def __init__(self, sandbox, component, title='Untitled'):
         pg.PlotItem.__init__(self)
         self.title = title
-        self.model = model
+        self.sandbox = sandbox
         self.component = component
 
-        self.cursor_track = cursor_track
         self.cursor = CursorRect()
         self.addCursor()
 
@@ -117,33 +106,55 @@ class ModelPlot(pg.PlotItem):
             useOpenGL=True)
         self.addItem(self.image)
 
+        self.sandbox.sigModelChanged.connect(self.update)
+        # self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
+        # self.sandbox.sources.modelReset.connect(self.addSourceROIS)
+
+        self.rois = []
+
         self.update()
-        self.transFromFrame()
+        self.addSourceROIS()
 
     @property
     def data(self):
-        return self.component(self.model)
+        return self.component(self.sandbox.model)
 
+    @QtCore.Slot()
     def update(self):
         self.image.updateImage(self.data.T)
+        self.transFromFrame()
 
     def transFromFrame(self):
         self.image.resetTransform()
         self.image.scale(
-            self.model.frame.dE,
-            self.model.frame.dN)
+            self.sandbox.frame.dE,
+            self.sandbox.frame.dN)
+
+    def addSourceROIS(self):
+        index = QtCore.QModelIndex()
+        for isrc in xrange(self.sandbox.sources.rowCount(index)):
+            index = self.sandbox.sources.index(isrc, 0, index)
+            roi = index.data(PyQtGraphROI)
+            self.rois.append(roi)
+            self.addItem(roi)
+
+    def removeSourceROIS(self):
+        for roi in self.rois:
+            self.removeItem(roi)
+            self.rois.remove(roi)
 
     def addCursor(self):
         if config.show_cursor:
-            self.cursor_track.sigCursorMoved.connect(self.drawCursor)
-            self.cursor_track.sigMouseMoved.connect(self.mouseMoved)
+            self.sandbox.cursor_tracker.sigCursorMoved.connect(self.drawCursor)
+            self.sandbox.cursor_tracker.sigMouseMoved.connect(self.mouseMoved)
             self.addItem(self.cursor)
 
     @QtCore.Slot(object)
     def mouseMoved(self, event):
         if self.vb.sceneBoundingRect().contains(event[0]):
             map_pos = self.vb.mapSceneToView(event[0])
-            self.cursor_track.sigCursorMoved.emit(map_pos)
+
+            self.sandbox.cursor_tracker.sigCursorMoved.emit(map_pos)
             self.cursor.hide()
         else:
             self.cursor.show()
@@ -153,12 +164,12 @@ class ModelPlot(pg.PlotItem):
         self.cursor.setPos(pos)
 
 
-class ModelDockarea(dockarea.DockArea):
+class PlotDockarea(dockarea.DockArea):
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, sandbox, *args, **kwargs):
         dockarea.DockArea.__init__(self)
 
-        layout = ModelLayout(model)
+        layout = PlotLayout(sandbox)
         cmap = ColormapPlots(plot=layout.plots[0])
         for plt in layout.plots:
             cmap.addPlot(plt)

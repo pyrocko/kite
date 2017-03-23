@@ -5,7 +5,7 @@ from meta import Subject, property_cached
 from scene import BaseScene, FrameConfig
 
 # Import the modeling backends
-from .models import DislocProcessor
+from .sources import DislocProcessor
 
 
 processors_available = [DislocProcessor]
@@ -34,6 +34,7 @@ class ModelScene(BaseScene):
     def __init__(self, config=ModelSceneConfig(), **kwargs):
         self.config = config
         self.sources = self.config.sources
+        self.evModelChanged = Subject()
 
         frame_config = kwargs.pop('frame_config', None)
         if frame_config is not None:
@@ -68,11 +69,6 @@ class ModelScene(BaseScene):
 
         self.evChanged.notify()
 
-    def _clearModel(self):
-        for arr in [self.north, self.east, self.down]:
-            arr.fill(0.)
-        self.displacement = None
-
     @property_cached
     def displacement(self):
         self.processGrid()
@@ -84,23 +80,9 @@ class ModelScene(BaseScene):
              los_fac[:, :, 2] * self.north)
         return self._displacement
 
-    def _LOSFactors(self):
-        if (self.theta.size != self.phi.size):
-            raise AttributeError('LOS angles inconsistent with provided'
-                                 ' coordinate shape.')
-        if self._los_factors is None:
-            self._los_factors = num.empty((self.theta.shape[0],
-                                           self.theta.shape[1],
-                                           3))
-            self._los_factors[:, :, 0] = num.sin(self.theta)
-            self._los_factors[:, :, 1] = num.cos(self.theta)\
-                * num.cos(self.phi)
-            self._los_factors[:, :, 2] = num.cos(self.theta)\
-                * num.sin(self.phi)
-        return self._los_factors
-
     def addSource(self, source):
         self.sources.append(source)
+        source.evParametersChanged.subscribe(self._clearModel)
 
     def processGrid(self):
         results = []
@@ -133,6 +115,75 @@ class ModelScene(BaseScene):
             theta=self.theta,
             phi=self.phi,
             config=config)
+
+    def _clearModel(self):
+        for arr in [self.north, self.east, self.down]:
+            arr.fill(0.)
+        self.displacement = None
+        self.evModelChanged.notify()
+
+    def _LOSFactors(self):
+        if (self.theta.size != self.phi.size):
+            raise AttributeError('LOS angles inconsistent with provided'
+                                 ' coordinate shape.')
+        if self._los_factors is None:
+            self._los_factors = num.empty((self.theta.shape[0],
+                                           self.theta.shape[1],
+                                           3))
+            self._los_factors[:, :, 0] = num.sin(self.theta)
+            self._los_factors[:, :, 1] = num.cos(self.theta)\
+                * num.cos(self.phi)
+            self._los_factors[:, :, 2] = num.cos(self.theta)\
+                * num.sin(self.phi)
+        return self._los_factors
+
+
+class TestModelScene(ModelScene):
+
+    @classmethod
+    def randomOkada(cls, nsources=1):
+        from .sources import OkadaSource
+        model_scene = cls()
+
+        def r(lo, hi):
+            return float(num.random.randint(
+                lo, high=hi, size=1))
+
+        for s in xrange(nsources):
+            length = r(5000, 15000)
+            model_scene.addSource(
+                OkadaSource(
+                    easting=r(length, model_scene.frame.E.max()-length),
+                    northing=r(length, model_scene.frame.N.max()-length),
+                    depth=r(0, 8000),
+                    strike=r(0, 360),
+                    dip=r(0, 170),
+                    slip=r(1, 5),
+                    rake=r(0, 180),
+                    length=length,
+                    width=15. * length**.66,))
+        return model_scene
+
+    @classmethod
+    def simpleOkada(cls, **kwargs):
+        from .sources import OkadaSource
+        model_scene = cls()
+
+        parameters = {
+            'easting': 50000,
+            'northing': 50000,
+            'depth': 0,
+            'strike': 180.,
+            'dip': 20,
+            'slip': 2,
+            'rake': 90,
+            'length': 10000,
+            'width': 15. * 10000**.66,
+        }
+        parameters.update(kwargs)
+
+        model_scene.addSource(OkadaSource(**parameters))
+        return model_scene
 
 
 class ProcessorProfile(dict):

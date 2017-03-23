@@ -1,6 +1,7 @@
 import numpy as num
 
 from kite import disloc_ext
+from ..meta import Subject
 from pyrocko.guts import Object, Float, List, Bool
 
 d2r = num.pi / 180.
@@ -40,6 +41,10 @@ class OkadaSource(Object):
         help='Opening of the plane in [m]',
         optional=True,
         default=0.)
+
+    def __init__(self, *args, **kwargs):
+        Object.__init__(self, *args, **kwargs)
+        self.evParametersChanged = Subject()
 
     def dislocSource(self, dsrc=None):
         if dsrc is None:
@@ -87,6 +92,9 @@ class OkadaSource(Object):
         coords[:, 0] += self.easting
         coords[:, 1] += self.northing
         return coords
+
+    def parametersUpdated(self):
+        self.evParametersChanged.notify()
 
     @property
     def segments(self):

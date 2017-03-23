@@ -85,16 +85,17 @@ class SpoolMainWindow(QtGui.QMainWindow):
             QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
 
         self.scene_proxy = QSceneProxy()
-        self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
+        self.scene_proxy.sigSceneModelChanged.connect(
+            self.buildViews)
 
-        self.sigLoadFile.connect(self.scene_proxy.loadFile)
-        self.sigImportFile.connect(self.scene_proxy.importFile)
-        self.sigLoadConfig.connect(self.scene_proxy.loadConfig)
+        self.sigLoadFile.connect(
+            self.scene_proxy.loadFile)
+        self.sigImportFile.connect(
+            self.scene_proxy.importFile)
+        self.sigLoadConfig.connect(
+            self.scene_proxy.loadConfig)
         self.sigExportWeightMatrix.connect(
             self.scene_proxy.exportWeightMatrix)
-
-        self.log_model = SceneLogModel(self)
-        self.log = SceneLog(self)
 
         self.actionSave_config.triggered.connect(
             self.onSaveConfig)
@@ -118,6 +119,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
         self.actionLog.triggered.connect(
             self.log.show)
+
+        self.log_model = SceneLogModel(self)
+        self.log = SceneLog(self)
 
         self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)

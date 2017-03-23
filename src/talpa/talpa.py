@@ -2,24 +2,14 @@ import sys
 from os import path
 from PySide import QtCore, QtGui
 
-from .multiplot import ModelDockarea
-from .sources import SourcesListDock
+from .multiplot import PlotDockarea
+from .sources_dock import SourcesListDock
 
+from model_proxy import SandboxModel
 from ..qt_utils import loadUi
-from ..model_scene import ModelScene
-from ..models import OkadaSource
 
 
-model = ModelScene()
-src = OkadaSource(
-    northing=10000.,
-    easting=10000.,
-    depth=.0,
-    length=5000.,
-    width=3000.,
-    strike=14.)
-
-model.addSource(src)
+sandbox = SandboxModel.randomOkada(4)
 
 
 def get_resource(filename):
@@ -42,6 +32,10 @@ class Talpa(QtGui.QApplication):
         self.processEvents()
 
         self.splash.finish(self.talpa_win)
+
+        self.aboutToQuit.connect(self.splash.deleteLater)
+        self.aboutToQuit.connect(self.deleteLater)
+
         self.talpa_win.show()
         rc = self.exec_()
         sys.exit(rc)
@@ -61,16 +55,16 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
 
-        self.openModel(model)
+        self.openModel(sandbox)
 
     def loadUi(self):
         loadUi(get_resource('talpa.ui'), baseinstance=self)
 
-    def openModel(self, model):
-        plots = ModelDockarea(model)
-        sources = SourcesListDock(model, parent=self)
+    def openModel(self, sandbox):
+        plots = PlotDockarea(sandbox)
+        sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
 
-    def closeModel(self, model):
+    def closeModel(self, sandbox):
         pass

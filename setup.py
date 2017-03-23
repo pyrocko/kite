@@ -120,9 +120,10 @@ setup(
         'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
     packages=[
         'kite',
-        'kite.models',
+        'kite.sources',
         'kite.spool',
-        'kite.talpa'],
+        'kite.talpa',
+        'kite.talpa.sources'],
     package_dir={
         'kite': 'src'},
     package_data={
@@ -152,7 +153,7 @@ setup(
             language=None),
         Extension(
             'disloc_ext',
-            sources=[pjoin('src/models/ext', 'disloc.c')],
+            sources=[pjoin('src/sources/ext', 'disloc.c')],
             include_dirs=[numpy.get_include()],
             define_macros=None,
             undef_macros=None,
