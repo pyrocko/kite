@@ -117,11 +117,11 @@ class SpoolMainWindow(QtGui.QMainWindow):
             self.about.show)
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
-        self.actionLog.triggered.connect(
-            self.log.show)
 
         self.log_model = SceneLogModel(self)
         self.log = SceneLog(self)
+        self.actionLog.triggered.connect(
+            self.log.show)
 
         self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)
