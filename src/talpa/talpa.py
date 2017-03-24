@@ -1,7 +1,7 @@
 import sys
-from os import path
 from PySide import QtCore, QtGui
 
+from .common import get_resource
 from .multiplot import PlotDockarea
 from .sources_dock import SourcesListDock
 
@@ -10,10 +10,6 @@ from ..qt_utils import loadUi
 
 
 sandbox = SandboxModel.randomOkada(4)
-
-
-def get_resource(filename):
-    return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
 
 
 class Talpa(QtGui.QApplication):

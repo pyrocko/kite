@@ -1,8 +1,13 @@
-from PySide import QtCore
+from PySide import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as num
 
+from ..common import get_resource
+from kite.qt_utils import loadUi
+
+
 d2r = num.pi / 180.
+r2d = 180. / num.pi
 
 
 class OkadaSourceROI(pg.ROI):
@@ -13,9 +18,9 @@ class OkadaSourceROI(pg.ROI):
     pen_handle = pg.mkPen(((38, 50, 56, 180)), width=1.25)
     pen_highlight = pg.mkPen((52, 175, 60), width=2.5)
 
-    def __init__(self, okada_model):
-        self.model = okada_model
-        self.source = self.model.source
+    def __init__(self, okada_delegate):
+        self.delegate = okada_delegate
+        self.source = self.delegate.source
         source = self.source
 
         pg.ROI.__init__(
@@ -32,12 +37,18 @@ class OkadaSourceROI(pg.ROI):
         self.addScaleHandle([1, .5], [0, .5],
                             lockAspect=False)
 
-        self.model.sourceParametersChanged.connect(self.updatePosition)
-        self.sigRegionChangeFinished.connect(self.updateSourceParameters)
+        for h in self.handles:
+            h['item'].sigClicked.connect(self.sigRegionChangeStarted.emit)
+
+        self.delegate.sourceParametersChanged.connect(self.updateROIPosition)
+        self.sigRegionChangeFinished.connect(self.setSourceParametersFromROI)
+
+        self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
+        self.sigClicked.connect(self.showEditingDialog)
 
     @QtCore.Slot()
-    def updateSourceParameters(self):
-        strike = float(180. - self.angle())
+    def setSourceParametersFromROI(self):
+        strike = float((180. - self.angle()) % 360)
         parameters = {
             'strike': strike,
             'width': float(self.size().x()),
@@ -50,16 +61,27 @@ class OkadaSourceROI(pg.ROI):
         self.newSourceParameters.emit(parameters)
 
     @QtCore.Slot()
-    def updatePosition(self):
+    def updateROIPosition(self):
+        source = self.source
+        width = source.width
+
         self.setPos(
-            pg.Point(self.source.outline()[0]),
+            pg.Point(source.outline()[0]),
             finish=False)
         self.setSize(
-            pg.Point(self.source.width, self.source.length),
+            pg.Point(width, source.length),
             finish=False)
         self.setAngle(
-            180. - self.source.strike,
+            180. - source.strike,
             finish=False)
+
+    @QtCore.Slot()
+    def highlightROI(self, highlight):
+        self.setMouseHover(highlight)
+
+    @QtCore.Slot()
+    def showEditingDialog(self, *args):
+        self.delegate.getEditingDialog().show()
 
     def _makePen(self):
         # Generate the pen color for this ROI based on its current state.
@@ -69,39 +91,114 @@ class OkadaSourceROI(pg.ROI):
             return self.pen
 
 
-class OkadaSourceModel(QtCore.QObject):
+class OkadaEditDialog(QtGui.QDialog):
+
+    def __init__(self, delegate, *args, **kwargs):
+        QtGui.QDialog.__init__(self, *args, **kwargs)
+        loadUi(get_resource('okada_source.ui'), self)
+        self.delegate = delegate
+
+        self.delegate.sourceParametersChanged.connect(self.getSourceParameters)
+        self.applyButton.released.connect(self.setSourceParameters)
+        self.okButton.released.connect(self.setSourceParameters)
+        self.okButton.released.connect(self.close)
+
+        self.getSourceParameters()
+
+    @QtCore.Slot()
+    def getSourceParameters(self):
+        for param, value in self.delegate.getSourceParameters().iteritems():
+            self.__getattribute__(param).setValue(value)
+
+    @QtCore.Slot()
+    def setSourceParameters(self):
+        params = {}
+        for param in OkadaSourceDelegate.parameters:
+            params[param] = float(self.__getattribute__(param).value())
+        self.delegate.updateModelParameters(params)
+
+
+class OkadaSourceDelegate(QtCore.QObject):
 
     __represents__ = 'OkadaSource'
 
     sourceParametersChanged = QtCore.Signal()
-    highlightROI = QtCore.Signal()
-    ROISelected = QtCore.Signal(QtCore.QModelIndex)
+    highlightROI = QtCore.Signal(bool)
+
+    parameters = ['easting', 'northing', 'width', 'length',
+                  'slip', 'opening', 'strike', 'dip', 'rake']
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
         self.source = source
         self.model = model
         self.index = index
+        self.rois = []
+
+        self.editing_dialog = None
+
+        if model.selection_model is not None:
+            self.setSelectionModel()
+
+        self.model.selectionModelChanged.connect(self.setSelectionModel)
 
     def getROIItem(self):
         src = OkadaSourceROI(self)
-        src.newSourceParameters.connect(self.updateParameters)
-        src.sigHoverEvent.connect(
-            lambda: self.ROISelected.emit(self.index))
+
+        src.newSourceParameters.connect(self.updateModelParameters)
+
+        src.sigRegionChangeStarted.connect(self.highlightItem)
+        src.sigHoverEvent.connect(self.highlightItem)
+        self.highlightROI.connect(src.highlightROI)
+
+        self.rois.append(src)
         return src
 
     @QtCore.Slot(object)
-    def updateParameters(self, parameters):
+    def highlightItem(self):
+        if self.model.selection_model is not None:
+            self.model.selection_model.setCurrentIndex(
+                self.index, QtGui.QItemSelectionModel.SelectCurrent)
+
+    @QtCore.Slot()
+    def selectionChanged(self, idx):
+        if self.index.row() == idx.row()\
+          and self.index.column() == idx.column():
+            self.highlightROI.emit(True)
+        else:
+            self.highlightROI.emit(False)
+
+    @QtCore.Slot()
+    def setSelectionModel(self):
+        self.model.selection_model.currentChanged.connect(
+            self.selectionChanged)
+
+    def getEditingDialog(self):
+        if self.editing_dialog is None:
+            self.editing_dialog = OkadaEditDialog(self)
+        return self.editing_dialog
+
+    @QtCore.Slot(object)
+    def updateModelParameters(self, parameters):
+        self.model.setItemData(self.index, parameters)
+
+    def setSourceParameters(self, parameters):
         for param, value in parameters.iteritems():
             self.source.__setattr__(param, value)
         self.source.parametersUpdated()
         self.sourceParametersChanged.emit()
 
+    def getSourceParameters(self):
+        params = {}
+        for param in self.parameters:
+            params[param] = self.source.__getattribute__(param)
+        return params
+
     def formatListItem(self):
         item = '''{0}. <i>OkadaSource</i>
 <table style="color: #616161; font-size: small;">
 <tr>
-    <td style="width: 100px;">Depth:</td><td>{source.depth:.2f} m</td>
+    <td>Depth:</td><td>{source.depth:.2f} m</td>
 </tr><tr>
     <td>Width:</td><td>{source.width:.2f} m</td>
 </tr><tr>

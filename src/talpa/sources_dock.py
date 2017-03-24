@@ -1,4 +1,5 @@
 from PySide import QtGui, QtCore
+from .common import SourceEditorDialog
 
 
 class SourcesList(QtGui.QListView):
@@ -8,8 +9,19 @@ class SourcesList(QtGui.QListView):
         self.sandbox = sandbox
         self.setModel(sandbox.sources)
         self.setItemDelegate(SourceItemDelegate())
-
+        self.setAlternatingRowColors(True)
         sandbox.sources.setSelectionModel(self.selectionModel())
+
+        self.setEditTriggers(
+            QtGui.QAbstractItemView.EditTrigger.DoubleClicked |
+            QtGui.QAbstractItemView.EditTrigger.SelectedClicked)
+
+    def edit(self, idx, trigger, event):
+        if trigger == QtGui.QAbstractItemView.EditTrigger.DoubleClicked or\
+          trigger == QtGui.QAbstractItemView.EditTrigger.SelectedClicked:
+            editing_dialog = idx.data(SourceEditorDialog)
+            editing_dialog.show()
+        return False
 
 
 class SourcesListDock(QtGui.QDockWidget):
@@ -38,10 +50,6 @@ class SourceItemDelegate(QtGui.QStyledItemDelegate):
         style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter)
 
         ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
-
-        # Highlighting text if item is selected
-        # if (optionV4.state & QStyle::State_Selected)
-            # ctx.palette.setColor(QPalette::Text, optionV4.palette.color(QPalette::Active, QPalette::HighlightedText));
 
         textRect = style.subElementRect(
             QtGui.QStyle.SE_ItemViewItemText, options, options.widget)

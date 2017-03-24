@@ -1,1 +1,1 @@
-from .okada import OkadaSourceModel  # noqa
+from .okada import OkadaSourceDelegate  # noqa

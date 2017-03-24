@@ -3,7 +3,7 @@ from pyqtgraph import dockarea
 import pyqtgraph as pg
 
 from .config import getConfig
-from .common import PyQtGraphROI
+from .common import SourceROI
 
 import numpy as num
 
@@ -134,7 +134,7 @@ class DisplacementPlot(pg.PlotItem):
         index = QtCore.QModelIndex()
         for isrc in xrange(self.sandbox.sources.rowCount(index)):
             index = self.sandbox.sources.index(isrc, 0, index)
-            roi = index.data(PyQtGraphROI)
+            roi = index.data(SourceROI)
             self.rois.append(roi)
             self.addItem(roi)
 

@@ -1,13 +1,13 @@
-from PySide import QtCore, QtGui
+from PySide import QtCore
 
 # Importing available models
-from .sources import OkadaSourceModel
-from .common import PyQtGraphROI
+from .sources import OkadaSourceDelegate
+from .common import SourceROI, SourceEditorDialog
 
 
-available_models = {}
-for module in [OkadaSourceModel]:
-    available_models[module.__represents__] = module
+available_delegates = {}
+for module in [OkadaSourceDelegate]:
+    available_delegates[module.__represents__] = module
 
 
 class CursorTracker(QtCore.QObject):
@@ -61,6 +61,8 @@ class SandboxModel(QtCore.QObject):
 
 class SourceModel(QtCore.QAbstractTableModel):
 
+    selectionModelChanged = QtCore.Signal()
+
     def __init__(self, sandbox, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
 
@@ -72,7 +74,7 @@ class SourceModel(QtCore.QAbstractTableModel):
     def _createSources(self):
         self._sources = []
         for isrc, src in enumerate(self.sandbox.model.sources):
-            source_model = available_models[src.__class__.__name__]
+            source_model = available_delegates[src.__class__.__name__]
             idx = self.createIndex(isrc, 0)
             src = source_model(self, src, idx)
 
@@ -81,32 +83,39 @@ class SourceModel(QtCore.QAbstractTableModel):
     def rowCount(self, idx):
         return len(self.sandbox.model.sources)
 
+    def columnCount(self, idx):
+        return 1
+
+    def flags(self, idx):
+        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |\
+            QtCore.Qt.ItemIsEnabled
+
     def setSelectionModel(self, selection_model):
         self.selection_model = selection_model
-        for src in self._sources:
-            src.ROISelected.connect(self.highlightSourceListItem)
-
-    @QtCore.Slot(object)
-    def highlightSourceROI(self, idx):
-        self._sources[idx.row()].sigHighlightROI.emit()
-
-    @QtCore.Slot(object)
-    def highlightSourceListItem(self, idx):
-        print idx
-        self.selection_model.select(idx, QtGui.QItemSelectionModel.ToggleCurrent)
+        self.selectionModelChanged.emit()
 
     def data(self, idx, role):
         src = self._sources[idx.row()]
         if role == QtCore.Qt.DisplayRole:
             return src.formatListItem()
-        elif role == PyQtGraphROI:
+        elif role == SourceROI:
             return src.getROIItem()
+        elif role == SourceEditorDialog:
+            return src.getEditingDialog()
 
-    def columnCount(self, idx):
-        return 1
+    def itemData(self, idx):
+        src = self._sources[idx.row()]
+        return src.getSourceParameters()
+
+    def setItemData(self, idx, parameters):
+        src = self._sources[idx.row()]
+        src.setSourceParameters(parameters)
+        self.dataChanged.emit(idx, idx)
+        return True
+
+    def setData(self, idx, value, role):
+        print idx
 
     @QtCore.Slot()
     def modelUpdated(self):
-        self.beginResetModel()
-        # self._createSources()
-        self.endResetModel()
+        return
