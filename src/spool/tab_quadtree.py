@@ -91,7 +91,7 @@ class KiteQuadtreePlot(KitePlot):
             brush=pg.mkBrush(focalpoint_color),
             antialias=True)
 
-        self.setMenuEnabled(False)
+        self.setMenuEnabled(True)
 
         self.highlighted_leaves = []
         self.selected_leaves = []

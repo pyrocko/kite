@@ -567,8 +567,10 @@ class Quadtree(object):
     def clearLeafBlacklist(self):
         self.config.leaf_blacklist = []
 
-    def blacklistLeafs(self, leaves):
+    def blacklistLeaves(self, leaves):
         self.config.leaf_blacklist.extend(leaves)
+        self._log.debug('Blacklisted leaves: %s'
+                        % ', '.join(self.config.leaf_blacklist))
         self.leaves = None
         self.evChanged.notify()
 
