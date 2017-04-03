@@ -1,13 +1,21 @@
 import unittest
 import numpy as num
+import tempfile
+import shutil
 
-from kite import ModelScene
-from kite.models import OkadaSource, OkadaPath
+from kite import ModelScene, TestModelScene
+from kite.sources import OkadaSource, OkadaPath
 
 
 class testOkada(unittest.TestCase):
     def setUp(self):
         self.ms = ModelScene()
+        self.tmpdir = tempfile.mkdtemp(prefix='kite')
+        print self.tmpdir
+
+    def tearDown(self):
+        return
+        shutil.rmtree(self.tmpdir)
 
     def testOkadaSource(self):
         nsources = 2
@@ -32,14 +40,14 @@ class testOkada(unittest.TestCase):
         # self.plotDisplacement(self.ms)
 
     def testOkadaPath(self):
-        path = OkadaPath(
+        ok_path = OkadaPath(
             origin_easting=10000,
             origin_northing=24000,)
-        path.addNode(15000, 28000)
-        path.addNode(18000, 32000)
-        path.addNode(22000, 34000)
-        # path.insertNode(1, 22000, 34000)
-        self.ms.addSource(path)
+        ok_path.addNode(15000, 28000)
+        ok_path.addNode(18000, 32000)
+        ok_path.addNode(22000, 34000)
+        # ok_path.insertNode(1, 22000, 34000)
+        self.ms.addSource(ok_path)
 
         self.plotDisplacement(self.ms)
 
@@ -61,6 +69,15 @@ class testOkada(unittest.TestCase):
                 ax.scatter(nodes[:, 0], nodes[:, 1], color='r')
         plt.show()
         fig.clear()
+
+    def testModelSaveLoad(self):
+        filename = self.tmpdir + '/testsave.yml'
+        msc = TestModelScene.randomOkada(nsources=2)
+        msc.save(filename=filename)
+
+        msc2 = ModelScene.load(filename=filename)
+        print msc2.config
+
 
 
 if __name__ == '__main__':

@@ -8,6 +8,9 @@ d2r = num.pi / 180.
 r2d = 180. / num.pi
 
 
+__all__ = ['OkadaSource', 'OkadaPath', 'DislocProcessor']
+
+
 class OkadaSource(Object):
 
     __implements__ = 'disloc'
@@ -129,6 +132,7 @@ class OkadaPath(Object):
 
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
+        self.evParametersChanged = Subject()
         self._segments = []
 
         if not self.nodes:

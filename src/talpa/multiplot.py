@@ -84,8 +84,6 @@ class CursorRect(QtGui.QGraphicsRectItem):
 
 class DisplacementPlot(pg.PlotItem):
 
-    position = 'left'
-
     def __init__(self, sandbox, component, title='Untitled'):
         pg.PlotItem.__init__(self)
         self.title = title
@@ -107,8 +105,7 @@ class DisplacementPlot(pg.PlotItem):
         self.addItem(self.image)
 
         self.sandbox.sigModelChanged.connect(self.update)
-        # self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
-        # self.sandbox.sources.modelReset.connect(self.addSourceROIS)
+        self.sandbox.sources.elementsChanged.connect(self.updateSourceROIS)
 
         self.rois = []
 
@@ -124,6 +121,11 @@ class DisplacementPlot(pg.PlotItem):
         self.image.updateImage(self.data.T)
         self.transFromFrame()
 
+    @QtCore.Slot()
+    def updateSourceROIS(self):
+        self.removeSourceROIS()
+        self.addSourceROIS()
+
     def transFromFrame(self):
         self.image.resetTransform()
         self.image.scale(
@@ -131,6 +133,7 @@ class DisplacementPlot(pg.PlotItem):
             self.sandbox.frame.dN)
 
     def addSourceROIS(self):
+        self.rois = []
         index = QtCore.QModelIndex()
         for isrc in xrange(self.sandbox.sources.rowCount(index)):
             index = self.sandbox.sources.index(isrc, 0, index)
@@ -139,9 +142,12 @@ class DisplacementPlot(pg.PlotItem):
             self.addItem(roi)
 
     def removeSourceROIS(self):
+        if not self.rois:
+            return
+
         for roi in self.rois:
             self.removeItem(roi)
-            self.rois.remove(roi)
+        self.update()
 
     def addCursor(self):
         if config.show_cursor:
@@ -187,8 +193,6 @@ class PlotDockarea(dockarea.DockArea):
 
 
 class ColormapPlots(pg.HistogramLUTWidget):
-
-    position = 'right'
 
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)

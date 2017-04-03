@@ -60,6 +60,10 @@
         </property>
         <item row="0" column="0">
          <widget class="QLabel" name="eastingLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.easting&lt;/span&gt;&lt;br&gt;
+Coordinate of the top center edge.</string>
+          </property>
           <property name="text">
            <string>Easting</string>
           </property>
@@ -98,6 +102,10 @@
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="northingLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.northing&lt;/span&gt;&lt;br&gt;
+Coordinate of the top center edge.</string>
+          </property>
           <property name="text">
            <string>Northing</string>
           </property>
@@ -136,6 +144,10 @@
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="depthLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.depth&lt;/span&gt;&lt;br&gt;
+Depth of the upper edge of the fault.</string>
+          </property>
           <property name="text">
            <string>Depth</string>
           </property>
@@ -174,6 +186,9 @@
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="widthLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.width&lt;/span&gt;</string>
+          </property>
           <property name="text">
            <string>Width</string>
           </property>
@@ -212,6 +227,9 @@
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="lengthLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.length&lt;/span&gt;</string>
+          </property>
           <property name="text">
            <string>Length</string>
           </property>
@@ -276,6 +294,10 @@
         </item>
         <item row="2" column="0">
          <widget class="QLabel" name="rakeLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.rake&lt;/span&gt;&lt;br&gt;
+Clockwise from left-lateral (0 deg; horizontal).</string>
+          </property>
           <property name="text">
            <string>Rake</string>
           </property>
@@ -302,6 +324,10 @@
         </item>
         <item row="3" column="0">
          <widget class="QLabel" name="slipLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.slip&lt;/span&gt;
+In direction of rake.</string>
+          </property>
           <property name="text">
            <string>Slip</string>
           </property>
@@ -325,6 +351,10 @@
         </item>
         <item row="4" column="0">
          <widget class="QLabel" name="openingLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.opening&lt;/span&gt;
+Positive is expansion (e.g. of a dike).</string>
+          </property>
           <property name="text">
            <string>Opening</string>
           </property>
@@ -367,6 +397,10 @@
         </item>
         <item row="1" column="0">
          <widget class="QLabel" name="dipLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.dip&lt;/span&gt;&lt;br&gt;
+Positive from horizontal.</string>
+          </property>
           <property name="text">
            <string>Dip</string>
           </property>
@@ -374,6 +408,10 @@
         </item>
         <item row="0" column="0">
          <widget class="QLabel" name="strikeLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.strike&lt;/span&gt;&lt;br&gt;
+Clockwise from north.</string>
+          </property>
           <property name="text">
            <string>Strike</string>
           </property>

@@ -351,7 +351,7 @@ def dynamicmethod(func):
 class BaseScene(object):
 
     def __init__(self, frame_config, **kwargs):
-        self._setupLogging()
+        self._initLogging()
 
         self._displacement = None
         self._phi = None
@@ -373,10 +373,10 @@ class BaseScene(object):
             if data is not None:
                 self.__setattr__(attr, data)
 
-    def _setupLogging(self):
+    def _initLogging(self):
         logging.basicConfig(level=logging.DEBUG)
 
-        self._log = logging.getLogger('Scene')
+        self._log = logging.getLogger(self.__class__.__name__)
         self._log.setLevel(logging.DEBUG)
 
         self._log_stream = None
@@ -608,7 +608,7 @@ class Scene(BaseScene):
 
     def saveConfig(self, filename):
         _file, ext = op.splitext(filename)
-        filename = _file if ext in ['.yml'] else filename
+        filename = filename if ext in ['.yml'] else filename + '.yml'
         self._log.info('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')

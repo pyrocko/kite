@@ -4,6 +4,7 @@ import numpy as num
 
 from ..common import get_resource
 from kite.qt_utils import loadUi
+from kite.sources import OkadaSource
 
 
 d2r = num.pi / 180.
@@ -125,7 +126,7 @@ class OkadaSourceDelegate(QtCore.QObject):
     sourceParametersChanged = QtCore.Signal()
     highlightROI = QtCore.Signal(bool)
 
-    parameters = ['easting', 'northing', 'width', 'length',
+    parameters = ['easting', 'northing', 'width', 'length', 'depth',
                   'slip', 'opening', 'strike', 'dip', 'rake']
 
     def __init__(self, model, source, index):
@@ -141,6 +142,20 @@ class OkadaSourceDelegate(QtCore.QObject):
             self.setSelectionModel()
 
         self.model.selectionModelChanged.connect(self.setSelectionModel)
+
+    @staticmethod
+    def getRepresentedSource(sandbox):
+        src = OkadaSource(
+            easting=num.mean(sandbox.frame.E),
+            northing=num.mean(sandbox.frame.N),
+            depth=4000,
+            width=3000,
+            length=5000,
+            strike=45.,
+            rake=0,
+            slip=2,
+            )
+        return src
 
     def getROIItem(self):
         src = OkadaSourceROI(self)

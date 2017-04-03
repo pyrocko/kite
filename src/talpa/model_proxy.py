@@ -44,6 +44,12 @@ class SandboxModel(QtCore.QObject):
             return
         self.model.evModelChanged.unsubscribe(self.sigModelChanged.emit)
 
+    def addSource(self, source):
+        self.model.addSource(source)
+
+    def removeSource(self, source):
+        self.model.removeSource(source)
+
     @classmethod
     def randomOkada(cls, nsources=1):
         from ..model_scene import TestModelScene
@@ -62,6 +68,7 @@ class SandboxModel(QtCore.QObject):
 class SourceModel(QtCore.QAbstractTableModel):
 
     selectionModelChanged = QtCore.Signal()
+    elementsChanged = QtCore.Signal()
 
     def __init__(self, sandbox, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
@@ -116,6 +123,15 @@ class SourceModel(QtCore.QAbstractTableModel):
     def setData(self, idx, value, role):
         print idx
 
+    def removeSource(self, idx):
+        src = self._sources[idx.row()]
+        self.sandbox.removeSource(src.source)
+
     @QtCore.Slot()
     def modelUpdated(self):
-        return
+        if len(self._sources) != len(self.sandbox.model.sources):
+            self.beginResetModel()
+            self._createSources()
+            self.endResetModel()
+
+            self.elementsChanged.emit()

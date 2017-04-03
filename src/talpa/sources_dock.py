@@ -1,27 +1,6 @@
 from PySide import QtGui, QtCore
 from .common import SourceEditorDialog
-
-
-class SourcesList(QtGui.QListView):
-
-    def __init__(self, sandbox, *args, **kwargs):
-        QtGui.QListView.__init__(self, *args, **kwargs)
-        self.sandbox = sandbox
-        self.setModel(sandbox.sources)
-        self.setItemDelegate(SourceItemDelegate())
-        self.setAlternatingRowColors(True)
-        sandbox.sources.setSelectionModel(self.selectionModel())
-
-        self.setEditTriggers(
-            QtGui.QAbstractItemView.EditTrigger.DoubleClicked |
-            QtGui.QAbstractItemView.EditTrigger.SelectedClicked)
-
-    def edit(self, idx, trigger, event):
-        if trigger == QtGui.QAbstractItemView.EditTrigger.DoubleClicked or\
-          trigger == QtGui.QAbstractItemView.EditTrigger.SelectedClicked:
-            editing_dialog = idx.data(SourceEditorDialog)
-            editing_dialog.show()
-        return False
+import sources
 
 
 class SourcesListDock(QtGui.QDockWidget):
@@ -30,41 +9,118 @@ class SourcesListDock(QtGui.QDockWidget):
         QtGui.QDockWidget.__init__(self, 'Sources', *args, **kwargs)
         self.sandbox = sandbox
 
-        self.list = SourcesList(sandbox)
-        self.setWidget(self.list)
+        layout = QtGui.QVBoxLayout()
+        layout.setContentsMargins(3, 3, 3, 3)
+        sources = SourcesList(sandbox)
+        sources_add_menu = SourcesAddButton(sandbox)
+
+        self.widget = QtGui.QWidget()
+        self.widget.setLayout(layout)
+        self.widget.layout().addWidget(sources)
+        self.widget.layout().addWidget(sources_add_menu)
+
+        self.setWidget(self.widget)
 
 
-class SourceItemDelegate(QtGui.QStyledItemDelegate):
+class SourcesAddButton(QtGui.QToolButton):
 
-    def paint(self, painter, option, index):
-        options = QtGui.QStyleOptionViewItemV4(option)
-        self.initStyleOption(options, index)
+    class SourcesAddMenu(QtGui.QMenu):
 
-        style = QtGui.QApplication.style() if options.widget is None\
-            else options.widget.style()
+        def __init__(self, sandbox, *args, **kwargs):
+            QtGui.QMenu.__init__(self, *args, **kwargs)
+            self.sandbox = sandbox
 
-        doc = QtGui.QTextDocument()
-        doc.setHtml(options.text)
+            def addSource(source):
+                self.sandbox.addSource(source)
 
-        options.text = ""
-        style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter)
+            for src in sources.__sources__:
+                self.addAction(
+                    '%s' % src.__represents__,
+                    lambda: addSource(src.getRepresentedSource(sandbox)))
 
-        ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+    def __init__(self, sandbox, parent=None):
+        QtGui.QToolButton.__init__(self, parent)
 
-        textRect = style.subElementRect(
-            QtGui.QStyle.SE_ItemViewItemText, options, options.widget)
-        painter.save()
-        painter.translate(textRect.topLeft())
-        painter.setClipRect(textRect.translated(-textRect.topLeft()))
-        doc.documentLayout().draw(painter, ctx)
+        menu = self.SourcesAddMenu(sandbox, self, 'Availables sources')
 
-        painter.restore()
+        self.setText('Add Source')
+        self.setMenu(menu)
 
-    def sizeHint(self, option, index):
-        options = QtGui.QStyleOptionViewItemV4(option)
-        self.initStyleOption(options, index)
+        self.setIcon(self.style().standardPixmap(
+                     QtGui.QStyle.SP_FileDialogDetailedView))
+        self.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
 
-        doc = QtGui.QTextDocument()
-        doc.setHtml(options.text)
-        doc.setTextWidth(options.rect.width())
-        return QtCore.QSize(doc.idealWidth(), doc.size().height())
+
+class SourcesList(QtGui.QListView):
+
+    class SourceItemDelegate(QtGui.QStyledItemDelegate):
+
+        def paint(self, painter, option, index):
+            options = QtGui.QStyleOptionViewItemV4(option)
+            self.initStyleOption(options, index)
+
+            style = QtGui.QApplication.style() if options.widget is None\
+                else options.widget.style()
+
+            doc = QtGui.QTextDocument()
+            doc.setHtml(options.text)
+
+            options.text = ""
+            style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter)
+
+            ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
+
+            textRect = style.subElementRect(
+                QtGui.QStyle.SE_ItemViewItemText, options, options.widget)
+            painter.save()
+            painter.translate(textRect.topLeft())
+            painter.setClipRect(textRect.translated(-textRect.topLeft()))
+            doc.documentLayout().draw(painter, ctx)
+
+            painter.restore()
+
+        def sizeHint(self, option, index):
+            options = QtGui.QStyleOptionViewItemV4(option)
+            self.initStyleOption(options, index)
+
+            doc = QtGui.QTextDocument()
+            doc.setHtml(options.text)
+            doc.setTextWidth(options.rect.width())
+            return QtCore.QSize(doc.idealWidth(), doc.size().height())
+
+    class SourceContextMenu(QtGui.QMenu):
+
+        def __init__(self, sandbox, idx, *args, **kwargs):
+            QtGui.QMenu.__init__(self, *args, **kwargs)
+            self.sandbox = sandbox
+            self.idx = idx
+
+            def removeSource():
+                self.sandbox.sources.removeSource(self.idx)
+
+            self.addAction(
+                self.style().standardPixmap(
+                    QtGui.QStyle.SP_DialogCloseButton),
+                'Remove source', removeSource)
+
+    def __init__(self, sandbox, *args, **kwargs):
+        QtGui.QListView.__init__(self, *args, **kwargs)
+        self.sandbox = sandbox
+        self.setModel(sandbox.sources)
+        self.setItemDelegate(self.SourceItemDelegate())
+        self.setAlternatingRowColors(True)
+        sandbox.sources.setSelectionModel(self.selectionModel())
+
+    def edit(self, idx, trigger, event):
+        if trigger == QtGui.QAbstractItemView.EditTrigger.DoubleClicked or\
+          trigger == QtGui.QAbstractItemView.EditTrigger.SelectedClicked:
+            editing_dialog = idx.data(SourceEditorDialog)
+            editing_dialog.show()
+        return False
+
+    @QtCore.Slot()
+    def contextMenuEvent(self, event):
+        idx = self.indexAt(event.pos())
+        menu = self.SourceContextMenu(self.sandbox, idx, self)
+        menu.popup(event.globalPos())

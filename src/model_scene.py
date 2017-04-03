@@ -1,14 +1,18 @@
 import numpy as num
+import time
 
 from pyrocko.guts import Object, List, Int
+from pyrocko import guts
 from meta import Subject, property_cached
 from scene import BaseScene, FrameConfig
+from os import path as op
 
 # Import the modeling backends
 from .sources import DislocProcessor
 
 
-processors_available = [DislocProcessor]
+PROCESSORS = [DislocProcessor]
+
 km = 1e3
 
 
@@ -17,7 +21,7 @@ class ModelSceneConfig(Object):
         default=FrameConfig(),
         help='Frame/reference configuration')
     extent_north = Int.T(
-        default=900,
+        default=800,
         help='Model size towards north in [px]')
     extent_east = Int.T(
         default=800,
@@ -82,23 +86,41 @@ class ModelScene(BaseScene):
 
     def addSource(self, source):
         self.sources.append(source)
+        self._log.info('Added %s' % source.__class__.__name__)
         source.evParametersChanged.subscribe(self._clearModel)
+
+        self._clearModel()
+        self.evModelChanged.notify()
+
+    def removeSource(self, source):
+        source.evParametersChanged.unsubscribe(self._clearModel)
+        self.sources.remove(source)
+        self._log.info('Removed %s' % source.__class__.__name__)
+
+        self._clearModel()
+        self.evModelChanged.notify()
 
     def processGrid(self):
         results = []
-        for processor in processors_available:
-            sources = [s for s in self.sources
-                       if s.__implements__ == processor.__implements__]
+        for processor in PROCESSORS:
+            sources = [src for src in self.sources
+                       if src.__implements__ == processor.__implements__]
+            t0 = time.time()
+
             result = processor.process(
                 sources, self.frame.coordinates, nthreads=0)
             results.append(result)
+
+            self._log.debug('Processed %s (%s) using %s [%.4fs]'
+                            % (src.__class__.__name__, src.__implements__,
+                               processor.__class__.__name__, time.time() - t0))
 
         for r in results:
             self.north += r['north'].reshape(self.rows, self.cols)
             self.east += r['east'].reshape(self.rows, self.cols)
             self.down += r['down'].reshape(self.rows, self.cols)
 
-    def getScene(self):
+    def getKiteScene(self):
         '''Return a full featured :class:`Scene` from current model.
 
         :returns: Scene
@@ -136,6 +158,20 @@ class ModelScene(BaseScene):
             self._los_factors[:, :, 2] = num.cos(self.theta)\
                 * num.sin(self.phi)
         return self._los_factors
+
+    def save(self, filename):
+        _file, ext = op.splitext(filename)
+        filename = filename if ext in ['.yml'] else filename + '.yml'
+        self._log.info('Saving model scene to %s' % filename)
+        self.config.dump(filename='%s' % filename,
+                         header='kite.ModelScene YAML Config')
+
+    @classmethod
+    def load(cls, filename):
+        model_scene = cls()
+        model_scene.config = guts.load(filename=filename)
+        model_scene._log.info('Loaded config from %s' % filename)
+        return model_scene
 
 
 class TestModelScene(ModelScene):
