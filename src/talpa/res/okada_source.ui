@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>229</height>
+    <height>242</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -266,6 +266,23 @@ Depth of the upper edge of the fault.</string>
           </property>
          </widget>
         </item>
+        <item row="5" column="0">
+         <widget class="QLabel" name="M0_label">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.seismic_moment&lt;/span&gt;</string>
+          </property>
+          <property name="text">
+           <string>M&lt;sub&gt;0&lt;/sub&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="seismic_moment">
+          <property name="text">
+           <string>TextLabel</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </item>
       <item>
@@ -273,13 +290,27 @@ Depth of the upper edge of the fault.</string>
         <property name="fieldGrowthPolicy">
          <enum>QFormLayout::ExpandingFieldsGrow</enum>
         </property>
-        <item row="1" column="1">
-         <widget class="QDoubleSpinBox" name="dip">
+        <item row="0" column="0">
+         <widget class="QLabel" name="strikeLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.strike&lt;/span&gt;&lt;br&gt;
+Clockwise from north.</string>
+          </property>
+          <property name="text">
+           <string>Strike</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QDoubleSpinBox" name="strike">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="wrapping">
+           <bool>true</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -289,6 +320,39 @@ Depth of the upper edge of the fault.</string>
           </property>
           <property name="maximum">
            <double>360.000000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="dipLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.dip&lt;/span&gt;&lt;br&gt;
+Positive from horizontal.</string>
+          </property>
+          <property name="text">
+           <string>Dip</string>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="1">
+         <widget class="QDoubleSpinBox" name="dip">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="wrapping">
+           <bool>true</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="suffix">
+           <string>°</string>
+          </property>
+          <property name="maximum">
+           <double>90.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -311,14 +375,20 @@ Clockwise from left-lateral (0 deg; horizontal).</string>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="wrapping">
+           <bool>true</bool>
+          </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
           <property name="suffix">
            <string>°</string>
           </property>
+          <property name="minimum">
+           <double>-180.000000000000000</double>
+          </property>
           <property name="maximum">
-           <double>360.000000000000000</double>
+           <double>180.000000000000000</double>
           </property>
          </widget>
         </item>
@@ -376,44 +446,20 @@ Positive is expansion (e.g. of a dike).</string>
           </property>
          </widget>
         </item>
-        <item row="0" column="1">
-         <widget class="QDoubleSpinBox" name="strike">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="suffix">
-           <string>°</string>
-          </property>
-          <property name="maximum">
-           <double>360.000000000000000</double>
+        <item row="5" column="1">
+         <widget class="QLabel" name="moment_magnitude">
+          <property name="text">
+           <string>TextLabel</string>
           </property>
          </widget>
         </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="dipLabel">
+        <item row="5" column="0">
+         <widget class="QLabel" name="MW_label">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.dip&lt;/span&gt;&lt;br&gt;
-Positive from horizontal.</string>
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.moment_magnitude&lt;/span&gt;</string>
           </property>
           <property name="text">
-           <string>Dip</string>
-          </property>
-         </widget>
-        </item>
-        <item row="0" column="0">
-         <widget class="QLabel" name="strikeLabel">
-          <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.strike&lt;/span&gt;&lt;br&gt;
-Clockwise from north.</string>
-          </property>
-          <property name="text">
-           <string>Strike</string>
+           <string>M&lt;sub&gt;W&lt;/sub&gt;</string>
           </property>
          </widget>
         </item>

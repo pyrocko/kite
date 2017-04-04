@@ -68,7 +68,6 @@ class SandboxModel(QtCore.QObject):
 class SourceModel(QtCore.QAbstractTableModel):
 
     selectionModelChanged = QtCore.Signal()
-    elementsChanged = QtCore.Signal()
 
     def __init__(self, sandbox, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
@@ -133,5 +132,3 @@ class SourceModel(QtCore.QAbstractTableModel):
             self.beginResetModel()
             self._createSources()
             self.endResetModel()
-
-            self.elementsChanged.emit()

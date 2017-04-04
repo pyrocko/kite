@@ -105,11 +105,12 @@ class DisplacementPlot(pg.PlotItem):
         self.addItem(self.image)
 
         self.sandbox.sigModelChanged.connect(self.update)
-        self.sandbox.sources.elementsChanged.connect(self.updateSourceROIS)
-
-        self.rois = []
+        self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
+        self.sandbox.sources.modelReset.connect(self.addSourceROIS)
 
         self.update()
+
+        self.rois = []
         self.addSourceROIS()
 
     @property
@@ -121,17 +122,13 @@ class DisplacementPlot(pg.PlotItem):
         self.image.updateImage(self.data.T)
         self.transFromFrame()
 
-    @QtCore.Slot()
-    def updateSourceROIS(self):
-        self.removeSourceROIS()
-        self.addSourceROIS()
-
     def transFromFrame(self):
         self.image.resetTransform()
         self.image.scale(
             self.sandbox.frame.dE,
             self.sandbox.frame.dN)
 
+    @QtCore.Slot()
     def addSourceROIS(self):
         self.rois = []
         index = QtCore.QModelIndex()
@@ -141,13 +138,12 @@ class DisplacementPlot(pg.PlotItem):
             self.rois.append(roi)
             self.addItem(roi)
 
+    @QtCore.Slot()
     def removeSourceROIS(self):
-        if not self.rois:
-            return
-
-        for roi in self.rois:
-            self.removeItem(roi)
-        self.update()
+        if self.rois:
+            for roi in self.rois:
+                self.removeItem(roi)
+            self.update()
 
     def addCursor(self):
         if config.show_cursor:

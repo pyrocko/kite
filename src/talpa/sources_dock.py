@@ -99,10 +99,22 @@ class SourcesList(QtGui.QListView):
             def removeSource():
                 self.sandbox.sources.removeSource(self.idx)
 
+            def editSource():
+                editing_dialog = self.sandbox.sources.data(
+                    self.idx, SourceEditorDialog)
+                editing_dialog.show()
+
+
+            print self.style().standardPixmap(
+                    QtGui.QStyle.SP_DialogCloseButton)
             self.addAction(
                 self.style().standardPixmap(
                     QtGui.QStyle.SP_DialogCloseButton),
-                'Remove source', removeSource)
+                'Edit', editSource)
+            self.addAction(
+                self.style().standardPixmap(
+                    QtGui.QStyle.SP_DialogCloseButton),
+                'Remove', removeSource)
 
     def __init__(self, sandbox, *args, **kwargs):
         QtGui.QListView.__init__(self, *args, **kwargs)

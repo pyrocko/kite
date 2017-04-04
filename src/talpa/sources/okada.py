@@ -104,6 +104,14 @@ class OkadaEditDialog(QtGui.QDialog):
         self.okButton.released.connect(self.setSourceParameters)
         self.okButton.released.connect(self.close)
 
+        def setLabel(method, fmt, value, suffix=''):
+            method(fmt.format(value) + suffix)
+
+        self.moment_magnitude.setValue = lambda v: setLabel(
+            self.moment_magnitude.setText, '{:.2f}', v)
+        self.seismic_moment.setValue = lambda v: setLabel(
+            self.seismic_moment.setText, '{:.2e}', v, ' Nm')
+
         self.getSourceParameters()
 
     @QtCore.Slot()
@@ -128,6 +136,8 @@ class OkadaSourceDelegate(QtCore.QObject):
 
     parameters = ['easting', 'northing', 'width', 'length', 'depth',
                   'slip', 'opening', 'strike', 'dip', 'rake']
+
+    ro_parameters = ['seismic_moment', 'moment_magnitude']
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
@@ -205,7 +215,7 @@ class OkadaSourceDelegate(QtCore.QObject):
 
     def getSourceParameters(self):
         params = {}
-        for param in self.parameters:
+        for param in self.parameters + self.ro_parameters:
             params[param] = self.source.__getattribute__(param)
         return params
 

@@ -38,8 +38,8 @@ class OkadaSource(Object):
         default=1.5,
         help='Slip in [m]')
     nu = Float.T(
-        default=1.25,
-        help='Material parameter Nu in P s^-1')
+        default=0.25,
+        help='Poisson\'s ratio, typically 1./4')
     opening = Float.T(
         help='Opening of the plane in [m]',
         optional=True,
@@ -48,6 +48,35 @@ class OkadaSource(Object):
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
         self.evParametersChanged = Subject()
+
+    @property
+    def seismic_moment(self):
+        '''Seismic moment
+
+        Disregarding the opening (as for now)
+        :math:`M_0 = \mu A D`
+
+        We assume a perfect elastic solid with :math:`K = \frac{5}{3}\mu`
+
+        Through :math:`\mu = \frac{3K(1-2\nu)}{2(1+\nu)}} this leads to
+        :math:`\mu = \frac{8(1+\nu)}{1-2\nu}
+        :returns: Seismic moment release
+        :rtype: float
+        '''
+        mu = (8. * (1+self.nu))/(1-2.*self.nu)
+        # print mu
+        A = self.length * self.width
+        return mu * A * self.slip
+
+    @property
+    def moment_magnitude(self):
+        '''Moment magnitude from Seismic moment
+
+        We assume :math:`M_\mathrm{w} = {\frac{2}{3}}\log_{10}(M_0) - 10.7`
+        :returns: Moment magnitude
+        :rtype: float
+        '''
+        return 2./3 * num.log10(self.seismic_moment*1e7) - 10.7
 
     def dislocSource(self, dsrc=None):
         if dsrc is None:
