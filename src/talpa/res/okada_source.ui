@@ -9,20 +9,26 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>400</width>
-    <height>242</height>
+    <width>490</width>
+    <height>283</height>
    </rect>
   </property>
   <property name="sizePolicy">
-   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+   <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
     <horstretch>0</horstretch>
     <verstretch>0</verstretch>
    </sizepolicy>
   </property>
   <property name="minimumSize">
    <size>
-    <width>400</width>
+    <width>0</width>
     <height>0</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>16777215</width>
+    <height>16777215</height>
    </size>
   </property>
   <property name="focusPolicy">
@@ -30,6 +36,9 @@
   </property>
   <property name="windowTitle">
    <string>OkadaSource Parameters</string>
+  </property>
+  <property name="modal">
+   <bool>false</bool>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -66,6 +75,9 @@ Coordinate of the top center edge.</string>
           </property>
           <property name="text">
            <string>Easting</string>
+          </property>
+          <property name="buddy">
+           <cstring>easting</cstring>
           </property>
          </widget>
         </item>
@@ -109,6 +121,9 @@ Coordinate of the top center edge.</string>
           <property name="text">
            <string>Northing</string>
           </property>
+          <property name="buddy">
+           <cstring>northing</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
@@ -151,6 +166,9 @@ Depth of the upper edge of the fault.</string>
           <property name="text">
            <string>Depth</string>
           </property>
+          <property name="buddy">
+           <cstring>depth</cstring>
+          </property>
          </widget>
         </item>
         <item row="2" column="1">
@@ -191,6 +209,9 @@ Depth of the upper edge of the fault.</string>
           </property>
           <property name="text">
            <string>Width</string>
+          </property>
+          <property name="buddy">
+           <cstring>width</cstring>
           </property>
          </widget>
         </item>
@@ -233,6 +254,9 @@ Depth of the upper edge of the fault.</string>
           <property name="text">
            <string>Length</string>
           </property>
+          <property name="buddy">
+           <cstring>length</cstring>
+          </property>
          </widget>
         </item>
         <item row="4" column="1">
@@ -267,17 +291,63 @@ Depth of the upper edge of the fault.</string>
          </widget>
         </item>
         <item row="5" column="0">
+         <widget class="QLabel" name="MW_label">
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.moment_magnitude&lt;/span&gt;&lt;br&gt;
+We assume a constant crustal Bulk modulus of 35 GPa.</string>
+          </property>
+          <property name="text">
+           <string>M&lt;sub&gt;W&lt;/sub&gt;</string>
+          </property>
+         </widget>
+        </item>
+        <item row="5" column="1">
+         <widget class="QLabel" name="moment_magnitude">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
+          <property name="font">
+           <font>
+            <weight>75</weight>
+            <bold>true</bold>
+           </font>
+          </property>
+          <property name="frameShape">
+           <enum>QFrame::NoFrame</enum>
+          </property>
+          <property name="text">
+           <string>TextLabel</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
          <widget class="QLabel" name="M0_label">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.seismic_moment&lt;/span&gt;</string>
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.seismic_moment&lt;/span&gt;&lt;br&gt;
+We assume a constant crustal Bulk modulus of 35 GPa.</string>
           </property>
           <property name="text">
            <string>M&lt;sub&gt;0&lt;/sub&gt;</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
+        <item row="6" column="1">
          <widget class="QLabel" name="seismic_moment">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>25</height>
+           </size>
+          </property>
           <property name="text">
            <string>TextLabel</string>
           </property>
@@ -298,6 +368,9 @@ Clockwise from north.</string>
           </property>
           <property name="text">
            <string>Strike</string>
+          </property>
+          <property name="buddy">
+           <cstring>strike</cstring>
           </property>
          </widget>
         </item>
@@ -332,6 +405,9 @@ Positive from horizontal.</string>
           <property name="text">
            <string>Dip</string>
           </property>
+          <property name="buddy">
+           <cstring>dip</cstring>
+          </property>
          </widget>
         </item>
         <item row="1" column="1">
@@ -364,6 +440,9 @@ Clockwise from left-lateral (0 deg; horizontal).</string>
           </property>
           <property name="text">
            <string>Rake</string>
+          </property>
+          <property name="buddy">
+           <cstring>rake</cstring>
           </property>
          </widget>
         </item>
@@ -401,6 +480,9 @@ In direction of rake.</string>
           <property name="text">
            <string>Slip</string>
           </property>
+          <property name="buddy">
+           <cstring>slip</cstring>
+          </property>
          </widget>
         </item>
         <item row="3" column="1">
@@ -428,6 +510,9 @@ Positive is expansion (e.g. of a dike).</string>
           <property name="text">
            <string>Opening</string>
           </property>
+          <property name="buddy">
+           <cstring>opening</cstring>
+          </property>
          </widget>
         </item>
         <item row="4" column="1">
@@ -446,20 +531,39 @@ Positive is expansion (e.g. of a dike).</string>
           </property>
          </widget>
         </item>
-        <item row="5" column="1">
-         <widget class="QLabel" name="moment_magnitude">
+        <item row="5" column="0">
+         <widget class="QLabel" name="nu_label">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.nu&lt;/span&gt;
+Poisson's ratio in Pascal.</string>
+          </property>
           <property name="text">
-           <string>TextLabel</string>
+           <string>Poisson's</string>
+          </property>
+          <property name="buddy">
+           <cstring>nu</cstring>
           </property>
          </widget>
         </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="MW_label">
-          <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.moment_magnitude&lt;/span&gt;</string>
+        <item row="5" column="1">
+         <widget class="QDoubleSpinBox" name="nu">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="text">
-           <string>M&lt;sub&gt;W&lt;/sub&gt;</string>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="suffix">
+           <string> Pa</string>
+          </property>
+          <property name="maximum">
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.050000000000000</double>
           </property>
          </widget>
         </item>
@@ -470,19 +574,6 @@ Positive is expansion (e.g. of a dike).</string>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_3">
-     <item>
-      <spacer name="horizontalSpacer">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>20</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
      <item>
       <widget class="QPushButton" name="okButton">
        <property name="text">
@@ -496,6 +587,19 @@ Positive is expansion (e.g. of a dike).</string>
         <string>Apply</string>
        </property>
       </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
      </item>
      <item>
       <widget class="QPushButton" name="cancelButton">
@@ -519,6 +623,7 @@ Positive is expansion (e.g. of a dike).</string>
   <tabstop>rake</tabstop>
   <tabstop>slip</tabstop>
   <tabstop>opening</tabstop>
+  <tabstop>nu</tabstop>
   <tabstop>okButton</tabstop>
   <tabstop>applyButton</tabstop>
   <tabstop>cancelButton</tabstop>

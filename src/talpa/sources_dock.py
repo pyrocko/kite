@@ -104,9 +104,6 @@ class SourcesList(QtGui.QListView):
                     self.idx, SourceEditorDialog)
                 editing_dialog.show()
 
-
-            print self.style().standardPixmap(
-                    QtGui.QStyle.SP_DialogCloseButton)
             self.addAction(
                 self.style().standardPixmap(
                     QtGui.QStyle.SP_DialogCloseButton),

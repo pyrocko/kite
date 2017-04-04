@@ -117,7 +117,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
 
-        self.log = SceneLog(self)
+        self.log = SceneLog(self, self.model)
         self.actionLog.triggered.connect(
             self.log.show)
 

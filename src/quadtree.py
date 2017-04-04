@@ -428,7 +428,7 @@ class Quadtree(object):
             b.createTree()
 
         self._log.debug(
-            'Tree created, %d nodes [%0.8f s]' %
+            'Tree created, %d nodes [%0.4f s]' %
             (self.nnodes, time.time() - t0))
 
     @property
@@ -586,7 +586,7 @@ class Quadtree(object):
                           if l.nan_fraction < self.nan_allowed and
                           l.id not in self.config.leaf_blacklist])
         self._log.debug(
-            'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.8f s]' %
+            'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.4f s]' %
             (self.epsilon, len(leaves), time.time() - t0))
         return leaves
 

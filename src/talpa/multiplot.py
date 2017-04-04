@@ -176,6 +176,8 @@ class PlotDockarea(dockarea.DockArea):
         for plt in layout.plots:
             cmap.addPlot(plt)
 
+        sandbox.sigModelChanged.connect(cmap.setSymColormap)
+
         cmap_dock = dockarea.Dock(
             'Colormap',
             widget=cmap)
@@ -208,6 +210,7 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.axis.setLabel('Displacement / m')
         self.setSymColormap()
 
+    @QtCore.Slot()
     def setSymColormap(self):
         cmap = {'ticks':
                 [[0, (106, 0, 31, 255)],

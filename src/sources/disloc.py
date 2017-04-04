@@ -54,16 +54,22 @@ class OkadaSource(Object):
         '''Seismic moment
 
         Disregarding the opening (as for now)
+
+        We assume a shear modulus of :math:`\mu = 36 \mathrm{GPa}`
         :math:`M_0 = \mu A D`
 
-        We assume a perfect elastic solid with :math:`K = \frac{5}{3}\mu`
 
-        Through :math:`\mu = \frac{3K(1-2\nu)}{2(1+\nu)}} this leads to
-        :math:`\mu = \frac{8(1+\nu)}{1-2\nu}
+        Warning ::
+            DEPRECATED!
+            We assume a perfect elastic solid with :math:`K = \frac{5}{3}\mu`
+
+            Through :math:`\mu = \frac{3K(1-2\nu)}{2(1+\nu)}} this leads to
+            :math:`\mu = \frac{8(1+\nu)}{1-2\nu}
         :returns: Seismic moment release
         :rtype: float
         '''
         mu = (8. * (1+self.nu))/(1-2.*self.nu)
+        mu = 32e9  # GPa
         # print mu
         A = self.length * self.width
         return mu * A * self.slip

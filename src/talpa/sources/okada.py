@@ -135,7 +135,7 @@ class OkadaSourceDelegate(QtCore.QObject):
     highlightROI = QtCore.Signal(bool)
 
     parameters = ['easting', 'northing', 'width', 'length', 'depth',
-                  'slip', 'opening', 'strike', 'dip', 'rake']
+                  'slip', 'opening', 'strike', 'dip', 'rake', 'nu']
 
     ro_parameters = ['seismic_moment', 'moment_magnitude']
 
@@ -236,6 +236,9 @@ class OkadaSourceDelegate(QtCore.QObject):
     <td>Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr>
     <td>Rake:</td><td>{source.rake:.2f}&deg;</td>
+</tr>
+<tr>
+    <td>M<sub>W</sub>:</td><td>{source.moment_magnitude:.2f}</td>
 </tr>
 </table>
 '''

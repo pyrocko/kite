@@ -3,6 +3,9 @@ from PySide import QtCore
 # Importing available models
 from .sources import OkadaSourceDelegate
 from .common import SourceROI, SourceEditorDialog
+from ..qt_utils import SceneLogModel
+
+import logging
 
 
 available_delegates = {}
@@ -18,30 +21,37 @@ class CursorTracker(QtCore.QObject):
 class SandboxModel(QtCore.QObject):
 
     sigModelChanged = QtCore.Signal()
+    sigLogRecord = QtCore.Signal(object)
 
-    def __init__(self, model, *args, **kwargs):
+    def __init__(self, scene_model, *args, **kwargs):
         QtCore.QObject.__init__(self, *args, **kwargs)
         self.model = None
+        self.log = SceneLogModel(self)
+
+        self._log_handler = logging.Handler()
+        self._log_handler.emit = self.sigLogRecord.emit
 
         self.cursor_tracker = CursorTracker()
-        self.setModel(model)
+        self.setModel(scene_model)
 
     def setModel(self, model):
-        self.disconnectModel()
+        self.disconnectSlots()
 
         self.model = model
         self.frame = model.frame
         self.sources = SourceModel(self)
 
-        self.connectModel()
+        self.connectSlots()
         self.sigModelChanged.emit()
 
-    def connectModel(self):
+    def connectSlots(self):
+        self.model._log.addHandler(self._log_handler)
         self.model.evModelChanged.subscribe(self.sigModelChanged.emit)
 
-    def disconnectModel(self):
+    def disconnectSlots(self):
         if self.model is None:
             return
+        self.model._log.removeHandler(self._log_handler)
         self.model.evModelChanged.unsubscribe(self.sigModelChanged.emit)
 
     def addSource(self, source):
@@ -61,6 +71,13 @@ class SandboxModel(QtCore.QObject):
     def simpleOkada(cls, **kwargs):
         from ..model_scene import TestModelScene
         model = TestModelScene.simpleOkada(**kwargs)
+        sandbox = cls(model)
+        return sandbox
+
+    @classmethod
+    def empty(cls):
+        from ..model_scene import ModelScene
+        model = ModelScene()
         sandbox = cls(model)
         return sandbox
 

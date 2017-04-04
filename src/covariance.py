@@ -285,7 +285,7 @@ class Covariance(object):
         nodes = sorted(self.quadtree.nodes,
                        key=costFunction)
 
-        self._log.debug('Fetched noise from Quadtree.nodes [%0.8f s]'
+        self._log.debug('Fetched noise from Quadtree.nodes [%0.4f s]'
                         % (time.time() - t0))
         return nodes[0]
 
@@ -432,7 +432,7 @@ class Covariance(object):
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)
 
-        self._log.debug('Created covariance matrix - %s mode [%0.8f s]' %
+        self._log.debug('Created covariance matrix - %s mode [%0.4f s]' %
                         (method, time.time()-t0))
         return cov_matrix
 

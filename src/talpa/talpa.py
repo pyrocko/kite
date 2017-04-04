@@ -5,11 +5,8 @@ from .common import get_resource
 from .multiplot import PlotDockarea
 from .sources_dock import SourcesListDock
 
-from model_proxy import SandboxModel
-from ..qt_utils import loadUi
-
-
-sandbox = SandboxModel.randomOkada(4)
+from sandbox_model import SandboxModel
+from ..qt_utils import loadUi, SceneLog
 
 
 class Talpa(QtGui.QApplication):
@@ -48,10 +45,16 @@ class TalpaMainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
 
+        self.sandbox = SandboxModel.empty()
+
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
 
-        self.openModel(sandbox)
+        self.log = SceneLog(self, self.sandbox)
+        self.actionLog.triggered.connect(
+            self.log.show)
+
+        self.openModel(self.sandbox)
 
     def loadUi(self):
         loadUi(get_resource('talpa.ui'), baseinstance=self)

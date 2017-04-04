@@ -44,7 +44,8 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionLogger"/>
+    <addaction name="separator"/>
+    <addaction name="actionLog"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -71,9 +72,12 @@
     <string>F1</string>
    </property>
   </action>
-  <action name="actionLogger">
+  <action name="actionLog">
    <property name="text">
     <string>Logger</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
    </property>
   </action>
   <action name="actionAbout_Talpa">

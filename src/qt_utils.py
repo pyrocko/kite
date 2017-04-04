@@ -396,8 +396,22 @@ class SceneLog(QtGui.QDialog):
 
     class LogEntryDelegate(QtGui.QStyledItemDelegate):
 
+        levels = {
+            50: QtGui.QStyle.SP_MessageBoxCritical,
+            40: QtGui.QStyle.SP_MessageBoxCritical,
+            30: QtGui.QStyle.SP_MessageBoxWarning,
+            20: QtGui.QStyle.SP_MessageBoxInformation,
+            10: QtGui.QStyle.SP_FileIcon,
+        }
+
         def paint(self, painter, option, idx):
-            pass
+            # paint icon instead of log_lvl
+            if idx.column() == 0:
+                getIcon = QtGui.QApplication.style().standardIcon
+                icon = getIcon(self.levels[idx.data()])
+                icon.paint(painter, option.rect)
+            else:
+                QtGui.QStyledItemDelegate.paint(self, painter, option, idx)
 
     class LogFilter(QtGui.QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
@@ -408,7 +422,7 @@ class SceneLog(QtGui.QDialog):
             self.level = level
             self.setFilterRegExp('%s' % self.level)
 
-    def __init__(self, app=None):
+    def __init__(self, app, model):
         QtGui.QDialog.__init__(self, app)
 
         logging_ui = op.join(
@@ -422,17 +436,18 @@ class SceneLog(QtGui.QDialog):
         self.table_filter = self.LogFilter()
         self.table_filter.setFilterKeyColumn(0)
         self.table_filter.setDynamicSortFilter(True)
-        self.table_filter.setSourceModel(app.model.log)
+        self.table_filter.setSourceModel(model.log)
 
         self.table_filter.rowsInserted.connect(self.popupOnWarning)
 
         self.tableView.setModel(self.table_filter)
+        self.tableView.setItemDelegate(self.LogEntryDelegate())
 
         self.tableView.setColumnWidth(0, 30)
         self.tableView.setColumnWidth(1, 200)
 
         self.filterBox.addItems(
-            [l for l in self.levels.values()] + ['All'])
+            [lvl_name for lvl_name in self.levels.values()] + ['All'])
         self.filterBox.setCurrentIndex(0)
 
         def changeFilter():

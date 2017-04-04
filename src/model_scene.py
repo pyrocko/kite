@@ -105,14 +105,17 @@ class ModelScene(BaseScene):
         for processor in PROCESSORS:
             sources = [src for src in self.sources
                        if src.__implements__ == processor.__implements__]
+            if not sources:
+                continue
+
             t0 = time.time()
 
             result = processor.process(
                 sources, self.frame.coordinates, nthreads=0)
             results.append(result)
 
-            self._log.debug('Processed %s (%s) using %s [%.4fs]'
-                            % (src.__class__.__name__, src.__implements__,
+            self._log.debug('Processed %s (nsources:%d) using %s [%.4f s]'
+                            % (src.__class__.__name__, len(sources),
                                processor.__class__.__name__, time.time() - t0))
 
         for r in results:
@@ -193,9 +196,9 @@ class TestModelScene(ModelScene):
                     northing=r(length, model_scene.frame.N.max()-length),
                     depth=r(0, 8000),
                     strike=r(0, 360),
-                    dip=r(0, 170),
+                    dip=r(0, 90),
                     slip=r(1, 5),
-                    rake=r(0, 180),
+                    rake=r(-180, 180),
                     length=length,
                     width=15. * length**.66,))
         return model_scene
