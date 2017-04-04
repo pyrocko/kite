@@ -16,17 +16,17 @@ class KiteQuadtree(KiteView):
     title = 'Scene.quadtree'
 
     def __init__(self, spool):
-        scene_proxy = spool.scene_proxy
-        self.main_widget = KiteQuadtreePlot(scene_proxy)
+        model = spool.model
+        self.main_widget = KiteQuadtreePlot(model)
         self.tools = {}
 
         self.param_quadtree = KiteParamQuadtree(
-            scene_proxy,
+            model,
             self.main_widget,
             expanded=True)
         self.parameters = [self.param_quadtree]
 
-        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
+        model.sigSceneModelChanged.connect(self.modelChanged)
 
         KiteView.__init__(self)
 
@@ -61,7 +61,7 @@ class QQuadLeaf(QtCore.QRectF):
 
 
 class KiteQuadtreePlot(KitePlot):
-    def __init__(self, scene_proxy):
+    def __init__(self, model):
 
         self.components_available = {
             'mean':
@@ -77,7 +77,7 @@ class KiteQuadtreePlot(KitePlot):
 
         self._component = 'median'
 
-        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, model=model, los_arrow=True)
 
         # http://paletton.com
         focalpoint_color = (45, 136, 45)
@@ -117,27 +117,27 @@ class KiteQuadtreePlot(KitePlot):
             if self._component == 'weight':
                 self.update()
 
-        self.scene_proxy.sigQuadtreeChanged.connect(self.unselectLeaves)
-        self.scene_proxy.sigQuadtreeChanged.connect(self.update)
-        self.scene_proxy.sigQuadtreeChanged.connect(self.updateFocalPoints)
-        self.scene_proxy.sigCovarianceChanged.connect(covarianceChanged)
+        self.model.sigQuadtreeChanged.connect(self.unselectLeaves)
+        self.model.sigQuadtreeChanged.connect(self.update)
+        self.model.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        self.model.sigCovarianceChanged.connect(covarianceChanged)
 
-        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrame)
-        # self.scene_proxy.sigFrameChanged.connect(self.transFromFrameScatter)
+        # self.model.sigFrameChanged.connect(self.transFromFrame)
+        # self.model.sigFrameChanged.connect(self.transFromFrameScatter)
 
         self.updateFocalPoints()
 
     def transFromFrameScatter(self):
         self.focal_points.resetTransform()
         self.focal_points.scale(
-            self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
+            self.model.frame.dE, self.model.frame.dN)
 
     def updateFocalPoints(self):
-        if self.scene_proxy.quadtree.leaf_focal_points.size == 0:
+        if self.model.quadtree.leaf_focal_points.size == 0:
             self.focal_points.clear()
         else:
             self.focal_points.setData(
-                pos=self.scene_proxy.quadtree.leaf_focal_points,
+                pos=self.model.quadtree.leaf_focal_points,
                 pxMode=True)
 
     def updateEraseBox(self, p1, p2):
@@ -162,7 +162,7 @@ class KiteQuadtreePlot(KitePlot):
             self.updateEraseBox(ev.buttonDownPos(), ev.pos())
 
     def getQleaves(self):
-        return [QQuadLeaf(l) for l in self.scene_proxy.quadtree.leaves]
+        return [QQuadLeaf(l) for l in self.model.quadtree.leaves]
 
     def selectLeaves(self):
         self.unselectLeaves()
@@ -185,7 +185,7 @@ class KiteQuadtreePlot(KitePlot):
 
     def blacklistSelectedLeaves(self, ev):
         if ev.key() & QtCore.Qt.Key_Delete:
-            self.scene_proxy.quadtree.blacklistLeaves(
+            self.model.quadtree.blacklistLeaves(
                 l.id for l in self.selected_leaves)
 
 
@@ -195,10 +195,10 @@ class KiteParamQuadtree(KiteParameterGroup):
     sigTileMaximum = QtCore.Signal(float)
     sigTileMinimum = QtCore.Signal(float)
 
-    def __init__(self, scene_proxy, plot, *args, **kwargs):
+    def __init__(self, model, plot, *args, **kwargs):
         self.plot = plot
         self.sig_guard = True
-        self.sp = scene_proxy
+        self.sp = model
 
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.quadtree'
@@ -212,17 +212,17 @@ class KiteParamQuadtree(KiteParameterGroup):
 
         KiteParameterGroup.__init__(
             self,
-            model=scene_proxy,
+            model=model,
             model_attr='quadtree',
             **kwargs)
 
-        scene_proxy.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
-        scene_proxy.sigQuadtreeChanged.connect(self.updateValues)
+        model.sigQuadtreeConfigChanged.connect(self.onConfigUpdate)
+        model.sigQuadtreeChanged.connect(self.updateValues)
 
-        self.sigEpsilon.connect(scene_proxy.qtproxy.setEpsilon)
-        self.sigNanFraction.connect(scene_proxy.qtproxy.setNanFraction)
-        self.sigTileMaximum.connect(scene_proxy.qtproxy.setTileMaximum)
-        self.sigTileMinimum.connect(scene_proxy.qtproxy.setTileMinimum)
+        self.sigEpsilon.connect(model.qtproxy.setEpsilon)
+        self.sigNanFraction.connect(model.qtproxy.setNanFraction)
+        self.sigTileMaximum.connect(model.qtproxy.setTileMaximum)
+        self.sigTileMinimum.connect(model.qtproxy.setTileMinimum)
 
         def updateGuard(func):
             def wrapper(*args, **kwargs):
@@ -236,13 +236,13 @@ class KiteParamQuadtree(KiteParameterGroup):
             self.sigEpsilon.emit(self.epsilon.value())
 
         p = {'name': 'epsilon',
-             'value': scene_proxy.quadtree.epsilon,
+             'value': model.quadtree.epsilon,
              'type': 'float',
-             'default': scene_proxy.quadtree._epsilon_init,
-             'step': round((scene_proxy.quadtree.epsilon -
-                            scene_proxy.quadtree.epsilon_min)*.1, 3),
-             'limits': (scene_proxy.quadtree.epsilon_min,
-                        3*scene_proxy.quadtree._epsilon_init),
+             'default': model.quadtree._epsilon_init,
+             'step': round((model.quadtree.epsilon -
+                            model.quadtree.epsilon_min)*.1, 3),
+             'limits': (model.quadtree.epsilon_min,
+                        3*model.quadtree._epsilon_init),
              'editable': True}
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
@@ -254,7 +254,7 @@ class KiteParamQuadtree(KiteParameterGroup):
             self.sigNanFraction.emit(self.nan_allowed.value())
 
         p = {'name': 'nan_allowed',
-             'value': scene_proxy.quadtree.nan_allowed,
+             'value': model.quadtree.nan_allowed,
              'default': QuadtreeConfig.nan_allowed.default(),
              'type': 'float',
              'step': 0.05,
@@ -270,7 +270,7 @@ class KiteParamQuadtree(KiteParameterGroup):
             self.sigTileMinimum.emit(self.tile_size_min.value())
 
         p = {'name': 'tile_size_min',
-             'value': scene_proxy.quadtree.tile_size_min,
+             'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
              'type': 'int',
              'limits': (50, 50000),
@@ -285,7 +285,7 @@ class KiteParamQuadtree(KiteParameterGroup):
             self.sigTileMaximum.emit(self.tile_size_max.value())
 
         p.update({'name': 'tile_size_max',
-                  'value': scene_proxy.quadtree.tile_size_max,
+                  'value': model.quadtree.tile_size_max,
                   'default': QuadtreeConfig.tile_size_max.default()})
         self.tile_size_max = pTypes.SimpleParameter(**p)
         self.tile_size_max.itemClass = SliderWidgetParameterItem
@@ -308,7 +308,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.components.sigValueChanged.connect(changeComponent)
 
         def changeCorrection():
-            scene_proxy.quadtree.setCorrection(correction_method.value())
+            model.quadtree.setCorrection(correction_method.value())
             self.updateEpsilonLimits()
 
         p = {'name': 'setCorrection',

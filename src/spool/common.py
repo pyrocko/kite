@@ -51,11 +51,11 @@ class KiteView(dockarea.DockArea):
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
-    def __init__(self, scene_proxy):
+    def __init__(self, model):
         pg.GraphicsWidget.__init__(self)
         pg.GraphicsWidgetAnchor.__init__(self)
 
-        self.scene_proxy = scene_proxy
+        self.model = model
 
         self.arrow = pg.ArrowItem(
             parent=self,
@@ -65,13 +65,13 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             pxMode=True)
         self.orientArrow()
 
-        self.scene_proxy.sigSceneChanged.connect(self.orientArrow)
+        self.model.sigSceneChanged.connect(self.orientArrow)
         self.setFlag(self.ItemIgnoresTransformations)
 
     @QtCore.Slot()
     def orientArrow(self):
-        phi = num.median(self.scene_proxy.scene.phi)
-        theta = num.median(self.scene_proxy.scene.theta)
+        phi = num.median(self.model.scene.phi)
+        theta = num.median(self.model.scene.theta)
 
         angle = -num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
@@ -96,9 +96,9 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
 class KitePlot(pg.PlotWidget):
 
-    def __init__(self, scene_proxy, los_arrow=False):
+    def __init__(self, model, los_arrow=False):
         pg.PlotWidget.__init__(self)
-        self.scene_proxy = scene_proxy
+        self.model = model
         self.draw_time = 0.
         self._data = None
 
@@ -155,7 +155,7 @@ class KitePlot(pg.PlotWidget):
         # self.scalebar()
 
     def addLOSArrow(self):
-        self.los_arrow = LOSArrow(self.scene_proxy)
+        self.los_arrow = LOSArrow(self.model)
         self.los_arrow.setParentItem(self.graphicsItem())
         self.los_arrow.anchor(
             itemPos=(1., 0.), parentPos=(1, 0.),
@@ -163,7 +163,7 @@ class KitePlot(pg.PlotWidget):
 
     def transFromFrame(self):
         self.image.resetTransform()
-        self.image.scale(self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
+        self.image.scale(self.model.frame.dE, self.model.frame.dN)
 
     def scalebar(self):
         ''' Not working '''
@@ -189,7 +189,7 @@ class KitePlot(pg.PlotWidget):
     def data(self):
         if self._data is None:
             self._data = self.components_available[self.component][1](
-                self.scene_proxy)
+                self.model)
         return self._data
         # return self._data  # num.nan_to_num(_data)
 

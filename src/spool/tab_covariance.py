@@ -28,9 +28,9 @@ class KiteCovariance(KiteView):
     title = 'Scene.covariance'
 
     def __init__(self, spool):
-        scene_proxy = spool.scene_proxy
+        model = spool.model
 
-        covariance_plot = KiteNoisePlot(scene_proxy)
+        covariance_plot = KiteNoisePlot(model)
         self.main_widget = covariance_plot
         self.tools = {
             'Covariance.powerspecNoise':
@@ -41,12 +41,12 @@ class KiteCovariance(KiteView):
             #     KiteStructureFunction(covariance_plot),
         }
 
-        self.param_covariance = KiteParamCovariance(scene_proxy)
+        self.param_covariance = KiteParamCovariance(model)
         self.parameters = [self.param_covariance]
 
-        self.dialogInspectNoise = KiteToolNoise(scene_proxy, spool)
+        self.dialogInspectNoise = KiteToolNoise(model, spool)
         self.dialogInspectCovariance = KiteToolWeightMatrix(
-            scene_proxy, spool)
+            model, spool)
 
         spool.actionInspect_Noise.triggered.connect(
             self.dialogInspectNoise.show)
@@ -55,13 +55,13 @@ class KiteCovariance(KiteView):
         spool.actionInspect_Weights.triggered.connect(
             self.dialogInspectCovariance.show)
         spool.actionCalculate_WeightMatrix.triggered.connect(
-            lambda: QCalculateWeightMatrix(scene_proxy, spool))
+            lambda: QCalculateWeightMatrix(model, spool))
 
         spool.actionInspect_Noise.setEnabled(True)
         spool.actionInspect_Weights.setEnabled(True)
         spool.actionCalculate_WeightMatrix.setEnabled(True)
 
-        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
+        model.sigSceneModelChanged.connect(self.modelChanged)
 
         KiteView.__init__(self)
 
@@ -78,16 +78,16 @@ class KiteCovariance(KiteView):
 
 
 class KiteNoisePlot(KitePlot):
-    def __init__(self, scene_proxy):
+    def __init__(self, model):
         self.components_available = {
             'displacement':
             ['Displacement', lambda sp: sp.scene.displacement],
         }
         self._component = 'displacement'
 
-        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, model=model, los_arrow=True)
 
-        llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
+        llE, llN, sizeE, sizeN = self.model.covariance.noise_coord
         self.roi = pg.RectROI(
             pos=(llE, llN),
             size=(sizeE, sizeN),
@@ -98,11 +98,11 @@ class KiteNoisePlot(KitePlot):
         self.roi.sigRegionChangeFinished.connect(self.updateNoiseRegion)
         self.addItem(self.roi)
 
-        self.scene_proxy.sigCovarianceConfigChanged.connect(
+        self.model.sigCovarianceConfigChanged.connect(
             self.onConfigChanged)
 
     def onConfigChanged(self):
-        llE, llN, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
+        llE, llN, sizeE, sizeN = self.model.covariance.noise_coord
         self.roi.setPos((llE, llN), update=False, finish=False)
         self.roi.setSize((sizeE, sizeN), finish=False)
         self.update()
@@ -116,15 +116,15 @@ class KiteNoisePlot(KitePlot):
 
         llE, llN = self.roi.pos()
         sizeE, sizeN = self.roi.size()
-        self.scene_proxy.covariance.noise_coord = (llE, llN, sizeE, sizeN)
-        self.scene_proxy.covariance.noise_data = data.T
+        self.model.covariance.noise_coord = (llE, llN, sizeE, sizeN)
+        self.model.covariance.noise_data = data.T
 
 
 class _KiteSubplotPlot(QtGui.QWidget):
     def __init__(self, parent_plot):
         QtGui.QWidget.__init__(self)
         self.parent_plot = parent_plot
-        self.scene_proxy = parent_plot.scene_proxy
+        self.model = parent_plot.model
 
         self.plot = pg.PlotWidget(background='default')
         self.plot.showGrid(True, True, alpha=.5)
@@ -159,11 +159,11 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.addItem(self.power)
         # self.addItem(self.power_lin)
 
-        self.scene_proxy.sigCovarianceChanged.connect(self.update)
+        self.model.sigCovarianceChanged.connect(self.update)
         self.update()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
+        covariance = self.model.covariance
         spec, k, _, _, _, _ = covariance.powerspecNoise1D()
         self.power.setData(k, spec)
         self.power_lin.setData(
@@ -203,16 +203,16 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.legend.addItem(self.cov_model, '')
         self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f}) | RMS: {rms:.4e}'
 
-        self.scene_proxy.sigCovarianceChanged.connect(
+        self.model.sigCovarianceChanged.connect(
             self.update)
 
         self.update()
 
     def setVariance(self):
-        self.scene_proxy.covariance.variance = self.variance.value()
+        self.model.covariance.variance = self.variance.value()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
+        covariance = self.model.covariance
         cov, dist = covariance.covariance_func
 
         self.cov.setData(dist, cov)
@@ -245,7 +245,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
         self.addItem(self.structure)
         self.addItem(self.variance)
-        self.scene_proxy.sigCovarianceChanged.connect(
+        self.model.sigCovarianceChanged.connect(
             self.update)
         self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
@@ -253,19 +253,19 @@ class KiteStructureFunction(_KiteSubplotPlot):
         self.update()
 
     def update(self):
-        covariance = self.scene_proxy.covariance
+        covariance = self.model.covariance
         struc, dist = covariance.structure_func
         self.structure.setData(dist, struc)
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
-        covariance = self.scene_proxy.covariance
+        covariance = self.model.covariance
         covariance.variance = inf_line.getYPos()
 
 
 class KiteToolNoise(QtGui.QDialog):
     class NoisePlot(KitePlot):
-        def __init__(self, scene_proxy):
+        def __init__(self, model):
             self.components_available = {
                 'noise_data': [
                   'Displacement',
@@ -273,7 +273,7 @@ class KiteToolNoise(QtGui.QDialog):
                 ]}
 
             self._component = 'noise_data'
-            KitePlot.__init__(self, scene_proxy=scene_proxy)
+            KitePlot.__init__(self, model=model)
 
         @staticmethod
         def noise_data_masked(covariance):
@@ -282,14 +282,14 @@ class KiteToolNoise(QtGui.QDialog):
             return data
 
         def proxy_connect(self):
-            self.scene_proxy.sigCovarianceChanged.connect(self.update)
+            self.model.sigCovarianceChanged.connect(self.update)
 
         def proxy_disconnect(self):
-            self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
+            self.model.sigCovarianceChanged.disconnect(self.update)
 
     class NoiseSyntheticPlot(KitePlot):
-        def __init__(self, scene_proxy):
-            sp = scene_proxy
+        def __init__(self, model):
+            sp = model
             _, _, sizeE, sizeN = sp.covariance.noise_coord
 
             self.patch_size_roi = pg.RectROI(
@@ -309,7 +309,7 @@ class KiteToolNoise(QtGui.QDialog):
                 ]}
 
             self._component = 'synthetic_noise'
-            KitePlot.__init__(self, scene_proxy=scene_proxy)
+            KitePlot.__init__(self, model=model)
 
             self.addItem(self.patch_size_roi)
 
@@ -322,11 +322,11 @@ class KiteToolNoise(QtGui.QDialog):
             self.update()
 
         def resetSize(self):
-            _, _, sizeE, sizeN = self.scene_proxy.covariance.noise_coord
+            _, _, sizeE, sizeN = self.model.covariance.noise_coord
             self.patch_size_roi.setSize((sizeE, sizeN))
 
         def sizePatchPx(self):
-            sp = self.scene_proxy
+            sp = self.model
             sizeE, sizeN = self.patch_size_roi.size()
             return int(sizeN / sp.frame.dN), int(sizeE / sp.frame.dE)
 
@@ -358,12 +358,12 @@ class KiteToolNoise(QtGui.QDialog):
             image.sigImageChanged.connect(updateHistogram)
 
         def proxy_connect(self):
-            self.scene_proxy.sigCovarianceChanged.connect(self.update)
+            self.model.sigCovarianceChanged.connect(self.update)
 
         def proxy_disconnect(self):
-            self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
+            self.model.sigCovarianceChanged.disconnect(self.update)
 
-    def __init__(self, scene_proxy, parent=None):
+    def __init__(self, model, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
         loadUi(get_resource('noise_dialog.ui'), baseinstance=self)
@@ -371,8 +371,8 @@ class KiteToolNoise(QtGui.QDialog):
             self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
         self.setWindowFlags(QtCore.Qt.Window)
 
-        self.noise_patch = self.NoisePlot(scene_proxy)
-        self.noise_synthetic = self.NoiseSyntheticPlot(scene_proxy)
+        self.noise_patch = self.NoisePlot(model)
+        self.noise_synthetic = self.NoiseSyntheticPlot(model)
 
         colormap = KiteToolColormap(self.noise_patch)
         self.noise_synthetic.setGradientEditor(colormap)
@@ -423,12 +423,12 @@ class KiteToolNoise(QtGui.QDialog):
 
 class KiteToolWeightMatrix(QtGui.QDialog):
     class MatrixPlot(KitePlot):
-        def __init__(self, scene_proxy):
+        def __init__(self, model):
             from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
             self._component = 'weight'
 
-            KitePlot.__init__(self, scene_proxy)
-            self.scene_proxy = scene_proxy
+            KitePlot.__init__(self, model)
+            self.model = model
 
             gradient = Gradients['thermal']
 
@@ -460,14 +460,14 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         def update(self):
             self.image.updateImage(
-                self.scene_proxy.covariance.weight_matrix_focal.T,
+                self.model.covariance.weight_matrix_focal.T,
                 autoLevels=True)
 
         def transFromFrame(self):
             # self.resetTransform()
             self.setRange(
-                xRange=(0, self.scene_proxy.quadtree.nleaves),
-                yRange=(0, self.scene_proxy.quadtree.nleaves))
+                xRange=(0, self.model.quadtree.nleaves),
+                yRange=(0, self.model.quadtree.nleaves))
 
         @QtCore.Slot(object)
         def mouseMoved(self, event=None):
@@ -486,21 +486,21 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             self.hint_text.setText(self.hint_text.template.format(**self.hint))
 
         def proxy_connect(self):
-            self.scene_proxy.sigCovarianceChanged.connect(self.update)
-            self.scene_proxy.sigQuadtreeChanged.connect(self.transFromFrame)
+            self.model.sigCovarianceChanged.connect(self.update)
+            self.model.sigQuadtreeChanged.connect(self.transFromFrame)
 
         def proxy_disconnect(self):
-            self.scene_proxy.sigCovarianceChanged.disconnect(self.update)
-            self.scene_proxy.sigQuadtreeChanged.disconnect(self.transFromFrame)
+            self.model.sigCovarianceChanged.disconnect(self.update)
+            self.model.sigQuadtreeChanged.disconnect(self.transFromFrame)
 
-    def __init__(self, scene_proxy, parent=None):
+    def __init__(self, model, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
         loadUi(get_resource('covariance_matrix.ui'), baseinstance=self)
         self.closeButton.setIcon(
             self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
 
-        self.weight_matrix = self.MatrixPlot(scene_proxy)
+        self.weight_matrix = self.MatrixPlot(model)
         self.dockarea = dockarea.DockArea(self)
 
         self.dockarea.addDock(
@@ -526,10 +526,10 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 class QCalculateWeightMatrix(QtCore.QObject):
     sigCalculateWeightMatrix = QtCore.Signal()
 
-    def __init__(self, scene_proxy, parent):
+    def __init__(self, model, parent):
         QtCore.QObject.__init__(self)
         self.sigCalculateWeightMatrix.connect(
-            scene_proxy.calculateWeightMatrix)
+            model.calculateWeightMatrix)
 
         ret = QtGui.QMessageBox.information(
             parent,
@@ -546,7 +546,7 @@ The calculation is expensive and may take several minutes.
 
 
 class KiteParamCovariance(KiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.covariance'
 
@@ -563,9 +563,9 @@ class KiteParamCovariance(KiteParameterGroup):
              lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
             ])
 
-        scene_proxy.sigCovarianceChanged.connect(self.updateValues)
+        model.sigCovarianceChanged.connect(self.updateValues)
         KiteParameterGroup.__init__(
             self,
-            model=scene_proxy,
+            model=model,
             model_attr='covariance',
             **kwargs)

@@ -1,16 +1,19 @@
 #!/usr/bin/python2
 from __future__ import (print_function, division, unicode_literals,
                         absolute_import)
-import os
 
+import os
+import logging
 import numpy as num
+
+from os import path as op
 from pyqtgraph.Qt import QtGui, QtCore
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 from PySide.QtCore import QMetaObject
 from PySide.QtUiTools import QUiLoader
 
 
-SCRIPT_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
 
 _viridis_data = [[68, 1, 84],
                  [69, 6, 90],
@@ -80,10 +83,10 @@ _viridis_data.reverse()
 
 
 def validateFilename(filename):
-    filedir = os.path.dirname(filename)
+    filedir = op.dirname(filename)
     if filename == '' or filedir == '':
         return False
-    if os.path.isdir(filename) or not os.access(filedir, os.W_OK):
+    if op.isdir(filename) or not os.access(filedir, os.W_OK):
         QtGui.QMessageBox.critical(None, 'Path Error',
                                    'Could not access file <b>%s</b>'
                                    % filename)
@@ -335,5 +338,114 @@ class SliderWidgetParameterItem(WidgetParameterItem):
         return w
 
 
-class QSceneLogger(QtGui.QWidget):
-    pass
+class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
+
+    def __init__(self, model, *args, **kwargs):
+        QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
+        logging.Handler.__init__(self)
+
+        self.log_records = []
+        self.app = None
+        self.model = model
+        self.model.sigLogRecord.connect(self.newRecord)
+
+    def data(self, idx, role):
+        rec = self.log_records[idx.row()]
+
+        if role == QtCore.Qt.DisplayRole:
+            if idx.column() == 0:
+                return int(rec.levelno)
+            elif idx.column() == 1:
+                return '%s:%s' % (rec.levelname, rec.name)
+            elif idx.column() == 2:
+                return rec.getMessage()
+
+        elif role == QtCore.Qt.ItemDataRole:
+            return rec
+
+        elif role == QtCore.Qt.ToolTipRole:
+            if idx.column() == 0:
+                return rec.levelname
+            elif idx.column() == 1:
+                return '%s.%s' % (rec.module, rec.funcName)
+            elif idx.column() == 2:
+                return 'Line %d' % rec.lineno
+
+    def rowCount(self, idx):
+        return len(self.log_records)
+
+    def columnCount(self, idx):
+        return 3
+
+    @QtCore.Slot(object)
+    def newRecord(self, record):
+        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
+        self.log_records.append(record)
+        self.endInsertRows()
+
+
+class SceneLog(QtGui.QDialog):
+
+    levels = {
+        50: 'Critical',
+        40: 'Error',
+        30: 'Warning',
+        20: 'Info',
+        10: 'Debug',
+    }
+
+    class LogEntryDelegate(QtGui.QStyledItemDelegate):
+
+        def paint(self, painter, option, idx):
+            pass
+
+    class LogFilter(QtGui.QSortFilterProxyModel):
+        def __init__(self, *args, **kwargs):
+            QtGui.QSortFilterProxyModel.__init__(self, *args, **kwargs)
+            self.level = 0
+
+        def setLevel(self, level):
+            self.level = level
+            self.setFilterRegExp('%s' % self.level)
+
+    def __init__(self, app=None):
+        QtGui.QDialog.__init__(self, app)
+
+        logging_ui = op.join(
+            op.dirname(op.realpath(__file__)),
+            'spool', 'res', 'logging.ui')
+        loadUi(logging_ui, baseinstance=self)
+
+        self.closeButton.setIcon(self.style().standardPixmap(
+                                 QtGui.QStyle.SP_DialogCloseButton))
+
+        self.table_filter = self.LogFilter()
+        self.table_filter.setFilterKeyColumn(0)
+        self.table_filter.setDynamicSortFilter(True)
+        self.table_filter.setSourceModel(app.model.log)
+
+        self.table_filter.rowsInserted.connect(self.popupOnWarning)
+
+        self.tableView.setModel(self.table_filter)
+
+        self.tableView.setColumnWidth(0, 30)
+        self.tableView.setColumnWidth(1, 200)
+
+        self.filterBox.addItems(
+            [l for l in self.levels.values()] + ['All'])
+        self.filterBox.setCurrentIndex(0)
+
+        def changeFilter():
+            for lvl, lvl_name in self.levels.iteritems():
+                if lvl_name == self.filterBox.currentText():
+                    self.table_filter.setLevel(lvl)
+                    return
+
+            self.table_filter.setLevel(0)
+
+        self.filterBox.currentIndexChanged.connect(changeFilter)
+
+    def popupOnWarning(self, idx, first, last):
+        record = self.table_filter.sourceModel().log_records[-1]
+        if record.levelno >= 30 and self.autoBox.isChecked():
+            self.show()

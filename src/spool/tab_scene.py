@@ -15,18 +15,18 @@ class KiteScene(KiteView):
     title = 'Scene'
 
     def __init__(self, spool):
-        scene_proxy = spool.scene_proxy
+        model = spool.model
 
-        scene_plot = KiteScenePlot(scene_proxy)
+        scene_plot = KiteScenePlot(model)
         self.main_widget = scene_plot
         self.tools = {
             # 'Components': KiteToolComponents(self.main_widget),
             # 'Displacement Transect': KiteToolTransect(self.main_widget),
         }
 
-        self.param_scene = KiteParamScene(scene_proxy, scene_plot)
-        self.param_frame = KiteParamSceneFrame(scene_proxy, expanded=False)
-        self.param_meta = KiteParamSceneMeta(scene_proxy, expanded=False)
+        self.param_scene = KiteParamScene(model, scene_plot)
+        self.param_frame = KiteParamSceneFrame(model, expanded=False)
+        self.param_meta = KiteParamSceneMeta(model, expanded=False)
 
         self.param_scene.addChild(self.param_frame)
         self.param_scene.addChild(self.param_meta)
@@ -37,7 +37,7 @@ class KiteScene(KiteView):
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
-        scene_proxy.sigSceneModelChanged.connect(self.modelChanged)
+        model.sigSceneModelChanged.connect(self.modelChanged)
 
         KiteView.__init__(self)
 
@@ -53,7 +53,7 @@ class KiteScene(KiteView):
 
 
 class KiteScenePlot(KitePlot):
-    def __init__(self, scene_proxy):
+    def __init__(self, model):
         self.components_available = {
             'displacement':
                 ['Scene.displacement', lambda sp: sp.scene.displacement],
@@ -74,10 +74,10 @@ class KiteScenePlot(KitePlot):
         }
         self._component = 'displacement'
 
-        KitePlot.__init__(self, scene_proxy=scene_proxy, los_arrow=True)
+        KitePlot.__init__(self, model=model, los_arrow=True)
 
-        scene_proxy.sigFrameChanged.connect(self.onFrameChange)
-        scene_proxy.sigSceneModelChanged.connect(self.update)
+        model.sigFrameChanged.connect(self.onFrameChange)
+        model.sigSceneModelChanged.connect(self.update)
 
     def onFrameChange(self):
         self.update()
@@ -121,7 +121,7 @@ class KiteToolTransect(QtGui.QDialog):
         self.createButton.released.connect(self.addPolyLine)
         self.removeButton.released.connect(self.removePolyLine)
 
-        parent.scene_proxy.sigConfigChanged.connect(self.close)
+        parent.model.sigConfigChanged.connect(self.close)
 
     def addPolyLine(self):
         [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
@@ -172,7 +172,7 @@ class KiteToolTransect(QtGui.QDialog):
 
 
 class KiteParamScene(KiteParameterGroup):
-    def __init__(self, scene_proxy, plot, **kwargs):
+    def __init__(self, model, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
         self.plot = plot
@@ -211,7 +211,7 @@ class KiteParamScene(KiteParameterGroup):
 
 
 class KiteParamSceneFrame(KiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.frame'
 
@@ -233,16 +233,16 @@ class KiteParamSceneFrame(KiteParameterGroup):
             ('utm_zone_letter', None),
             ])
 
-        scene_proxy.sigFrameChanged.connect(self.updateValues)
+        model.sigFrameChanged.connect(self.updateValues)
 
         KiteParameterGroup.__init__(self,
-                                    model=scene_proxy,
+                                    model=model,
                                     model_attr='frame',
                                     **kwargs)
 
 
 class KiteParamSceneMeta(KiteParameterGroup):
-    def __init__(self, scene_proxy, **kwargs):
+    def __init__(self, model, **kwargs):
         from datetime import datetime as dt
         kwargs['type'] = 'group'
         kwargs['name'] = '.meta'
@@ -267,9 +267,9 @@ class KiteParamSceneMeta(KiteParameterGroup):
              lambda sc: '%s' % sc.meta.time_separation),
             ])
 
-        scene_proxy.sigConfigChanged.connect(self.updateValues)
+        model.sigConfigChanged.connect(self.updateValues)
 
         KiteParameterGroup.__init__(self,
-                                    model=scene_proxy,
+                                    model=model,
                                     model_attr='scene',
                                     **kwargs)

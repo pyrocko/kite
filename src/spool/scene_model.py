@@ -1,10 +1,13 @@
 from PySide import QtCore
 from pyqtgraph import SignalProxy
 from kite import Scene
+
+from ..qt_utils import SceneLogModel
+
 import logging
 
 
-class QSceneProxy(QtCore.QObject):
+class SceneModel(QtCore.QObject):
     ''' Proxy for :class:`kite.Scene` so we can change the scene
     '''
     sigSceneModelChanged = QtCore.Signal()
@@ -31,6 +34,7 @@ class QSceneProxy(QtCore.QObject):
         self.frame = None
         self.quadtree = None
         self.covariance = None
+        self.log = SceneLogModel(self)
 
         self._ = SignalProxy(self._sigQuadtreeChanged,
                              rateLimit=5,
