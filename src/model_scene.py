@@ -37,8 +37,7 @@ class ModelScene(BaseScene):
 
     def __init__(self, config=ModelSceneConfig(), **kwargs):
         self.config = config
-        self.sources = self.config.sources
-        self.evModelChanged = Subject()
+        self.evModelUpdated = Subject()
 
         frame_config = kwargs.pop('frame_config', None)
         if frame_config is not None:
@@ -53,6 +52,10 @@ class ModelScene(BaseScene):
                 self.__setattr__(attr, data)
 
         self._los_factors = None
+
+    @property
+    def sources(self):
+        return self.config.sources
 
     def setExtent(self, north, east):
         self.config.extent_east = east
@@ -85,12 +88,13 @@ class ModelScene(BaseScene):
         return self._los_displacement
 
     def addSource(self, source):
-        self.sources.append(source)
+        if source not in self.sources:
+            self.sources.append(source)
         self._log.info('Added %s' % source.__class__.__name__)
         source.evParametersChanged.subscribe(self._clearModel)
 
         self._clearModel()
-        self.evModelChanged.notify()
+        self.evModelUpdated.notify()
 
     def removeSource(self, source):
         source.evParametersChanged.unsubscribe(self._clearModel)
@@ -99,7 +103,7 @@ class ModelScene(BaseScene):
         del source
 
         self._clearModel()
-        self.evModelChanged.notify()
+        self.evModelUpdated.notify()
 
     def processSources(self):
         results = []
@@ -147,7 +151,7 @@ class ModelScene(BaseScene):
         for arr in [self.north, self.east, self.down]:
             arr.fill(0.)
         self.los_displacement = None
-        self.evModelChanged.notify()
+        self.evModelUpdated.notify()
 
     def _LOSFactors(self):
         if (self.theta.size != self.phi.size):
@@ -175,6 +179,8 @@ class ModelScene(BaseScene):
     def load(cls, filename):
         model_scene = cls()
         model_scene.config = guts.load(filename=filename)
+        for source in model_scene.sources:
+            model_scene.addSource(source)
         model_scene._log.info('Loaded config from %s' % filename)
         return model_scene
 

@@ -20,6 +20,7 @@ class CursorTracker(QtCore.QObject):
 
 class SandboxModel(QtCore.QObject):
 
+    sigModelUpdated = QtCore.Signal()
     sigModelChanged = QtCore.Signal()
     sigLogRecord = QtCore.Signal(object)
 
@@ -27,6 +28,7 @@ class SandboxModel(QtCore.QObject):
         QtCore.QObject.__init__(self, *args, **kwargs)
         self.model = None
         self.log = SceneLogModel(self)
+        self.sources = SourceModel(self)
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit
@@ -39,20 +41,21 @@ class SandboxModel(QtCore.QObject):
 
         self.model = model
         self.frame = model.frame
-        self.sources = SourceModel(self)
 
         self.connectSlots()
         self.sigModelChanged.emit()
+        self.sigModelUpdated.emit()
 
     def connectSlots(self):
         self.model._log.addHandler(self._log_handler)
-        self.model.evModelChanged.subscribe(self.sigModelChanged.emit)
+        self.model.evModelUpdated.subscribe(self.sigModelUpdated.emit)
 
     def disconnectSlots(self):
         if self.model is None:
             return
         self.model._log.removeHandler(self._log_handler)
-        self.model.evModelChanged.unsubscribe(self.sigModelChanged.emit)
+        self.model.evModelUpdated.unsubscribe(self.sigModelUpdated.emit)
+        self.model = None
 
     def addSource(self, source):
         self.model.addSource(source)
@@ -92,19 +95,28 @@ class SourceModel(QtCore.QAbstractTableModel):
         self.sandbox = sandbox
         self.selection_model = None
         self._createSources()
-        self.sandbox.sigModelChanged.connect(self.modelUpdated)
+
+        self.sandbox.sigModelUpdated.connect(self.modelUpdated)
+        self.sandbox.sigModelChanged.connect(self.modelChanged)
 
     def _createSources(self):
         self._sources = []
-        for isrc, src in enumerate(self.sandbox.model.sources):
+        for isrc, src in enumerate(self.model_sources):
             source_model = available_delegates[src.__class__.__name__]
             idx = self.createIndex(isrc, 0)
             src = source_model(self, src, idx)
 
             self._sources.append(src)
 
+    @property
+    def model_sources(self):
+        if self.sandbox.model is None:
+            return []
+        else:
+            return self.sandbox.model.sources
+
     def rowCount(self, idx):
-        return len(self.sandbox.model.sources)
+        return len(self.model_sources)
 
     def columnCount(self, idx):
         return 1
@@ -144,8 +156,12 @@ class SourceModel(QtCore.QAbstractTableModel):
         self.sandbox.removeSource(src.source)
 
     @QtCore.Slot()
-    def modelUpdated(self):
-        if len(self._sources) != len(self.sandbox.model.sources):
+    def modelUpdated(self, force=False):
+        if len(self._sources) != len(self.model_sources) or force:
             self.beginResetModel()
             self._createSources()
             self.endResetModel()
+
+    @QtCore.Slot()
+    def modelChanged(self):
+        self.modelUpdated(force=True)

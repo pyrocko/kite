@@ -6,6 +6,7 @@ from .multiplot import PlotDockarea
 from .sources_dock import SourcesListDock
 
 from sandbox_model import SandboxModel
+from ..model_scene import ModelScene
 from ..qt_utils import loadUi, SceneLog, validateFilename
 
 
@@ -49,6 +50,10 @@ class TalpaMainWindow(QtGui.QMainWindow):
 
         self.log = SceneLog(self, self.sandbox)
 
+        self.actionSaveModel.triggered.connect(
+            self.onSaveModel)
+        self.actionLoadModel.triggered.connect(
+            self.onLoadModel)
         self.actionExportKiteScene.triggered.connect(
             self.onExportScene)
 
@@ -60,18 +65,35 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.actionLog.triggered.connect(
             self.log.show)
 
-        self.openModel(self.sandbox)
+        self.createView(self.sandbox)
 
     def aboutDialog(self):
         self._about = QtGui.QDialog()
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
-    def openModel(self, sandbox):
+    def createView(self, sandbox):
         plots = PlotDockarea(sandbox)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
+
+    def onSaveModel(self):
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            filter='YAML *.yml (*.yml)',
+            caption='Save ModelScene')
+        if not validateFilename(filename):
+            return
+        self.sandbox.model.save(filename)
+
+    def onLoadModel(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='YAML *.yml (*.yml)',
+            caption='Load ModelScene')
+        if not validateFilename(filename):
+            return
+        model = ModelScene.load(filename)
+        self.sandbox.setModel(model)
 
     def onExportScene(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(

@@ -116,7 +116,7 @@ class DisplacementPlot(pg.PlotItem):
             parentPos=(.01, .01))
         self.title_label.setOpacity(.6)
 
-        self.sandbox.sigModelChanged.connect(self.update)
+        self.sandbox.sigModelUpdated.connect(self.update)
         self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
         self.sandbox.sources.modelReset.connect(self.addSourceROIS)
 
@@ -221,7 +221,7 @@ class PlotDockarea(dockarea.DockArea):
         for plt in layout.plots:
             cmap.addPlot(plt)
 
-        sandbox.sigModelChanged.connect(cmap.setSymColormap)
+        sandbox.sigModelUpdated.connect(cmap.setSymColormap)
 
         cmap_dock = dockarea.Dock(
             'Colormap',
