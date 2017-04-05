@@ -155,12 +155,13 @@ class OkadaSourceDelegate(QtCore.QObject):
 
     @staticmethod
     def getRepresentedSource(sandbox):
+        length = 5000.
         src = OkadaSource(
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000,
-            width=3000,
-            length=5000,
+            length=length,
+            width=15. * length**.66,
             strike=45.,
             rake=0,
             slip=2,
@@ -229,15 +230,14 @@ class OkadaSourceDelegate(QtCore.QObject):
 </tr><tr>
     <td>Length:</td><td>{source.length:.2f} m</td>
 </tr><tr>
-    <td>Slip:</td><td>{source.slip:.2f} m</td>
-</tr><tr>
     <td>Strike:</td><td>{source.strike:.2f}&deg;</td>
 </tr><tr>
     <td>Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr>
     <td>Rake:</td><td>{source.rake:.2f}&deg;</td>
-</tr>
-<tr>
+</tr><tr style="font-weight: bold;">
+    <td>Slip:</td><td>{source.slip:.2f} m</td>
+</tr><tr style="font-weight: bold;">
     <td>M<sub>W</sub>:</td><td>{source.moment_magnitude:.2f}</td>
 </tr>
 </table>

@@ -46,6 +46,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionChangeExtent"/>
     <addaction name="actionSetReferenceScene"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
@@ -117,6 +118,11 @@
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>
+   </property>
+  </action>
+  <action name="actionChangeExtent">
+   <property name="text">
+    <string>Change ModelScene extent</string>
    </property>
   </action>
  </widget>

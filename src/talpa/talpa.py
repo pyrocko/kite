@@ -6,6 +6,7 @@ from .multiplot import PlotDockarea
 from .sources_dock import SourcesListDock
 
 from sandbox_model import SandboxModel
+from .tool_dialogs import ExtentDialog
 from ..model_scene import ModelScene
 from ..qt_utils import loadUi, SceneLog, validateFilename
 
@@ -56,6 +57,8 @@ class TalpaMainWindow(QtGui.QMainWindow):
             self.onLoadModel)
         self.actionExportKiteScene.triggered.connect(
             self.onExportScene)
+        self.actionChangeExtent.triggered.connect(
+            self.extentDialog)
 
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
@@ -67,16 +70,20 @@ class TalpaMainWindow(QtGui.QMainWindow):
 
         self.createView(self.sandbox)
 
-    def aboutDialog(self):
-        self._about = QtGui.QDialog()
-        loadUi(get_resource('about.ui'), baseinstance=self._about)
-        return self._about
-
     def createView(self, sandbox):
         plots = PlotDockarea(sandbox)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
+
+    def aboutDialog(self):
+        self._about = QtGui.QDialog()
+        loadUi(get_resource('about.ui'), baseinstance=self._about)
+        return self._about
+
+    def extentDialog(self):
+        extent_dialog = ExtentDialog(self.sandbox, self)
+        extent_dialog.show()
 
     def onSaveModel(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(

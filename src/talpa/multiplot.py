@@ -106,8 +106,7 @@ class DisplacementPlot(pg.PlotItem):
         self.addItem(self.image)
 
         self.title_label = pg.LabelItem(
-            text='<span style="font-family: monospace; color: #fff;'
-                 '">'
+            text='<span style="color: #9E9E9E;">'
                  '%s</span>' % self.title,
             justify='right', size='10pt',
             parent=self)
@@ -191,7 +190,7 @@ class DisplacementPlot(pg.PlotItem):
     def addHintText(self):
         self.hint_text = pg.LabelItem(
             text='',
-            justify='right', size='7pt',
+            justify='right', size='8pt',
             parent=self)
         self.hint_text.anchor(
             itemPos=(1., 1.),

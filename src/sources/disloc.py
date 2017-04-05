@@ -27,10 +27,10 @@ class OkadaSource(Object):
         help='Length in [m]')
     strike = Float.T(
         default=45.,
-        help='Strike, clockwise from north in [deg]')
+        help='Strike, clockwise from north in [deg]; -180-180')
     dip = Float.T(
         default=45.,
-        help='Dip, down from horizontal in [deg]')
+        help='Dip, down from horizontal in [deg]; 0-90')
     rake = Float.T(
         default=90.,
         help='Rake, clockwise in [deg]; 0 is left-lateral Strike-Slip')

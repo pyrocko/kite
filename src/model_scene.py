@@ -11,7 +11,7 @@ from os import path as op
 from .sources import DislocProcessor
 
 
-PROCESSORS = [DislocProcessor]
+__processors__ = [DislocProcessor]
 
 km = 1e3
 
@@ -38,10 +38,6 @@ class ModelScene(BaseScene):
     def __init__(self, config=ModelSceneConfig(), **kwargs):
         self.config = config
         self.evModelUpdated = Subject()
-
-        frame_config = kwargs.pop('frame_config', None)
-        if frame_config is not None:
-            self.config.frame = frame_config
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
 
         self.setExtent(self.config.extent_north, self.config.extent_east)
@@ -57,7 +53,7 @@ class ModelScene(BaseScene):
     def sources(self):
         return self.config.sources
 
-    def setExtent(self, north, east):
+    def setExtent(self, east, north):
         self.config.extent_east = east
         self.config.extent_north = north
 
@@ -75,6 +71,7 @@ class ModelScene(BaseScene):
         self._los_factors = None
 
         self.evChanged.notify()
+        self.evModelUpdated.notify()
 
     @property_cached
     def los_displacement(self):
@@ -107,7 +104,7 @@ class ModelScene(BaseScene):
 
     def processSources(self):
         results = []
-        for processor in PROCESSORS:
+        for processor in __processors__:
             sources = [src for src in self.sources
                        if src.__implements__ == processor.__implements__]
             if not sources:
@@ -121,7 +118,7 @@ class ModelScene(BaseScene):
 
             self._log.debug('Processed %s (nsources:%d) using %s [%.4f s]'
                             % (src.__class__.__name__, len(sources),
-                               processor.__class__.__name__, time.time() - t0))
+                               processor.__name__, time.time() - t0))
 
         for r in results:
             self.north += r['north'].reshape(self.rows, self.cols)
@@ -177,8 +174,8 @@ class ModelScene(BaseScene):
 
     @classmethod
     def load(cls, filename):
-        model_scene = cls()
-        model_scene.config = guts.load(filename=filename)
+        config = guts.load(filename=filename)
+        model_scene = cls(config=config)
         for source in model_scene.sources:
             model_scene.addSource(source)
         model_scene._log.info('Loaded config from %s' % filename)
