@@ -105,15 +105,21 @@ class SourcesList(QtGui.QListView):
                     self.idx, SourceEditorDialog)
                 editing_dialog.show()
 
-            self.addAction(
+            editAction = self.addAction(
                 'Edit', editSource)
+
             self.addMenu(
                 SourcesAddButton.SourcesAddMenu(self.sandbox, self))
             self.addSeparator()
-            self.addAction(
+
+            removeAction = self.addAction(
                 self.style().standardPixmap(
                     QtGui.QStyle.SP_DialogCloseButton),
                 'Remove', removeSource)
+
+            if self.sandbox.sources.rowCount(QtCore.QModelIndex()) == 0:
+                editAction.setEnabled(False)
+                removeAction.setEnabled(False)
 
     def __init__(self, sandbox, *args, **kwargs):
         QtGui.QListView.__init__(self, *args, **kwargs)

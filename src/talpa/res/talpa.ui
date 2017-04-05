@@ -38,12 +38,15 @@
     <addaction name="actionSave_model"/>
     <addaction name="actionLoad_model"/>
     <addaction name="separator"/>
-    <addaction name="actionImport_kite_Scene"/>
+    <addaction name="actionExportKiteScene"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuTools">
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionSetReferenceScene"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -95,12 +98,39 @@
     <string>Load model</string>
    </property>
   </action>
-  <action name="actionImport_kite_Scene">
+  <action name="actionExportKiteScene">
    <property name="text">
-    <string>Import kite.Scene</string>
+    <string>Export kite.Scene</string>
+   </property>
+  </action>
+  <action name="actionSetReferenceScene">
+   <property name="text">
+    <string>Set Reference Scene</string>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>Exit</string>
    </property>
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>TalpaMainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>574</x>
+     <y>360</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

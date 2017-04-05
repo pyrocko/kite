@@ -131,13 +131,14 @@ class ModelScene(BaseScene):
         :rtype: :class:`Scene`
         '''
         from .scene import Scene, SceneConfig
+        self._log.info('Creating kite.Scene from ModelScene')
 
         config = SceneConfig()
-        config.frame = self.frame
-        config.meta.scene_id = 'Model Scene'
+        config.frame = self.frame.config
+        config.meta.scene_id = 'Exported ModelScene'
 
         return Scene(
-            displacement=self.displacement,
+            displacement=self.los_displacement,
             theta=self.theta,
             phi=self.phi,
             config=config)

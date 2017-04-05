@@ -99,7 +99,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionSave_config.triggered.connect(
             self.onSaveConfig)
         self.actionSave_scene.triggered.connect(
-            self.onSaveData)
+            self.onSaveScene)
         self.actionLoad_config.triggered.connect(
             self.onLoadConfig)
         self.actionLoad_scene.triggered.connect(
@@ -113,7 +113,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             self.onExportWeightMatrix)
 
         self.actionAbout_Spool.triggered.connect(
-            self.about.show)
+            self.aboutDialog().show)
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
 
@@ -128,8 +128,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.progress.setWindowTitle('processing...')
         self.model.sigProcessingFinished.connect(self.progress.reset)
 
-    @property
-    def about(self):
+    def aboutDialog(self):
         self._about = QtGui.QDialog()
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
@@ -172,7 +171,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             return
         self.model.scene.saveConfig(filename)
 
-    def onSaveData(self):
+    def onSaveScene(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')

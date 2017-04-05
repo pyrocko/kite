@@ -116,7 +116,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -382,5 +382,22 @@
   </action>
  </widget>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>actionExit</sender>
+   <signal>triggered()</signal>
+   <receiver>SpoolMainWindow</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>581</x>
+     <y>349</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

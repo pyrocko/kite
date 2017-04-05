@@ -6,7 +6,7 @@ from .multiplot import PlotDockarea
 from .sources_dock import SourcesListDock
 
 from sandbox_model import SandboxModel
-from ..qt_utils import loadUi, SceneLog
+from ..qt_utils import loadUi, SceneLog, validateFilename
 
 
 class Talpa(QtGui.QApplication):
@@ -43,27 +43,44 @@ class TalpaMainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
-        self.loadUi()
+        loadUi(get_resource('talpa.ui'), baseinstance=self)
 
         self.sandbox = SandboxModel.empty()
 
+        self.log = SceneLog(self, self.sandbox)
+
+        self.actionExportKiteScene.triggered.connect(
+            self.onExportScene)
+
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
+        self.actionAbout_Talpa.triggered.connect(
+            self.aboutDialog().show)
 
-        self.log = SceneLog(self, self.sandbox)
         self.actionLog.triggered.connect(
             self.log.show)
 
         self.openModel(self.sandbox)
 
-    def loadUi(self):
-        loadUi(get_resource('talpa.ui'), baseinstance=self)
+    def aboutDialog(self):
+        self._about = QtGui.QDialog()
+        loadUi(get_resource('about.ui'), baseinstance=self._about)
+        return self._about
 
     def openModel(self, sandbox):
         plots = PlotDockarea(sandbox)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
+
+    def onExportScene(self):
+        filename, _ = QtGui.QFileDialog.getSaveFileName(
+            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
+            caption='Save scene')
+        if not validateFilename(filename):
+            return
+        scene = self.sandbox.model.getKiteScene()
+        scene.save(filename)
 
     def closeModel(self, sandbox):
         pass
