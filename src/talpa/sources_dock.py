@@ -28,6 +28,7 @@ class SourcesAddButton(QtGui.QToolButton):
 
         def __init__(self, sandbox, *args, **kwargs):
             QtGui.QMenu.__init__(self, *args, **kwargs)
+            self.setTitle('Add Source')
             self.sandbox = sandbox
 
             def addSource(source):
@@ -105,9 +106,10 @@ class SourcesList(QtGui.QListView):
                 editing_dialog.show()
 
             self.addAction(
-                self.style().standardPixmap(
-                    QtGui.QStyle.SP_DialogCloseButton),
                 'Edit', editSource)
+            self.addMenu(
+                SourcesAddButton.SourcesAddMenu(self.sandbox, self))
+            self.addSeparator()
             self.addAction(
                 self.style().standardPixmap(
                     QtGui.QStyle.SP_DialogCloseButton),

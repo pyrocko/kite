@@ -32,7 +32,8 @@ class PlotLayout(pg.GraphicsLayoutWidget):
             DisplacementPlot(
                 sandbox,
                 title='LOS',
-                component=lambda m: m.displacement)]
+                component=lambda m: m.los_displacement)]
+        self.plots[-1].addHintText()
 
         self._mov_sig = pg.SignalProxy(
             self.scene().sigMouseMoved,
@@ -104,6 +105,17 @@ class DisplacementPlot(pg.PlotItem):
             useOpenGL=True)
         self.addItem(self.image)
 
+        self.title_label = pg.LabelItem(
+            text='<span style="font-family: monospace; color: #fff;'
+                 '">'
+                 '%s</span>' % self.title,
+            justify='right', size='10pt',
+            parent=self)
+        self.title_label.anchor(
+            itemPos=(0., 0.),
+            parentPos=(.01, .01))
+        self.title_label.setOpacity(.6)
+
         self.sandbox.sigModelChanged.connect(self.update)
         self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
         self.sandbox.sources.modelReset.connect(self.addSourceROIS)
@@ -156,14 +168,47 @@ class DisplacementPlot(pg.PlotItem):
         if self.vb.sceneBoundingRect().contains(event[0]):
             map_pos = self.vb.mapSceneToView(event[0])
 
-            self.sandbox.cursor_tracker.sigCursorMoved.emit(map_pos)
+            img_pos = self.image.mapFromScene(event[0])
+            pE, pN = img_pos.x(), img_pos.y()
+            if pE < 0 or pN < 0:
+                value = 0.
+            elif (pE > self.image.image.shape[0] or
+                  pN > self.image.image.shape[1]):
+                value = 0.
+            else:
+                value = self.image.image[int(img_pos.x()),
+                                         int(img_pos.y())]
+            self.sandbox.cursor_tracker.sigCursorMoved.emit((map_pos, value))
             self.cursor.hide()
         else:
             self.cursor.show()
 
     @QtCore.Slot(object)
     def drawCursor(self, pos):
+        pos, _ = pos
         self.cursor.setPos(pos)
+
+    def addHintText(self):
+        self.hint_text = pg.LabelItem(
+            text='',
+            justify='right', size='7pt',
+            parent=self)
+        self.hint_text.anchor(
+            itemPos=(1., 1.),
+            parentPos=(1., 1.))
+        self.hint_text.text_template =\
+            '<span style="font-family: monospace; color: #fff;'\
+            'background-color: #000;">'\
+            'East {0:08.2f} m | North {1:08.2f} m | '\
+            'Displacement {2:2.4f} m</span>'
+        self.hint_text.setOpacity(.6)
+        self.sandbox.cursor_tracker.sigCursorMoved.connect(self.updateHintText)
+
+    @QtCore.Slot()
+    def updateHintText(self, pos):
+        pos, value = pos
+        self.hint_text.setText(
+            self.hint_text.text_template.format(pos.x(), pos.y(), value))
 
 
 class PlotDockarea(dockarea.DockArea):

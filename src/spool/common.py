@@ -129,16 +129,15 @@ class KitePlot(pg.PlotWidget):
             text='',
             justify='right', size='8pt',
             parent=self.plotItem)
-
         self.hint_text.anchor(
             itemPos=(1., 0.),
             parentPos=(1., 0.))
-
-        self.hint_text.template =\
+        self.hint_text.text_template =\
             '<span style="font-family: monospace; color: #fff;'\
             'background-color: #000;">'\
             'East {east:08.2f} m | North {north:08.2f} m | '\
             '{measure} {value:{length}.{precision}f}</span>'
+        self.hint_text.setOpacity(.6)
 
         self.addItem(self.image)
         self.update()
@@ -230,7 +229,8 @@ class KitePlot(pg.PlotWidget):
                 self.hint['value'] = value
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']
-        self.hint_text.setText(self.hint_text.template.format(**self.hint))
+        self.hint_text.setText(
+            self.hint_text.text_template.format(**self.hint))
 
 
 class KiteToolColormap(pg.HistogramLUTWidget):

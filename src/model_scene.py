@@ -74,15 +74,15 @@ class ModelScene(BaseScene):
         self.evChanged.notify()
 
     @property_cached
-    def displacement(self):
-        self.processGrid()
+    def los_displacement(self):
+        self.processSources()
         los_fac = self._LOSFactors()
 
-        self._displacement =\
+        self._los_displacement =\
             (los_fac[:, :, 0] * -self.down +
              los_fac[:, :, 1] * self.east +
              los_fac[:, :, 2] * self.north)
-        return self._displacement
+        return self._los_displacement
 
     def addSource(self, source):
         self.sources.append(source)
@@ -96,11 +96,12 @@ class ModelScene(BaseScene):
         source.evParametersChanged.unsubscribe(self._clearModel)
         self.sources.remove(source)
         self._log.info('Removed %s' % source.__class__.__name__)
+        del source
 
         self._clearModel()
         self.evModelChanged.notify()
 
-    def processGrid(self):
+    def processSources(self):
         results = []
         for processor in PROCESSORS:
             sources = [src for src in self.sources
@@ -144,7 +145,7 @@ class ModelScene(BaseScene):
     def _clearModel(self):
         for arr in [self.north, self.east, self.down]:
             arr.fill(0.)
-        self.displacement = None
+        self.los_displacement = None
         self.evModelChanged.notify()
 
     def _LOSFactors(self):
