@@ -79,6 +79,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
 
         self.ptree = KiteParameterTree(showHeader=False)
         self.ptree_dock = QtGui.QDockWidget('Parameters', self)
+        self.ptree_dock.setFeatures(QtGui.QDockWidget.DockWidgetFloatable |
+                                    QtGui.QDockWidget.DockWidgetMovable)
         self.ptree_dock.setWidget(self.ptree)
         self.addDockWidget(
             QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)

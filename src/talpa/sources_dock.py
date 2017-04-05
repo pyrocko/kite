@@ -14,6 +14,9 @@ class SourcesListDock(QtGui.QDockWidget):
         sources = SourcesList(sandbox)
         sources_add_menu = SourcesAddButton(sandbox)
 
+        self.setFeatures(QtGui.QDockWidget.DockWidgetFloatable |
+                         QtGui.QDockWidget.DockWidgetMovable)
+
         self.widget = QtGui.QWidget()
         self.widget.setLayout(layout)
         self.widget.layout().addWidget(sources)

@@ -8,6 +8,12 @@ class ExtentDialog(QtGui.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
         QtGui.QDialog.__init__(self, *args, **kwargs)
         loadUi(get_resource('dialog_extent.ui'), self)
+        self.setSizeGripEnabled(False)
+
+        self.move(
+            self.parent().window().mapToGlobal(
+                self.parent().window().rect().center()) -
+            self.mapToGlobal(self.rect().center()))
 
         self.sandbox = sandbox
         model = self.sandbox.model

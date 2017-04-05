@@ -11,7 +11,7 @@ import numpy as num
 config = getConfig()
 
 
-class PlotLayout(pg.GraphicsLayoutWidget):
+class ModelSceneLayout(pg.GraphicsLayoutWidget):
     def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.sandbox = sandbox
@@ -33,6 +33,57 @@ class PlotLayout(pg.GraphicsLayoutWidget):
                 sandbox,
                 title='LOS',
                 component=lambda m: m.los_displacement)]
+        self.plots[-1].addHintText()
+
+        self._mov_sig = pg.SignalProxy(
+            self.scene().sigMouseMoved,
+            rateLimit=60, slot=self.mouseMoved)
+
+        for ip, plt in enumerate(self.plots):
+            row = ip / 2
+            col = ip % 2 + 1
+
+            self.addItem(plt, row=row, col=col)
+            plt.showGrid(x=True, y=True)
+            plt.hideAxis('bottom')
+            plt.hideAxis('left')
+            plt.vb.border = pg.mkPen(50, 50, 50)
+            if ip != 0:
+                plt.setXLink(self.plots[0])
+                plt.setYLink(self.plots[0])
+
+        def getAxis(plt, orientation, label):
+            axis = pg.AxisItem(
+                orientation=orientation,
+                linkView=plt.vb)
+            axis.setLabel(label, units='m')
+            return axis
+
+        plts = self.plots
+        self.addItem(getAxis(plts[0], 'left', 'Northing'), row=0, col=0)
+        self.addItem(getAxis(plts[1], 'left', 'Northing'), row=1, col=0)
+        self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
+        self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
+
+    @QtCore.Slot(object)
+    def mouseMoved(self, event):
+        self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
+
+
+class ModelReferenceLayout(pg.GraphicsLayoutWidget):
+    def __init__(self, sandbox, *args, **kwargs):
+        pg.GraphicsLayoutWidget.__init__(self, **kwargs)
+        self.sandbox = sandbox
+
+        self.plots = [
+            DisplacementPlot(
+                sandbox,
+                title='Scene Displacement',
+                component=lambda m: m.reference.scene.displacement),
+            DisplacementPlot(
+                sandbox,
+                title='Model Residual',
+                component=lambda m: m.reference.difference)]
         self.plots[-1].addHintText()
 
         self._mov_sig = pg.SignalProxy(
@@ -210,35 +261,11 @@ class DisplacementPlot(pg.PlotItem):
             self.hint_text.text_template.format(pos.x(), pos.y(), value))
 
 
-class PlotDockarea(dockarea.DockArea):
-
-    def __init__(self, sandbox, *args, **kwargs):
-        dockarea.DockArea.__init__(self)
-
-        layout = PlotLayout(sandbox)
-        cmap = ColormapPlots(plot=layout.plots[0])
-        for plt in layout.plots:
-            cmap.addPlot(plt)
-
-        sandbox.sigModelUpdated.connect(cmap.setSymColormap)
-
-        cmap_dock = dockarea.Dock(
-            'Colormap',
-            widget=cmap)
-        cmap_dock.setStretch(1, None)
-
-        layout_dock = dockarea.Dock(
-            'Model Sandbox',
-            widget=layout)
-        self.addDock(layout_dock, position='right')
-        self.addDock(cmap_dock, position='right')
-
-
 class ColormapPlots(pg.HistogramLUTWidget):
 
-    def __init__(self, plot):
-        pg.HistogramLUTWidget.__init__(self, image=plot.image)
-        self.plots = [plot]
+    def __init__(self):
+        pg.HistogramLUTWidget.__init__(self, image=None)
+        self.plots = []
 
         self.axis.setLabel('Displacement / m')
 
@@ -293,3 +320,50 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.sigLevelChangeFinished.connect(updateLevels)
         self.sigLevelsChanged.connect(updateLevels)
         updateLevels()
+
+
+class ModelSceneDockarea(dockarea.DockArea):
+
+    def __init__(self, sandbox, *args, **kwargs):
+        dockarea.DockArea.__init__(self)
+        layout = ModelSceneLayout(sandbox)
+
+        cmap = ColormapPlots()
+        for plt in layout.plots:
+            cmap.addPlot(plt)
+        sandbox.sigModelUpdated.connect(cmap.setSymColormap)
+
+        cmap_dock = dockarea.Dock(
+            'Colormap',
+            widget=cmap)
+        cmap_dock.setStretch(1, None)
+
+        layout_dock = dockarea.Dock(
+            'Model Sandbox',
+            widget=layout)
+        self.addDock(layout_dock, position='right')
+        self.addDock(cmap_dock, position='right')
+
+
+class ModelReferenceDockarea(dockarea.DockArea):
+
+    def __init__(self, sandbox, *args, **kwargs):
+        dockarea.DockArea.__init__(self)
+        layout = ModelReferenceLayout(sandbox)
+
+        cmap = ColormapPlots()
+        for plt in layout.plots:
+            cmap.addPlot(plt)
+        sandbox.sigModelUpdated.connect(
+            cmap.setSymColormap)
+
+        cmap_dock = dockarea.Dock(
+            'Colormap',
+            widget=cmap)
+        cmap_dock.setStretch(1, None)
+
+        layout_dock = dockarea.Dock(
+            'Model Sandbox',
+            widget=layout)
+        self.addDock(layout_dock, position='right')
+        self.addDock(cmap_dock, position='right')

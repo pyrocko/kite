@@ -2,7 +2,7 @@ import sys
 from PySide import QtCore, QtGui
 
 from .common import get_resource
-from .multiplot import PlotDockarea
+from .multiplot import ModelSceneDockarea, ModelReferenceDockarea
 from .sources_dock import SourcesListDock
 
 from sandbox_model import SandboxModel
@@ -59,6 +59,8 @@ class TalpaMainWindow(QtGui.QMainWindow):
             self.onExportScene)
         self.actionChangeExtent.triggered.connect(
             self.extentDialog)
+        self.actionLoadReferenceScene.triggered.connect(
+            self.onLoadReferenceScene)
 
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
@@ -71,7 +73,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.createView(self.sandbox)
 
     def createView(self, sandbox):
-        plots = PlotDockarea(sandbox)
+        plots = ModelSceneDockarea(sandbox)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
@@ -82,8 +84,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
         return self._about
 
     def extentDialog(self):
-        extent_dialog = ExtentDialog(self.sandbox, self)
-        extent_dialog.show()
+        ExtentDialog(self.sandbox, self).show()
 
     def onSaveModel(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -102,6 +103,30 @@ class TalpaMainWindow(QtGui.QMainWindow):
         model = ModelScene.load(filename)
         self.sandbox.setModel(model)
 
+    def onLoadReferenceScene(self):
+        filename, _ = QtGui.QFileDialog.getOpenFileName(
+            filter='YAML *.yml (*.yml)',
+            caption='Load kite.Scene')
+        if not validateFilename(filename):
+            return
+        self.sandbox.model.loadReferenceScene(filename)
+
+        self.createMisfitWindow()
+        self.actionMisfitScene.setChecked(True)
+
+    def createMisfitWindow(self):
+        self.misfitWindow = MisfitWindow(self.sandbox, self)
+
+        def toggleWindow(switch):
+            if switch:
+                self.misfitWindow.show()
+            else:
+                self.misfitWindow.close()
+        self.misfitWindow.windowClosed.connect(
+            lambda: self.actionMisfitScene.setChecked(False))
+        self.actionMisfitScene.toggled.connect(toggleWindow)
+        self.actionMisfitScene.setEnabled(True)
+
     def onExportScene(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
@@ -113,3 +138,27 @@ class TalpaMainWindow(QtGui.QMainWindow):
 
     def closeModel(self, sandbox):
         pass
+
+
+class MisfitWindow(QtGui.QMainWindow):
+    windowClosed = QtCore.Signal()
+
+    def __init__(self, sandbox, *args, **kwargs):
+        QtGui.QMainWindow.__init__(self, *args, **kwargs)
+        loadUi(get_resource('window_reference.ui'), self)
+
+        self.move(
+            self.parent().window().mapToGlobal(
+                self.parent().window().rect().center()) -
+            self.mapToGlobal(self.rect().center()))
+
+        self.sandbox = sandbox
+        self.createView(self.sandbox)
+
+    def createView(self, sandbox):
+        plots = ModelReferenceDockarea(sandbox)
+        self.centralwidget.layout().addWidget(plots)
+
+    def closeEvent(self, ev):
+        self.windowClosed.emit()
+        ev.accept()

@@ -106,6 +106,7 @@ class Frame(object):
     def _updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
+
         self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter =\
             utm.from_latlon(self.llLat, self.llLon)
 
@@ -142,6 +143,7 @@ class Frame(object):
 
         self.gridE = None
         self.gridN = None
+        self.coordinates = None
         return
 
     @property

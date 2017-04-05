@@ -40,20 +40,24 @@ class ModelScene(BaseScene):
         self.evModelUpdated = Subject()
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
 
-        self.setExtent(self.config.extent_north, self.config.extent_east)
+        self.reference = None
+        self._los_factors = None
 
         for attr in ['theta', 'phi']:
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.__setattr__(attr, data)
 
-        self._los_factors = None
+        self.setExtent(self.config.extent_north, self.config.extent_east)
 
     @property
     def sources(self):
         return self.config.sources
 
     def setExtent(self, east, north):
+        if self.reference is not None:
+            self._log.warning('Cannot change a referenced model!')
+            return
         self.config.extent_east = east
         self.config.extent_north = north
 
@@ -68,20 +72,21 @@ class ModelScene(BaseScene):
         self._phi = num.zeros_like(self.north)
         self._theta.fill(num.pi/2)
         self._phi.fill(0.)
-        self._los_factors = None
+        self._resetLOSFactors()
 
+        self.frame._updateExtent()
+        self._clearModel()
         self.evChanged.notify()
-        self.evModelUpdated.notify()
 
     @property_cached
     def los_displacement(self):
         self.processSources()
-        los_fac = self._LOSFactors()
+        los_factors = self._LOSFactors()
 
         self._los_displacement =\
-            (los_fac[:, :, 0] * -self.down +
-             los_fac[:, :, 1] * self.east +
-             los_fac[:, :, 2] * self.north)
+            (los_factors[:, :, 0] * -self.down +
+             los_factors[:, :, 1] * self.east +
+             los_factors[:, :, 2] * self.north)
         return self._los_displacement
 
     def addSource(self, source):
@@ -91,7 +96,6 @@ class ModelScene(BaseScene):
         source.evParametersChanged.subscribe(self._clearModel)
 
         self._clearModel()
-        self.evModelUpdated.notify()
 
     def removeSource(self, source):
         source.evParametersChanged.unsubscribe(self._clearModel)
@@ -100,7 +104,6 @@ class ModelScene(BaseScene):
         del source
 
         self._clearModel()
-        self.evModelUpdated.notify()
 
     def processSources(self):
         results = []
@@ -124,6 +127,23 @@ class ModelScene(BaseScene):
             self.north += r['north'].reshape(self.rows, self.cols)
             self.east += r['east'].reshape(self.rows, self.cols)
             self.down += r['down'].reshape(self.rows, self.cols)
+
+    def loadReferenceScene(self, filename):
+        from .scene import Scene
+        scene = Scene.load(filename)
+        self.setReferenceScene(scene)
+
+    def setReferenceScene(self, scene):
+        self.setExtent(scene.cols, scene.rows)
+
+        self.frame._updateConfig(scene.frame.config)
+
+        self.phi = scene.phi
+        self.theta = scene.theta
+        self._resetLOSFactors()
+        self.reference = Reference(self, scene)
+
+        self._clearModel()
 
     def getKiteScene(self):
         '''Return a full featured :class:`Scene` from current model.
@@ -149,6 +169,9 @@ class ModelScene(BaseScene):
             arr.fill(0.)
         self.los_displacement = None
         self.evModelUpdated.notify()
+
+    def _resetLOSFactors(self):
+        self._los_factors = None
 
     def _LOSFactors(self):
         if (self.theta.size != self.phi.size):
@@ -180,6 +203,21 @@ class ModelScene(BaseScene):
             model_scene.addSource(source)
         model_scene._log.info('Loaded config from %s' % filename)
         return model_scene
+
+
+class Reference(object):
+    def __init__(self, model, scene):
+        self.model = model
+        self.scene = scene
+
+        self.model.evModelUpdated.subscribe(self._clearRefence)
+
+    def _clearRefence(self):
+        self.difference = None
+
+    @property_cached
+    def difference(self):
+        return self.scene.displacement - self.model.los_displacement
 
 
 class TestModelScene(ModelScene):

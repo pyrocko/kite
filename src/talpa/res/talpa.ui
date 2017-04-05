@@ -47,7 +47,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionChangeExtent"/>
-    <addaction name="actionSetReferenceScene"/>
+    <addaction name="actionLoadReferenceScene"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -62,6 +62,7 @@
     <property name="title">
      <string>Windows</string>
     </property>
+    <addaction name="actionMisfitScene"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuTools"/>
@@ -110,9 +111,9 @@
     <string>Export kite.Scene</string>
    </property>
   </action>
-  <action name="actionSetReferenceScene">
+  <action name="actionLoadReferenceScene">
    <property name="text">
-    <string>Set Reference Scene</string>
+    <string>Load Reference Scene</string>
    </property>
   </action>
   <action name="actionExit">
@@ -123,6 +124,17 @@
   <action name="actionChangeExtent">
    <property name="text">
     <string>Change ModelScene extent</string>
+   </property>
+  </action>
+  <action name="actionMisfitScene">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Model residual</string>
    </property>
   </action>
  </widget>
