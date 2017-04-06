@@ -1,8 +1,9 @@
 import numpy as num
 
 from kite import disloc_ext
+from .meta import Parameter
 from ..meta import Subject
-from pyrocko.guts import Object, Float, List, Bool
+from pyrocko.guts import Object, List, Bool
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
@@ -15,32 +16,32 @@ class OkadaSource(Object):
 
     __implements__ = 'disloc'
 
-    easting = Float.T(
+    easting = Parameter.T(
         help='Easting in [m]')
-    northing = Float.T(
+    northing = Parameter.T(
         help='Northing in [m]')
-    depth = Float.T(
+    depth = Parameter.T(
         help='Depth in [m]')
-    width = Float.T(
+    width = Parameter.T(
         help='Width, downdip in [m]')
-    length = Float.T(
+    length = Parameter.T(
         help='Length in [m]')
-    strike = Float.T(
+    strike = Parameter.T(
         default=45.,
         help='Strike, clockwise from north in [deg]; -180-180')
-    dip = Float.T(
+    dip = Parameter.T(
         default=45.,
         help='Dip, down from horizontal in [deg]; 0-90')
-    rake = Float.T(
+    rake = Parameter.T(
         default=90.,
         help='Rake, clockwise in [deg]; 0 is left-lateral Strike-Slip')
-    slip = Float.T(
+    slip = Parameter.T(
         default=1.5,
         help='Slip in [m]')
-    nu = Float.T(
+    nu = Parameter.T(
         default=0.25,
         help='Poisson\'s ratio, typically 1./4')
-    opening = Float.T(
+    opening = Parameter.T(
         help='Opening of the plane in [m]',
         optional=True,
         default=0.)
@@ -135,6 +136,37 @@ class OkadaSource(Object):
         self.evParametersChanged.notify()
 
     @property
+    def parameters(self):
+        return self.T.propnames
+
+    def getParametersArray(self):
+        return num.array([self.__getattribute__(p) for p in self.parameters])
+
+    def setParametersArray(self, parameter_arr):
+        if parameter_arr.size != len(self.parameters):
+            raise AttributeError('Invalid number of parameters, %s has %d'
+                                 ' parameters'
+                                 % self.__name__, len(self.parameters))
+        for ip, param in enumerate(self.parameters):
+            self.__setattr__(param, parameter_arr[ip])
+        self.parametersUpdated()
+
+    def getParameterRanges(self):
+        return {
+            'easting': (None, None),
+            'northing': (None, None),
+            'depth': (0., 30000.),
+            'width': (0., 30000.),
+            'length': (0., 500000.),
+            'strike': (-180., 180.),
+            'dip': (0., 89.9),
+            'rake': (-180., 180.),
+            'slip': (0., 20.),
+            'nu': (0.25, 0.25),
+            'opening': (0., 0.),
+        }
+
+    @property
     def segments(self):
         yield self
 
@@ -149,11 +181,11 @@ class OkadaPath(Object):
 
     __implements__ = 'disloc'
 
-    origin_easting = Float.T(
+    origin_easting = Parameter.T(
         help='Easting of the origin in [m]')
-    origin_northing = Float.T(
+    origin_northing = Parameter.T(
         help='Northing of the origin in [m]')
-    nu = Float.T(
+    nu = Parameter.T(
         default=1.25,
         help='Material parameter Nu in P s^-1')
     nodes = List.T(

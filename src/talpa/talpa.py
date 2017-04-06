@@ -12,7 +12,7 @@ from ..qt_utils import loadUi, SceneLog, validateFilename
 
 
 class Talpa(QtGui.QApplication):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, filename=None):
         QtGui.QApplication.__init__(self, ['Talpa'])
         splash_img = QtGui.QPixmap(
             get_resource('talpa_splash.png'))\
@@ -20,7 +20,7 @@ class Talpa(QtGui.QApplication):
         self.splash = QtGui.QSplashScreen(
             splash_img, QtCore.Qt.WindowStaysOnTopHint)
 
-        self.talpa_win = TalpaMainWindow()
+        self.talpa_win = TalpaMainWindow(filename=filename)
 
         self.updateSplashMessage('')
         self.splash.show()
@@ -44,6 +44,8 @@ class Talpa(QtGui.QApplication):
 class TalpaMainWindow(QtGui.QMainWindow):
 
     def __init__(self, *args, **kwargs):
+        filename = kwargs.pop('filename', None)
+
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         loadUi(get_resource('talpa.ui'), baseinstance=self)
 
@@ -54,7 +56,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.actionSaveModel.triggered.connect(
             self.onSaveModel)
         self.actionLoadModel.triggered.connect(
-            self.onLoadModel)
+            self.loadModel)
         self.actionExportKiteScene.triggered.connect(
             self.onExportScene)
         self.actionChangeExtent.triggered.connect(
@@ -66,10 +68,24 @@ class TalpaMainWindow(QtGui.QMainWindow):
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
         self.actionAbout_Talpa.triggered.connect(
             self.aboutDialog().show)
-
         self.actionLog.triggered.connect(
             self.log.show)
 
+        self.sandbox.sigModelChanged.connect(
+            self.createMisfitWindow)
+
+        self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
+        self.progress.setValue(0)
+        self.progress.closeEvent = lambda ev: ev.ignore()
+        self.progress.setMinimumWidth(400)
+        self.progress.setWindowTitle('processing...')
+        self.sandbox.sigProcessingFinished.connect(
+            self.processingFinished)
+        self.sandbox.sigProcessingStarted.connect(
+            self.processingStarted)
+
+        if filename is not None:
+            self.loadModel(filename)
         self.createView(self.sandbox)
 
     def createView(self, sandbox):
@@ -86,6 +102,17 @@ class TalpaMainWindow(QtGui.QMainWindow):
     def extentDialog(self):
         ExtentDialog(self.sandbox, self).show()
 
+    @QtCore.Slot(str)
+    def processingStarted(self, text):
+        self.progress.setLabelText(text)
+        self.progress.show()
+
+    @QtCore.Slot()
+    def processingFinished(self):
+        print 'called!'
+        self.progress.reset()
+        self.progress.close()
+
     def onSaveModel(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='YAML *.yml (*.yml)',
@@ -94,10 +121,11 @@ class TalpaMainWindow(QtGui.QMainWindow):
             return
         self.sandbox.model.save(filename)
 
-    def onLoadModel(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
-            filter='YAML *.yml (*.yml)',
-            caption='Load ModelScene')
+    def loadModel(self, filename=None):
+        if filename is None:
+            filename, _ = QtGui.QFileDialog.getOpenFileName(
+                filter='YAML *.yml (*.yml)',
+                caption='Load ModelScene')
         if not validateFilename(filename):
             return
         model = ModelScene.load(filename)
@@ -115,6 +143,9 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.actionMisfitScene.setChecked(True)
 
     def createMisfitWindow(self):
+        if self.sandbox.model.reference is None:
+            return
+
         self.misfitWindow = MisfitWindow(self.sandbox, self)
 
         def toggleWindow(switch):
@@ -153,6 +184,10 @@ class MisfitWindow(QtGui.QMainWindow):
             self.mapToGlobal(self.rect().center()))
 
         self.sandbox = sandbox
+
+        self.actionOptimizeSource.triggered.connect(
+            self.sandbox.optimizeSource)
+
         self.createView(self.sandbox)
 
     def createView(self, sandbox):

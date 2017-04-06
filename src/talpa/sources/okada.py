@@ -41,8 +41,10 @@ class OkadaSourceROI(pg.ROI):
         for h in self.handles:
             h['item'].sigClicked.connect(self.sigRegionChangeStarted.emit)
 
-        self.delegate.sourceParametersChanged.connect(self.updateROIPosition)
-        self.sigRegionChangeFinished.connect(self.setSourceParametersFromROI)
+        self.delegate.sourceParametersChanged.connect(
+            self.updateROIPosition)
+        self.sigRegionChangeFinished.connect(
+            self.setSourceParametersFromROI)
 
         self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.sigClicked.connect(self.showEditingDialog)
@@ -99,10 +101,14 @@ class OkadaEditDialog(QtGui.QDialog):
         loadUi(get_resource('okada_source.ui'), self)
         self.delegate = delegate
 
-        self.delegate.sourceParametersChanged.connect(self.getSourceParameters)
-        self.applyButton.released.connect(self.setSourceParameters)
-        self.okButton.released.connect(self.setSourceParameters)
-        self.okButton.released.connect(self.close)
+        self.delegate.sourceParametersChanged.connect(
+            self.getSourceParameters)
+        self.applyButton.released.connect(
+            self.setSourceParameters)
+        self.okButton.released.connect(
+            self.setSourceParameters)
+        self.okButton.released.connect(
+            self.close)
 
         def setLabel(method, fmt, value, suffix=''):
             method(fmt.format(value) + suffix)
@@ -171,11 +177,14 @@ class OkadaSourceDelegate(QtCore.QObject):
     def getROIItem(self):
         src = OkadaSourceROI(self)
 
-        src.newSourceParameters.connect(self.updateModelParameters)
-
-        src.sigRegionChangeStarted.connect(self.highlightItem)
-        src.sigHoverEvent.connect(self.highlightItem)
-        self.highlightROI.connect(src.highlightROI)
+        src.newSourceParameters.connect(
+            self.updateModelParameters)
+        src.sigRegionChangeStarted.connect(
+            self.highlightItem)
+        src.sigHoverEvent.connect(
+            self.highlightItem)
+        self.highlightROI.connect(
+            src.highlightROI)
 
         self.rois.append(src)
         return src

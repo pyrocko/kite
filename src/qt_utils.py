@@ -442,7 +442,7 @@ class SceneLog(QtGui.QDialog):
         self.table_filter.setDynamicSortFilter(True)
         self.table_filter.setSourceModel(model.log)
 
-        self.table_filter.rowsInserted.connect(self.popupOnWarning)
+        self.table_filter.rowsInserted.connect(self.newLogRecord)
 
         self.tableView.setModel(self.table_filter)
         self.tableView.setItemDelegate(self.LogEntryDelegate())
@@ -464,7 +464,10 @@ class SceneLog(QtGui.QDialog):
 
         self.filterBox.currentIndexChanged.connect(changeFilter)
 
-    def popupOnWarning(self, idx, first, last):
+    @QtCore.Slot()
+    def newLogRecord(self, idx, first, last):
+        self.tableView.scrollToBottom()
+
         record = self.table_filter.sourceModel().log_records[-1]
         if record.levelno >= 30 and self.autoBox.isChecked():
             self.show()

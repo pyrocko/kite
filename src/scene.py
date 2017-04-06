@@ -442,6 +442,7 @@ class BaseScene(object):
             self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
+        self.los_rotation_factors = None
         self.evChanged.notify()
 
     @property
@@ -470,6 +471,7 @@ class BaseScene(object):
             self._theta = value
         else:
             _setDataNumpy(self, '_theta', value)
+        self.los_rotation_factors = None
         self.evChanged.notify()
 
     @property_cached
@@ -483,12 +485,41 @@ class BaseScene(object):
 
     @property_cached
     def phiDeg(self):
-        ''' LOS horizontal orientation angle in degree, ``NxM`` matrix like
+        '''LOS horizontal orientation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
 
         :type: :class:`numpy.ndarray`
         '''
         return num.rad2deg(self.phi)
+
+    @property_cached
+    def los_rotation_factors(self):
+        '''Trigonometric factors for rotating displacement matrices towards LOS
+
+        Rotation is as follows:
+
+            displacement_los =\
+                (los_rotation_factors[:, :, 0] * -down +
+                 los_rotation_factors[:, :, 1] * east +
+                 los_rotation_factors[:, :, 2] * north)
+
+        :returns: Factors for rotation
+        :rtype: :class:`numpy.ndarray`, NxMx3
+        :raises: AttributeError
+        '''
+        if (self.theta.size != self.phi.size):
+            raise AttributeError('LOS angles inconsistent with provided'
+                                 ' coordinate shape.')
+        if self._los_factors is None:
+            self._los_factors = num.empty((self.theta.shape[0],
+                                           self.theta.shape[1],
+                                           3))
+            self._los_factors[:, :, 0] = num.sin(self.theta)
+            self._los_factors[:, :, 1] = num.cos(self.theta)\
+                * num.cos(self.phi)
+            self._los_factors[:, :, 2] = num.cos(self.theta)\
+                * num.sin(self.phi)
+        return self._los_factors
 
 
 class Scene(BaseScene):

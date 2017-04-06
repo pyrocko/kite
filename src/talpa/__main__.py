@@ -30,6 +30,10 @@ BriDGes DFG Project, University of Kiel
         conflict_handler='resolve',
         add_help=True)
 
+    parser.add_argument('file', type=str,
+                        help='Load ModelScene from file (.yml)',
+                        default=None, nargs='?')
+
     ns = parser.parse_args(args)
-    ns
-    Talpa()
+
+    Talpa(ns.file)

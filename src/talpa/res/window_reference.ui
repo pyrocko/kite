@@ -37,11 +37,26 @@
     </property>
     <addaction name="actionClose"/>
    </widget>
+   <widget class="QMenu" name="menuTools">
+    <property name="title">
+     <string>Tools</string>
+    </property>
+    <addaction name="actionOptimizeSource"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuTools"/>
   </widget>
   <action name="actionClose">
    <property name="text">
     <string>Close</string>
+   </property>
+  </action>
+  <action name="actionOptimizeSource">
+   <property name="text">
+    <string>Optimize solution</string>
+   </property>
+   <property name="toolTip">
+    <string>ModelScene.reference.optimize</string>
    </property>
   </action>
  </widget>

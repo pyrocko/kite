@@ -24,8 +24,15 @@ class SandboxModel(QtCore.QObject):
     sigModelChanged = QtCore.Signal()
     sigLogRecord = QtCore.Signal(object)
 
+    sigProcessingFinished = QtCore.Signal()
+    sigProcessingStarted = QtCore.Signal(str)
+
     def __init__(self, scene_model, *args, **kwargs):
         QtCore.QObject.__init__(self, *args, **kwargs)
+        self.worker_thread = QtCore.QThread()
+        self.moveToThread(self.worker_thread)
+        self.worker_thread.start()
+
         self.model = None
         self.log = SceneLogModel(self)
         self.sources = SourceModel(self)
@@ -34,6 +41,7 @@ class SandboxModel(QtCore.QObject):
         self._log_handler.emit = self.sigLogRecord.emit
 
         self.cursor_tracker = CursorTracker()
+
         self.setModel(scene_model)
 
     def setModel(self, model):
@@ -62,6 +70,12 @@ class SandboxModel(QtCore.QObject):
 
     def removeSource(self, source):
         self.model.removeSource(source)
+
+    @QtCore.Slot()
+    def optimizeSource(self):
+        self.sigProcessingStarted.emit('Optimizing source, stay tuned!')
+        self.model.reference.optimizeSource()
+        self.sigProcessingFinished.emit()
 
     @classmethod
     def randomOkada(cls, nsources=1):
@@ -96,8 +110,10 @@ class SourceModel(QtCore.QAbstractTableModel):
         self.selection_model = None
         self._createSources()
 
-        self.sandbox.sigModelUpdated.connect(self.modelUpdated)
-        self.sandbox.sigModelChanged.connect(self.modelChanged)
+        self.sandbox.sigModelUpdated.connect(
+            self.modelUpdated)
+        self.sandbox.sigModelChanged.connect(
+            self.modelChanged)
 
     def _createSources(self):
         self._sources = []

@@ -166,9 +166,12 @@ class DisplacementPlot(pg.PlotItem):
             parentPos=(.01, .01))
         self.title_label.setOpacity(.6)
 
-        self.sandbox.sigModelUpdated.connect(self.update)
-        self.sandbox.sources.modelAboutToBeReset.connect(self.removeSourceROIS)
-        self.sandbox.sources.modelReset.connect(self.addSourceROIS)
+        self.sandbox.sigModelUpdated.connect(
+            self.update)
+        self.sandbox.sources.modelAboutToBeReset.connect(
+            self.removeSourceROIS)
+        self.sandbox.sources.modelReset.connect(
+            self.addSourceROIS)
 
         self.update()
 
@@ -307,9 +310,12 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.setLevels(-abs_range, abs_range)
 
     def addPlot(self, plot):
+        image = plot.image
+        if not self.plots:
+            self.setImageItem(image)
+
         self.plots.append(plot)
         self.setSymColormap()
-        image = plot.image
 
         # hist_pen = pg.mkPen((170, 57, 57, 255), width=1.)
         image.setLookupTable(self.getLookupTable)
@@ -331,7 +337,8 @@ class ModelSceneDockarea(dockarea.DockArea):
         cmap = ColormapPlots()
         for plt in layout.plots:
             cmap.addPlot(plt)
-        sandbox.sigModelUpdated.connect(cmap.setSymColormap)
+        sandbox.sigModelUpdated.connect(
+            cmap.setSymColormap)
 
         cmap_dock = dockarea.Dock(
             'Colormap',
@@ -354,8 +361,6 @@ class ModelReferenceDockarea(dockarea.DockArea):
         cmap = ColormapPlots()
         for plt in layout.plots:
             cmap.addPlot(plt)
-        sandbox.sigModelUpdated.connect(
-            cmap.setSymColormap)
 
         cmap_dock = dockarea.Dock(
             'Colormap',
