@@ -1,10 +1,13 @@
-from pyrocko.guts import Object, Bool
+from pyrocko.guts import Object, Bool, String
 from os import path
 
 
 class TalpaConfig(Object):
     show_cursor = Bool.T(
         default=True)
+    default_gf_dir = String.T(
+        '/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield',  # noqa
+        optional=True)
 
 
 def getConfig():

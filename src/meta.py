@@ -221,7 +221,8 @@ class Subject(object):
         if self._mute:
             return
         for l in self._listeners:
-            self._call(l, *args, **kwargs)
+            if callable(l):
+                self._call(l, *args, **kwargs)
 
     @staticmethod
     def _call(func, *args, **kwargs):

@@ -8,10 +8,10 @@ from scene import BaseScene, FrameConfig
 from os import path as op
 
 # Import the modeling backends
-from .sources import DislocProcessor
+from .sources import DislocProcessor, PyrockoProcessor
 
 
-__processors__ = [DislocProcessor]
+__processors__ = [DislocProcessor, PyrockoProcessor]
 km = 1e3
 
 
@@ -128,15 +128,23 @@ class ModelScene(BaseScene):
                        ('east', num.float64),
                        ('down', num.float64)])
 
-        for processor in __processors__:
+        avail_processors = {}
+        for proc in __processors__:
+            avail_processors[proc.__implements__] = proc
+
+        for impl in set([src.__implements__ for src in sources]):
             proc_sources = [src for src in sources
-                            if src.__implements__ == processor.__implements__]
-            if not proc_sources:
+                            if src.__implements__ == impl]
+            processor = avail_processors.get(impl, None)
+
+            if processor is None:
+                self._log.warning(
+                    'Could not find source processor for %s' % impl)
                 continue
 
             t0 = time.time()
 
-            proc_result = processor.process(
+            proc_result = processor(self).process(
                 proc_sources,
                 coordinates,
                 nthreads=0)
@@ -145,9 +153,9 @@ class ModelScene(BaseScene):
                             % (src.__class__.__name__, len(proc_sources),
                                processor.__name__, time.time() - t0))
 
-            result['north'] += proc_result['north']
-            result['east'] += proc_result['east']
-            result['down'] += proc_result['down']
+            result['north'] += proc_result['displacement.n']
+            result['east'] += proc_result['displacement.e']
+            result['down'] += proc_result['displacement.d']
 
         return result
 
@@ -333,24 +341,3 @@ class TestModelScene(ModelScene):
 
         model_scene.addSource(OkadaSource(**parameters))
         return model_scene
-
-
-class ProcessorProfile(dict):
-    pass
-
-
-class ModelProcessor(object):
-    '''Interface definition of the processor '''
-    __implements__ = 'disloc'  # Defines What backend is implemented
-
-    @staticmethod
-    def process(sources, coords, nthreads=0):
-        raise NotImplementedError()
-
-        result = {
-            'north': num.array(),
-            'east': num.array(),
-            'down': num.array(),
-            'processor_profile': ProcessorProfile()
-        }
-        return result

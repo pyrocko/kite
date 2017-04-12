@@ -1,5 +1,6 @@
 from PySide import QtGui, QtCore
 from .common import SourceEditorDialog
+from functools import partial
 import sources
 
 
@@ -35,12 +36,13 @@ class SourcesAddButton(QtGui.QToolButton):
             self.sandbox = sandbox
 
             def addSource(source):
-                self.sandbox.addSource(source)
+                if source:
+                    self.sandbox.addSource(source)
 
             for src in sources.__sources__:
                 self.addAction(
                     '%s' % src.__represents__,
-                    lambda: addSource(src.getRepresentedSource(sandbox)))
+                    partial(addSource, src.getRepresentedSource(sandbox)))
 
     def __init__(self, sandbox, parent=None):
         QtGui.QToolButton.__init__(self, parent)

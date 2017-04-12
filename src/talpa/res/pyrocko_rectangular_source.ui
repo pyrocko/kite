@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>OkadaSourceDialog</class>
- <widget class="QDialog" name="OkadaSourceDialog">
+ <class>PyrockoRectangularSourceDialog</class>
+ <widget class="QDialog" name="PyrockoRectangularSourceDialog">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
   </property>
@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>490</width>
-    <height>283</height>
+    <width>517</width>
+    <height>256</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -35,7 +35,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>OkadaSource Parameters</string>
+   <string>PyrockoRectangularSource Parameters</string>
   </property>
   <property name="modal">
    <bool>false</bool>
@@ -70,7 +70,7 @@
         <item row="0" column="0">
          <widget class="QLabel" name="eastingLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.easting&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.easting&lt;/span&gt;&lt;br&gt;
 Coordinate of the top center edge.</string>
           </property>
           <property name="text">
@@ -115,7 +115,7 @@ Coordinate of the top center edge.</string>
         <item row="1" column="0">
          <widget class="QLabel" name="northingLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.northing&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.northing&lt;/span&gt;&lt;br&gt;
 Coordinate of the top center edge.</string>
           </property>
           <property name="text">
@@ -160,7 +160,7 @@ Coordinate of the top center edge.</string>
         <item row="2" column="0">
          <widget class="QLabel" name="depthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.depth&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.depth&lt;/span&gt;&lt;br&gt;
 Depth of the upper edge of the fault.</string>
           </property>
           <property name="text">
@@ -192,7 +192,7 @@ Depth of the upper edge of the fault.</string>
            <string> m</string>
           </property>
           <property name="minimum">
-           <number>-10000000</number>
+           <number>0</number>
           </property>
           <property name="maximum">
            <number>10000000</number>
@@ -205,7 +205,7 @@ Depth of the upper edge of the fault.</string>
         <item row="3" column="0">
          <widget class="QLabel" name="widthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.width&lt;/span&gt;</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.width&lt;/span&gt;</string>
           </property>
           <property name="text">
            <string>Width</string>
@@ -249,7 +249,7 @@ Depth of the upper edge of the fault.</string>
         <item row="4" column="0">
          <widget class="QLabel" name="lengthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.length&lt;/span&gt;</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.length&lt;/span&gt;</string>
           </property>
           <property name="text">
            <string>Length</string>
@@ -291,66 +291,58 @@ Depth of the upper edge of the fault.</string>
          </widget>
         </item>
         <item row="5" column="0">
-         <widget class="QLabel" name="MW_label">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
+         <widget class="QLabel" name="store_dirLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.moment_magnitude&lt;/span&gt;&lt;br&gt;
-We assume a constant crustal Bulk modulus of 35 GPa.</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.store_dir&lt;/span&gt;
+Pyrocko Green's function (GF) store directory.</string>
           </property>
           <property name="text">
-           <string>M&lt;sub&gt;W&lt;/sub&gt;</string>
+           <string>GF Store</string>
+          </property>
+          <property name="buddy">
+           <cstring>store_dir</cstring>
           </property>
          </widget>
         </item>
         <item row="5" column="1">
-         <widget class="QLabel" name="moment_magnitude">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::NoFrame</enum>
-          </property>
-          <property name="text">
-           <string>TextLabel</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QLabel" name="M0_label">
-          <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.seismic_moment&lt;/span&gt;&lt;br&gt;
-We assume a constant crustal Bulk modulus of 35 GPa.</string>
-          </property>
-          <property name="text">
-           <string>M&lt;sub&gt;0&lt;/sub&gt;</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="1">
-         <widget class="QLabel" name="seismic_moment">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>25</height>
-           </size>
-          </property>
-          <property name="text">
-           <string>TextLabel</string>
-          </property>
+         <widget class="QFrame" name="frame_2">
+          <layout class="QHBoxLayout" name="horizontalLayout">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <property name="margin">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLineEdit" name="store_dir">
+             <property name="readOnly">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="chooseStoreDirButton">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>30</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
+             <property name="text">
+              <string>...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
@@ -363,7 +355,7 @@ We assume a constant crustal Bulk modulus of 35 GPa.</string>
         <item row="0" column="0">
          <widget class="QLabel" name="strikeLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.strike&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.strike&lt;/span&gt;&lt;br&gt;
 Clockwise from north.</string>
           </property>
           <property name="text">
@@ -399,7 +391,7 @@ Clockwise from north.</string>
         <item row="1" column="0">
          <widget class="QLabel" name="dipLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.dip&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.dip&lt;/span&gt;&lt;br&gt;
 Positive from horizontal.</string>
           </property>
           <property name="text">
@@ -435,7 +427,7 @@ Positive from horizontal.</string>
         <item row="2" column="0">
          <widget class="QLabel" name="rakeLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.rake&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.rake&lt;/span&gt;&lt;br&gt;
 Clockwise from left-lateral (0 deg; horizontal).</string>
           </property>
           <property name="text">
@@ -474,7 +466,7 @@ Clockwise from left-lateral (0 deg; horizontal).</string>
         <item row="3" column="0">
          <widget class="QLabel" name="slipLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.slip&lt;/span&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.slip&lt;/span&gt;
 In direction of rake.</string>
           </property>
           <property name="text">
@@ -502,21 +494,21 @@ In direction of rake.</string>
          </widget>
         </item>
         <item row="4" column="0">
-         <widget class="QLabel" name="openingLabel">
+         <widget class="QLabel" name="decimation_factorLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.opening&lt;/span&gt;
-Positive is expansion (e.g. of a dike).</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoRectangularSource.decimation_factor&lt;/span&gt;
+Sub-source decimation factor.</string>
           </property>
           <property name="text">
-           <string>Opening</string>
+           <string>Decimation</string>
           </property>
           <property name="buddy">
-           <cstring>opening</cstring>
+           <cstring>decimation_factor</cstring>
           </property>
          </widget>
         </item>
         <item row="4" column="1">
-         <widget class="QDoubleSpinBox" name="opening">
+         <widget class="QSpinBox" name="decimation_factor">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -527,43 +519,7 @@ Positive is expansion (e.g. of a dike).</string>
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
           <property name="suffix">
-           <string> m</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QLabel" name="nu_label">
-          <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;OkadaSource.nu&lt;/span&gt;
-Poisson's ratio in Pascal.</string>
-          </property>
-          <property name="text">
-           <string>Poisson's</string>
-          </property>
-          <property name="buddy">
-           <cstring>nu</cstring>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="1">
-         <widget class="QDoubleSpinBox" name="nu">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-          </property>
-          <property name="suffix">
-           <string> Pa</string>
-          </property>
-          <property name="maximum">
-           <double>1.000000000000000</double>
-          </property>
-          <property name="singleStep">
-           <double>0.050000000000000</double>
+           <string> x</string>
           </property>
          </widget>
         </item>
@@ -618,27 +574,28 @@ Poisson's ratio in Pascal.</string>
   <tabstop>depth</tabstop>
   <tabstop>width</tabstop>
   <tabstop>length</tabstop>
+  <tabstop>store_dir</tabstop>
   <tabstop>strike</tabstop>
   <tabstop>dip</tabstop>
   <tabstop>rake</tabstop>
   <tabstop>slip</tabstop>
-  <tabstop>opening</tabstop>
-  <tabstop>nu</tabstop>
+  <tabstop>decimation_factor</tabstop>
   <tabstop>okButton</tabstop>
   <tabstop>applyButton</tabstop>
   <tabstop>cancelButton</tabstop>
+  <tabstop>chooseStoreDirButton</tabstop>
  </tabstops>
  <resources/>
  <connections>
   <connection>
    <sender>cancelButton</sender>
    <signal>released()</signal>
-   <receiver>OkadaSourceDialog</receiver>
+   <receiver>PyrockoRectangularSourceDialog</receiver>
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>533</x>
-     <y>243</y>
+     <x>479</x>
+     <y>272</y>
     </hint>
     <hint type="destinationlabel">
      <x>292</x>

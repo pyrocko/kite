@@ -1,54 +1,28 @@
 import numpy as num
 
 from kite import disloc_ext
-from .meta import Parameter
-from ..meta import Subject
-from pyrocko.guts import Object, List, Bool
+from .meta import SandboxSourceRectangular, SandboxSource, SourceProcessor
+from pyrocko.guts import List, Bool, Float
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
+km = 1e3
 
 
 __all__ = ['OkadaSource', 'OkadaPath', 'DislocProcessor']
 
 
-class OkadaSource(Object):
+class OkadaSource(SandboxSourceRectangular):
 
     __implements__ = 'disloc'
 
-    easting = Parameter.T(
-        help='Easting in [m]')
-    northing = Parameter.T(
-        help='Northing in [m]')
-    depth = Parameter.T(
-        help='Depth in [m]')
-    width = Parameter.T(
-        help='Width, downdip in [m]')
-    length = Parameter.T(
-        help='Length in [m]')
-    strike = Parameter.T(
-        default=45.,
-        help='Strike, clockwise from north in [deg]; -180-180')
-    dip = Parameter.T(
-        default=45.,
-        help='Dip, down from horizontal in [deg]; 0-90')
-    rake = Parameter.T(
-        default=90.,
-        help='Rake, clockwise in [deg]; 0 is left-lateral Strike-Slip')
-    slip = Parameter.T(
-        default=1.5,
-        help='Slip in [m]')
-    nu = Parameter.T(
-        default=0.25,
-        help='Poisson\'s ratio, typically 1./4')
-    opening = Parameter.T(
+    opening = Float.T(
         help='Opening of the plane in [m]',
         optional=True,
         default=0.)
-
-    def __init__(self, *args, **kwargs):
-        Object.__init__(self, *args, **kwargs)
-        self.evParametersChanged = Subject()
+    nu = Float.T(
+        default=0.25,
+        help='Poisson\'s ratio, typically 1./4')
 
     @property
     def seismic_moment(self):
@@ -111,33 +85,9 @@ class OkadaSource(Object):
         dsrc[9] = self.opening  # TS Tensional-Slip
         return dsrc
 
-    def outline(self):
-        coords = num.empty((4, 2))
-
-        c_strike = num.cos(self.strike * d2r)
-        s_strike = num.sin(self.strike * d2r)
-        c_dip = num.cos(self.dip * d2r)
-
-        coords[0, 0] = s_strike * self.length/2
-        coords[0, 1] = c_strike * self.length/2
-        coords[1, 0] = -coords[0, 0]
-        coords[1, 1] = -coords[0, 1]
-
-        coords[2, 0] = coords[1, 0] - c_strike * c_dip * self.width
-        coords[2, 1] = coords[1, 1] + s_strike * c_dip * self.width
-        coords[3, 0] = coords[0, 0] - c_strike * c_dip * self.width
-        coords[3, 1] = coords[0, 1] + s_strike * c_dip * self.width
-
-        coords[:, 0] += self.easting
-        coords[:, 1] += self.northing
-        return coords
-
-    def parametersUpdated(self):
-        self.evParametersChanged.notify()
-
-    @property
-    def parameters(self):
-        return self.T.propnames
+    # @property
+    # def parameters(self):
+        # return self.T.propnames
 
     def getParametersArray(self):
         return num.array([self.__getattribute__(p) for p in self.parameters])
@@ -151,25 +101,6 @@ class OkadaSource(Object):
             self.__setattr__(param, parameter_arr[ip])
         self.parametersUpdated()
 
-    def getParameterRanges(self):
-        return {
-            'easting': (None, None),
-            'northing': (None, None),
-            'depth': (0., 30000.),
-            'width': (0., 30000.),
-            'length': (0., 500000.),
-            'strike': (-180., 180.),
-            'dip': (0., 89.9),
-            'rake': (-180., 180.),
-            'slip': (0., 20.),
-            'nu': (0.25, 0.25),
-            'opening': (0., 0.),
-        }
-
-    @property
-    def segments(self):
-        yield self
-
 
 class OkadaSegment(OkadaSource):
     enabled = Bool.T(
@@ -177,15 +108,17 @@ class OkadaSegment(OkadaSource):
         optional=True)
 
 
-class OkadaPath(Object):
+class OkadaPath(SandboxSource):
 
     __implements__ = 'disloc'
 
-    origin_easting = Parameter.T(
+    easting = Float.T(
         help='Easting of the origin in [m]')
-    origin_northing = Parameter.T(
+    northing = Float.T(
         help='Northing of the origin in [m]')
-    nu = Parameter.T(
+    depth = None
+
+    nu = Float.T(
         default=1.25,
         help='Material parameter Nu in P s^-1')
     nodes = List.T(
@@ -198,13 +131,13 @@ class OkadaPath(Object):
         help='List of all segments.')
 
     def __init__(self, *args, **kwargs):
-        Object.__init__(self, *args, **kwargs)
-        self.evParametersChanged = Subject()
+        SandboxSource.__init__(self, *args, **kwargs)
+
         self._segments = []
 
         if not self.nodes:
             self.nodes.append(
-                [self.origin_easting, self.origin_northing])
+                [self.easting, self.northing])
 
     @property
     def segments(self):
@@ -306,7 +239,7 @@ class OkadaPath(Object):
                           if seg.enabled])
 
 
-class DislocProcessor(object):
+class DislocProcessor(SourceProcessor):
     __implements__ = 'disloc'
 
     @staticmethod
@@ -318,8 +251,8 @@ class DislocProcessor(object):
         src_arr = num.vstack([src.dislocSource() for src in sources])
         res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
 
-        result['north'] = res[:, 0]
-        result['east'] = res[:, 1]
-        result['down'] = res[:, 2]
+        result['displacement.n'] = res[:, 0]
+        result['displacement.e'] = res[:, 1]
+        result['displacement.d'] = res[:, 2]
 
         return result

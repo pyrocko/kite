@@ -7,7 +7,9 @@ from kite import ModelScene, TestModelScene
 from kite.sources import OkadaSource, OkadaPath
 
 
-class testOkada(unittest.TestCase):
+class testSourceOkada(unittest.TestCase):
+    __name__ = 'SandboxTestOkada'
+
     def setUp(self):
         self.ms = ModelScene()
         self.tmpdir = tempfile.mkdtemp(prefix='kite')
@@ -37,12 +39,13 @@ class testOkada(unittest.TestCase):
                     length=length,
                     width=15. * length**.66,))
 
-        # self.plotDisplacement(self.ms)
+        self.plotDisplacement(self.ms)
 
+    @unittest.skip
     def testOkadaPath(self):
         ok_path = OkadaPath(
-            origin_easting=10000,
-            origin_northing=24000,)
+            easting=10000,
+            northing=24000,)
         ok_path.addNode(15000, 28000)
         ok_path.addNode(18000, 32000)
         ok_path.addNode(22000, 34000)
@@ -57,8 +60,9 @@ class testOkada(unittest.TestCase):
         from matplotlib.patches import Polygon
         fig = plt.figure()
         ax = fig.gca()
+        ms.processSources()
 
-        ax.imshow(num.flipud(ms.north), aspect='equal',
+        ax.imshow(num.flipud(ms.down), aspect='equal',
                   extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()])
         for src in ms.sources:
             for seg in src.segments:
@@ -76,8 +80,7 @@ class testOkada(unittest.TestCase):
         msc.save(filename=filename)
 
         msc2 = ModelScene.load(filename=filename)
-        print msc2.config
-
+        # print msc2.config
 
 
 if __name__ == '__main__':

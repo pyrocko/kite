@@ -1,7 +1,7 @@
 from PySide import QtCore
 
 # Importing available models
-from .sources import OkadaSourceDelegate
+import sources
 from .common import SourceROI, SourceEditorDialog
 from ..qt_utils import SceneLogModel
 
@@ -9,7 +9,7 @@ import logging
 
 
 available_delegates = {}
-for module in [OkadaSourceDelegate]:
+for module in sources.__sources__:
     available_delegates[module.__represents__] = module
 
 

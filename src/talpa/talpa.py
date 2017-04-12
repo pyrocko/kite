@@ -109,7 +109,6 @@ class TalpaMainWindow(QtGui.QMainWindow):
 
     @QtCore.Slot()
     def processingFinished(self):
-        print 'called!'
         self.progress.reset()
         self.progress.close()
 
