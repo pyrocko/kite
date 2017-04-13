@@ -95,6 +95,9 @@ Coordinate of the top center edge.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -139,6 +142,9 @@ Coordinate of the top center edge.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -185,6 +191,9 @@ Depth of the upper edge of the fault.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -229,6 +238,9 @@ Depth of the upper edge of the fault.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -272,6 +284,9 @@ Depth of the upper edge of the fault.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -388,6 +403,9 @@ Clockwise from north.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -424,6 +442,9 @@ Positive from horizontal.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -436,7 +457,7 @@ Positive from horizontal.</string>
          <widget class="QLabel" name="rakeLabel">
           <property name="toolTip">
            <string>&lt;span style='font-family: monospace'&gt;OkadaSource.rake&lt;/span&gt;&lt;br&gt;
-Clockwise from left-lateral (0 deg; horizontal).</string>
+Clockwise from left-lateral (0&amp;deg; horizontal).</string>
           </property>
           <property name="text">
            <string>Rake</string>
@@ -459,6 +480,9 @@ Clockwise from left-lateral (0 deg; horizontal).</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="suffix">
            <string>°</string>
@@ -493,11 +517,20 @@ In direction of rake.</string>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
+          <property name="wrapping">
+           <bool>true</bool>
+          </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string> m</string>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
           </property>
          </widget>
         </item>
@@ -526,8 +559,17 @@ Positive is expansion (e.g. of a dike).</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string> m</string>
+          </property>
+          <property name="minimum">
+           <double>-99.989999999999995</double>
+          </property>
+          <property name="singleStep">
+           <double>0.100000000000000</double>
           </property>
          </widget>
         </item>
@@ -556,8 +598,11 @@ Poisson's ratio in Pascal.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Pa</string>
+           <string/>
           </property>
           <property name="maximum">
            <double>1.000000000000000</double>

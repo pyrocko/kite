@@ -95,6 +95,9 @@ Coordinate of the point source.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -139,6 +142,9 @@ Coordinate of the point source.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -185,6 +191,9 @@ Depth of the point source.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -227,6 +236,11 @@ Pyrocko Green's function (GF) store directory.</string>
            </property>
            <item>
             <widget class="QLineEdit" name="store_dir">
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
              <property name="readOnly">
               <bool>false</bool>
              </property>
@@ -292,6 +306,9 @@ Clockwise from north.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -328,6 +345,9 @@ Positive from horizontal.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -363,6 +383,9 @@ Clockwise from right-lateral (0 deg; horizontal).</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="suffix">
            <string>°</string>
@@ -402,6 +425,9 @@ Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="suffix">
            <string/>

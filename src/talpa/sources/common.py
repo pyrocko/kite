@@ -89,6 +89,65 @@ class RectangularSourceROI(pg.ROI):
             return self.pen
 
 
+class PointSourceROI(pg.EllipseROI):
+
+    newSourceParameters = QtCore.Signal(object)
+
+    pen_outline = pg.mkPen((46, 125, 50, 180), width=1.25)
+    pen_handle = pg.mkPen(((38, 50, 56, 180)), width=1.25)
+    pen_highlight = pg.mkPen((52, 175, 60), width=2.5)
+
+    def __init__(self, delegate):
+        self.delegate = delegate
+        self.source = self.delegate.source
+        source = self.source
+
+        size = 3000.
+        pg.EllipseROI.__init__(
+            self,
+            pos=(source.easting - size/2, source.northing - size/2),
+            size=size,
+            invertible=False,
+            pen=self.pen_outline)
+        self.handlePen = self.pen_handle
+        self.aspectLocked = True
+        self.handles = []
+
+        # self.addTranslateHandle([.5*2.**-.5 + .5, .5*2.**-.5 + .5])
+
+        self.delegate.sourceParametersChanged.connect(
+            self.updateROIPosition)
+        self.sigRegionChangeFinished.connect(
+            self.setSourceParametersFromROI)
+
+        self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
+        self.sigClicked.connect(self.showEditingDialog)
+
+    @QtCore.Slot()
+    def setSourceParametersFromROI(self):
+        parameters = {
+            'easting': float(self.pos().x() + self.size().x()/2),
+            'northing': float(self.pos().y() + self.size().y()/2)
+            }
+        self.newSourceParameters.emit(parameters)
+
+    @QtCore.Slot()
+    def updateROIPosition(self):
+        source = self.source
+        self.setPos(
+            pg.Point((source.easting - self.size().x()/2,
+                      source.northing - self.size().x()/2)),
+            finish=False)
+
+    @QtCore.Slot()
+    def highlightROI(self, highlight):
+        self.setMouseHover(highlight)
+
+    @QtCore.Slot()
+    def showEditingDialog(self, *args):
+        self.delegate.getEditingDialog().show()
+
+
 class SourceDelegate(QtCore.QObject):
 
     __represents__ = 'SourceToImplement'

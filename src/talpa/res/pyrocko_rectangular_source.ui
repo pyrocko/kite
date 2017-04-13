@@ -95,6 +95,9 @@ Coordinate of the top center edge.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -139,6 +142,9 @@ Coordinate of the top center edge.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -185,6 +191,9 @@ Depth of the upper edge of the fault.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -228,6 +237,9 @@ Depth of the upper edge of the fault.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -273,6 +285,9 @@ Depth of the upper edge of the fault.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -315,6 +330,11 @@ Pyrocko Green's function (GF) store directory.</string>
            </property>
            <item>
             <widget class="QLineEdit" name="store_dir">
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
              <property name="readOnly">
               <bool>false</bool>
              </property>
@@ -380,6 +400,9 @@ Clockwise from north.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -415,6 +438,9 @@ Positive from horizontal.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="suffix">
            <string>°</string>
@@ -452,6 +478,9 @@ Clockwise from left-lateral (0 deg; horizontal).</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string>°</string>
           </property>
@@ -488,6 +517,9 @@ In direction of rake.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
            <string> m</string>
           </property>
@@ -517,6 +549,9 @@ Sub-source decimation factor.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="suffix">
            <string> x</string>

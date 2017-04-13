@@ -1,7 +1,8 @@
 from PySide import QtGui, QtCore
+
+from .sources import __sources__
 from .common import SourceEditorDialog
 from functools import partial
-import sources
 
 
 class SourcesListDock(QtGui.QDockWidget):
@@ -35,14 +36,42 @@ class SourcesAddButton(QtGui.QToolButton):
             self.setTitle('Add Source')
             self.sandbox = sandbox
 
+            backends = set(src.display_backend for src in __sources__)
+
+            for ibe, be in enumerate(backends):
+                self.addSection(be)
+
+                for src in [s for s in __sources__
+                            if s.display_backend == be]:
+                    self.addSourceDelegate(src)
+
+                if ibe is not len(backends) - 1:
+                    self.addSeparator()
+
+        def addSourceDelegate(self, src):
+
             def addSource(source):
                 if source:
                     self.sandbox.addSource(source)
 
-            for src in sources.__sources__:
-                self.addAction(
-                    '%s' % src.__represents__,
-                    partial(addSource, src.getRepresentedSource(sandbox)))
+            action = QtGui.QAction(src.display_name, self)
+            action.setToolTip('<span style="font-family: monospace;">'
+                              '%s</span>' % src.__represents__)
+            action.triggered.connect(
+                partial(addSource, src.getRepresentedSource(self.sandbox)))
+            self.addAction(action)
+            return action
+
+        def addSection(self, text):
+            action = QtGui.QAction(text, self)
+            # action.setSeparator(True)
+            font = action.font()
+            font.setPointSize(9)
+            font.setItalic(True)
+            action.setFont(font)
+            action.setEnabled(False)
+            self.addAction(action)
+            return action
 
     def __init__(self, sandbox, parent=None):
         QtGui.QToolButton.__init__(self, parent)

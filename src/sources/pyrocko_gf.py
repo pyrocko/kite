@@ -132,6 +132,10 @@ class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
         self.pyrocko_source = gf.DCSource(**self._src_args)
 
     @property
+    def moment(self):
+        return self.pyrocko_source.moment
+
+    @property
     def _src_args(self):
         return {
             'lat': 0.,

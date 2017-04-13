@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>438</width>
-    <height>252</height>
+    <height>283</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -95,6 +95,9 @@ Coordinate of the point source.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -139,6 +142,9 @@ Coordinate of the point source.</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
           <property name="accelerated">
            <bool>false</bool>
@@ -185,6 +191,9 @@ Depth of the point source.</string>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="accelerated">
            <bool>false</bool>
           </property>
@@ -227,6 +236,11 @@ Pyrocko Green's function (GF) store directory.</string>
            </property>
            <item>
             <widget class="QLineEdit" name="store_dir">
+             <property name="font">
+              <font>
+               <pointsize>8</pointsize>
+              </font>
+             </property>
              <property name="readOnly">
               <bool>false</bool>
              </property>
@@ -287,16 +301,28 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
           </property>
          </widget>
         </item>
@@ -337,16 +363,28 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
           </property>
          </widget>
         </item>
@@ -373,16 +411,28 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
           </property>
          </widget>
         </item>
@@ -409,16 +459,28 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
           </property>
          </widget>
         </item>
@@ -445,16 +507,28 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
           </property>
          </widget>
         </item>
@@ -467,16 +541,54 @@ East diagonal component of the moment tensor.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
           </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
           <property name="suffix">
-           <string> Nm</string>
+           <string/>
+          </property>
+          <property name="decimals">
+           <number>4</number>
+          </property>
+          <property name="minimum">
+           <double>-1.000000000000000</double>
           </property>
           <property name="maximum">
-           <double>5000.000000000000000</double>
+           <double>1.000000000000000</double>
+          </property>
+          <property name="singleStep">
+           <double>0.020000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="0">
+         <widget class="QLabel" name="exponentLabel">
+          <property name="text">
+           <string>Exponent</string>
+          </property>
+         </widget>
+        </item>
+        <item row="6" column="1">
+         <widget class="QSpinBox" name="exponent">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
+          <property name="value">
+           <number>1</number>
           </property>
          </widget>
         </item>

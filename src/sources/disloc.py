@@ -22,7 +22,7 @@ class OkadaSource(SandboxSourceRectangular):
         default=0.)
     nu = Float.T(
         default=0.25,
-        help='Poisson\'s ratio, typically 1./4')
+        help='Poisson\'s ratio, typically 0.25')
 
     @property
     def seismic_moment(self):
@@ -71,7 +71,7 @@ class OkadaSource(SandboxSourceRectangular):
         dsrc[0] = self.length
         dsrc[1] = self.width
         dsrc[2] = self.depth
-        dsrc[3] = -dip  # Dip
+        dsrc[3] = -dip
         dsrc[4] = self.strike
         dsrc[5] = self.easting
         dsrc[6] = self.northing
@@ -80,9 +80,10 @@ class OkadaSource(SandboxSourceRectangular):
         ds_slip = num.sin(self.rake * d2r) * self.slip
         # print '{:<13}{}\n{:<13}{}'.format(
         #     'strike_slip', ss_slip, 'dip_slip', ds_slip)
-        dsrc[7] = ss_slip  # SS Strike-Slip
+        dsrc[7] = -ss_slip  # SS Strike-Slip
         dsrc[8] = ds_slip  # DS Dip-Slip
         dsrc[9] = self.opening  # TS Tensional-Slip
+
         return dsrc
 
     # @property
@@ -112,15 +113,10 @@ class OkadaPath(SandboxSource):
 
     __implements__ = 'disloc'
 
-    easting = Float.T(
-        help='Easting of the origin in [m]')
-    northing = Float.T(
-        help='Northing of the origin in [m]')
     depth = None
-
     nu = Float.T(
-        default=1.25,
-        help='Material parameter Nu in P s^-1')
+        default=0.25,
+        help='Poisson\'s ratio, typically 0.25')
     nodes = List.T(
         default=[],
         optional=True,
@@ -245,14 +241,21 @@ class DislocProcessor(SourceProcessor):
     @staticmethod
     def process(sources, coords, nthreads=0):
         result = {
-            'processor_profile': dict()
+            'processor_profile': dict(),
+            'displacement.n': num.zeros((coords.shape[0])),
+            'displacement.e': num.zeros((coords.shape[0])),
+            'displacement.d': num.zeros((coords.shape[0])),
         }
 
-        src_arr = num.vstack([src.dislocSource() for src in sources])
-        res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
+        src_nu = set(src.nu for src in sources)
 
-        result['displacement.n'] = res[:, 0]
-        result['displacement.e'] = res[:, 1]
-        result['displacement.d'] = res[:, 2]
+        for nu in src_nu:
+            src_arr = num.vstack([src.dislocSource() for src in sources
+                                  if src.nu == nu])
+            res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
+
+            result['displacement.e'] += res[:, 0]
+            result['displacement.n'] += res[:, 1]
+            result['displacement.d'] += -res[:, 2]
 
         return result

@@ -53,6 +53,9 @@ class OkadaSourceDelegate(SourceDelegate):
 
     __represents__ = 'OkadaSource'
 
+    display_backend = 'Okada'
+    display_name = 'OkadaSource'
+
     parameters = ['easting', 'northing', 'width', 'length', 'depth',
                   'slip', 'opening', 'strike', 'dip', 'rake', 'nu']
     ro_parameters = ['seismic_moment', 'moment_magnitude']
@@ -82,7 +85,10 @@ class OkadaSourceDelegate(SourceDelegate):
     def formatListItem(self):
         item = '''
 <span style="font-weight: bold; font-style: oblique">
-    {0}. OkadaSource
+    {idx}. {delegate.display_name}
+    <span style="color: #616161;">
+        ({delegate.display_backend})
+    </span>
 </span>
 <table style="color: #616161; font-size: small;">
 <tr>
@@ -97,6 +103,8 @@ class OkadaSourceDelegate(SourceDelegate):
     <td>Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr>
     <td>Rake:</td><td>{source.rake:.2f}&deg;</td>
+</tr><tr>
+    <td>M<sub>0</sub>:</td><td>{source.seismic_moment:.2e}</td>
 </tr><tr style="font-weight: bold;">
     <td>Slip:</td><td>{source.slip:.2f} m</td>
 </tr><tr style="font-weight: bold;">
@@ -104,4 +112,6 @@ class OkadaSourceDelegate(SourceDelegate):
 </tr>
 </table>
 '''
-        return item.format(self.index.row()+1, source=self.source)
+        return item.format(idx=self.index.row()+1,
+                           delegate=self,
+                           source=self.source)

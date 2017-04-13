@@ -208,6 +208,8 @@ class ModelScene(BaseScene):
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
         self._log.info('Saving model scene to %s' % filename)
+        for source in self.sources:
+            source.regularize()
         self.config.dump(filename='%s' % filename,
                          header='kite.ModelScene YAML Config')
 

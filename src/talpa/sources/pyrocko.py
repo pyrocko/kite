@@ -1,9 +1,10 @@
 from PySide import QtCore, QtGui
-import pyqtgraph as pg
 import numpy as num
 import os
 
-from .common import RectangularSourceROI, SourceDelegate
+import pyqtgraph as pg
+
+from .common import RectangularSourceROI, PointSourceROI, SourceDelegate
 from ..common import get_resource
 from kite.qt_utils import loadUi
 from kite.sources import (PyrockoRectangularSource,
@@ -77,6 +78,9 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
 
     __represents__ = 'PyrockoRectangularSource'
 
+    display_backend = 'pyrocko'
+    display_name = 'RectangularSource'
+
     parameters = ['easting', 'northing', 'width', 'length', 'depth',
                   'slip', 'strike', 'dip', 'rake', 'store_dir',
                   'decimation_factor']
@@ -117,7 +121,11 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
     def formatListItem(self):
         item = '''
 <span style="font-weight: bold; font-style: oblique">
-    {0}. PyrockoRectangularSource</span>
+    {idx}. {delegate.display_name}
+    <span style="color: #616161;">
+        ({delegate.display_backend})
+    </span>
+</span>
 <table style="color: #616161; font-size: small;">
 <tr>
     <td>Depth:</td><td>{source.depth:.2f} m</td>
@@ -133,68 +141,11 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
     <td>Rake:</td><td>{source.rake:.2f}&deg;</td>
 </tr><tr style="font-weight: bold;">
     <td>Slip:</td><td>{source.slip:.2f} m</td>
-</tr>
-</table>
+</tr></table>
 '''
-        return item.format(self.index.row()+1, source=self.source)
-
-
-class PointSourceROI(pg.EllipseROI):
-
-    newSourceParameters = QtCore.Signal(object)
-
-    pen_outline = pg.mkPen((46, 125, 50, 180), width=1.25)
-    pen_handle = pg.mkPen(((38, 50, 56, 180)), width=1.25)
-    pen_highlight = pg.mkPen((52, 175, 60), width=2.5)
-
-    def __init__(self, delegate):
-        self.delegate = delegate
-        self.source = self.delegate.source
-        source = self.source
-
-        size = 3000.
-        pg.EllipseROI.__init__(
-            self,
-            pos=(source.easting - size/2, source.northing - size/2),
-            size=size,
-            invertible=False,
-            pen=self.pen_outline)
-        self.handlePen = self.pen_handle
-        self.aspectLocked = True
-
-        self.addTranslateHandle([.5*2.**-.5 + .5, .5*2.**-.5 + .5])
-
-        self.delegate.sourceParametersChanged.connect(
-            self.updateROIPosition)
-        self.sigRegionChangeFinished.connect(
-            self.setSourceParametersFromROI)
-
-        self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
-        self.sigClicked.connect(self.showEditingDialog)
-
-    @QtCore.Slot()
-    def setSourceParametersFromROI(self):
-        parameters = {
-            'easting': float(self.pos().x() + self.size().x()/2),
-            'northing': float(self.pos().y() + self.size().y()/2)
-            }
-        self.newSourceParameters.emit(parameters)
-
-    @QtCore.Slot()
-    def updateROIPosition(self):
-        source = self.source
-        self.setPos(
-            pg.Point((source.easting - self.size().x()/2,
-                      source.northing - self.size().x()/2)),
-            finish=False)
-
-    @QtCore.Slot()
-    def highlightROI(self, highlight):
-        self.setMouseHover(highlight)
-
-    @QtCore.Slot()
-    def showEditingDialog(self, *args):
-        self.delegate.getEditingDialog().show()
+        return item.format(idx=self.index.row()+1,
+                           delegate=self,
+                           source=self.source)
 
 
 class PyrockoMomentTensorDialog(PyrockoSourceDialog):
@@ -203,17 +154,34 @@ class PyrockoMomentTensorDialog(PyrockoSourceDialog):
         PyrockoSourceDialog.__init__(
             self, ui_file='pyrocko_moment_tensor.ui', *args, **kwargs)
 
+        mt = ['mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
 
-class PyrockoDoubleCoupleDialog(PyrockoSourceDialog):
+        exponent = float(
+            num.log10(
+                num.mean([self.__getattribute__(n).value() for n in mt])))
+        exponent = exponent if exponent > 0 else 1
+        self.exponent.setValue(exponent)
 
-    def __init__(self, *args, **kwargs):
-        PyrockoSourceDialog.__init__(
-            self, ui_file='pyrocko_double_couple.ui', *args, **kwargs)
+        def valueFromTextExp(sb, text):
+            print 'text: ', text
+            return float(text)**self.exponent.value()
+
+        def textFromValueExp(sb, value):
+            print 'value: ', value
+            return '%.2f' % (value / 10**exponent)
+
+        for spinbox_name in mt:
+            spin = self.__getattribute__(spinbox_name)
+            spin.__setattr__('valueFromText', valueFromTextExp)
+            spin.__setattr__('textFromValue', textFromValueExp)
 
 
 class PyrockoMomentTensorDelegate(SourceDelegate):
 
     __represents__ = 'PyrockoMomentTensor'
+
+    display_backend = 'pyrocko'
+    display_name = 'MomentTensor'
 
     parameters = ['easting', 'northing', 'depth', 'store_dir',
                   'mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
@@ -261,36 +229,98 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
     def formatListItem(self):
         item = '''
 <span style="font-weight: bold; font-style: oblique">
-    {0}. PyrockoMomentTensor</span>
+    {idx}. {delegate.display_name}
+    <span style="color: #616161;">
+        ({delegate.display_backend})
+    </span>
+</span>
 <table style="color: #616161; font-size: small;">
 <tr>
     <td>Depth:</td><td>{source.depth:.2f} m</td>
 </tr><tr>
-    <td>mnn:</td><td>{source.strike:.2f} Nm</td>
+    <td>mnn:</td><td style="align: justify;">{source.mnn:.3e}</td><td>Nm</td>
 </tr><tr>
-    <td>mee:</td><td>{source.mee:.2f} Nm</td>
+    <td>mee:</td><td style="align: justify;">{source.mee:.3e}</td><td>Nm</td>
 </tr><tr>
-    <td>mdd:</td><td>{source.mdd:.2f} Nm</td>
+    <td>mdd:</td><td style="align: justify;">{source.mdd:.3e}</td><td>Nm</td>
 </tr><tr>
-    <td>mne:</td><td>{source.mne:.2f} Nm</td>
+    <td>mne:</td><td style="align: justify;">{source.mne:.3e}</td><td>Nm</td>
 </tr><tr>
-    <td>mnd:</td><td>{source.mnd:.2f} Nm</td>
+    <td>mnd:</td><td style="align: justify;">{source.mnd:.3e}</td><td>Nm</td>
 </tr><tr>
-    <td>med:</td><td>{source.med:.2f} Nm</td>
+    <td>med:</td><td style="align: justify;">{source.med:.3e}</td><td>Nm</td>
 </tr>
 </table>
 '''
-        return item.format(self.index.row()+1, source=self.source)
+        return item.format(idx=self.index.row()+1,
+                           delegate=self,
+                           source=self.source)
+
+
+class PyrockoDoubleCoupleDialog(PyrockoSourceDialog):
+
+    def __init__(self, *args, **kwargs):
+        PyrockoSourceDialog.__init__(
+            self, ui_file='pyrocko_double_couple.ui', *args, **kwargs)
+
+
+class DoubleCoupleROI(PointSourceROI):
+
+    def __init__(self, *args, **kwargs):
+        PointSourceROI.__init__(self, *args, **kwargs)
+        self.addRotateHandle([.5, 1.], [0.5, 0.5])
+        self.updateROIPosition()
+
+    @QtCore.Slot()
+    def setSourceParametersFromROI(self):
+        angle = self.angle()
+        strike = float(-angle) % 360
+        parameters = {
+            'easting':
+                float(
+                    self.pos().x() + num.sin(strike*d2r) * self.size().x()/2),
+            'northing':
+                float(
+                    self.pos().y() + num.cos(strike*d2r) * self.size().y()/2),
+            'strike': strike
+            }
+
+        parameters = {
+            'easting': float(self.pos().x()),
+            'northing': float(self.pos().y()),
+            'strike': strike
+        }
+        self.newSourceParameters.emit(parameters)
+
+    @QtCore.Slot()
+    def updateROIPosition(self):
+        source = self.source
+        self.setPos(
+            QtCore.QPointF(
+                source.easting
+                - num.sin(source.strike*d2r) * self.size().x()/2,
+                source.northing
+                - num.cos(source.strike*d2r) * self.size().y()/2),
+            finish=False)
+        self.setPos(QtCore.QPointF(source.easting, source.northing),
+                    finish=False)
+        self.setAngle(-source.strike, finish=False)
+
+    def paint(self, p, opt, widget):
+        return pg.ROI.paint(self, p, opt, widget)
 
 
 class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
     __represents__ = 'PyrockoDoubleCouple'
 
+    display_backend = 'pyrocko'
+    display_name = 'DoubleCouple'
+
     parameters = ['easting', 'northing', 'depth', 'store_dir',
                   'strike', 'dip', 'rake', 'magnitude']
     ro_parameters = []
-    ROIWidget = PointSourceROI
+    ROIWidget = DoubleCoupleROI
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
@@ -333,7 +363,11 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
     def formatListItem(self):
         item = '''
 <span style="font-weight: bold; font-style: oblique">
-    {0}. PyrockoDoubleCouple</span>
+    {idx}. {delegate.display_name}
+    <span style="color: #616161;">
+        ({delegate.display_backend})
+    </span>
+</span>
 <table style="color: #616161; font-size: small;">
 <tr>
     <td>Depth:</td><td>{source.depth:.2f} m</td>
@@ -343,9 +377,13 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
     <td>Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr>
     <td>Rake:</td><td>{source.rake:.2f}&deg;</td>
+</tr><tr>
+    <td>M<sub>0</sub>:</td><td>{source.moment:.2e}</td>
 </tr><tr style="font-weight: bold;">
     <td>M<sub>W</sub>:</td><td>{source.magnitude:.2f}</td>
 </tr>
 </table>
 '''
-        return item.format(self.index.row()+1, source=self.source)
+        return item.format(idx=self.index.row()+1,
+                           delegate=self,
+                           source=self.source)

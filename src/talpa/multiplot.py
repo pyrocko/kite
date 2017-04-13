@@ -65,6 +65,12 @@ class ModelSceneLayout(pg.GraphicsLayoutWidget):
         self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
         self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
 
+    def resizeEvent(self, ev):
+        pg.GraphicsLayoutWidget.resizeEvent(self, ev)
+        if hasattr(self, 'plots'):
+            viewbox = self.plots[0].getViewBox()
+            viewbox.autoRange()
+
     @QtCore.Slot(object)
     def mouseMoved(self, event):
         self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
