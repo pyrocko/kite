@@ -42,7 +42,7 @@ class SandboxSourceRectangular(SandboxSource):
         help='Dip, down from horizontal in [deg]; 0-90')
     rake = Float.T(
         default=90.,
-        help='Rake, clockwise in [deg]; 0 is left-lateral Strike-Slip')
+        help='Rake, clockwise in [deg]; 0 is right-lateral strike slip (.')
     slip = Float.T(
         default=1.5,
         help='Slip in [m]',

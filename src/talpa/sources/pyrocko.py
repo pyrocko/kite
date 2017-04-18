@@ -2,8 +2,6 @@ from PySide import QtCore, QtGui
 import numpy as num
 import os
 
-import pyqtgraph as pg
-
 from .common import RectangularSourceROI, PointSourceROI, SourceDelegate
 from ..common import get_resource
 from kite.qt_utils import loadUi
@@ -87,6 +85,7 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
     ro_parameters = []
 
     ROIWidget = RectangularSourceROI
+    EditDialog = PyrockoRectangularSourceEditDialog
 
     @staticmethod
     def getRepresentedSource(sandbox):
@@ -112,11 +111,6 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
             store_dir=folder,
             )
         return src
-
-    def getEditingDialog(self):
-        if self.editing_dialog is None:
-            self.editing_dialog = PyrockoRectangularSourceEditDialog(self)
-        return self.editing_dialog
 
     def formatListItem(self):
         item = '''
@@ -150,30 +144,35 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
 
 class PyrockoMomentTensorDialog(PyrockoSourceDialog):
 
+    scaling_params = ['mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
+
     def __init__(self, *args, **kwargs):
         PyrockoSourceDialog.__init__(
             self, ui_file='pyrocko_moment_tensor.ui', *args, **kwargs)
 
-        mt = ['mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
+    @QtCore.Slot()
+    def setSourceParameters(self):
+        params = {}
+        scale = float('1e%d' % self.exponent.value())
+        for param in self.delegate.parameters:
+            params[param] = self.__getattribute__(param).value()
+            if param in self.scaling_params:
+                params[param] = params[param] * scale
+        self.delegate.updateModelParameters(params)
 
-        exponent = float(
-            num.log10(
-                num.mean([self.__getattribute__(n).value() for n in mt])))
-        exponent = exponent if exponent > 0 else 1
-        self.exponent.setValue(exponent)
+    @QtCore.Slot()
+    def getSourceParameters(self):
+        params = self.delegate.getSourceParameters()
+        exponent = num.log10(
+            num.max([v for k, v in params.iteritems()
+                     if k in self.scaling_params]))
+        scale = float('1e%d' % int(exponent))
 
-        def valueFromTextExp(sb, text):
-            print 'text: ', text
-            return float(text)**self.exponent.value()
-
-        def textFromValueExp(sb, value):
-            print 'value: ', value
-            return '%.2f' % (value / 10**exponent)
-
-        for spinbox_name in mt:
-            spin = self.__getattribute__(spinbox_name)
-            spin.__setattr__('valueFromText', valueFromTextExp)
-            spin.__setattr__('textFromValue', textFromValueExp)
+        for param, value in params.iteritems():
+            if param in self.scaling_params:
+                self.__getattribute__(param).setValue(value / scale)
+            else:
+                self.__getattribute__(param).setValue(value)
 
 
 class PyrockoMomentTensorDelegate(SourceDelegate):
@@ -186,21 +185,9 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
     parameters = ['easting', 'northing', 'depth', 'store_dir',
                   'mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
     ro_parameters = []
+
     ROIWidget = PointSourceROI
-
-    def __init__(self, model, source, index):
-        QtCore.QObject.__init__(self)
-        self.source = source
-        self.model = model
-        self.index = index
-        self.rois = []
-
-        self.editing_dialog = None
-
-        if model.selection_model is not None:
-            self.setSelectionModel()
-
-        self.model.selectionModelChanged.connect(self.setSelectionModel)
+    EditDialog = PyrockoMomentTensorDialog
 
     @staticmethod
     def getRepresentedSource(sandbox):
@@ -220,11 +207,6 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
             store_dir=folder,
             )
         return src
-
-    def getEditingDialog(self):
-        if self.editing_dialog is None:
-            self.editing_dialog = PyrockoMomentTensorDialog(self)
-        return self.editing_dialog
 
     def formatListItem(self):
         item = '''
@@ -275,39 +257,37 @@ class DoubleCoupleROI(PointSourceROI):
     def setSourceParametersFromROI(self):
         angle = self.angle()
         strike = float(-angle) % 360
+        vec_x, vec_y = self._vectorToCenter(strike)
+
         parameters = {
-            'easting':
-                float(
-                    self.pos().x() + num.sin(strike*d2r) * self.size().x()/2),
-            'northing':
-                float(
-                    self.pos().y() + num.cos(strike*d2r) * self.size().y()/2),
+            'easting': float(self.pos().x() + vec_x),
+            'northing': float(self.pos().y() + vec_y),
             'strike': strike
             }
 
-        parameters = {
-            'easting': float(self.pos().x()),
-            'northing': float(self.pos().y()),
-            'strike': strike
-        }
         self.newSourceParameters.emit(parameters)
 
     @QtCore.Slot()
     def updateROIPosition(self):
         source = self.source
-        self.setPos(
-            QtCore.QPointF(
-                source.easting
-                - num.sin(source.strike*d2r) * self.size().x()/2,
-                source.northing
-                - num.cos(source.strike*d2r) * self.size().y()/2),
-            finish=False)
-        self.setPos(QtCore.QPointF(source.easting, source.northing),
-                    finish=False)
-        self.setAngle(-source.strike, finish=False)
+        vec_x, vec_y = self._vectorToCenter(source.strike)
 
-    def paint(self, p, opt, widget):
-        return pg.ROI.paint(self, p, opt, widget)
+        self.setAngle(-source.strike, finish=False)
+        self.setPos(
+            QtCore.QPointF(source.easting - vec_x,
+                           source.northing - vec_y),
+            finish=False)
+        # self.setPos(QtCore.QPointF(source.easting, source.northing),
+        #             finish=False)
+
+    def _vectorToCenter(self, angle):
+        rangle = angle * d2r
+
+        sdx = self.size().x()/2
+        sdy = self.size().y()/2
+
+        return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
+                sdx*num.cos(rangle) - sdy*num.sin(rangle),)
 
 
 class PyrockoDoubleCoupleDelegate(SourceDelegate):
@@ -320,7 +300,9 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
     parameters = ['easting', 'northing', 'depth', 'store_dir',
                   'strike', 'dip', 'rake', 'magnitude']
     ro_parameters = []
+
     ROIWidget = DoubleCoupleROI
+    EditDialog = PyrockoDoubleCoupleDialog
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
@@ -354,11 +336,6 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             store_dir=folder,
             )
         return src
-
-    def getEditingDialog(self):
-        if self.editing_dialog is None:
-            self.editing_dialog = PyrockoDoubleCoupleDialog(self)
-        return self.editing_dialog
 
     def formatListItem(self):
         item = '''

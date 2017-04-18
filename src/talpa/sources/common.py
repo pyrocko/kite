@@ -112,8 +112,8 @@ class PointSourceROI(pg.EllipseROI):
         self.handlePen = self.pen_handle
         self.aspectLocked = True
         self.handles = []
-
-        # self.addTranslateHandle([.5*2.**-.5 + .5, .5*2.**-.5 + .5])
+        # self.setFlag(self.ItemIgnoresTransformations)
+        self.setScale(1.)
 
         self.delegate.sourceParametersChanged.connect(
             self.updateROIPosition)
@@ -152,13 +152,14 @@ class SourceDelegate(QtCore.QObject):
 
     __represents__ = 'SourceToImplement'
 
+    sourceParametersChanged = QtCore.Signal()
+    highlightROI = QtCore.Signal(bool)
+
     parameters = ['List', 'of', 'parameters', 'from', 'kite.source']
     ro_parameters = ['Read-Only', 'parameters']
 
     ROIWidget = None  # For use in pyqtgraph
-
-    sourceParametersChanged = QtCore.Signal()
-    highlightROI = QtCore.Signal(bool)
+    EditDialog = None  # QDialog to edit the source
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
@@ -179,8 +180,9 @@ class SourceDelegate(QtCore.QObject):
         raise NotImplementedError()
 
     def getEditingDialog(self):
-        raise NotImplementedError()
-        return QtGui.QDialog
+        if self.editing_dialog is None:
+            self.editing_dialog = self.EditDialog(self)
+        return self.editing_dialog
 
     def formatListItem(self):
         raise NotImplementedError()

@@ -61,6 +61,7 @@ class OkadaSourceDelegate(SourceDelegate):
     ro_parameters = ['seismic_moment', 'moment_magnitude']
 
     ROIWidget = RectangularSourceROI
+    EditDialog = OkadaEditDialog
 
     @staticmethod
     def getRepresentedSource(sandbox):
@@ -76,11 +77,6 @@ class OkadaSourceDelegate(SourceDelegate):
             slip=2,
             )
         return src
-
-    def getEditingDialog(self):
-        if self.editing_dialog is None:
-            self.editing_dialog = OkadaEditDialog(self)
-        return self.editing_dialog
 
     def formatListItem(self):
         item = '''
