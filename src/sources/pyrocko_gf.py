@@ -150,6 +150,54 @@ class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
         }
 
 
+class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
+
+    __implements__ = 'pyrocko'
+
+    store_dir = String.T(
+        help='Pyrocko GF Store path')
+    diameter = Float.T(
+        default=1.0,
+        help='diameter of the ring in [m]')
+    sign = Float.T(
+        default=1.0,
+        help='inside of the ring moves up (+1) or down (-1)')
+    strike = Float.T(
+        default=0.0,
+        help='strike direction of the ring plane, clockwise from north,'
+             ' in [deg]')
+    dip = Float.T(
+        default=0.0,
+        help='dip angle of the ring plane from horizontal in [deg]')
+    npointsources = Int.T(
+        default=8,
+        help='number of point sources to use')
+    magnitude = Float.T(
+        default=6.0,
+        help='moment magnitude Mw as in [Hanks and Kanamori, 1979]')
+
+    parametersUpdated = PyrockoSource.parametersUpdated
+
+    def __init__(self, *args, **kwargs):
+        SandboxSource.__init__(self, *args, **kwargs)
+        self.pyrocko_source = gf.RingfaultSource(**self._src_args)
+
+    @property
+    def _src_args(self):
+        return {
+            'lat': 0.,
+            'lon': 0.,
+            'north_shift': self.northing,
+            'east_shift': self.easting,
+            'depth': self.depth,
+            'diameter': self.diameter,
+            'strike': self.strike,
+            'dip': self.dip,
+            'magnitude': self.magnitude,
+            'npointsources': self.npointsources,
+        }
+
+
 class PyrockoProcessor(SourceProcessor):
 
     __implements__ = 'pyrocko'

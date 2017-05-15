@@ -3,9 +3,11 @@ import numpy as num
 import tempfile
 import shutil
 
-from kite import ModelScene, TestModelScene
+from kite import ModelScene, TestModelScene  # noqa
 from kite.sources import (PyrockoRectangularSource, PyrockoMomentTensor,
-                          PyrockoDoubleCouple)
+                          PyrockoDoubleCouple, PyrockoRingfaultSource)
+
+gf_store = '/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'  # noqa
 
 
 class testSourcePyrocko(unittest.TestCase):
@@ -33,11 +35,11 @@ class testSourcePyrocko(unittest.TestCase):
                     depth=r(0, 8000),  # ok
                     strike=r(0, 360),  # ok
                     dip=r(0, 170),
-                    slip=r(1, 5),  # ok
+                    slip=r(1, 7),  # ok
                     rake=r(0, 180),
                     length=length,
                     width=15. * length**.66,
-                    store_dir='/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'))  # noqa
+                    store_dir=gf_store))  # noqa
 
         # self.plotDisplacement(self.ms)
 
@@ -53,7 +55,7 @@ class testSourcePyrocko(unittest.TestCase):
                     easting=r(0., self.ms.frame.E.max()),  # ok
                     northing=r(0., self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
-                    store_dir='/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'))  # noqa
+                    store_dir=gf_store))
 
         self.plotDisplacement(self.ms)
 
@@ -69,7 +71,28 @@ class testSourcePyrocko(unittest.TestCase):
                     easting=r(0., self.ms.frame.E.max()),  # ok
                     northing=r(0., self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
-                    store_dir='/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'))  # noqa
+                    store_dir=gf_store))
+
+        self.plotDisplacement(self.ms)
+
+    def testPyrockoRingfault(self):
+        nsources = 1
+
+        def r(lo, hi):
+            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+
+        for s in xrange(nsources):
+            diameter = r(5000, 15000)
+            self.ms.addSource(
+                PyrockoRingfaultSource(
+                    easting=r(0., self.ms.frame.E.max()),  # ok
+                    northing=r(0., self.ms.frame.N.max()),  # ok
+                    depth=r(0, 8000),  # ok
+                    strike=r(0, 360),  # ok
+                    dip=r(0, 170),
+                    magnitude=r(2, 6),  # ok
+                    diameter=diameter,
+                    store_dir=gf_store))  # noqa
 
         self.plotDisplacement(self.ms)
 

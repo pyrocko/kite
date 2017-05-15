@@ -34,12 +34,12 @@ class ModelSceneConfig(Object):
 
 class ModelScene(BaseScene):
 
-    evChanged = Subject()
-    evConfigChanged = Subject()
-
-    def __init__(self, config=ModelSceneConfig(), **kwargs):
-        self.config = config
+    def __init__(self, config=None, **kwargs):
+        self.evChanged = Subject()
         self.evModelUpdated = Subject()
+        self.evConfigChanged = Subject()
+
+        self.config = config if config else ModelSceneConfig()
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
 
         self.reference = None
@@ -51,6 +51,7 @@ class ModelScene(BaseScene):
                 self.__setattr__(attr, data)
 
         self.setExtent(self.config.extent_north, self.config.extent_east)
+
         if self.config.reference_scene is not None:
             self.loadReferenceScene(self.config.reference_scene)
 
@@ -62,11 +63,9 @@ class ModelScene(BaseScene):
         if self.reference is not None:
             self._log.warning('Cannot change a referenced model!')
             return
-        self.config.extent_east = east
-        self.config.extent_north = north
 
-        self.cols = east
-        self.rows = north
+        self.cols = self.config.extent_east
+        self.rows = self.config.extent_north
 
         self.north = num.zeros((self.rows, self.cols))
         self.east = num.zeros_like(self.north)
@@ -95,7 +94,7 @@ class ModelScene(BaseScene):
     def addSource(self, source):
         if source not in self.sources:
             self.sources.append(source)
-        self._log.info('Added %s' % source.__class__.__name__)
+        self._log.info('%s added' % source.__class__.__name__)
         source.evParametersChanged.subscribe(self._clearModel)
 
         self._clearModel()
@@ -103,7 +102,7 @@ class ModelScene(BaseScene):
     def removeSource(self, source):
         source.evParametersChanged.unsubscribe(self._clearModel)
         self.sources.remove(source)
-        self._log.info('Removed %s' % source.__class__.__name__)
+        self._log.info('%s removed' % source.__class__.__name__)
         del source
 
         self._clearModel()

@@ -22,11 +22,11 @@ _VALID_COMPONENTS = {
 }
 
 
-class Plot2D(Subject):
+class Plot2D(object):
     """Base class for matplotlib 2D plots
     """
     def __init__(self, scene, **kwargs):
-        Subject.__init__(self)
+        self.evPlotChanged = Subject()
         self._scene = scene
         self._data = None
 
@@ -141,7 +141,7 @@ class Plot2D(Subject):
         :type cmap: str, optional
         """
         self.image.set_cmap(cmap)
-        self._notify()
+        self.evPlotChanged.notify()
 
     def colormapAdjust(self):
         """Set colormap limits automatically
@@ -177,7 +177,7 @@ class Plot2D(Subject):
             vmin, vmax = -_max, _max
         self.image.set_clim(vmin, vmax)
 
-        self._notify()
+        self.evPlotChanged.notify()
 
     @staticmethod
     def _colormapsAvailable():

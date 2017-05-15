@@ -209,6 +209,7 @@ class DisplacementPlot(pg.PlotItem):
         for isrc in xrange(self.sandbox.sources.rowCount(index)):
             index = self.sandbox.sources.index(isrc, 0, index)
             roi = index.data(SourceROI)
+            roi.setParent(self)
             self.rois.append(roi)
             self.addItem(roi)
 

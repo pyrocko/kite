@@ -10,45 +10,6 @@ d2r = num.pi / 180.
 r2d = 180. / num.pi
 
 
-class OkadaEditDialog(QtGui.QDialog):
-
-    def __init__(self, delegate, *args, **kwargs):
-        QtGui.QDialog.__init__(self, *args, **kwargs)
-        loadUi(get_resource('okada_source.ui'), self)
-        self.delegate = delegate
-
-        self.delegate.sourceParametersChanged.connect(
-            self.getSourceParameters)
-        self.applyButton.released.connect(
-            self.setSourceParameters)
-        self.okButton.released.connect(
-            self.setSourceParameters)
-        self.okButton.released.connect(
-            self.close)
-
-        def setLabel(method, fmt, value, suffix=''):
-            method(fmt.format(value) + suffix)
-
-        self.moment_magnitude.setValue = lambda v: setLabel(
-            self.moment_magnitude.setText, '{:.2f}', v)
-        self.seismic_moment.setValue = lambda v: setLabel(
-            self.seismic_moment.setText, '{:.2e}', v, ' Nm')
-
-        self.getSourceParameters()
-
-    @QtCore.Slot()
-    def getSourceParameters(self):
-        for param, value in self.delegate.getSourceParameters().iteritems():
-            self.__getattribute__(param).setValue(value)
-
-    @QtCore.Slot()
-    def setSourceParameters(self):
-        params = {}
-        for param in OkadaSourceDelegate.parameters:
-            params[param] = float(self.__getattribute__(param).value())
-        self.delegate.updateModelParameters(params)
-
-
 class OkadaSourceDelegate(SourceDelegate):
 
     __represents__ = 'OkadaSource'
@@ -59,6 +20,45 @@ class OkadaSourceDelegate(SourceDelegate):
     parameters = ['easting', 'northing', 'width', 'length', 'depth',
                   'slip', 'opening', 'strike', 'dip', 'rake', 'nu']
     ro_parameters = ['seismic_moment', 'moment_magnitude']
+
+    class OkadaEditDialog(QtGui.QDialog):
+
+        def __init__(self, delegate, *args, **kwargs):
+            QtGui.QDialog.__init__(self, *args, **kwargs)
+            loadUi(get_resource('okada_source.ui'), self)
+            self.delegate = delegate
+
+            self.delegate.sourceParametersChanged.connect(
+                self.getSourceParameters)
+            self.applyButton.released.connect(
+                self.setSourceParameters)
+            self.okButton.released.connect(
+                self.setSourceParameters)
+            self.okButton.released.connect(
+                self.close)
+
+            def setLabel(method, fmt, value, suffix=''):
+                method(fmt.format(value) + suffix)
+
+            self.moment_magnitude.setValue = lambda v: setLabel(
+                self.moment_magnitude.setText, '{:.2f}', v)
+            self.seismic_moment.setValue = lambda v: setLabel(
+                self.seismic_moment.setText, '{:.2e}', v, ' Nm')
+
+            self.getSourceParameters()
+
+        @QtCore.Slot()
+        def getSourceParameters(self):
+            for param, value in\
+              self.delegate.getSourceParameters().iteritems():
+                self.__getattribute__(param).setValue(value)
+
+        @QtCore.Slot()
+        def setSourceParameters(self):
+            params = {}
+            for param in OkadaSourceDelegate.parameters:
+                params[param] = float(self.__getattribute__(param).value())
+            self.delegate.updateModelParameters(params)
 
     ROIWidget = RectangularSourceROI
     EditDialog = OkadaEditDialog
@@ -102,9 +102,9 @@ class OkadaSourceDelegate(SourceDelegate):
 </tr><tr>
     <td>M<sub>0</sub>:</td><td>{source.seismic_moment:.2e}</td>
 </tr><tr style="font-weight: bold;">
-    <td>Slip:</td><td>{source.slip:.2f} m</td>
-</tr><tr style="font-weight: bold;">
     <td>M<sub>W</sub>:</td><td>{source.moment_magnitude:.2f}</td>
+</tr><tr style="font-weight: bold;">
+    <td>Slip:</td><td>{source.slip:.2f} m</td>
 </tr>
 </table>
 '''
