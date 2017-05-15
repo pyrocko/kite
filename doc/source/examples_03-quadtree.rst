@@ -20,21 +20,21 @@ The parametrization of the tree can be done through the :doc:`spool` or the pyth
     from sc import Scene
     sc = Scene.import_data('test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
 
-    sc.quadtree  # this initializes and constructs the tree
+    qt = sc.quadtree  # this initializes and constructs the tree
 
-    sc.epsilon = .024
-    sc.nan_allowed = .9
-    sc.tile_size_max = 12000
-    sc.tile_size_min = 250
+    qt.epsilon = .024
+    qt.nan_allowed = .9
+    qt.tile_size_max = 12000
+    qt.tile_size_min = 250
 
-    print(sc.reduction_rms)  # In units of [m]
+    print(qt.reduction_rms)  # In units of [m]
     >>> 0.234123152
 
-    for l in sc.quadtree.leafs:
+    for l in qt.leafs:
         print l
 
     # One may export the tree in a CSV format
-    sc.quadtree.export('/tmp/tree.csv')
+    qt.export('/tmp/tree.csv')
 
 
 .. rubric:: Footnotes
