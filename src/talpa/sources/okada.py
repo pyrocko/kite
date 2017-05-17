@@ -1,9 +1,6 @@
-from PySide import QtCore, QtGui
 import numpy as num
 
-from .common import RectangularSourceROI, SourceDelegate
-from ..common import get_resource
-from kite.qt_utils import loadUi
+from .common import RectangularSourceROI, SourceDelegate, SourceEditDialog
 from kite.sources import OkadaSource
 
 d2r = num.pi / 180.
@@ -21,21 +18,12 @@ class OkadaSourceDelegate(SourceDelegate):
                   'slip', 'opening', 'strike', 'dip', 'rake', 'nu']
     ro_parameters = ['seismic_moment', 'moment_magnitude']
 
-    class OkadaEditDialog(QtGui.QDialog):
+    class OkadaDialog(SourceEditDialog):
 
         def __init__(self, delegate, *args, **kwargs):
-            QtGui.QDialog.__init__(self, *args, **kwargs)
-            loadUi(get_resource('okada_source.ui'), self)
-            self.delegate = delegate
-
-            self.delegate.sourceParametersChanged.connect(
-                self.getSourceParameters)
-            self.applyButton.released.connect(
-                self.setSourceParameters)
-            self.okButton.released.connect(
-                self.setSourceParameters)
-            self.okButton.released.connect(
-                self.close)
+            SourceEditDialog.__init__(self, delegate,
+                                      ui_file='okada_source.ui',
+                                      *args, **kwargs)
 
             def setLabel(method, fmt, value, suffix=''):
                 method(fmt.format(value) + suffix)
@@ -47,21 +35,8 @@ class OkadaSourceDelegate(SourceDelegate):
 
             self.getSourceParameters()
 
-        @QtCore.Slot()
-        def getSourceParameters(self):
-            for param, value in\
-              self.delegate.getSourceParameters().iteritems():
-                self.__getattribute__(param).setValue(value)
-
-        @QtCore.Slot()
-        def setSourceParameters(self):
-            params = {}
-            for param in OkadaSourceDelegate.parameters:
-                params[param] = float(self.__getattribute__(param).value())
-            self.delegate.updateModelParameters(params)
-
     ROIWidget = RectangularSourceROI
-    EditDialog = OkadaEditDialog
+    EditDialog = OkadaDialog
 
     @staticmethod
     def getRepresentedSource(sandbox):

@@ -2,9 +2,8 @@ from PySide import QtCore, QtGui
 import numpy as num
 import os
 
-from .common import RectangularSourceROI, PointSourceROI, SourceDelegate
-from ..common import get_resource
-from kite.qt_utils import loadUi
+from .common import (RectangularSourceROI, PointSourceROI, SourceDelegate,
+                     SourceEditDialog)
 from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
                           PyrockoRingfaultSource)
@@ -16,25 +15,15 @@ r2d = 180. / num.pi
 config = getConfig()
 
 
-class PyrockoSourceDialog(QtGui.QDialog):
+class PyrockoSourceDialog(SourceEditDialog):
     completer = QtGui.QCompleter()
     completer_model = QtGui.QFileSystemModel(completer)
     completer.setModel(completer_model)
     completer.setMaxVisibleItems(8)
 
     def __init__(self, delegate, ui_file, *args, **kwargs):
-        QtGui.QDialog.__init__(self, *args, **kwargs)
-        loadUi(get_resource(ui_file), self)
-        self.delegate = delegate
+        SourceEditDialog.__init__(self, delegate, ui_file, *args, **kwargs)
 
-        self.delegate.sourceParametersChanged.connect(
-            self.getSourceParameters)
-        self.applyButton.released.connect(
-            self.setSourceParameters)
-        self.okButton.released.connect(
-            self.setSourceParameters)
-        self.okButton.released.connect(
-            self.close)
         self.chooseStoreDirButton.released.connect(
             self.chooseStoreDir)
 
@@ -52,18 +41,6 @@ class PyrockoSourceDialog(QtGui.QDialog):
         folder = QtGui.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
         self.store_dir.setText(folder)
-
-    @QtCore.Slot()
-    def getSourceParameters(self):
-        for param, value in self.delegate.getSourceParameters().iteritems():
-            self.__getattribute__(param).setValue(value)
-
-    @QtCore.Slot()
-    def setSourceParameters(self):
-        params = {}
-        for param in self.delegate.parameters:
-            params[param] = self.__getattribute__(param).value()
-        self.delegate.updateModelParameters(params)
 
 
 class PyrockoRectangularSourceDelegate(SourceDelegate):

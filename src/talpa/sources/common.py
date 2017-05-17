@@ -1,6 +1,8 @@
 from PySide import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as num
+from ..common import get_resource
+from kite.qt_utils import loadUi
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
@@ -237,3 +239,32 @@ class SourceDelegate(QtCore.QObject):
         for param in self.parameters + self.ro_parameters:
             params[param] = self.source.__getattribute__(param)
         return params
+
+
+class SourceEditDialog(QtGui.QDialog):
+
+    def __init__(self, delegate, ui_file, *args, **kwargs):
+        QtGui.QDialog.__init__(self, *args, **kwargs)
+        loadUi(get_resource(ui_file), self)
+        self.delegate = delegate
+
+        self.delegate.sourceParametersChanged.connect(
+            self.getSourceParameters)
+        self.applyButton.released.connect(
+            self.setSourceParameters)
+        self.okButton.released.connect(
+            self.setSourceParameters)
+        self.okButton.released.connect(
+            self.close)
+
+    @QtCore.Slot()
+    def getSourceParameters(self):
+        for param, value in self.delegate.getSourceParameters().iteritems():
+            self.__getattribute__(param).setValue(value)
+
+    @QtCore.Slot()
+    def setSourceParameters(self):
+        params = {}
+        for param in self.delegate.parameters:
+            params[param] = self.__getattribute__(param).value()
+        self.delegate.updateModelParameters(params)

@@ -274,6 +274,22 @@ class DisplacementPlot(pg.PlotItem):
             self.hint_text.text_template.format(pos.x(), pos.y(), value))
 
 
+class HorizontalDisplacementArrows(object):
+
+    class Arrow(QtGui.QGraphicsItem):
+
+        def __init__(self, plot):
+            QtGui.QGraphicsItem.__init__(self, parent=plot)
+            self.plot = plot
+            self.sandbox = plot.sandbox
+
+        def paint(self, painter, option, parent):
+            pass
+
+    def __init__(self, plot):
+        self.plot = plot
+
+
 class ColormapPlots(pg.HistogramLUTWidget):
 
     def __init__(self):

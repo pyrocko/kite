@@ -8,10 +8,10 @@ from scene import BaseScene, FrameConfig
 from os import path as op
 
 # Import the modeling backends
-from .sources import DislocProcessor, PyrockoProcessor
+from .sources import DislocProcessor, PyrockoProcessor, CompoundModelProcessor
 
 
-__processors__ = [DislocProcessor, PyrockoProcessor]
+__processors__ = [DislocProcessor, PyrockoProcessor, CompoundModelProcessor]
 km = 1e3
 
 
