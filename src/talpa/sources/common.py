@@ -149,6 +149,13 @@ class PointSourceROI(pg.EllipseROI):
     def showEditingDialog(self, *args):
         self.delegate.getEditingDialog().show()
 
+    def _makePen(self):
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
+            return self.pen_highlight
+        else:
+            return self.pen
+
 
 class SourceDelegate(QtCore.QObject):
 
