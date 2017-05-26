@@ -9,6 +9,7 @@ import numpy as num
 
 
 config = getConfig()
+d2r = num.pi / 180.
 
 
 class ModelSceneLayout(pg.GraphicsLayoutWidget):
@@ -233,10 +234,8 @@ class DisplacementPlot(pg.PlotItem):
 
             img_pos = self.image.mapFromScene(event[0])
             pE, pN = img_pos.x(), img_pos.y()
-            if pE < 0 or pN < 0:
-                value = 0.
-            elif (pE > self.image.image.shape[0] or
-                  pN > self.image.image.shape[1]):
+            if (pE < 0 or pN < 0) or (pE > self.image.image.shape[0] or
+                                      pN > self.image.image.shape[1]):
                 value = 0.
             else:
                 value = self.image.image[int(img_pos.x()),
@@ -299,7 +298,7 @@ class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
 
         self.arrows = []
         for ia in xrange(self.narrows):
-            arr = Arrow(self, 0, 0)
+            arr = Arrow(self)
             self.arrows.append(arr)
             self.addToGroup(arr)
 
@@ -313,44 +312,49 @@ class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
 
         nx = int(num.sqrt(self.narrows) * float(w)/h)
         ny = int(num.sqrt(self.narrows) * float(h)/w)
-
-        r = self.vb.viewRect()
-        h = r.height()
-        w = r.width()
         dx = float(w) / nx
         dy = float(h) / ny
 
-        scale = w / painter.window().height()*2
+        scale = (w+h)/2 / painter.window().height()*2.5
+        mat_N = self.sandbox.model.north.T
+        mat_E = self.sandbox.model.east.T
+        img_shape = self.image.image.T.shape
         iarr = 0
         for ix in xrange(nx):
             for iy in xrange(ny):
-                if iarr < self.narrows:
-                    arr = self.arrows[iarr]
-                    pos = QtCore.QPointF(r.x() + ix * dx + dx/2,
-                                         r.y() + iy * dy + dy/2)
-                    scene_pos = self.vb.mapViewToScene(pos)
-                    img_pos = self.plot.image.mapFromScene(scene_pos)
-                    pE = int(img_pos.x())
-                    pN = int(img_pos.y())
-                    if pE < 0 or pN < 0:
-                        dE = 0.
-                        dN = 0.
-                    elif (pE >= self.image.image.T.shape[0] or
-                          pN >= self.image.image.T.shape[1]):
-                        dE = 0.
-                        dN = 0.
-                    else:
-                        dE = self.sandbox.model.east.T[int(pE), int(pN)]
-                        dN = self.sandbox.model.north.T[int(pE), int(pN)]
-                    dE *= 100.
-                    dN *= 100.
-                    arr.setPos(pos)
-                    arr.setOrientation(dE, dN)
+                if iarr > self.narrows:
+                    break
+                arr = self.arrows[iarr]
+                pos = QtCore.QPointF(r.x() + ix * dx + dx/2,
+                                     r.y() + iy * dy + dy/2)
+
+                # Slowest operation
+                img_pos = self.plot.image.mapFromScene(
+                    self.vb.mapViewToScene(pos))
+
+                pE = int(img_pos.x())
+                pN = int(img_pos.y())
+
+                if (pE >= img_shape[0] or pN >= img_shape[1]) or\
+                   (pE < 0 or pN < 0):
+                    dE = 0.
+                    dN = 0.
+                else:
+                    dE = mat_E[pE, pN]
+                    dN = mat_N[pE, pN]
+                dE *= 100.
+                dN *= 100.
+                arr.setPos(pos)
+                arr.setOrientation(dE, dN)
+
+                if arr.scale() != scale:
                     arr.setScale(scale)
-                    arr.setVisible(True)
+                arr.setVisible(True)
+
                 iarr += 1
+
         while iarr < self.narrows:
-            self.arrows[iarr].setVisible(False)
+            self.arrows[iarr].hide()
             iarr += 1
 
         QtGui.QGraphicsItemGroup.paint(self, painter, option, parent)
@@ -362,56 +366,48 @@ class Arrow(QtGui.QGraphicsWidget):
     arrow_brush = QtGui.QBrush(arrow_color, QtCore.Qt.SolidPattern)
     arrow_pen = QtGui.QPen(
         arrow_brush,
-        2,
+        1,
         QtCore.Qt.SolidLine,
         QtCore.Qt.RoundCap,
         QtCore.Qt.RoundJoin)
 
-    def __init__(self, parent, east, north):
+    def __init__(self, parent):
         QtGui.QGraphicsWidget.__init__(self, parent=parent)
 
-        self.parent = parent
         self.p1 = QtCore.QPointF()
         self.p2 = QtCore.QPointF()
         self.line = QtCore.QLineF(self.p1, self.p2)
 
-        self.east, self.north = 0., 0.
-        self.dE, self.dN = 0., 0.
-
-        self.setPosition(east, north)
         self.setOrientation(5, 5)
-
-        self.setZValue(999999)
+        self.setZValue(10000)
 
     def boundingRect(self):
         return QtCore.QRectF(self.p1, self.p2)
 
-    def shape(self):
-        pass
-
     def setOrientation(self, dEast, dNorth):
-        self.dE = dEast
-        self.dN = dNorth
-        self._setPoints()
-
-    def setPosition(self, east, north):
-        self.east = east
-        self.north = north
-        self._setPoints()
-
-    def _setPoints(self):
-        self.p1.setX(self.east)
-        self.p1.setY(self.north)
-        self.p2.setX(self.east + self.dE)
-        self.p2.setY(self.north + self.dN)
-        self.line.setP1(self.p1)
+        self.p2.setX(dEast)
+        self.p2.setY(dNorth)
         self.line.setP2(self.p2)
 
     def paint(self, painter, option, parent):
-        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        if self.line.length() == 0.:
+            return
         painter.setPen(self.arrow_pen)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceOver)
+
+        arrow_length = self.line.length() * .3
+        d = self.line.angle()
+        head_p1 = self.p2 - QtCore.QPointF(
+            num.sin(d*d2r + num.pi/3) * arrow_length,
+            num.cos(d*d2r + num.pi/3) * arrow_length)
+
+        head_p2 = self.p2 - QtCore.QPointF(
+            num.sin(d*d2r + num.pi - num.pi/3) * arrow_length,
+            num.cos(d*d2r + num.pi - num.pi/3) * arrow_length)
 
         painter.drawLine(self.line)
+        painter.drawPolyline([head_p1, self.p2, head_p2])
 
 
 class ColormapPlots(pg.HistogramLUTWidget):
