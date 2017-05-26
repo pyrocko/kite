@@ -26,7 +26,7 @@ class ModelSceneLayout(pg.GraphicsLayoutWidget):
                 sandbox,
                 title='East',
                 component=lambda m: m.east),
-            DisplacementArrowPlot(
+            DisplacementVectorPlot(
                 sandbox,
                 title='Down',
                 component=lambda m: m.down),
@@ -273,7 +273,7 @@ class DisplacementPlot(pg.PlotItem):
             self.hint_text.text_template.format(pos.x(), pos.y(), value))
 
 
-class DisplacementArrowPlot(DisplacementPlot):
+class DisplacementVectorPlot(DisplacementPlot):
 
     def __init__(self, *args, **kwargs):
         DisplacementPlot.__init__(self, *args, **kwargs)
