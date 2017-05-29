@@ -50,6 +50,8 @@
     <addaction name="actionLoadReferenceScene"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
+    <addaction name="separator"/>
+    <addaction name="actionConfiguration"/>
    </widget>
    <widget class="QMenu" name="menuAbout">
     <property name="title">
@@ -135,6 +137,11 @@
    </property>
    <property name="text">
     <string>Model residual</string>
+   </property>
+  </action>
+  <action name="actionConfiguration">
+   <property name="text">
+    <string>Configuration</string>
    </property>
   </action>
  </widget>

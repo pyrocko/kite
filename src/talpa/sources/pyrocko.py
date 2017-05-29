@@ -8,11 +8,10 @@ from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
                           PyrockoRingfaultSource)
 
-from ..config import getConfig
+from ..config import config
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
-config = getConfig()
 
 
 class PyrockoSourceDialog(SourceEditDialog):
@@ -40,7 +39,8 @@ class PyrockoSourceDialog(SourceEditDialog):
     def chooseStoreDir(self):
         folder = QtGui.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
-        self.store_dir.setText(folder)
+        if folder != '':
+            self.store_dir.setText(folder)
 
 
 class PyrockoRectangularSourceDelegate(SourceDelegate):

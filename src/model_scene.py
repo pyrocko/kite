@@ -91,6 +91,10 @@ class ModelScene(BaseScene):
              los_factors[:, :, 2] * self.north)
         return self._los_displacement
 
+    @property_cached
+    def max_horizontal_displacement(self):
+        return num.sqrt(self.north**2 + self.east**2).max()
+
     def addSource(self, source):
         if source not in self.sources:
             self.sources.append(source)
@@ -201,6 +205,7 @@ class ModelScene(BaseScene):
         for arr in [self.north, self.east, self.down]:
             arr.fill(0.)
         self.los_displacement = None
+        self.max_horizontal_displacement = None
         self.evModelUpdated.notify()
 
     def save(self, filename):

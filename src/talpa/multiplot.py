@@ -2,13 +2,12 @@ from PySide import QtGui, QtCore
 from pyqtgraph import dockarea
 import pyqtgraph as pg
 
-from .config import getConfig
+from .config import config
 from .common import SourceROI
 
 import numpy as num
 
 
-config = getConfig()
 d2r = num.pi / 180.
 
 
@@ -184,7 +183,6 @@ class DisplacementPlot(pg.PlotItem):
             self.addSourceROIS)
 
         self.update()
-
         self.rois = []
         self.addSourceROIS()
 
@@ -222,13 +220,16 @@ class DisplacementPlot(pg.PlotItem):
             self.update()
 
     def addCursor(self):
-        if config.show_cursor:
-            self.sandbox.cursor_tracker.sigCursorMoved.connect(self.drawCursor)
-            self.sandbox.cursor_tracker.sigMouseMoved.connect(self.mouseMoved)
-            self.addItem(self.cursor)
+        self.sandbox.cursor_tracker.sigCursorMoved.connect(self.drawCursor)
+        self.sandbox.cursor_tracker.sigMouseMoved.connect(self.mouseMoved)
+        self.addItem(self.cursor)
 
     @QtCore.Slot(object)
     def mouseMoved(self, event):
+        if not config.show_cursor:
+            self.cursor.hide()
+            return
+
         if self.vb.sceneBoundingRect().contains(event[0]):
             map_pos = self.vb.mapSceneToView(event[0])
 
@@ -278,13 +279,13 @@ class DisplacementVectorPlot(DisplacementPlot):
     def __init__(self, *args, **kwargs):
         DisplacementPlot.__init__(self, *args, **kwargs)
 
-        arrows = DisplacementArrows(self)
-        self.addItem(arrows)
+        vectors = DisplacementVectors(self)
+        self.addItem(vectors)
 
 
-class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
+class DisplacementVectors(QtGui.QGraphicsItemGroup):
 
-    narrows = 200
+    nvectors = config.nvectors
 
     def __init__(self, plot, *args, **kwargs):
         QtGui.QGraphicsItemGroup.__init__(
@@ -294,13 +295,30 @@ class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
         self.image = plot.image
         self.sandbox = plot.sandbox
 
-        self.vb.geometryChanged.connect(self.prepareGeometryChange)
+        self.scale_view = None
+        self.scale_length = None
+        self.vectors = []
 
-        self.arrows = []
-        for ia in xrange(self.narrows):
-            arr = Arrow(self)
-            self.arrows.append(arr)
-            self.addToGroup(arr)
+        self.vb.geometryChanged.connect(self.prepareGeometryChange)
+        config.qconfig.updated.connect(self.createVectors)
+        config.qconfig.updated.connect(self.updateColor)
+
+        self.createVectors()
+
+    def createVectors(self):
+        for vec in self.vectors:
+            vec.hide()
+
+        if len(self.vectors) < config.nvectors:
+            while len(self.vectors) < config.nvectors:
+                vec = Vector(self)
+                self.vectors.append(vec)
+                self.addToGroup(vec)
+
+    def updateColor(self):
+        Vector.arrow_color.setRgb(*config.vector_color)
+        Vector.arrow_brush.setColor(Vector.arrow_color)
+        Vector.arrow_pen.setBrush(Vector.arrow_brush)
 
     def boundingRect(self):
         return self.vb.viewRect()
@@ -310,21 +328,28 @@ class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
         h = r.height()
         w = r.width()
 
-        nx = int(num.sqrt(self.narrows) * float(w)/h)
-        ny = int(num.sqrt(self.narrows) * float(h)/w)
+        nvectors = config.nvectors
+
+        nx = int(num.sqrt(nvectors) * float(w)/h)
+        ny = int(num.sqrt(nvectors) * float(h)/w)
         dx = float(w) / nx
         dy = float(h) / ny
+        d = dx if dx < dy else dy
 
-        scale = (w+h)/2 / painter.window().height()*2.5
         mat_N = self.sandbox.model.north.T
         mat_E = self.sandbox.model.east.T
         img_shape = self.image.image.T.shape
-        iarr = 0
+        ivec = 0
+
+        length_scale = self.sandbox.model.max_horizontal_displacement
+        self.length_scale = length_scale if length_scale > 0. else 1.
+        self.scale_view = (w+h)/2 / painter.window().height()*2.5
+
         for ix in xrange(nx):
             for iy in xrange(ny):
-                if iarr > self.narrows:
+                if ivec > nvectors:
                     break
-                arr = self.arrows[iarr]
+                vec = self.vectors[ivec]
                 pos = QtCore.QPointF(r.x() + ix * dx + dx/2,
                                      r.y() + iy * dy + dy/2)
 
@@ -342,27 +367,27 @@ class DisplacementArrows(QtGui.QGraphicsItemGroup, pg.GraphicsWidgetAnchor):
                 else:
                     dE = mat_E[pE, pN]
                     dN = mat_N[pE, pN]
-                dE *= 100.
-                dN *= 100.
-                arr.setPos(pos)
-                arr.setOrientation(dE, dN)
+                    dE = dE / self.length_scale * (d/self.scale_view)
+                    dN = dN / self.length_scale * (d/self.scale_view)
+                vec.setPos(pos)
+                vec.setOrientation(dE, dN)
 
-                if arr.scale() != scale:
-                    arr.setScale(scale)
-                arr.setVisible(True)
+                if vec.scale() != self.scale_view:
+                    vec.setScale(self.scale_view)
+                vec.setVisible(True)
 
-                iarr += 1
+                ivec += 1
 
-        while iarr < self.narrows:
-            self.arrows[iarr].hide()
-            iarr += 1
+        while ivec < nvectors:
+            self.vectors[ivec].hide()
+            ivec += 1
 
         QtGui.QGraphicsItemGroup.paint(self, painter, option, parent)
 
 
-class Arrow(QtGui.QGraphicsWidget):
+class Vector(QtGui.QGraphicsItem):
 
-    arrow_color = QtGui.QColor(0, 0, 0, 100)
+    arrow_color = QtGui.QColor(*config.vector_color)
     arrow_brush = QtGui.QBrush(arrow_color, QtCore.Qt.SolidPattern)
     arrow_pen = QtGui.QPen(
         arrow_brush,
@@ -372,13 +397,13 @@ class Arrow(QtGui.QGraphicsWidget):
         QtCore.Qt.RoundJoin)
 
     def __init__(self, parent):
-        QtGui.QGraphicsWidget.__init__(self, parent=parent)
+        QtGui.QGraphicsItem.__init__(self, parent=parent)
 
         self.p1 = QtCore.QPointF()
         self.p2 = QtCore.QPointF()
         self.line = QtCore.QLineF(self.p1, self.p2)
 
-        self.setOrientation(5, 5)
+        self.setOrientation(0., 0.)
         self.setZValue(10000)
 
     def boundingRect(self):

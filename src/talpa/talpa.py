@@ -7,6 +7,7 @@ from .sources_dock import SourcesListDock
 
 from sandbox_model import SandboxModel
 from .tool_dialogs import ExtentDialog
+from .config import ConfigDialog
 from ..model_scene import ModelScene
 from ..qt_utils import loadUi, SceneLog, validateFilename
 
@@ -64,6 +65,9 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.actionLoadReferenceScene.triggered.connect(
             self.onLoadReferenceScene)
 
+        self.actionConfiguration.triggered.connect(
+            self.configDialog)
+
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
         self.actionAbout_Talpa.triggered.connect(
@@ -99,8 +103,13 @@ class TalpaMainWindow(QtGui.QMainWindow):
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
+    @QtCore.Slot()
     def extentDialog(self):
         ExtentDialog(self.sandbox, self).show()
+
+    @QtCore.Slot()
+    def configDialog(self):
+        ConfigDialog(self).show()
 
     @QtCore.Slot(str)
     def processingStarted(self, text):
