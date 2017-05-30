@@ -186,6 +186,9 @@ class Subject(object):
         self._listeners = list()
         self._mute = False
 
+    def __call__(self, *args, **kwargs):
+        return self.notify(*args, **kwargs)
+
     def mute(self):
         self._mute = True
 
@@ -218,7 +221,8 @@ class Subject(object):
         if self._mute:
             return
         for l in self._listeners:
-            self._call(l, *args, **kwargs)
+            if callable(l):
+                self._call(l, *args, **kwargs)
 
     @staticmethod
     def _call(func, *args, **kwargs):

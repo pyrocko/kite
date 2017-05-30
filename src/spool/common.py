@@ -3,39 +3,46 @@ from __future__ import division, absolute_import, print_function, \
     unicode_literals
 
 from PySide import QtCore
+from os import path
 import time
 import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
+
 from pyqtgraph import dockarea
-from .utils_qt import _viridis_data
+from ..qt_utils import _viridis_data
 from ..meta import calcPrecission, formatScalar
 
-__all__ = ['QKiteView', 'QKitePlot', 'QKiteToolColormap',
-           'QKiteParameterGroup']
+__all__ = ['KiteView', 'KitePlot', 'KiteToolColormap',
+           'KiteParameterGroup']
 
 
-class QKiteView(dockarea.DockArea):
+def get_resource(filename):
+    return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
+
+
+class KiteView(dockarea.DockArea):
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
 
-        dock_main =\
-            dockarea.Dock(self.title,
-                          autoOrientation=False,
-                          widget=self.main_widget)
-        dock_colormap =\
-            dockarea.Dock('Colormap',
-                          autoOrientation=False,
-                          widget=QKiteToolColormap(self.main_widget))
+        dock_main = dockarea.Dock(
+            self.title,
+            autoOrientation=False,
+            widget=self.main_widget)
+        dock_colormap = dockarea.Dock(
+            'Colormap',
+            autoOrientation=False,
+            widget=KiteToolColormap(self.main_widget))
         dock_colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.iteritems()):
             self.tool_docks.append(
-                dockarea.Dock(name,
-                              widget=tool,
-                              size=(2, 2),
-                              autoOrientation=False))
+                dockarea.Dock(
+                    name,
+                    widget=tool,
+                    size=(2, 2),
+                    autoOrientation=False))
             self.addDock(self.tool_docks[-1], position='bottom')
 
         self.addDock(dock_main, position='left')
@@ -44,11 +51,11 @@ class QKiteView(dockarea.DockArea):
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
-    def __init__(self, scene_proxy):
+    def __init__(self, model):
         pg.GraphicsWidget.__init__(self)
         pg.GraphicsWidgetAnchor.__init__(self)
 
-        self.scene_proxy = scene_proxy
+        self.model = model
 
         self.arrow = pg.ArrowItem(
             parent=self,
@@ -58,13 +65,13 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             pxMode=True)
         self.orientArrow()
 
-        self.scene_proxy.sigSceneChanged.connect(self.orientArrow)
+        self.model.sigSceneChanged.connect(self.orientArrow)
         self.setFlag(self.ItemIgnoresTransformations)
 
     @QtCore.Slot()
     def orientArrow(self):
-        phi = num.median(self.scene_proxy.scene.phi)
-        theta = num.median(self.scene_proxy.scene.theta)
+        phi = num.median(self.model.scene.phi)
+        theta = num.median(self.model.scene.theta)
 
         angle = -num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
@@ -87,25 +94,27 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         return QtCore.QRectF(0, 0, self.width(), self.height())
 
 
-class QKitePlot(pg.PlotWidget):
+class KitePlot(pg.PlotWidget):
 
-    def __init__(self, scene_proxy, los_arrow=False):
+    def __init__(self, model, los_arrow=False):
         pg.PlotWidget.__init__(self)
-        self.scene_proxy = scene_proxy
+        self.model = model
         self.draw_time = 0.
         self._data = None
 
         border_pen = pg.mkPen(255, 255, 255, 50)
-        self.image = pg.ImageItem(None,
-                                  autoDownsample=False,
-                                  border=border_pen,
-                                  useOpenGL=True)
+        self.image = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=border_pen,
+            useOpenGL=True)
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(bottom=('Easting', 'm'),
-                       left=('Northing', 'm'))
+        self.setLabels(
+            bottom=('Easting', 'm'),
+            left=('Northing', 'm'))
 
         self.hint = {
             'east': 0.,
@@ -116,22 +125,27 @@ class QKitePlot(pg.PlotWidget):
             'precision': '3',
         }
 
-        self.hint_text = pg.LabelItem(text='',
-                                      justify='right', size='8pt',
-                                      parent=self.plotItem)
-        self.hint_text.anchor(itemPos=(1., 0.), parentPos=(1., 0.))
-        self.hint_text.template =\
+        self.hint_text = pg.LabelItem(
+            text='',
+            justify='right', size='8pt',
+            parent=self.plotItem)
+        self.hint_text.anchor(
+            itemPos=(1., 0.),
+            parentPos=(1., 0.))
+        self.hint_text.text_template =\
             '<span style="font-family: monospace; color: #fff;'\
             'background-color: #000;">'\
             'East {east:08.2f} m | North {north:08.2f} m | '\
             '{measure} {value:{length}.{precision}f}</span>'
+        self.hint_text.setOpacity(.6)
 
         self.addItem(self.image)
         self.update()
 
         self.transFromFrame()
-        self._move_sig = pg.SignalProxy(self.image.scene().sigMouseMoved,
-                                        rateLimit=25, slot=self.mouseMoved)
+        self._move_sig = pg.SignalProxy(
+            self.image.scene().sigMouseMoved,
+            rateLimit=25, slot=self.mouseMoved)
 
         if los_arrow:
             self.addLOSArrow()
@@ -140,18 +154,22 @@ class QKitePlot(pg.PlotWidget):
         # self.scalebar()
 
     def addLOSArrow(self):
-        self.los_arrow = LOSArrow(self.scene_proxy)
+        self.los_arrow = LOSArrow(self.model)
         self.los_arrow.setParentItem(self.graphicsItem())
-        self.los_arrow.anchor(itemPos=(1., 0.), parentPos=(1, 0.),
-                              offset=(-10., 40.))
+        self.los_arrow.anchor(
+            itemPos=(1., 0.), parentPos=(1, 0.),
+            offset=(-10., 40.))
 
     def transFromFrame(self):
         self.image.resetTransform()
-        self.image.scale(self.scene_proxy.frame.dE, self.scene_proxy.frame.dN)
+        self.image.scale(self.model.frame.dE, self.model.frame.dN)
 
     def scalebar(self):
         ''' Not working '''
-        self.scale_bar = pg.ScaleBar(10, width=5, suffix='m')
+        self.scale_bar = pg.ScaleBar(
+            10,
+            width=5,
+            suffix='m')
         self.scale_bar.setParentItem(self.plotItem)
         self.scale_bar.anchor((1, 1), (1, 1), offset=(-20, -20))
 
@@ -170,7 +188,7 @@ class QKitePlot(pg.PlotWidget):
     def data(self):
         if self._data is None:
             self._data = self.components_available[self.component][1](
-                self.scene_proxy)
+                self.model)
         return self._data
         # return self._data  # num.nan_to_num(_data)
 
@@ -198,7 +216,7 @@ class QKitePlot(pg.PlotWidget):
     @QtCore.Slot(object)
     def mouseMoved(self, event=None):
         if event is None:
-            pass
+            return
         elif self.image.sceneBoundingRect().contains(event[0]):
             map_pos = self.plotItem.vb.mapSceneToView(event[0])
             if not map_pos.isNull():
@@ -211,19 +229,23 @@ class QKitePlot(pg.PlotWidget):
                 self.hint['value'] = value
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']
-        self.hint_text.setText(self.hint_text.template.format(**self.hint))
+        self.hint_text.setText(
+            self.hint_text.text_template.format(**self.hint))
 
 
-class QKiteToolColormap(pg.HistogramLUTWidget):
+class KiteToolColormap(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
-
         self._plot = plot
 
-        _zero_marker = pg.InfiniteLine(pos=0, angle=0, pen='w', movable=False)
-        _zero_marker.setValue(0.)
-        _zero_marker.setZValue(1000)
-        self.vb.addItem(_zero_marker)
+        zero_marker = pg.InfiniteLine(
+            pos=0,
+            angle=0,
+            pen='w',
+            movable=False)
+        zero_marker.setValue(0.)
+        zero_marker.setZValue(1000)
+        self.vb.addItem(zero_marker)
 
         self.axis.setLabel('Displacement / m')
         # self.plot.rotate(-90)
@@ -268,7 +290,11 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
                        num.nanmax(self._plot.data))
 
     def isoCurveControl(self):
-        iso_ctrl = pg.InfiniteLine(pos=0, angle=0, pen='g', movable=True)
+        iso_ctrl = pg.InfiniteLine(
+            pos=0,
+            angle=0,
+            pen='g',
+            movable=True)
         iso_ctrl.setValue(0.)
         iso_ctrl.setZValue(1000)
 
@@ -279,7 +305,7 @@ class QKiteToolColormap(pg.HistogramLUTWidget):
         self.vb.addItem(iso_ctrl)
 
 
-class QKiteParameterGroup(pTypes.GroupParameter):
+class KiteParameterGroup(pTypes.GroupParameter):
     def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
         self.model_attr = model_attr

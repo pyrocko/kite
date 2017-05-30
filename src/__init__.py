@@ -1,4 +1,5 @@
 #!/bin/python
-from kite.scene import Scene, SceneTest, read  # noqa
-from kite.quadtree import Quadtree  # noqa
-from kite.covariance import Covariance  # noqa
+from .scene import Scene, TestScene, read  # noqa
+from .quadtree import Quadtree  # noqa
+from .covariance import Covariance  # noqa
+from .model_scene import ModelScene, TestModelScene  # noqa

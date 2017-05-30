@@ -1,42 +1,26 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
-from .scene_proxy import QSceneProxy
-from .tab_scene import QKiteScene
-from .tab_quadtree import QKiteQuadtree  # noqa
-from .tab_covariance import QKiteCovariance  # noqa
-from .utils_qt import loadUi
+from .scene_model import SceneModel
+from .tab_scene import KiteScene
+from .tab_quadtree import KiteQuadtree  # noqa
+from .tab_covariance import KiteCovariance  # noqa
+from ..qt_utils import loadUi, validateFilename, SceneLog
 from ..scene import Scene
+from .common import get_resource
 
-from os import path
-import os
 import sys
 import time  # noqa
-import logging
 import pyqtgraph as pg
-
-
-def validateFilename(filename):
-    filedir = path.dirname(filename)
-    if filename == '' or filedir == '':
-        return False
-    if path.isdir(filename) or not os.access(filedir, os.W_OK):
-        QtGui.QMessageBox.critical(None, 'Path Error',
-                                   'Could not access file <b>%s</b>'
-                                   % filename)
-        return False
-    return True
 
 
 class Spool(QtGui.QApplication):
     def __init__(self, scene=None, import_data=None, load_file=None):
-        QtGui.QApplication.__init__(self, ['spool'])
+        QtGui.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
-        splash_img = QtGui.QPixmap(
-            path.join(path.dirname(path.realpath(__file__)),
-                      'ui/spool_splash.png'))\
+        splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        self.splash = QtGui.QSplashScreen(splash_img,
-                                          QtCore.Qt.WindowStaysOnTopHint)
+        self.splash = QtGui.QSplashScreen(
+            splash_img, QtCore.Qt.WindowStaysOnTopHint)
         self.updateSplashMessage('Scene')
         self.splash.show()
         self.processEvents()
@@ -45,8 +29,8 @@ class Spool(QtGui.QApplication):
         self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
-        self.aboutToQuit.connect(self.spool_win.scene_proxy.worker_thread.quit)
-        self.aboutToQuit.connect(self.spool_win.scene_proxy.deleteLater)
+        self.aboutToQuit.connect(self.spool_win.model.worker_thread.quit)
+        self.aboutToQuit.connect(self.spool_win.model.deleteLater)
         self.aboutToQuit.connect(self.splash.deleteLater)
         self.aboutToQuit.connect(self.deleteLater)
 
@@ -71,10 +55,10 @@ class Spool(QtGui.QApplication):
         self.spool_win.addScene(scene)
 
     def importScene(self, filename):
-        self.spool_win.scene_proxy.importFile(filename)
+        self.spool_win.model.importFile(filename)
 
     def loadScene(self, filename):
-        self.spool_win.scene_proxy.loadFile(filename)
+        self.spool_win.model.loadFile(filename)
 
     def __del__(self):
         pass
@@ -91,28 +75,33 @@ class SpoolMainWindow(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self, *args, **kwargs)
         self.loadUi()
 
-        self.views = [QKiteScene, QKiteQuadtree, QKiteCovariance]
+        self.views = [KiteScene, KiteQuadtree, KiteCovariance]
 
-        self.ptree = QKiteParameterTree(showHeader=True)
-        self.ptree.resize(100, 100)
-        self.splitter.insertWidget(0, self.ptree)
+        self.ptree = KiteParameterTree(showHeader=False)
+        self.ptree_dock = QtGui.QDockWidget('Parameters', self)
+        self.ptree_dock.setFeatures(QtGui.QDockWidget.DockWidgetFloatable |
+                                    QtGui.QDockWidget.DockWidgetMovable)
+        self.ptree_dock.setWidget(self.ptree)
+        self.addDockWidget(
+            QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
 
-        self.scene_proxy = QSceneProxy()
-        self.scene_proxy.sigSceneModelChanged.connect(self.buildViews)
+        self.model = SceneModel()
+        self.model.sigSceneModelChanged.connect(
+            self.buildViews)
 
-        self.sigLoadFile.connect(self.scene_proxy.loadFile)
-        self.sigImportFile.connect(self.scene_proxy.importFile)
-        self.sigLoadConfig.connect(self.scene_proxy.loadConfig)
+        self.sigLoadFile.connect(
+            self.model.loadFile)
+        self.sigImportFile.connect(
+            self.model.importFile)
+        self.sigLoadConfig.connect(
+            self.model.loadConfig)
         self.sigExportWeightMatrix.connect(
-            self.scene_proxy.exportWeightMatrix)
-
-        self.log_model = SceneLogModel(self)
-        self.log = SceneLog(self)
+            self.model.exportWeightMatrix)
 
         self.actionSave_config.triggered.connect(
             self.onSaveConfig)
         self.actionSave_scene.triggered.connect(
-            self.onSaveData)
+            self.onSaveScene)
         self.actionLoad_config.triggered.connect(
             self.onLoadConfig)
         self.actionLoad_scene.triggered.connect(
@@ -126,45 +115,41 @@ class SpoolMainWindow(QtGui.QMainWindow):
             self.onExportWeightMatrix)
 
         self.actionAbout_Spool.triggered.connect(
-            self.about.show)
+            self.aboutDialog().show)
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
+
+        self.log = SceneLog(self, self.model)
         self.actionLog.triggered.connect(
             self.log.show)
 
         self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)
-        self.progress.closeEvent = lambda e: e.ignore()
+        self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
         self.progress.setWindowTitle('processing...')
-        self.scene_proxy.sigProcessingFinished.connect(self.progress.reset)
+        self.model.sigProcessingFinished.connect(self.progress.reset)
 
-    @property
-    def about(self):
+    def aboutDialog(self):
         self._about = QtGui.QDialog()
-        about_ui = path.join(path.dirname(path.realpath(__file__)),
-                             'ui/about.ui')
-        loadUi(about_ui, baseinstance=self._about)
+        loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
     def loadUi(self):
-        ui_file = path.join(path.dirname(path.realpath(__file__)),
-                            'ui/spool.ui')
-        loadUi(ui_file, baseinstance=self)
-        return
+        loadUi(get_resource('spool.ui'), baseinstance=self)
 
     def addScene(self, scene):
-        self.scene_proxy.setScene(scene)
+        self.model.setScene(scene)
         self.buildViews()
 
     def buildViews(self):
-        self.setWindowTitle('Spool - %s'
-                            % self.scene_proxy.scene.meta.filename)
-        if self.scene_proxy.scene is None or self.tabs.count() != 0:
+        title = self.model.scene.meta.filename or 'Untitled'
+        self.setWindowTitle('Spool - %s' % title)
+        if self.model.scene is None or self.tabs.count() != 0:
             return
         for v in self.views:
             self.addView(v)
-        self.scene_proxy.sigProcessingStarted.connect(self.processingStarted)
+        self.model.sigProcessingStarted.connect(self.processingStarted)
 
     def addView(self, view):
         self.sigLoadingModule.emit(view.title)
@@ -186,15 +171,15 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.save_config(filename)
+        self.model.scene.saveConfig(filename)
 
-    def onSaveData(self):
+    def onSaveScene(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')
         if not validateFilename(filename):
             return
-        self.scene_proxy.scene.save(filename)
+        self.model.scene.save(filename)
 
     def onLoadConfig(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
@@ -209,7 +194,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             caption='Load kite scene')
         if not validateFilename(filename):
             return
-        self.scene_proxy.loadFile(filename)
+        self.model.loadFile(filename)
 
     def onImportScene(self):
         filename, _ = QtGui.QFileDialog.getOpenFileName(
@@ -229,7 +214,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
         if not validateFilename(filename):
             return
-        self.scene_proxy.quadtree.export(filename)
+        self.model.quadtree.export(filename)
 
     def onExportWeightMatrix(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
@@ -243,122 +228,8 @@ class SpoolMainWindow(QtGui.QMainWindow):
         pass
 
 
-class QKiteParameterTree(pg.parametertree.ParameterTree):
+class KiteParameterTree(pg.parametertree.ParameterTree):
     pass
-
-
-class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
-    log_records = []
-
-    def __init__(self, spool, *args, **kwargs):
-        QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
-        logging.Handler.__init__(self)
-
-        self.spool = spool
-        self.spool.scene_proxy.sigLogRecord.connect(self.newRecord)
-        getPixmap = spool.style().standardPixmap
-        qstyle = QtGui.QStyle
-
-        self.levels = {
-            50: [getPixmap(qstyle.SP_MessageBoxCritical), 'Critical'],
-            40: [getPixmap(qstyle.SP_MessageBoxCritical), 'Error'],
-            30: [getPixmap(qstyle.SP_MessageBoxWarning), 'Warning'],
-            20: [getPixmap(qstyle.SP_MessageBoxInformation), 'Info'],
-            10: [getPixmap(qstyle.SP_FileIcon), 'Debug'],
-        }
-
-        for i in self.levels.itervalues():
-            i[0] = i[0].scaledToHeight(20)
-
-    def data(self, idx, role):
-        rec = self.log_records[idx.row()]
-
-        if role == QtCore.Qt.DisplayRole:
-            if idx.column() == 0:
-                return int(rec.levelno)
-            elif idx.column() == 1:
-                return '%s:%s' % (rec.levelname, rec.name)
-            elif idx.column() == 2:
-                return rec.getMessage()
-
-        elif role == QtCore.Qt.ItemDataRole:
-            return idx.data()
-
-        elif role == QtCore.Qt.DecorationRole:
-            if idx.column() != 0:
-                return
-            log_lvl = self.levels[int(idx.data())]
-            return log_lvl[0]
-
-        elif role == QtCore.Qt.ToolTipRole:
-            if idx.column() == 0:
-                return rec.levelname
-            elif idx.column() == 1:
-                return '%s.%s' % (rec.module, rec.funcName)
-            elif idx.column() == 2:
-                return 'Line %d' % rec.lineno
-
-    def rowCount(self, idx):
-        return len(self.log_records)
-
-    def columnCount(self, idx):
-        return 3
-
-    @QtCore.Slot(object)
-    def newRecord(self, record):
-        self.log_records.append(record)
-        self.beginInsertRows(QtCore.QModelIndex(),
-                             0, 0)
-        self.endInsertRows()
-        self.spool.log.tableView.scrollToBottom()
-        if record.levelno >= 30 and self.spool.log.autoBox.isChecked():
-            self.spool.log.show()
-
-
-class SceneLog(QtGui.QDialog):
-
-    class LogFilter(QtGui.QSortFilterProxyModel):
-        def __init__(self, *args, **kwargs):
-            QtGui.QSortFilterProxyModel.__init__(self, *args, **kwargs)
-            self.level = 0
-
-        def setLevel(self, level):
-            self.level = level
-            self.setFilterRegExp('%s' % self.level)
-
-    def __init__(self, parent=None):
-        QtGui.QDialog.__init__(self, parent)
-
-        log_ui = path.join(path.dirname(path.realpath(__file__)),
-                           'ui/logging.ui')
-        loadUi(log_ui, baseinstance=self)
-
-        self.closeButton.setIcon(self.style().standardPixmap(
-                                 QtGui.QStyle.SP_DialogCloseButton))
-
-        self.table_filter = self.LogFilter()
-        self.table_filter.setFilterKeyColumn(0)
-        self.table_filter.setDynamicSortFilter(True)
-        self.table_filter.setSourceModel(parent.log_model)
-
-        self.tableView.setModel(self.table_filter)
-
-        self.tableView.setColumnWidth(0, 30)
-        self.tableView.setColumnWidth(1, 200)
-
-        self.filterBox.addItems(
-            [l[1] for l in parent.log_model.levels.values()] + ['All'])
-        self.filterBox.setCurrentIndex(0)
-
-        def changeFilter():
-            for k, v in parent.log_model.levels.iteritems():
-                if v[1] == self.filterBox.currentText():
-                    self.table_filter.setLevel(k)
-                    return
-
-            self.table_filter.setLevel(0)
-
-        self.filterBox.currentIndexChanged.connect(changeFilter)
 
 
 __all__ = ['Spool']

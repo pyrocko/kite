@@ -97,7 +97,7 @@ class QuadNode(object):
     def weight(self):
         '''
         :getter: Absolute weight derived from :class:`kite.Covariance`
-         - works on tree leafs only.
+         - works on tree leaves only.
         :type: float
         '''
         return self.quadtree.scene.covariance.getLeafWeight(self)
@@ -223,7 +223,7 @@ class QuadNode(object):
                     yield rc
 
     def iterLeafs(self):
-        ''' Iterator over the leafs, evaluating parameters from
+        ''' Iterator over the leaves, evaluating parameters from
         :class:`~kite.Quadtree` instance.
 
         :yields: Leafs fullfilling the tree's parameters.
@@ -296,22 +296,22 @@ class QuadtreeConfig(guts.Object):
     leaf_blacklist = guts.List.T(
         optional=True,
         default=[],
-        help='Blacklist of excluded leafs')
+        help='Blacklist of excluded leaves')
 
 
 class Quadtree(object):
-    """Quadtree for irregular subsampling InSAR displacement data held in
+    '''Quadtree for irregular subsampling InSAR displacement data held in
     :py:class:`kite.scene.Scene`
 
     InSAR displacement scenes can hold a vast amount of data points,
-    which is often highly redundant and unsuitably large for the use in 
+    which is often highly redundant and unsuitably large for the use in
     inverse modeling. By subsampling and therefore decimating the data points
-    systematically through a parametrized quadtree we can reduce the dataset 
+    systematically through a parametrized quadtree we can reduce the dataset
     without significant loss of displacement information. Quadtree subsampling
-    keeps a high spatial resolution where displacement gradients are high and 
-    efficiently reduces data point density in regions with small displacement 
-    variations. The product is a managable dataset size with good representation
-    of the original data.
+    keeps a high spatial resolution where displacement gradients are high and
+    efficiently reduces data point density in regions with small displacement
+    variations. The product is a managable dataset size with good
+    representation of the original data.
 
     The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
     is evaluated against different corrections:
@@ -332,10 +332,10 @@ class Quadtree(object):
         * :attr:`~kite.Quadtree.tile_size_max`, maximum node size in *meter*
         * :attr:`~kite.Quadtree.tile_size_min`, minimum node size in *meter*
 
-    :attr:`~kite.Quadtree.leafs` hold the current tree's
-    :class:`~kite.quadtree.QuadNode` 's. The leafs can also be exported in a
+    :attr:`~kite.Quadtree.leaves` hold the current tree's
+    :class:`~kite.quadtree.QuadNode` 's. The leaves can also be exported in a
     *CSV* format through :func:`~kite.Quadtree.export`.
-    """
+    '''
     evChanged = Subject()
     evConfigChanged = Subject()
 
@@ -357,7 +357,7 @@ class Quadtree(object):
     }
 
     def __init__(self, scene, config=QuadtreeConfig()):
-        self._leafs = None
+        self._leaves = None
         self.scene = scene
         self.displacement = self.scene.displacement
         self.frame = self.scene.frame
@@ -373,12 +373,12 @@ class Quadtree(object):
         self.scene.evConfigChanged.subscribe(self.setConfig)
 
     def setConfig(self, config=None):
-        """ Sets and updated the config of the instance
+        ''' Sets and updated the config of the instance
 
         :param config: New config instance, defaults to configuration provided
                        by parent :class:`~kite.Scene`
         :type config: :class:`~kite.covariance.QuadtreeConfig`, optional
-        """
+        '''
         if config is None:
             config = self.scene.config.quadtree
         self.config = config
@@ -387,7 +387,7 @@ class Quadtree(object):
         self.evConfigChanged.notify()
 
     def setCorrection(self, correction='mean'):
-        """ Set correction method calculating the standard deviation of
+        ''' Set correction method calculating the standard deviation of
         instances :class:`~kite.quadtree.QuadNode` s
 
         The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
@@ -402,7 +402,7 @@ class Quadtree(object):
             ``mean_std, median_std, bilinear_std, std``
         :type correction: str
         :raises: AttributeError
-        """
+        '''
         if correction not in self._corrections.keys():
             raise AttributeError('Method %s not in %s'
                                  % (correction, self._corrections))
@@ -413,14 +413,20 @@ class Quadtree(object):
 
         # Clearing cached properties through None
         self.leaf_center_distance = None
-        self.leafs = None
         self.nodes = None
         self.epsilon_min = None
         self._epsilon_init = None
+        self.clearLeaves()
         self.epsilon = self.config.epsilon or self._epsilon_init
 
         self._initTree()
         self.evChanged.notify()
+
+    def clearLeaves(self):
+        '''Clear cached leafs and properties'''
+        self.leaves = None
+        self.leaf_center_distance = None
+        self.leaf_los_rotation_factors = None
 
     def _initTree(self):
         t0 = time.time()
@@ -428,21 +434,21 @@ class Quadtree(object):
             b.createTree()
 
         self._log.debug(
-            'Tree created, %d nodes [%0.8f s]' %
+            'Tree created, %d nodes [%0.4f s]' %
             (self.nnodes, time.time() - t0))
 
     @property
     def epsilon(self):
-        """ Threshold for quadtree splitting its ``QuadNode``.
-        
-        The threshold is the maximum standard deviation of leaf mean, 
+        ''' Threshold for quadtree splitting its ``QuadNode``.
+
+        The threshold is the maximum standard deviation of leaf mean,
         median or simply its values (see ''SetSplitMethod'') allowed to
-        not further split a "QuadNode". 
-      
+        not further split a "QuadNode".
+
         :setter: Sets the epsilon/RMS threshold
         :getter: Returns the current epsilon
         :type: float
-        """
+        '''
         return self.config.epsilon
 
     @epsilon.setter
@@ -455,7 +461,7 @@ class Quadtree(object):
                 'Epsilon is out of bounds [%0.6f], epsilon_min %0.6f' %
                 (value, self.epsilon_min))
             return
-        self.leafs = None
+        self.clearLeaves()
         self.clearLeafBlacklist()
         self.config.epsilon = value
 
@@ -469,19 +475,19 @@ class Quadtree(object):
 
     @property_cached
     def epsilon_min(self):
-        """ Lowest allowed epsilon
+        ''' Lowest allowed epsilon
         :type: float
-        """
+        '''
         return self._epsilon_init * .2
 
     @property
     def nan_allowed(self):
-        """Fraction of allowed ``NaN`` values in quadtree leafs. If
+        '''Fraction of allowed ``NaN`` values in quadtree leaves. If
         value is exceeded the leaf is kicked out entirely.
 
         :setter: Fraction  ``0. <= fraction <= 1``.
         :type: float
-        """
+        '''
         return self.config.nan_allowed
 
     @nan_allowed.setter
@@ -490,20 +496,20 @@ class Quadtree(object):
             self._log.warning('NaN fraction must be 0. < nan_allowed <= 1.')
             return
 
-        self.leafs = None
+        self.clearLeaves()
         self.clearLeafBlacklist()
         self.config.nan_allowed = value
         self.evChanged.notify()
 
     @property
     def tile_size_min(self):
-        """ Minimum allowed tile size in *meter*.
+        ''' Minimum allowed tile size in *meter*.
         Measured along long edge ``(max(dE, dN))``
 
         :getter: Returns the minimum allowed tile size
         :setter: Sets the minimum threshold
         :type: float
-        """
+        '''
         return self.config.tile_size_min
 
     @tile_size_min.setter
@@ -516,13 +522,13 @@ class Quadtree(object):
 
     @property
     def tile_size_max(self):
-        """ Maximum allowed tile size in *meter*.
+        ''' Maximum allowed tile size in *meter*.
         Measured along long edge ``(max(dE, dN))``
 
         :getter: Returns the maximum allowed tile size
         :setter: Sets the maximum threshold
         :type: float
-        """
+        '''
         return self.config.tile_size_max
 
     @tile_size_max.setter
@@ -535,7 +541,7 @@ class Quadtree(object):
 
     def _tileSizeChanged(self):
         self._tile_size_lim_px = None
-        self.leafs = None
+        self.clearLeaves()
         self.clearLeafBlacklist()
         self.evChanged.notify()
 
@@ -549,90 +555,97 @@ class Quadtree(object):
 
     @property_cached
     def nodes(self):
-        """ All nodes of the tree
+        ''' All nodes of the tree
 
         :getter: Get the list of nodes
         :type: list
-        """
+        '''
         return [n for b in self._base_nodes for n in b.iterChildren()]
 
     @property
     def nnodes(self):
-        """
+        '''
         :getter: Number of nodes of the built tree.
         :type: int
-        """
+        '''
         return len(self.nodes)
 
     def clearLeafBlacklist(self):
         self.config.leaf_blacklist = []
 
-    def blacklistLeafs(self, leafs):
-        self.config.leaf_blacklist.extend(leafs)
-        self.leafs = None
+    def blacklistLeaves(self, leaves):
+        self.config.leaf_blacklist.extend(leaves)
+        self._log.debug('Blacklisted leaves: %s'
+                        % ', '.join(self.config.leaf_blacklist))
+        self.clearLeaves()
         self.evChanged.notify()
 
     @property_cached
-    def leafs(self):
-        """:getter: List of leafs for current configuration.
+    def leaves(self):
+        ''':getter: List of leaves for current configuration.
         :type: (list or :class:`~kite.quadtree.QuadNode` s)
-        """
+        '''
         t0 = time.time()
-        leafs = []
+        leaves = []
         for b in self._base_nodes:
-            leafs.extend([l for l in b.iterLeafs()
+            leaves.extend([l for l in b.iterLeafs()
                           if l.nan_fraction < self.nan_allowed and
                           l.id not in self.config.leaf_blacklist])
         self._log.debug(
-            'Gathering leafs for epsilon %.4f (nleafs=%d) [%0.8f s]' %
-            (self.epsilon, len(leafs), time.time() - t0))
-        return leafs
+            'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.4f s]' %
+            (self.epsilon, len(leaves), time.time() - t0))
+        return leaves
 
     @property
-    def nleafs(self):
-        """
-        :getter: Number of leafs for current parametrisation.
+    def nleaves(self):
+        '''
+        :getter: Number of leaves for current parametrisation.
         :type: int
-        """
-        return len(self.leafs)
+        '''
+        return len(self.leaves)
 
     @property
     def leaf_means(self):
-        """
+        '''
         :getter: Leaf mean displacements from
             :attr:`kite.quadtree.QuadNode.mean`.
         :type: :class:`numpy.ndarray`, size ``N``.
-        """
-        return num.array([l.mean for l in self.leafs])
+        '''
+        return num.array([l.mean for l in self.leaves])
 
     @property
     def leaf_medians(self):
-        """
+        '''
         :getter: Leaf median displacements from
             :attr:`kite.quadtree.QuadNode.median`.
         :type: :class:`numpy.ndarray`, size ``N``.
-        """
-        return num.array([l.median for l in self.leafs])
+        '''
+        return num.array([l.median for l in self.leaves])
 
     @property
     def _leaf_focal_points(self):
-        return num.array([l._focal_point for l in self.leafs])
+        return num.array([l._focal_point for l in self.leaves])
 
     @property
     def leaf_focal_points(self):
-        """
+        '''
         :getter: Leaf focal points in local coordinates.
         :type: :class:`numpy.ndarray`, size ``(N, 2)``
-        """
-        return num.array([l.focal_point for l in self.leafs])
+        '''
+        return num.array([l.focal_point for l in self.leaves])
+
+    @property
+    def leaf_coordinates(self):
+        '''Synonym for :func:`Quadtree.leaf_focal_points` '''
+        return self.leaf_focal_points
 
     @property_cached
     def leaf_center_distance(self):
-        """
+        '''
         :getter: Leaf distance to center point of the quadtree
         :type: :class:`numpy.ndarray`, size ``(N, 3)``
-        """
-        distances = num.zeros((self.nleafs, 3))
+        '''
+        distances = num.zeros((self.nleaves, 3))
         center = self.center_point
         distances[:, 0] = self.leaf_focal_points[:, 0] - center[0]
         distances[:, 1] = self.leaf_focal_points[:, 1] - center[1]
@@ -641,46 +654,62 @@ class Quadtree(object):
 
     @property
     def leaf_phis(self):
-        """
+        '''
         :getter: Median leaf LOS phi angle. :attr:`kite.Scene.phi`
         :type: :class:`numpy.ndarray`, size ``(N)``
-        """
-        return num.array([l.phi for l in self.leafs])
+        '''
+        return num.array([l.phi for l in self.leaves])
 
     @property
     def leaf_thetas(self):
-        """
+        '''
         :getter: Median leaf LOS theta angle. :attr:`kite.Scene.theta`
         :type: :class:`numpy.ndarray`, size ``(N)``
-        """
-        return num.array([l.theta for l in self.leafs])
+        '''
+        return num.array([l.theta for l in self.leaves])
+
+    @property_cached
+    def leaf_los_rotation_factors(self):
+        '''
+        :getter: Trigonometric factors for rotating displacement
+            matrices towards LOS.
+            See :attr:`kite.BaseScene.los_rotation_factors`
+        :type: :class:`numpy.ndarray`, Nx3
+        '''
+        los_factors = num.empty((self.nleaves, 3))
+        los_factors[:, 0] = num.sin(self.leaf_thetas)
+        los_factors[:, 1] = num.cos(self.leaf_thetas)\
+            * num.cos(self.leaf_phis)
+        los_factors[:, 2] = num.cos(self.leaf_thetas)\
+            * num.sin(self.leaf_phis)
+        return los_factors
 
     @property
     def leaf_matrix_means(self):
-        """
+        '''
         :getter: Leaf mean displacements casted to
             :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N, M)``
-        """
+        '''
         return self._getLeafsNormMatrix(self._leaf_matrix_means,
                                         method='mean')
 
     @property
     def leaf_matrix_medians(self):
-        """
+        '''
         :getter: Leaf median displacements casted to
             :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N, M)``
-        """
+        '''
         return self._getLeafsNormMatrix(self._leaf_matrix_medians,
                                         method='median')
 
     @property
     def leaf_matrix_weights(self):
-        """
+        '''
         :getter: Leaf weights casted to :attr:`kite.Scene.displacement`.
         :type: :class:`numpy.ndarray`, size ``(N, M)``
-        """
+        '''
         return self._getLeafsNormMatrix(self._leaf_matrix_weights,
                                         method='weight')
 
@@ -691,7 +720,7 @@ class Quadtree(object):
                 (method, self._norm_methods.keys()))
         t0 = time.time()  # noqa
         array.fill(num.nan)
-        for l in self.leafs:
+        for l in self.leaves:
             array[l._slice_rows, l._slice_cols] = \
                 self._norm_methods[method](l)
         array[self.scene.displacement_mask] = num.nan
@@ -707,10 +736,10 @@ class Quadtree(object):
         ''' This is measure for the reduction of the scene's full resolution
         over the quadtree.
 
-        :getter: Quadtree efficiency as :math:`N_{full} / N_{leafs}`
+        :getter: Quadtree efficiency as :math:`N_{full} / N_{leaves}`
         :type: float
         '''
-        return (self.scene.rows * self.scene.cols) / self.nleafs
+        return (self.scene.rows * self.scene.cols) / self.nleaves
 
     @property
     def reduction_rms(self):
@@ -745,20 +774,20 @@ class Quadtree(object):
 
     @property_cached
     def plot(self):
-        """ Simple `matplotlib` illustration of the quadtree
+        ''' Simple `matplotlib` illustration of the quadtree
 
         :type: :attr:`Quadtree.leaf_matrix_means`.
-        """
+        '''
         from kite.plot2d import QuadtreePlot
         return QuadtreePlot(self)
 
     def getStaticTarget(self):
-        """Not Implemented
-        """
+        '''Not Implemented
+        '''
         raise NotImplementedError
 
     def export(self, filename):
-        """ Exports the current quadtree leafs to ``filename`` in a
+        ''' Exports the current quadtree leaves to ``filename`` in a
         *CSV* format
 
         The formatting is::
@@ -768,13 +797,13 @@ class Quadtree(object):
 
         :param filename: export to path
         :type filename: string
-        """
-        self._log.debug('Exporting Quadtree.leafs to %s' % filename)
+        '''
+        self._log.debug('Exporting Quadtree.leaves to %s' % filename)
         with open(filename, mode='w') as f:
             f.write(
                 '# node_id, focal_point_E, focal_point_N, theta, phi, '
                 'mean_displacement, median_displacement, absolute_weight\n')
-            for l in self.leafs:
+            for l in self.leaves:
                 f.write(
                     '{l.id}, {l.focal_point[0]}, {l.focal_point[1]}, '
                     '{l.theta}, {l.phi}, '
