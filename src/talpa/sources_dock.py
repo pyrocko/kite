@@ -122,6 +122,7 @@ class SourcesList(QtGui.QListView):
             doc = QtGui.QTextDocument()
             doc.setHtml(options.text)
             doc.setTextWidth(options.rect.width())
+
             return QtCore.QSize(doc.idealWidth(), doc.size().height())
 
     class SourceContextMenu(QtGui.QMenu):

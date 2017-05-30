@@ -63,16 +63,15 @@ class OkadaSource(SandboxSourceRectangular):
         if dsrc is None:
             dsrc = num.empty(10)
 
+        dip = self.dip
         if self.dip == 90.:
-            dip = self.dip - 1e-2
-        else:
-            dip = self.dip
+            dip -= 1e-2
 
         dsrc[0] = self.length
         dsrc[1] = self.width
         dsrc[2] = self.depth
         dsrc[3] = -dip
-        dsrc[4] = self.strike
+        dsrc[4] = self.strike - 180.
         dsrc[5] = self.easting
         dsrc[6] = self.northing
 
@@ -81,7 +80,7 @@ class OkadaSource(SandboxSourceRectangular):
         # print '{:<13}{}\n{:<13}{}'.format(
         #     'strike_slip', ss_slip, 'dip_slip', ds_slip)
         dsrc[7] = -ss_slip  # SS Strike-Slip
-        dsrc[8] = ds_slip  # DS Dip-Slip
+        dsrc[8] = -ds_slip  # DS Dip-Slip
         dsrc[9] = self.opening  # TS Tensional-Slip
 
         return dsrc

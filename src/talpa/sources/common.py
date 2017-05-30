@@ -23,9 +23,9 @@ class RectangularSourceROI(pg.ROI):
 
         pg.ROI.__init__(
             self,
-            pos=pg.Point(source.outline()[0]),
+            pos=pg.Point(source.outline()[1]),
             size=pg.Point(source.width, source.length),
-            angle=180. - source.strike,
+            angle=-source.strike,
             invertible=False,
             pen=self.pen_outline)
         self.handlePen = self.pen_handle
@@ -48,15 +48,18 @@ class RectangularSourceROI(pg.ROI):
 
     @QtCore.Slot()
     def setSourceParametersFromROI(self):
-        strike = float((180. - self.angle()) % 360)
+        strike = float((-self.angle()) % 360)
+        width = float(self.size().x())
+        length = float(self.size().y())
+
         parameters = {
             'strike': strike,
-            'width': float(self.size().x()),
-            'length': float(self.size().y()),
+            'width': width,
+            'length': length,
             'easting': float(
-                self.pos().x() - num.sin(strike * d2r) * self.size().y()/2),
+                self.pos().x() + num.sin(strike * d2r) * length/2),
             'northing': float(
-                self.pos().y() - num.cos(strike * d2r) * self.size().y()/2)
+                self.pos().y() + num.cos(strike * d2r) * length/2)
             }
         self.newSourceParameters.emit(parameters)
 
@@ -66,13 +69,13 @@ class RectangularSourceROI(pg.ROI):
         width = source.width
 
         self.setPos(
-            pg.Point(source.outline()[0]),
+            pg.Point(source.outline()[1]),
             finish=False)
         self.setSize(
             pg.Point(width, source.length),
             finish=False)
         self.setAngle(
-            180. - source.strike,
+            -source.strike,
             finish=False)
 
     @QtCore.Slot()

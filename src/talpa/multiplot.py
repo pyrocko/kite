@@ -226,9 +226,6 @@ class DisplacementPlot(pg.PlotItem):
 
     @QtCore.Slot(object)
     def mouseMoved(self, event):
-        if not config.show_cursor:
-            self.cursor.hide()
-            return
 
         if self.vb.sceneBoundingRect().contains(event[0]):
             map_pos = self.vb.mapSceneToView(event[0])
@@ -244,7 +241,10 @@ class DisplacementPlot(pg.PlotItem):
             self.sandbox.cursor_tracker.sigCursorMoved.emit((map_pos, value))
             self.cursor.hide()
         else:
-            self.cursor.show()
+            if not config.show_cursor:
+                self.cursor.hide()
+            else:
+                self.cursor.show()
 
     @QtCore.Slot(object)
     def drawCursor(self, pos):

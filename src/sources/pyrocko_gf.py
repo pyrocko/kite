@@ -231,7 +231,7 @@ class PyrockoProcessor(SourceProcessor):
             try:
                 res = self.engine.process(
                     pyr_sources, [target],
-                    nprocs=nthreads)
+                    nthreads=nthreads)
             except Exception as e:
                 self._log.error(
                     'Could not execute pyrocko.gf.LocalEngine.process! \n'

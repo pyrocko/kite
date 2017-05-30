@@ -44,7 +44,10 @@ class EllipsoidSource(SandboxSource):
 
     @property
     def volume(self):
-        return 4./3 * num.pi * self.length_x * self.length_y * self.length_z
+        K = self.lamda + 2 * self.mu / 3  # Bulk Modulus
+        V = 4./3 * num.pi * self.length_x * self.length_y * self.length_z
+        V = (self.cavity_pressure * V) / K
+        return V
 
     def ECMParameters(self):
         params = {
@@ -87,12 +90,13 @@ class PointCompoundSource(SandboxSource):
         help='Volume change in z-plane in [m3]',
         default=1.)
     nu = Float.T(
-        default=0.25,
-        help='Poisson\'s ratio, typically 0.25')
+        help='Poisson\'s ratio, typically 0.25',
+        default=0.25)
 
     @property
     def volume(self):
-        return self.dVx + self.dVy + self.dVz
+        # After Nikkhoo, M et al. 2017
+        return (self.dVx + self.dVy + self.dVz) / 1.8
 
     def pointCDMParameters(self):
         params = {
@@ -102,9 +106,9 @@ class PointCompoundSource(SandboxSource):
             'rotx': self.rotation_x,
             'roty': self.rotation_y,
             'rotz': self.rotation_z,
-            'dVx': self.dVx,
-            'dVy': self.dVy,
-            'dVz': self.dVz,
+            'dVx': self.dVx**3,
+            'dVy': self.dVy**3,
+            'dVz': self.dVz**3,
             'nu': self.nu
         }
         return params
@@ -129,8 +133,8 @@ class CompoundModelProcessor(SourceProcessor):
                 res = ce.pointCDM(coords, **src.pointCDMParameters())
             else:
                 raise AttributeError('Source of wrong type!')
-            result['displacement.e'] = res[0]
-            result['displacement.n'] = res[1]
-            result['displacement.d'] = res[2]
+            result['displacement.e'] += res[0]
+            result['displacement.n'] += res[1]
+            result['displacement.d'] += res[2]
 
         return result

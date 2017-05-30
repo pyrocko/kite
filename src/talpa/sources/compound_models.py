@@ -70,7 +70,7 @@ class EllipsoidSourceDelegate(SourceDelegate):
         z: {source.rotation_z:.1f}&deg;
     </td>
 </tr><tr style="font-weight: bold;">
-    <td>Volume:</td><td>{source.volume:.2f} m<sup>3</sup></td>
+    <td>Volume:</td><td>{source.volume:.2e} m<sup>3</sup></td>
 </tr></table>
 '''
         return item.format(idx=self.index.row()+1,
@@ -141,7 +141,7 @@ class PointCompoundSourceDelegate(SourceDelegate):
         z: {source.rotation_z:.1f}&deg;
     </td>
 </tr><tr style="font-weight: bold;">
-    <td>Volume:</td><td>{source.volume:.2f} m<sup>3</sup></td>
+    <td>Volume:</td><td>{source.volume:.2e} m<sup>3</sup></td>
 </tr></table>
 '''
         return item.format(idx=self.index.row()+1,
