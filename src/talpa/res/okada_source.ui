@@ -518,7 +518,7 @@ In direction of rake.</string>
            </sizepolicy>
           </property>
           <property name="wrapping">
-           <bool>true</bool>
+           <bool>false</bool>
           </property>
           <property name="alignment">
            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
