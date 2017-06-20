@@ -153,7 +153,7 @@ static state_covariance calc_covariance_matrix(
                                     if (dist == 0.)
                                         cov += variance;
                                     else
-                                        cov += exp(-dist / mb);
+                                        cov += ma * exp(-dist / mb);
                                     npx++;
                                 }
                             }
@@ -173,7 +173,7 @@ static state_covariance calc_covariance_matrix(
                         }
                     #endif
                 }
-                cov_arr[il1*(nleafs)+il2] = ma * (cov/npx);
+                cov_arr[il1*(nleafs)+il2] = cov/npx;
                 cov_arr[il2*(nleafs)+il1] = cov_arr[il1*(nleafs)+il2];
             }
         }
