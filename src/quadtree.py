@@ -795,6 +795,14 @@ class Quadtree(object):
         '''
         raise NotImplementedError
 
+    def getMPLRectangles(self):
+        from matplotlib.patches import Rectangle
+        rectangles = []
+        for l in self.leaves:
+            r = Rectangle((l.llE, l.llN), l.sizeE, l.sizeN)
+            rectangles.append(r)
+        return rectangles
+
     def export(self, filename):
         ''' Exports the current quadtree leaves to ``filename`` in a
         *CSV* format
