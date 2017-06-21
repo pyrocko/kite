@@ -636,7 +636,8 @@ class Quadtree(object):
 
     @property
     def leaf_coordinates(self):
-        '''Synonym for :func:`Quadtree.leaf_focal_points` '''
+        '''Synonym for :func:`Quadtree.leaf_focal_points`
+           in easting/northing'''
         return self.leaf_focal_points
 
     @property_cached
@@ -651,6 +652,14 @@ class Quadtree(object):
         distances[:, 1] = self.leaf_focal_points[:, 1] - center[1]
         distances[:, 2] = num.sqrt(distances[:, 1]**2 + distances[:, 1]**2)
         return distances
+
+    @property
+    def leaf_eastings(self):
+        return self.leaf_coordinates[:, 0]
+
+    @property
+    def leaf_northings(self):
+        return self.leaf_coordinates[:, 1]
 
     @property
     def leaf_phis(self):
