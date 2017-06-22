@@ -66,15 +66,6 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        if not config.default_gf_dir:
-            folder = QtGui.QFileDialog.getExistingDirectory(
-                None, 'Open Pyrocko GF Store', os.getcwd())
-        else:
-            folder = config.default_gf_dir
-
-        if not folder:
-            return False
-
         length = 5000.
         src = PyrockoRectangularSource(
             easting=num.mean(sandbox.frame.E),
@@ -85,7 +76,7 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
             strike=45.,
             rake=0,
             slip=2,
-            store_dir=folder,
+            store_dir=config.default_gf_dir or '',
             )
         return src
 
@@ -167,20 +158,11 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        if not config.default_gf_dir:
-            folder = QtGui.QFileDialog.getExistingDirectory(
-                None, 'Open Pyrocko GF Store', os.getcwd())
-        else:
-            folder = config.default_gf_dir
-
-        if not folder:
-            return False
-
         src = PyrockoMomentTensor(
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=folder,
+            store_dir=config.default_gf_dir or '',
             )
         return src
 
@@ -294,20 +276,11 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        if not config.default_gf_dir:
-            folder = QtGui.QFileDialog.getExistingDirectory(
-                None, 'Open Pyrocko GF Store', os.getcwd())
-        else:
-            folder = config.default_gf_dir
-
-        if not folder:
-            return False
-
         src = PyrockoDoubleCouple(
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=folder,
+            store_dir=config.default_gf_dir or '',
             )
         return src
 
@@ -419,21 +392,12 @@ class PyrockoRingfaultDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        if not config.default_gf_dir:
-            folder = QtGui.QFileDialog.getExistingDirectory(
-                None, 'Open Pyrocko GF Store', os.getcwd())
-        else:
-            folder = config.default_gf_dir
-
-        if not folder:
-            return False
-
         src = PyrockoRingfaultSource(
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
             diameter=10000.,
-            store_dir=folder,
+            store_dir=config.default_gf_dir or '',
             )
         return src
 

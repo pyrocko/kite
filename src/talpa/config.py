@@ -8,7 +8,7 @@ import os
 import logging
 
 
-config_file = path.expanduser('~/.kite/talpa_config.yml')
+config_file = path.expanduser('~/.config/kite/talpa_config.yml')
 logger = logging.getLogger('TalpaConfig')
 
 
