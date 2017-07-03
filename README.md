@@ -9,6 +9,13 @@ Kite features simple and efficient handling of displacement data:
 * Covariance estimation from noise
 * Interactive GUI
 
+## Citation
+Recommended citation for Kite
+
+> Isken, Marius; Sudhaus, Henriette; Heimann, Sebastian; Steinberg, Andreas; Daout, Simon; Vasyura-Bathke, Hannes (2017): Kite - Software for Rapid Earthquake Source Optimisation from InSAR Surface Displacement. V. 0.1. GFZ Data Services. http://doi.org/10.5880/GFZ.2.1.2017.002
+
+[![DOI](https://img.shields.io/badge/DOI-10.5880%2FGFZ.2.1.2017.002-blue.svg)](http://doi.org/10.5880/GFZ.2.1.2017.002)
+
 
 ## Installation and Requirement
 
