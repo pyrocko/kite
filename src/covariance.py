@@ -382,7 +382,7 @@ class Covariance(object):
         '''
         return num.sum(self.weight_matrix_focal, axis=1)
 
-    def _calcCovarianceMatrix(self, method='focal'):
+    def _calcCovarianceMatrix(self, method='focal', nthreads=None):
         '''Constructs the covariance matrix.
 
         :param method: Either ``focal`` point distances are used - this is
@@ -394,6 +394,8 @@ class Covariance(object):
         :rtype: thon:numpy.ndarray
         '''
         self._initialized = True
+        if nthreads is None:
+            nthreads = self.nthreads
 
         nl = len(self.quadtree.leaves)
         self._leaf_mapping = {}
@@ -425,7 +427,7 @@ class Covariance(object):
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
-                            leaf_map, ma, mb, self.variance, self.nthreads,
+                            leaf_map, ma, mb, self.variance, nthreads,
                             self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
         else:

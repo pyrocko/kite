@@ -352,7 +352,7 @@ def dynamicmethod(func):
 
 class BaseScene(object):
 
-    def __init__(self, frame_config, **kwargs):
+    def __init__(self, **kwargs):
         self._initLogging()
 
         self._displacement = None
@@ -713,6 +713,19 @@ class Scene(BaseScene):
         if data is None:
             raise ImportError('Could not recognize format for %s' % path)
 
+        scene.meta.filename = op.basename(path)
+        return scene._import_from_dict(scene, data)
+
+    _import_data.__doc__ += \
+        '\nSupported import modules are **%s**.\n'\
+        % (', ').join(scene_io.__all__)
+    for mod in scene_io.__all__:
+        _import_data.__doc__ += '\n**%s**\n\n' % mod
+        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
+    import_data = staticmethod(_import_data)
+
+    @staticmethod
+    def _import_from_dict(scene, data):
         for sk in ['theta', 'phi', 'displacement']:
             setattr(scene, sk, data[sk])
 
@@ -724,17 +737,8 @@ class Scene(BaseScene):
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
 
-        scene.meta.filename = op.basename(path)
         scene._testImport()
         return scene
-
-    _import_data.__doc__ += \
-        '\nSupported import modules are **%s**.\n'\
-        % (', ').join(scene_io.__all__)
-    for mod in scene_io.__all__:
-        _import_data.__doc__ += '\n**%s**\n\n' % mod
-        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
-    import_data = staticmethod(_import_data)
 
     def __str__(self):
         return self.config.__str__()
@@ -827,7 +831,7 @@ class TestScene(Scene):
 
         scene.displacement = displ * amplitude
         if noise is not None:
-            cls.addNoise(noise)
+            scene.addNoise(noise)
         return scene
 
     @classmethod

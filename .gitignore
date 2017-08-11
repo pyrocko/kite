@@ -1,7 +1,10 @@
 *.pyc
+*.so
 build/
 dist/
 *.egg*/
 *.sublime-*
 gh-pages
+.coverage
 *swp
+test/data

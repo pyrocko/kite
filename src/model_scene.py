@@ -221,9 +221,9 @@ class ModelScene(BaseScene):
     def load(cls, filename):
         config = guts.load(filename=filename)
         model_scene = cls(config=config)
+        model_scene._log.info('Loading config from %s' % filename)
         for source in model_scene.sources:
             model_scene.addSource(source)
-        model_scene._log.info('Loaded config from %s' % filename)
         return model_scene
 
 

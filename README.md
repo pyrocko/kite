@@ -18,13 +18,12 @@ Kite features simple and efficient handling of displacement data:
 * pyQtGraph
 * NumPy
 * SciPy
-* OpenMP
 
 Installation on Debian based distributions through `apt`
 
 ```sh
 sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
-  python-yaml python-scipy python-numpy libomp-dev
+  python-yaml python-scipy python-numpy
 ```
 
 ### Native installation

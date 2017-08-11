@@ -293,7 +293,7 @@ class QuadtreePlot(Plot2D):
         }
         self._component = 'mean'
 
-        Plot2D.__init__(self, quadtree._scene)
+        Plot2D.__init__(self, quadtree.scene)
 
     @property
     def component(self):
@@ -329,8 +329,8 @@ class QuadtreePlot(Plot2D):
             plt.show()
 
     def _addInfoText(self):
-        """ Add number of leafs in self.ax """
-        self.ax.text(.975, .975, '%d Leafs' % len(self._quadtree.leafs),
+        """ Add number of leaves in self.ax """
+        self.ax.text(.975, .975, '%d Leafs' % len(self._quadtree.leaves),
                      transform=self.ax.transAxes, ha='right', va='top')
 
     def _update(self):
@@ -342,8 +342,8 @@ class QuadtreePlot(Plot2D):
             self.colormapAdjust()
             self.ax.draw_artist(self.image)
 
-            self._log.info('Redrew %d leafs [%0.8f s]' %
-                           (len(self._quadtree.leafs), time.time()-t0))
+            self._log.info('Redrew %d leaves [%0.8f s]' %
+                           (len(self._quadtree.leaves), time.time()-t0))
 
     def interactive(self):
         """Simple interactive quadtree plot with matplot
@@ -357,7 +357,7 @@ class QuadtreePlot(Plot2D):
             self._quadtree.epsilon = e
 
         def close_figure(*args):
-            self._quadtree.treeUpdate.unsubscribe(self._update)
+            self._quadtree.evChanged.unsubscribe(self._update)
 
         self.ax.set_position([0.05, 0.15, 0.90, 0.8])
         ax_eps = self.fig.add_axes([0.05, 0.1, 0.90, 0.03])
@@ -374,7 +374,7 @@ class QuadtreePlot(Plot2D):
 
         # Catch events
         epsilon.on_changed(change_epsilon)
-        self._quadtree.treeUpdate.subscribe(self._update)
+        self._quadtree.evChanged.subscribe(self._update)
         self.fig.canvas.mpl_connect('close_event', close_figure)
 
         plt.show()
@@ -466,10 +466,10 @@ class CovariancePlot(object):
         ax.set_yscale('log')
 
     def plotQuadtreeWeight(self, ax):
-        extent = (self._quadtree.frame.llE, self._quadtree.frame.urE,
-                  self._quadtree.frame.llN, self._quadtree.frame.urN)
-        cb = ax.imshow(self._quadtree.leaf_matrix_weights, aspect='equal',
-                       extent=extent)
+        # extent = (self._quadtree.frame.llE, self._quadtree.frame.urE,
+        #           self._quadtree.frame.llN, self._quadtree.frame.urN)
+        # cb = ax.imshow(self._quadtree.leaf_matrix_weights, aspect='equal',
+        #                extent=extent)
         ax.set_xlabel('UTM X [$m$]')
         ax.set_ylabel('UTM Y [$m$]')
 

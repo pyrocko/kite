@@ -65,10 +65,10 @@ class TestSyntheticScene(unittest.TestCase):
                              sc2.quadtree.tile_size_min)
             self.assertEqual(sc1.quadtree.tile_size_max,
                              sc2.quadtree.tile_size_max)
-            self.assertEqual(sc1.quadtree.nleafs,
-                             sc2.quadtree.nleafs)
-            self.assertEqual([l.id for l in sc1.quadtree.leafs],
-                             [l.id for l in sc2.quadtree.leafs])
+            self.assertEqual(sc1.quadtree.nleaves,
+                             sc2.quadtree.nleaves)
+            self.assertEqual([l.id for l in sc1.quadtree.leaves],
+                             [l.id for l in sc2.quadtree.leaves])
 
         finally:
             shutil.rmtree(tmp_dir)
@@ -134,10 +134,10 @@ class TestMatlabScene(unittest.TestCase):
                              sc2.quadtree.tile_size_min)
             self.assertEqual(sc1.quadtree.tile_size_max,
                              sc2.quadtree.tile_size_max)
-            self.assertEqual(sc1.quadtree.nleafs,
-                             sc2.quadtree.nleafs)
-            self.assertEqual([l.id for l in sc1.quadtree.leafs],
-                             [l.id for l in sc2.quadtree.leafs])
+            self.assertEqual(sc1.quadtree.nleaves,
+                             sc2.quadtree.nleaves)
+            self.assertEqual([l.id for l in sc1.quadtree.leaves],
+                             [l.id for l in sc2.quadtree.leaves])
 
             self.assertEqual(sc1.covariance.variance,
                              sc2.covariance.variance)

@@ -180,6 +180,7 @@ class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
 
     def __init__(self, *args, **kwargs):
         SandboxSource.__init__(self, *args, **kwargs)
+        PyrockoSource.__init__(self)
         self.pyrocko_source = gf.RingfaultSource(**self._src_args)
 
     @property
@@ -219,11 +220,15 @@ class PyrockoProcessor(SourceProcessor):
             north_shifts=coords[:, 1],
             interpolation='nearest_neighbor')
 
-        for store_dir in set([src.store_dir for src in sources]):
+        store_dirs = set([src.store_dir for src in sources])
+        for store_dir in store_dirs:
             self.engine.store_dirs = [store_dir]
 
-            pyr_sources = [src.pyrocko_source for src in sources
-                           if src.store_dir == store_dir]
+            talpa_sources = [src for src in sources
+                             if src.store_dir == store_dir
+                             and src._cached_result is None]
+
+            pyr_sources = [src.pyrocko_source for src in talpa_sources]
 
             for src in pyr_sources:
                 src.regularize()
@@ -232,15 +237,27 @@ class PyrockoProcessor(SourceProcessor):
                 res = self.engine.process(
                     pyr_sources, [target],
                     nthreads=nthreads)
+
             except Exception as e:
                 self._log.error(
                     'Could not execute pyrocko.gf.LocalEngine.process! \n'
                     'LocalEngine Exception: %s' % e)
                 continue
 
-            for static_res in res.static_results():
+            for ires, static_res in enumerate(res.static_results()):
                 result['displacement.n'] += static_res.result['displacement.n']
                 result['displacement.e'] += static_res.result['displacement.e']
                 result['displacement.d'] += static_res.result['displacement.d']
+
+                talpa_sources[ires]._cached_result = static_res.result
+
+        for src in sources:
+            if src._cached_result is None:
+                continue
+            self._log.debug('Using cached displacement for %s'
+                            % src.__class__.__name__)
+            result['displacement.n'] += src._cached_result['displacement.n']
+            result['displacement.e'] += src._cached_result['displacement.e']
+            result['displacement.d'] += src._cached_result['displacement.d']
 
         return result

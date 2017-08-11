@@ -1,10 +1,11 @@
 #!/bin/python
 import unittest
 import numpy as num
-from common import Benchmark
-from kite import Scene, SceneTest
 import matplotlib.pyplot as plt
 import os
+
+from kite import Scene, TestScene
+from .common import Benchmark
 
 benchmark = Benchmark()
 
@@ -22,10 +23,10 @@ class TestCovariance(unittest.TestCase):
 
         # self.sc.quadtree.epsilon = .05
         # self.sc.quadtree.tile_size_limit = (250, 12e3)
-        # self.sc = SceneTest.createGauss(ny=250)
+        # self.sc = TestScene.createGauss(ny=250)
 
     def __setUp(self):
-        self.sc = SceneTest.createGauss()
+        self.sc = TestScene.createGauss()
         # self.sc._log.setLevel('CRITICAL')
 
     # @unittest.skip('Skipped')
@@ -67,7 +68,7 @@ class TestCovariance(unittest.TestCase):
         cov = self.sc.covariance
         cov.epsilon = .02
         cov.subsampling = 10
-        # l = self.sc.quadtree.leafs[0]
+        # l = self.sc.quadtree.leaves[0]
         d = []
         d.append(('Full', cov._calcCovarianceMatrix(method='full',
                  nthreads=0)))

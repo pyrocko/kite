@@ -12,8 +12,8 @@ class RectangularSourceROI(pg.ROI):
 
     newSourceParameters = QtCore.Signal(object)
 
-    pen_outline = pg.mkPen((46, 125, 50, 180), width=1.25)
-    pen_handle = pg.mkPen(((38, 50, 56, 180)), width=1.25)
+    pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
+    pen_handle = pg.mkPen(((38, 50, 56, 100)), width=1.25)
     pen_highlight = pg.mkPen((52, 175, 60), width=2.5)
 
     def __init__(self, delegate):
@@ -98,8 +98,8 @@ class PointSourceROI(pg.EllipseROI):
 
     newSourceParameters = QtCore.Signal(object)
 
-    pen_outline = pg.mkPen((46, 125, 50, 180), width=1.25)
-    pen_handle = pg.mkPen(((38, 50, 56, 180)), width=1.25)
+    pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
+    pen_handle = pg.mkPen(((38, 50, 56, 100)), width=1.25)
     pen_highlight = pg.mkPen((52, 175, 60), width=2.5)
 
     def __init__(self, delegate):
