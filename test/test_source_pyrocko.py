@@ -11,16 +11,16 @@ gf_store = '/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruz
 
 
 class testSourcePyrocko(unittest.TestCase):
-    def setUp(self):
-        self.ms = ModelScene()
-        self.tmpdir = tempfile.mkdtemp(prefix='kite')
-        print self.tmpdir
+    @classmethod
+    def setUpClass(cls):
+        cls.ms = ModelScene()
+        cls.tmpdir = tempfile.mkdtemp(prefix='kite')
 
-    def tearDown(self):
-        return
-        shutil.rmtree(self.tmpdir)
+    @classmethod
+    def tearDownClass(cls):
+        shutil.rmtree(cls.tmpdir)
 
-    def testPyrockoRectangularSource(self):
+    def test_rectangular_source(self):
         nsources = 2
 
         def r(lo, hi):
@@ -41,9 +41,9 @@ class testSourcePyrocko(unittest.TestCase):
                     width=15. * length**.66,
                     store_dir=gf_store))  # noqa
 
-        # self.plotDisplacement(self.ms)
+        # self._plot_displacement(self.ms)
 
-    def testPyrockoMomentTensor(self):
+    def test_moment_tensor(self):
         nsources = 5
 
         def r(lo, hi):
@@ -57,9 +57,9 @@ class testSourcePyrocko(unittest.TestCase):
                     depth=r(0, 8000),  # ok
                     store_dir=gf_store))
 
-        self.plotDisplacement(self.ms)
+        self._plot_displacement(self.ms)
 
-    def testPyrockoDoubleCouple(self):
+    def test_double_couple(self):
         nsources = 5
 
         def r(lo, hi):
@@ -73,9 +73,9 @@ class testSourcePyrocko(unittest.TestCase):
                     depth=r(0, 8000),  # ok
                     store_dir=gf_store))
 
-        self.plotDisplacement(self.ms)
+        self._plot_displacement(self.ms)
 
-    def testPyrockoRingfault(self):
+    def test_ring_fault(self):
         nsources = 1
 
         def r(lo, hi):
@@ -94,12 +94,12 @@ class testSourcePyrocko(unittest.TestCase):
                     diameter=diameter,
                     store_dir=gf_store))  # noqa
 
-        self.plotDisplacement(self.ms)
+        self._plot_displacement(self.ms)
 
     @staticmethod
-    def plotDisplacement(ms):
+    def _plot_displacement(ms):
         import matplotlib.pyplot as plt
-        from matplotlib.patches import Polygon
+        from matplotlib.patches import Polygon  # noqa
         fig = plt.figure()
         ax = fig.gca()
         ms.processSources()

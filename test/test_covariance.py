@@ -2,35 +2,22 @@
 import unittest
 import numpy as num
 import matplotlib.pyplot as plt
-import os
 
 from kite import Scene, TestScene
-from .common import Benchmark
+from . import common
 
-benchmark = Benchmark()
+benchmark = common.Benchmark()
 
 
 class TestCovariance(unittest.TestCase):
 
-    def setUp(self):
-        file = os.path.join(
-         os.path.abspath(os.path.dirname(__file__)),
-         'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+    @classmethod
+    def setUpClass(cls):
+        file = common.get_test_data(
+            '20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+        cls.sc = Scene.import_data(file)
 
-        self.sc = Scene.import_data(file)
-        self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
-        self.sc._log.setLevel('CRITICAL')
-
-        # self.sc.quadtree.epsilon = .05
-        # self.sc.quadtree.tile_size_limit = (250, 12e3)
-        # self.sc = TestScene.createGauss(ny=250)
-
-    def __setUp(self):
-        self.sc = TestScene.createGauss()
-        # self.sc._log.setLevel('CRITICAL')
-
-    # @unittest.skip('Skipped')
-    def testCovariance(self):
+    def test_covariance(self):
         cov = self.sc.covariance
         cov.epsilon = .02
         cov.subsampling = 24

@@ -574,6 +574,11 @@ class Quadtree(object):
         self.config.leaf_blacklist = []
 
     def blacklistLeaves(self, leaves):
+        ''' Blacklist a leaf and exclude it from the tree
+        
+        :param leaves: Leaf instances
+        :type leaves: list
+        '''
         self.config.leaf_blacklist.extend(leaves)
         self._log.debug('Blacklisted leaves: %s'
                         % ', '.join(self.config.leaf_blacklist))

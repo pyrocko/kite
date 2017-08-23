@@ -12,6 +12,9 @@ from kite import Scene
 filenames = {
     'matlab': 'myanmar_alos_dsc_ionocorr.mat',
     'gmtsar': 'gmtsar/',
+    # 'roi_pac': None,
+    # 'gamma': None,
+    # 'isce': None,
 }
 
 
@@ -26,7 +29,7 @@ class SceneIOTest(unittest.TestCase):
         shutil.rmtree(cls.tmp_dir)
 
 
-def _make_function(fmt, filename):
+def _create_test_func(fmt, filename):
     def f(self):
         fn = common.get_test_data(filename)
         if isinstance(fn, list):
@@ -52,4 +55,4 @@ for fmt, filename in filenames.iteritems():
     setattr(
         SceneIOTest,
         'test_import_%s' % fmt,
-        _make_function(fmt, filename))
+        _create_test_func(fmt, filename))
