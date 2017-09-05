@@ -170,9 +170,9 @@ class ModelScene(BaseScene):
         self._log.debug('Loading reference scene from %s' % filename)
 
     def setReferenceScene(self, scene):
+        self.frame._updateConfig(scene.frame.config)
         self.setExtent(scene.cols, scene.rows)
 
-        self.frame._updateConfig(scene.frame.config)
 
         self.phi = scene.phi
         self.theta = scene.theta
