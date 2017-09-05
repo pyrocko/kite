@@ -6,6 +6,11 @@ import shutil
 from kite import ModelScene, TestModelScene
 from kite.sources import OkadaSource, OkadaPath
 
+from . import common
+
+plot = False
+common.setLogLevel('DEBUG')
+
 
 class testSourceOkada(unittest.TestCase):
     __name__ = 'SandboxTestOkada'
@@ -19,7 +24,7 @@ class testSourceOkada(unittest.TestCase):
         return
         shutil.rmtree(self.tmpdir)
 
-    def testOkadaSource(self):
+    def test_okada_source(self):
         nsources = 2
 
         def r(lo, hi):
@@ -39,10 +44,9 @@ class testSourceOkada(unittest.TestCase):
                     length=length,
                     width=15. * length**.66,))
 
-        self.plotDisplacement(self.ms)
+            self._plot_displacement(self.ms)
 
-    @unittest.skip
-    def testOkadaPath(self):
+    def _test_okada_path(self):
         ok_path = OkadaPath(
             easting=10000,
             northing=24000,)
@@ -52,10 +56,14 @@ class testSourceOkada(unittest.TestCase):
         # ok_path.insertNode(1, 22000, 34000)
         self.ms.addSource(ok_path)
 
-        self.plotDisplacement(self.ms)
+        self._plot_displacement(self.ms)
 
     @staticmethod
-    def plotDisplacement(ms):
+    def _plot_displacement(ms):
+        if not plot:
+            ms.down
+            return
+
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon
         fig = plt.figure()
@@ -79,9 +87,10 @@ class testSourceOkada(unittest.TestCase):
         msc = TestModelScene.randomOkada(nsources=2)
         msc.save(filename=filename)
 
-        msc2 = ModelScene.load(filename=filename)
+        msd2 = ModelScene.load(filename=filename)  # noqa
         # print msc2.config
 
 
 if __name__ == '__main__':
+    plot = True
     unittest.main(exit=False)

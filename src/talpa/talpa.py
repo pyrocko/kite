@@ -20,12 +20,11 @@ class Talpa(QtGui.QApplication):
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
         self.splash = QtGui.QSplashScreen(
             splash_img, QtCore.Qt.WindowStaysOnTopHint)
-
-        self.talpa_win = TalpaMainWindow(filename=filename)
-
         self.updateSplashMessage('')
         self.splash.show()
         self.processEvents()
+
+        self.talpa_win = TalpaMainWindow(filename=filename)
 
         self.splash.finish(self.talpa_win)
 
@@ -40,6 +39,7 @@ class Talpa(QtGui.QApplication):
     def updateSplashMessage(self, msg=''):
         self.splash.showMessage("Loading %s ..." % msg.title(),
                                 QtCore.Qt.AlignBottom)
+        self.processEvents()
 
 
 class TalpaMainWindow(QtGui.QMainWindow):

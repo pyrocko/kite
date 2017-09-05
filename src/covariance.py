@@ -239,7 +239,7 @@ class Covariance(object):
         if self._noise_data is not None:
             return self._noise_data
         elif self.config.noise_coord is not None:
-            self._log.info('Selecting noise_data from config...')
+            self._log.debug('Selecting noise_data from config...')
             llE, llN = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[:2])
             sE, sN = self.scene.frame.mapENMatrix(
@@ -248,7 +248,7 @@ class Covariance(object):
             slice_N = slice(llN, llN + sN)
             self.noise_data = self.scene.displacement[slice_N, slice_E]
         else:
-            self._log.info('Selecting noise_data from Quadtree...')
+            self._log.debug('Selecting noise_data from Quadtree...')
             node = self.selectNoiseNode()
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,
@@ -382,7 +382,7 @@ class Covariance(object):
         '''
         return num.sum(self.weight_matrix_focal, axis=1)
 
-    def _calcCovarianceMatrix(self, method='focal'):
+    def _calcCovarianceMatrix(self, method='focal', nthreads=None):
         '''Constructs the covariance matrix.
 
         :param method: Either ``focal`` point distances are used - this is
@@ -394,6 +394,8 @@ class Covariance(object):
         :rtype: thon:numpy.ndarray
         '''
         self._initialized = True
+        if nthreads is None:
+            nthreads = self.nthreads
 
         nl = len(self.quadtree.leaves)
         self._leaf_mapping = {}
@@ -425,7 +427,7 @@ class Covariance(object):
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
-                            leaf_map, ma, mb, self.variance, self.nthreads,
+                            leaf_map, ma, mb, self.variance, nthreads,
                             self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
         else:

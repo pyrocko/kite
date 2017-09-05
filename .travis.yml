@@ -4,12 +4,15 @@ env:
     global:
         - OMP_NUM_THREADS=4
 
+cache:
+  pip: true
+  directories: $TRAVIS_BUILD_DIR/kite/test/data
+
 matrix:
     include:
         - os: linux
           sudo: required
           python: 2.7
-          cache: pip
           virtualenv:
               system_site_packages: true
 
@@ -20,8 +23,10 @@ addons:
              python-matplotlib, python-yaml, python-tk, xvfb ]
 
 before_install:
-    - pip install setuptools flake8 pyyaml coveralls
-    - easy_install https://github.com/pyrocko/pyrocko.git
+    - pip install --upgrade pip
+    - pip install --upgrade setuptools 
+    - pip install flake8 pyyaml coveralls
+    - pip install git+https://github.com/pyrocko/pyrocko.git
 
 before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
