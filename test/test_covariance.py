@@ -1,35 +1,23 @@
 #!/bin/python
 import unittest
 import numpy as num
-from common import Benchmark
-from kite import Scene, SceneTest
 import matplotlib.pyplot as plt
-import os
 
-benchmark = Benchmark()
+from kite import Scene
+from . import common
+
+benchmark = common.Benchmark()
+common.setLogLevel('DEBUG')
 
 
 class TestCovariance(unittest.TestCase):
 
-    def setUp(self):
-        file = os.path.join(
-         os.path.abspath(os.path.dirname(__file__)),
-         'data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+    @classmethod
+    def setUpClass(cls):
+        file = common.get_test_data('myanmar_alos_dsc_ionocorr.mat')
+        cls.sc = Scene.import_data(file)
 
-        self.sc = Scene.import_data(file)
-        self.sc.meta.scene_title = 'Matlab Input - Myanmar 2011-02-14'
-        self.sc._log.setLevel('CRITICAL')
-
-        # self.sc.quadtree.epsilon = .05
-        # self.sc.quadtree.tile_size_limit = (250, 12e3)
-        # self.sc = SceneTest.createGauss(ny=250)
-
-    def __setUp(self):
-        self.sc = SceneTest.createGauss()
-        # self.sc._log.setLevel('CRITICAL')
-
-    # @unittest.skip('Skipped')
-    def testCovariance(self):
+    def test_covariance(self):
         cov = self.sc.covariance
         cov.epsilon = .02
         cov.subsampling = 24
@@ -44,30 +32,31 @@ class TestCovariance(unittest.TestCase):
                 num.testing.assert_allclose(c1, c2,
                                             rtol=200, atol=2e3, verbose=True)
 
-    @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancParallel(self):
-        cov = self.sc.covariance
-        cov._calcCovarianceMatrix(method='full', nthreads=12)
+    def test_synthetic_noise(self):
+        self.sc.covariance.syntheticNoise()
+        self.sc.covariance.variance
 
     @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancSingle(self):
+    def test_covariance_parallel(self):
+        cov = self.sc.covariance
+        cov._calcCovarianceMatrix(method='full', nthreads=0)
+
+    @benchmark
+    def _test_covariance_single_thread(self):
         cov = self.sc.covariance
         cov._calcCovarianceMatrix(method='full', nthreads=1)
 
     @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancFocal(self):
+    def test_covariance_focal(self):
         cov = self.sc.covariance
         cov._calcCovarianceMatrix(method='focal')
 
     @unittest.skip('Skip!')
-    def testCovarianceVisual(self):
+    def _test_covariance_visual(self):
         cov = self.sc.covariance
         cov.epsilon = .02
         cov.subsampling = 10
-        # l = self.sc.quadtree.leafs[0]
+        # l = self.sc.quadtree.leaves[0]
         d = []
         d.append(('Full', cov._calcCovarianceMatrix(method='full',
                  nthreads=0)))

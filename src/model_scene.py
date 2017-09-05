@@ -98,7 +98,7 @@ class ModelScene(BaseScene):
     def addSource(self, source):
         if source not in self.sources:
             self.sources.append(source)
-        self._log.info('%s added' % source.__class__.__name__)
+        self._log.debug('%s added' % source.__class__.__name__)
         source.evParametersChanged.subscribe(self._clearModel)
 
         self._clearModel()
@@ -106,7 +106,7 @@ class ModelScene(BaseScene):
     def removeSource(self, source):
         source.evParametersChanged.unsubscribe(self._clearModel)
         self.sources.remove(source)
-        self._log.info('%s removed' % source.__class__.__name__)
+        self._log.debug('%s removed' % source.__class__.__name__)
         del source
 
         self._clearModel()
@@ -189,7 +189,7 @@ class ModelScene(BaseScene):
         :rtype: :class:`Scene`
         '''
         from .scene import Scene, SceneConfig
-        self._log.info('Creating kite.Scene from ModelScene')
+        self._log.debug('Creating kite.Scene from ModelScene')
 
         config = SceneConfig()
         config.frame = self.frame.config
@@ -211,7 +211,7 @@ class ModelScene(BaseScene):
     def save(self, filename):
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
-        self._log.info('Saving model scene to %s' % filename)
+        self._log.debug('Saving model scene to %s' % filename)
         for source in self.sources:
             source.regularize()
         self.config.dump(filename='%s' % filename,
@@ -221,9 +221,9 @@ class ModelScene(BaseScene):
     def load(cls, filename):
         config = guts.load(filename=filename)
         model_scene = cls(config=config)
+        model_scene._log.debug('Loading config from %s' % filename)
         for source in model_scene.sources:
             model_scene.addSource(source)
-        model_scene._log.info('Loaded config from %s' % filename)
         return model_scene
 
 

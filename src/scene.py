@@ -352,7 +352,7 @@ def dynamicmethod(func):
 
 class BaseScene(object):
 
-    def __init__(self, frame_config, **kwargs):
+    def __init__(self, **kwargs):
         self._initLogging()
 
         self._displacement = None
@@ -633,7 +633,7 @@ class Scene(BaseScene):
         filename = _file if ext in ['.yml', '.npz'] else filename
 
         components = ['displacement', 'theta', 'phi']
-        self._log.info('Saving scene data to %s.npz' % filename)
+        self._log.debug('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),
                   *[getattr(self, arr) for arr in components])
@@ -642,7 +642,7 @@ class Scene(BaseScene):
     def saveConfig(self, filename):
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
-        self._log.info('Saving scene config to %s' % filename)
+        self._log.debug('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
 
@@ -660,7 +660,7 @@ class Scene(BaseScene):
         components = ['displacement', 'theta', 'phi']
 
         basename = op.splitext(filename)[0]
-        scene._log.info('Loading from %s[.npz,.yml]' % basename)
+        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
         try:
             data = num.load('%s.npz' % basename)
             for i, comp in enumerate(components):
@@ -680,7 +680,7 @@ class Scene(BaseScene):
     load = staticmethod(_load)
 
     def load_config(self, filename):
-        self._log.info('Loading config from %s' % filename)
+        self._log.debug('Loading config from %s' % filename)
         self.config = guts.load(filename=filename)
         self.meta = self.config.meta
 
@@ -706,13 +706,26 @@ class Scene(BaseScene):
         for mod in scene_io.__all__:
             module = eval('scene_io.%s(scene)' % mod)
             if module.validate(path, **kwargs):
-                scene._log.info('Importing %s using %s module' %
+                scene._log.debug('Importing %s using %s module' %
                                 (path, mod))
                 data = module.read(path, **kwargs)
                 break
         if data is None:
             raise ImportError('Could not recognize format for %s' % path)
 
+        scene.meta.filename = op.basename(path)
+        return scene._import_from_dict(scene, data)
+
+    _import_data.__doc__ += \
+        '\nSupported import modules are **%s**.\n'\
+        % (', ').join(scene_io.__all__)
+    for mod in scene_io.__all__:
+        _import_data.__doc__ += '\n**%s**\n\n' % mod
+        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
+    import_data = staticmethod(_import_data)
+
+    @staticmethod
+    def _import_from_dict(scene, data):
         for sk in ['theta', 'phi', 'displacement']:
             setattr(scene, sk, data[sk])
 
@@ -724,17 +737,8 @@ class Scene(BaseScene):
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
 
-        scene.meta.filename = op.basename(path)
         scene._testImport()
         return scene
-
-    _import_data.__doc__ += \
-        '\nSupported import modules are **%s**.\n'\
-        % (', ').join(scene_io.__all__)
-    for mod in scene_io.__all__:
-        _import_data.__doc__ += '\n**%s**\n\n' % mod
-        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
-    import_data = staticmethod(_import_data)
 
     def __str__(self):
         return self.config.__str__()
@@ -827,7 +831,7 @@ class TestScene(Scene):
 
         scene.displacement = displ * amplitude
         if noise is not None:
-            cls.addNoise(noise)
+            scene.addNoise(noise)
         return scene
 
     @classmethod

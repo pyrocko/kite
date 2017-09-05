@@ -2,10 +2,13 @@ import unittest
 import numpy as num
 from kite.sources import compound_engine as cm, EllipsoidSource, PointCompoundSource  # noqa
 from kite import ModelScene
-from common import Benchmark
+from . import common
 
 km = 1e3
-benchmark = Benchmark()
+plot = False
+
+benchmark = common.Benchmark()
+common.setLogLevel('DEBUG')
 
 
 class CompoundModelsTest(unittest.TestCase):
@@ -52,7 +55,7 @@ class CompoundModelsTest(unittest.TestCase):
                ax, ay, az, P, mu, lamda)
         ue, un, uv, _, _ = runECM()
 
-        # self.plot_displacement(un.reshape(nrows, ncols))
+        self._plot_displacement(un.reshape(nrows, ncols))
 
     def test_ECM_against_Octave(self):
         from scipy import io
@@ -104,8 +107,8 @@ class CompoundModelsTest(unittest.TestCase):
             # print [pym.min(), pym.max()], [m.min(), m.max()]
             num.testing.assert_allclose(pym, m, rtol=1e-11)
 
-        # self.plot_displacement(uv)
-        # self.plot_displacement(mat['uv'])
+        self._plot_displacement(uv)
+        self._plot_displacement(mat['uv'])
 
     def testEllipsoidSource(self):
         def r(lo, hi):
@@ -117,7 +120,10 @@ class CompoundModelsTest(unittest.TestCase):
             northing=r(0., ms.frame.N.max()),
             depth=1e3)
         src.regularize()
+
         ms.addSource(src)
+
+        self._plot_modelScene(ms)
 
     def test_pointCDM_against_Octave(self):
         from scipy import io
@@ -167,8 +173,9 @@ class CompoundModelsTest(unittest.TestCase):
             m = mat[comp]
             # print [pym.min(), pym.max()], [m.min(), m.max()]
             num.testing.assert_allclose(pym, m, rtol=1e-9)
-        # self.plot_displacement(mat['uv'])
-        # self.plot_displacement(uv)
+
+        self._plot_displacement(mat['uv'])
+        self._plot_displacement(uv)
 
     def testPointCompoundSourceSource(self):
         def r(lo, hi):
@@ -182,10 +189,14 @@ class CompoundModelsTest(unittest.TestCase):
         src.regularize()
         ms.addSource(src)
 
-        # self.plot_modelScene(ms)
+        self._plot_modelScene(ms)
 
     @staticmethod
-    def plot_modelScene(ms):
+    def _plot_modelScene(ms):
+        if not plot:
+            ms.down
+            return
+
         import matplotlib.pyplot as plt
         fig = plt.figure()
         ax = fig.gca()
@@ -196,7 +207,11 @@ class CompoundModelsTest(unittest.TestCase):
         plt.show()
 
     @staticmethod
-    def plot_displacement(u):
+    def _plot_displacement(u):
+        if not plot:
+            u
+            return
+
         import matplotlib.pyplot as plt
         fig = plt.figure()
         ax = fig.gca()
@@ -206,5 +221,6 @@ class CompoundModelsTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    plot = True
     unittest.main(exit=False)
     print benchmark

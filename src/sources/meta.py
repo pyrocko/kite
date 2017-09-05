@@ -19,9 +19,11 @@ class SandboxSource(Object):
 
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
+        self._cached_result = None
         self.evParametersChanged = Subject()
 
     def parametersUpdated(self):
+        self._cached_result = None
         self.evParametersChanged.notify()
 
     def getParametersArray(self):

@@ -338,7 +338,7 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
 
         mat_N = self.sandbox.model.north.T
         mat_E = self.sandbox.model.east.T
-        img_shape = self.image.image.T.shape
+        img_shape = self.image.image.shape
         ivec = 0
 
         length_scale = self.sandbox.model.max_horizontal_displacement

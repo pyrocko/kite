@@ -151,7 +151,7 @@ class OkadaPath(SandboxSource):
 
         Leonard, M. (2010). Earthquake fault scaling: Relating rupture length,
             width, average displacement, and moment release, Bull. Seismol.
-            Soc. Am. 100, no. 5, 1971–1988.
+            Soc. Am. 100, no. 5, 1971-1988.
         '''
         segment = {
             'northing': n1 + dN/2,
