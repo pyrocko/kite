@@ -23,6 +23,7 @@ addons:
              python-matplotlib, python-yaml, python-tk, xvfb ]
 
 before_install:
+    - pip install --upgrade pip
     - pip install setuptools flake8 pyyaml coveralls
     - pip install git+https://github.com/pyrocko/pyrocko.git
 
