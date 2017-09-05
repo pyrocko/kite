@@ -239,7 +239,7 @@ class Covariance(object):
         if self._noise_data is not None:
             return self._noise_data
         elif self.config.noise_coord is not None:
-            self._log.info('Selecting noise_data from config...')
+            self._log.debug('Selecting noise_data from config...')
             llE, llN = self.scene.frame.mapENMatrix(
                 *self.config.noise_coord[:2])
             sE, sN = self.scene.frame.mapENMatrix(
@@ -248,7 +248,7 @@ class Covariance(object):
             slice_N = slice(llN, llN + sN)
             self.noise_data = self.scene.displacement[slice_N, slice_E]
         else:
-            self._log.info('Selecting noise_data from Quadtree...')
+            self._log.debug('Selecting noise_data from Quadtree...')
             node = self.selectNoiseNode()
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,

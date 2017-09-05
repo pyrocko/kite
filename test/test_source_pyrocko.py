@@ -7,7 +7,12 @@ from kite import ModelScene, TestModelScene  # noqa
 from kite.sources import (PyrockoRectangularSource, PyrockoMomentTensor,
                           PyrockoDoubleCouple, PyrockoRingfaultSource)
 
+from . import common
+
+plot = False
 gf_store = '/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'  # noqa
+
+common.setLogLevel('DEBUG')
 
 
 class testSourcePyrocko(unittest.TestCase):
@@ -41,7 +46,7 @@ class testSourcePyrocko(unittest.TestCase):
                     width=15. * length**.66,
                     store_dir=gf_store))  # noqa
 
-        # self._plot_displacement(self.ms)
+        self._plot_displacement(self.ms)
 
     def test_moment_tensor(self):
         nsources = 5
@@ -98,6 +103,10 @@ class testSourcePyrocko(unittest.TestCase):
 
     @staticmethod
     def _plot_displacement(ms):
+        if not plot:
+            ms.down
+            return
+
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon  # noqa
         fig = plt.figure()
@@ -115,4 +124,5 @@ class testSourcePyrocko(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    plot = True
     unittest.main(exit=False)

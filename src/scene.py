@@ -633,7 +633,7 @@ class Scene(BaseScene):
         filename = _file if ext in ['.yml', '.npz'] else filename
 
         components = ['displacement', 'theta', 'phi']
-        self._log.info('Saving scene data to %s.npz' % filename)
+        self._log.debug('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),
                   *[getattr(self, arr) for arr in components])
@@ -642,7 +642,7 @@ class Scene(BaseScene):
     def saveConfig(self, filename):
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
-        self._log.info('Saving scene config to %s' % filename)
+        self._log.debug('Saving scene config to %s' % filename)
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
 
@@ -660,7 +660,7 @@ class Scene(BaseScene):
         components = ['displacement', 'theta', 'phi']
 
         basename = op.splitext(filename)[0]
-        scene._log.info('Loading from %s[.npz,.yml]' % basename)
+        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
         try:
             data = num.load('%s.npz' % basename)
             for i, comp in enumerate(components):
@@ -680,7 +680,7 @@ class Scene(BaseScene):
     load = staticmethod(_load)
 
     def load_config(self, filename):
-        self._log.info('Loading config from %s' % filename)
+        self._log.debug('Loading config from %s' % filename)
         self.config = guts.load(filename=filename)
         self.meta = self.config.meta
 
@@ -706,7 +706,7 @@ class Scene(BaseScene):
         for mod in scene_io.__all__:
             module = eval('scene_io.%s(scene)' % mod)
             if module.validate(path, **kwargs):
-                scene._log.info('Importing %s using %s module' %
+                scene._log.debug('Importing %s using %s module' %
                                 (path, mod))
                 data = module.read(path, **kwargs)
                 break

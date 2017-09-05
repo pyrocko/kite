@@ -6,7 +6,10 @@ import shutil
 from kite import ModelScene, TestModelScene
 from kite.sources import OkadaSource, OkadaPath
 
+from . import common
+
 plot = False
+common.setLogLevel('DEBUG')
 
 
 class testSourceOkada(unittest.TestCase):
@@ -41,7 +44,6 @@ class testSourceOkada(unittest.TestCase):
                     length=length,
                     width=15. * length**.66,))
 
-        if plot:
             self._plot_displacement(self.ms)
 
     def _test_okada_path(self):
@@ -53,11 +55,15 @@ class testSourceOkada(unittest.TestCase):
         ok_path.addNode(22000, 34000)
         # ok_path.insertNode(1, 22000, 34000)
         self.ms.addSource(ok_path)
-        if plot:
-            self._plot_displacement(self.ms)
+
+        self._plot_displacement(self.ms)
 
     @staticmethod
     def _plot_displacement(ms):
+        if not plot:
+            ms.down
+            return
+
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon
         fig = plt.figure()

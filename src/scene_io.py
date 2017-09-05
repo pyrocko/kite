@@ -144,8 +144,9 @@ class Matlab(SceneIO):
         if utm_zone is None:
             utm_zone = 33
             utm_zone_letter = 'N'
-            self._log.warning('Defaulting to UTM Zone %d%s' %
-                              (utm_zone, utm_zone_letter))
+            self._log.warning(
+                'utm_zone not defined. Defaulting to UTM Zone %d%s!' %
+                (utm_zone, utm_zone_letter))
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
                 'Could not find referencing UTM vectors in .mat file')
@@ -264,7 +265,7 @@ class Gamma(SceneIO):
             return 0.
 
         filename = phi_files[0]
-        self._log.info('Found %s in %s' % (pattern, filename))
+        self._log.debug('Found %s in %s' % (pattern, filename))
         return num.memmap(filename, mode='r', dtype='>f4')
 
     def read(self, filename, **kwargs):
@@ -314,7 +315,7 @@ class Gamma(SceneIO):
         c = self.container
 
         if radar_frequency is not None:
-            self._log.info('Scaling radian displacement by radar_frequency')
+            self._log.debug('Scaling radian displacement by radar_frequency')
             wavelength = 299792458. / radar_frequency
             displ = (displ / (4.*num.pi)) * wavelength
             c['meta']['wavelength'] = wavelength
@@ -328,7 +329,7 @@ class Gamma(SceneIO):
         c['par_file'] = par_file
 
         if par['DEM_projection'] == 'UTM':
-            self._log.info('Parameter file provides UTM reference')
+            self._log.debug('Parameter file provides UTM reference')
             import utm
             c['displacement'] = num.transpose(displ/100)
             c['theta'] = num.transpose(theta)
@@ -365,7 +366,7 @@ class Gamma(SceneIO):
             c['frame']['dLon'] =\
                 (urlon - c['frame']['llLon']) / displ.shape[1]
         else:
-            self._log.info('Parameter file provides Lat/Lon reference')
+            self._log.debug('Parameter file provides Lat/Lon reference')
             c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
             c['frame']['llLon'] = par['corner_lon']
             c['frame']['dLon'] = par['post_lon']
@@ -454,7 +455,8 @@ class ROI_PAC(SceneIO):
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
-        look = num.mean(num.array([look_ref1,look_ref2,look_ref3,look_ref4]))
+        look = num.mean(
+            num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
         data = num.memmap(filename, dtype='<f4')
         data = data.reshape(nlines, nrows*2)

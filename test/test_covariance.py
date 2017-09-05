@@ -3,18 +3,18 @@ import unittest
 import numpy as num
 import matplotlib.pyplot as plt
 
-from kite import Scene, TestScene
+from kite import Scene
 from . import common
 
 benchmark = common.Benchmark()
+common.setLogLevel('DEBUG')
 
 
 class TestCovariance(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        file = common.get_test_data(
-            '20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat')
+        file = common.get_test_data('myanmar_alos_dsc_ionocorr.mat')
         cls.sc = Scene.import_data(file)
 
     def test_covariance(self):
@@ -32,26 +32,27 @@ class TestCovariance(unittest.TestCase):
                 num.testing.assert_allclose(c1, c2,
                                             rtol=200, atol=2e3, verbose=True)
 
-    @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancParallel(self):
-        cov = self.sc.covariance
-        cov._calcCovarianceMatrix(method='full', nthreads=12)
+    def test_synthetic_noise(self):
+        self.sc.covariance.syntheticNoise()
+        self.sc.covariance.variance
 
     @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancSingle(self):
+    def test_covariance_parallel(self):
+        cov = self.sc.covariance
+        cov._calcCovarianceMatrix(method='full', nthreads=0)
+
+    @benchmark
+    def _test_covariance_single_thread(self):
         cov = self.sc.covariance
         cov._calcCovarianceMatrix(method='full', nthreads=1)
 
     @benchmark
-    @unittest.skip('Skip!')
-    def testCovariancFocal(self):
+    def test_covariance_focal(self):
         cov = self.sc.covariance
         cov._calcCovarianceMatrix(method='focal')
 
     @unittest.skip('Skip!')
-    def testCovarianceVisual(self):
+    def _test_covariance_visual(self):
         cov = self.sc.covariance
         cov.epsilon = .02
         cov.subsampling = 10

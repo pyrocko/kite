@@ -4,6 +4,10 @@ import os.path
 import numpy as num
 from kite import Scene, TestScene
 
+from . import common
+
+common.setLogLevel('DEBUG')
+
 
 class TestSyntheticsGenerators(unittest.TestCase):
     def testGauss(self):

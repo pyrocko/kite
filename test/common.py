@@ -7,11 +7,8 @@ from requests.compat import urljoin
 
 op = os.path
 
-data_dir = op.join(
-    op.dirname(op.abspath(__file__)),
-    'data')
-
-data_uri = 'http://data.pyrocko.org/testing/'
+data_uri = 'http://data.pyrocko.org/testing/kite/'
+data_dir = op.join(op.dirname(op.abspath(__file__)), 'data')
 
 logger = logging.getLogger('kite.testing')
 
@@ -33,12 +30,13 @@ def get_test_data(fn):
         return files
 
     def _file_size(url):
-        r = requests.head(url)
+        r = requests.head(url, headers={'Accept-Encoding': 'identity'})
         r.raise_for_status()
+        print r.headers
         return int(r.headers['content-length'])
 
     def _download_file(url, fn_local):
-        print fn_local
+        print url, fn_local
         if op.exists(fn_local):
             if os.stat(fn_local).st_size == _file_size(url):
                 return fn_local
@@ -46,7 +44,7 @@ def get_test_data(fn):
         logger.info('Downloading %s...' % url)
         fsize = _file_size(url)
 
-        r = requests.get(url)
+        r = requests.get(url, stream=True)
         r.raise_for_status()
 
         dl_bytes = 0
@@ -56,6 +54,7 @@ def get_test_data(fn):
                 f.write(d)
 
         if dl_bytes != fsize:
+            print url, dl_bytes, fsize
             raise DownloadError('Download incomplete!')
         logger.info('Download completed!')
         return fn_local
@@ -112,3 +111,10 @@ class Benchmark(object):
         if len(self.results) == 0:
             rstr.append('None ran!')
         return '\n'.join(rstr)
+
+
+def setLogLevel(level):
+    print('SETTING LOGLEVEL!')
+    level = getattr(logging, level, 'DEBUG')
+    logging.basicConfig(
+        level=level)

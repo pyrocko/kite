@@ -3,19 +3,24 @@ from __future__ import absolute_import
 import unittest
 import tempfile
 import shutil
-import os
 import numpy as num
+from os import path as op
 
 from . import common
 from kite import Scene
 
+
+# format (dl_dir, load_file)
 filenames = {
-    'matlab': 'myanmar_alos_dsc_ionocorr.mat',
-    'gmtsar': 'gmtsar/',
-    # 'roi_pac': None,
-    # 'gamma': None,
-    # 'isce': None,
+    'matlab': ('myanmar_alos_dsc_ionocorr.mat', None),
+    'gmtsar': ('gmtsar/', 'gmtsar/unwrap_ll.los_ll.grd'),
+    'roi_pac': ('roi_pac/',
+                'roi_pac/geo_20160113-20160206_atmo_2rlks_c10_cut.unw'),
+    'gamma': ('gamma/', 'gamma/asc'),
+    'isce': ('isce/', 'isce/filt_topophase.unw.geo')
 }
+
+common.setLogLevel('DEBUG')
 
 
 class SceneIOTest(unittest.TestCase):
@@ -29,15 +34,20 @@ class SceneIOTest(unittest.TestCase):
         shutil.rmtree(cls.tmp_dir)
 
 
-def _create_test_func(fmt, filename):
+def _create_test_func(fmt, dl_path, filename):
+
     def f(self):
-        fn = common.get_test_data(filename)
-        if isinstance(fn, list):
-            fn = fn[-1]
+        common.get_test_data(dl_path)
 
-        fn_save = os.path.join(self.tmp_dir, 'kite-%s' % fmt)
+        if filename is None:
+            load_path = dl_path
+        else:
+            load_path = filename
+        load_path = op.join(common.data_dir, load_path)
 
-        sc1 = Scene.import_data(fn)
+        fn_save = op.join(self.tmp_dir, 'kite-%s' % fmt)
+
+        sc1 = Scene.import_data(load_path)
         sc1.save(fn_save)
 
         sc2 = Scene.load(fn_save)
@@ -51,8 +61,8 @@ def _create_test_func(fmt, filename):
     return f
 
 
-for fmt, filename in filenames.iteritems():
+for fmt, fns in filenames.iteritems():
     setattr(
         SceneIOTest,
         'test_import_%s' % fmt,
-        _create_test_func(fmt, filename))
+        _create_test_func(fmt, *fns))

@@ -4,12 +4,15 @@ env:
     global:
         - OMP_NUM_THREADS=4
 
+cache:
+  pip: true
+  directories: $TRAVIS_BUILD_DIR/kite/test/data
+
 matrix:
     include:
         - os: linux
           sudo: required
           python: 2.7
-          cache: pip
           virtualenv:
               system_site_packages: true
 

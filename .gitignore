@@ -8,3 +8,4 @@ gh-pages
 .coverage
 *swp
 test/data
+htmlcov/
