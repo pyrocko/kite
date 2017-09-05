@@ -24,7 +24,8 @@ addons:
 
 before_install:
     - pip install --upgrade pip
-    - pip install setuptools flake8 pyyaml coveralls
+    - pip install --upgrade setuptools 
+    - pip install flake8 pyyaml coveralls
     - pip install git+https://github.com/pyrocko/pyrocko.git
 
 before_script:
