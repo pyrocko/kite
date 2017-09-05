@@ -161,6 +161,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
                 self.misfitWindow.show()
             else:
                 self.misfitWindow.close()
+
         self.misfitWindow.windowClosed.connect(
             lambda: self.actionMisfitScene.setChecked(False))
         self.actionMisfitScene.toggled.connect(toggleWindow)

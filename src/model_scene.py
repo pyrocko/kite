@@ -50,7 +50,7 @@ class ModelScene(BaseScene):
             if data is not None:
                 self.__setattr__(attr, data)
 
-        self.setExtent(self.config.extent_north, self.config.extent_east)
+        self.setExtent(self.config.extent_east, self.config.extent_north)
 
         if self.config.reference_scene is not None:
             self.loadReferenceScene(self.config.reference_scene)
@@ -64,17 +64,20 @@ class ModelScene(BaseScene):
             self._log.warning('Cannot change a referenced model!')
             return
 
-        self.cols = self.config.extent_east
-        self.rows = self.config.extent_north
+        self._log.debug('Changing model extent to %d px by %d px'
+                        % (east, north))
+
+        self.cols = east
+        self.rows = north
 
         self.north = num.zeros((self.rows, self.cols))
         self.east = num.zeros_like(self.north)
         self.down = num.zeros_like(self.north)
 
-        self._theta = num.zeros_like(self.north)
-        self._phi = num.zeros_like(self.north)
-        self._theta.fill(num.pi/2)
-        self._phi.fill(0.)
+        self.theta = num.zeros_like(self.north)
+        self.phi = num.zeros_like(self.north)
+        self.theta.fill(num.pi/2)
+        self.phi.fill(0.)
 
         self.frame._updateExtent()
         self._clearModel()
@@ -164,20 +167,19 @@ class ModelScene(BaseScene):
 
     def loadReferenceScene(self, filename):
         from .scene import Scene
+        self._log.debug('Loading reference scene from %s' % filename)
         scene = Scene.load(filename)
         self.setReferenceScene(scene)
         self.config.reference_scene = filename
-        self._log.debug('Loading reference scene from %s' % filename)
 
     def setReferenceScene(self, scene):
         self.frame._updateConfig(scene.frame.config)
         self.setExtent(scene.cols, scene.rows)
 
-
         self.phi = scene.phi
         self.theta = scene.theta
         self.reference = Reference(self, scene)
-        self._log.debug('Reference scene set to scene.id %s'
+        self._log.debug('Reference scene set to scene.id:%s'
                         % scene.meta.scene_id)
 
         self._clearModel()
@@ -205,7 +207,10 @@ class ModelScene(BaseScene):
         for arr in [self.north, self.east, self.down]:
             arr.fill(0.)
         self.los_displacement = None
+        self._los_factors = None
+
         self.max_horizontal_displacement = None
+
         self.evModelUpdated.notify()
 
     def save(self, filename):

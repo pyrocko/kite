@@ -43,6 +43,7 @@ class ExtentDialog(QtGui.QDialog):
 
     @QtCore.Slot()
     def updateValues(self):
+        print 'update extent!'
         self.sandbox.model.setExtent(
             self.spinEastPx.value(),
             self.spinNorthPx.value())
