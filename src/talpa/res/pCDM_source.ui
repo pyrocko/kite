@@ -3,7 +3,7 @@
  <class>EllipsoidSourceDialog</class>
  <widget class="QDialog" name="EllipsoidSourceDialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>

@@ -3,14 +3,14 @@
  <class>PyrockoRectangularSourceDialog</class>
  <widget class="QDialog" name="PyrockoRectangularSourceDialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>517</width>
-    <height>256</height>
+    <height>257</height>
    </rect>
   </property>
   <property name="sizePolicy">

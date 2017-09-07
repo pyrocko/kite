@@ -3,14 +3,14 @@
  <class>OkadaSourceDialog</class>
  <widget class="QDialog" name="OkadaSourceDialog">
   <property name="windowModality">
-   <enum>Qt::WindowModal</enum>
+   <enum>Qt::NonModal</enum>
   </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
     <width>490</width>
-    <height>283</height>
+    <height>288</height>
    </rect>
   </property>
   <property name="sizePolicy">
