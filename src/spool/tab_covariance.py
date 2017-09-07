@@ -11,8 +11,8 @@ from collections import OrderedDict
 from kite.qt_utils import loadUi
 from kite.covariance import modelCovariance
 
-from .common import (KiteView, KitePlot, KiteParameterGroup,
-                     KiteToolColormap, get_resource)
+from .base import (KiteView, KitePlot, KiteParameterGroup,
+                   KiteToolColormap, get_resource)
 
 analy_pen0 = pg.mkPen(
     (51, 53, 119, 0), width=1.5)

@@ -11,7 +11,7 @@ from .scene_model import SceneModel
 from .tab_scene import KiteScene
 from .tab_quadtree import KiteQuadtree  # noqa
 from .tab_covariance import KiteCovariance  # noqa
-from .common import get_resource
+from .base import get_resource
 
 
 class Spool(QtGui.QApplication):

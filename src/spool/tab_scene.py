@@ -7,7 +7,7 @@ import numpy as num
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from kite.qt_utils import loadUi
-from .common import KiteView, KitePlot, KiteParameterGroup, get_resource
+from .base import KiteView, KitePlot, KiteParameterGroup, get_resource
 
 
 __all__ = ['KiteScene']

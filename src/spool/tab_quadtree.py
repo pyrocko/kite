@@ -10,7 +10,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 from kite.qt_utils import SliderWidgetParameterItem
 from kite.quadtree import QuadtreeConfig
 
-from .common import KiteView, KitePlot, KiteParameterGroup
+from .base import KiteView, KitePlot, KiteParameterGroup
 
 
 class KiteQuadtree(KiteView):
