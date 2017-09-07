@@ -1,5 +1,5 @@
 from PySide import QtGui, QtCore
-from common import get_resource
+from util import get_resource
 from kite.qt_utils import loadUi
 from pyrocko.guts import Object, Bool, String, Int, Tuple, load
 from os import path

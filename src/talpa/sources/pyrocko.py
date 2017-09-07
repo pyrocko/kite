@@ -2,7 +2,7 @@ from PySide import QtCore, QtGui
 import numpy as num
 import os
 
-from .common import (RectangularSourceROI, PointSourceROI, SourceDelegate,
+from .base import (RectangularSourceROI, PointSourceROI, SourceDelegate,
                      SourceEditDialog)
 from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,

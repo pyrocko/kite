@@ -56,7 +56,7 @@
     <string>Optimize solution</string>
    </property>
    <property name="toolTip">
-    <string>ModelScene.reference.optimize</string>
+    <string>SandboxScene.reference.optimize</string>
    </property>
   </action>
  </widget>

@@ -1,15 +1,15 @@
 import sys
 from PySide import QtCore, QtGui
 
-from .common import get_resource
-from .multiplot import ModelSceneDockarea, ModelReferenceDockarea
+from .util import get_resource
+from .multiplot import SandboxSceneDockarea, ModelReferenceDockarea
 from .sources_dock import SourcesListDock
-
-from sandbox_model import SandboxModel
 from .tool_dialogs import ExtentDialog
 from .config import ConfigDialog
-from ..model_scene import ModelScene
-from ..qt_utils import loadUi, SceneLog, validateFilename
+
+from sandbox_model import SandboxModel
+from kite.sandbox_scene import SandboxScene
+from kite.qt_utils import loadUi, SceneLog, validateFilename
 
 
 class Talpa(QtGui.QApplication):
@@ -93,7 +93,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.createView(self.sandbox)
 
     def createView(self, sandbox):
-        plots = ModelSceneDockarea(sandbox)
+        plots = SandboxSceneDockarea(sandbox)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
@@ -124,7 +124,7 @@ class TalpaMainWindow(QtGui.QMainWindow):
     def onSaveModel(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(
             filter='YAML *.yml (*.yml)',
-            caption='Save ModelScene')
+            caption='Save SandboxScene')
         if not validateFilename(filename):
             return
         self.sandbox.model.save(filename)
@@ -133,10 +133,10 @@ class TalpaMainWindow(QtGui.QMainWindow):
         if filename is None:
             filename, _ = QtGui.QFileDialog.getOpenFileName(
                 filter='YAML *.yml (*.yml)',
-                caption='Load ModelScene')
+                caption='Load SandboxScene')
         if not validateFilename(filename):
             return
-        model = ModelScene.load(filename)
+        model = SandboxScene.load(filename)
         self.sandbox.setModel(model)
 
     def onLoadReferenceScene(self):

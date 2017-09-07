@@ -125,7 +125,7 @@
   </action>
   <action name="actionChangeExtent">
    <property name="text">
-    <string>Change ModelScene extent</string>
+    <string>Change SandboxScene extent</string>
    </property>
   </action>
   <action name="actionMisfitScene">

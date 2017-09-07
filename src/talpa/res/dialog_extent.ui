@@ -32,13 +32,13 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Extent ModelScene</string>
+   <string>Extent SandboxScene</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Change the spatial extent of the model using &lt;span style='font-family: monospace'&gt;ModelScene.setExtent&lt;/span&gt;.</string>
+      <string>Change the spatial extent of the model using &lt;span style='font-family: monospace'&gt;SandboxScene.setExtent&lt;/span&gt;.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -56,7 +56,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string> &lt;span style='font-family: monospace'&gt;ModelScene.config.extent_east&lt;/span&gt;</string>
+        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.config.extent_east&lt;/span&gt;</string>
        </property>
        <property name="text">
         <string>East</string>
@@ -72,7 +72,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string> &lt;span style='font-family: monospace'&gt;ModelScene.config.extent_east&lt;/span&gt;</string>
+        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.config.extent_east&lt;/span&gt;</string>
        </property>
        <property name="text">
         <string>North</string>

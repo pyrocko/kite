@@ -1,8 +1,8 @@
 from PySide import QtGui, QtCore
+from functools import partial
 
 from .sources import __sources__
-from .common import SourceEditorDialog
-from functools import partial
+from .util import SourceEditorDialog
 
 
 class SourcesListDock(QtGui.QDockWidget):

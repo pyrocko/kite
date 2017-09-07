@@ -3,7 +3,7 @@ from pyqtgraph import dockarea
 import pyqtgraph as pg
 
 from .config import config
-from .common import SourceROI
+from .util import SourceROI
 
 import numpy as num
 
@@ -11,7 +11,7 @@ import numpy as num
 d2r = num.pi / 180.
 
 
-class ModelSceneLayout(pg.GraphicsLayoutWidget):
+class SandboxSceneLayout(pg.GraphicsLayoutWidget):
     def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.sandbox = sandbox
@@ -32,7 +32,7 @@ class ModelSceneLayout(pg.GraphicsLayoutWidget):
             DisplacementPlot(
                 sandbox,
                 title='LOS',
-                component=lambda m: m.los_displacement)]
+                component=lambda m: m.displacement)]
         self.plots[-1].addHintText()
 
         self._mov_sig = pg.SignalProxy(
@@ -499,11 +499,11 @@ class ColormapPlots(pg.HistogramLUTWidget):
         updateLevels()
 
 
-class ModelSceneDockarea(dockarea.DockArea):
+class SandboxSceneDockarea(dockarea.DockArea):
 
     def __init__(self, sandbox, *args, **kwargs):
         dockarea.DockArea.__init__(self)
-        layout = ModelSceneLayout(sandbox)
+        layout = SandboxSceneLayout(sandbox)
 
         cmap = ColormapPlots()
         for plt in layout.plots:

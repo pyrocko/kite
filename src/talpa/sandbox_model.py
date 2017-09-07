@@ -1,9 +1,9 @@
 from PySide import QtCore
 
 # Importing available models
-import sources
-from .common import SourceROI, SourceEditorDialog
-from ..qt_utils import SceneLogModel
+from kite.qt_utils import SceneLogModel
+from . import sources
+from .util import SourceROI, SourceEditorDialog
 
 import logging
 
@@ -79,22 +79,22 @@ class SandboxModel(QtCore.QObject):
 
     @classmethod
     def randomOkada(cls, nsources=1):
-        from ..model_scene import TestModelScene
-        model = TestModelScene.randomOkada(nsources)
+        from ..sandbox_scene import TestSandboxScene
+        model = TestSandboxScene.randomOkada(nsources)
         sandbox = cls(model)
         return sandbox
 
     @classmethod
     def simpleOkada(cls, **kwargs):
-        from ..model_scene import TestModelScene
-        model = TestModelScene.simpleOkada(**kwargs)
+        from ..sandbox_scene import TestSandboxScene
+        model = TestSandboxScene.simpleOkada(**kwargs)
         sandbox = cls(model)
         return sandbox
 
     @classmethod
     def empty(cls):
-        from ..model_scene import ModelScene
-        model = ModelScene()
+        from ..sandbox_scene import SandboxScene
+        model = SandboxScene()
         sandbox = cls(model)
         return sandbox
 

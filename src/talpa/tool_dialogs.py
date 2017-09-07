@@ -1,6 +1,6 @@
 from PySide import QtGui, QtCore
 
-from .common import get_resource
+from .util import get_resource
 from ..qt_utils import loadUi
 
 

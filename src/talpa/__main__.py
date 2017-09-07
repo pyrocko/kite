@@ -31,7 +31,7 @@ BriDGes DFG Project, University of Kiel
         add_help=True)
 
     parser.add_argument('file', type=str,
-                        help='Load ModelScene from file (.yml)',
+                        help='Load SandboxScene from file (.yml)',
                         default=None, nargs='?')
 
     ns = parser.parse_args(args)

@@ -1,6 +1,6 @@
 import numpy as num
 
-from .common import RectangularSourceROI, SourceDelegate, SourceEditDialog
+from .base import RectangularSourceROI, SourceDelegate, SourceEditDialog
 from kite.sources import OkadaSource
 
 d2r = num.pi / 180.

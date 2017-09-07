@@ -1,7 +1,8 @@
 from PySide import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as num
-from ..common import get_resource
+
+from ..util import get_resource
 from kite.qt_utils import loadUi
 
 d2r = num.pi / 180.
