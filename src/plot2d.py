@@ -1,9 +1,11 @@
 import numpy as num
-import matplotlib.pyplot as plt
-from kite.meta import Subject
-from matplotlib.image import AxesImage
 import logging
 import time
+
+import matplotlib.pyplot as plt
+from matplotlib.image import AxesImage
+
+from kite.util import Subject
 
 __all__ = ['ScenePlot', 'QuadtreePlot', 'CovariancePlot']
 

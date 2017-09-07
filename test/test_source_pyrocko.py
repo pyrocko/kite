@@ -3,7 +3,7 @@ import numpy as num
 import tempfile
 import shutil
 
-from kite import ModelScene, TestModelScene  # noqa
+from kite import SandboxScene, TestSandboxScene  # noqa
 from kite.sources import (PyrockoRectangularSource, PyrockoMomentTensor,
                           PyrockoDoubleCouple, PyrockoRingfaultSource)
 
@@ -18,7 +18,7 @@ common.setLogLevel('DEBUG')
 class testSourcePyrocko(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.ms = ModelScene()
+        cls.ms = SandboxScene()
         cls.tmpdir = tempfile.mkdtemp(prefix='kite')
 
     @classmethod

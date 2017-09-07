@@ -2,7 +2,7 @@ import numpy as num
 import time
 from pyrocko import guts
 
-from .meta import Subject, property_cached, derampMatrix
+from .util import Subject, property_cached, derampMatrix
 
 
 class QuadNode(object):
@@ -575,7 +575,7 @@ class Quadtree(object):
 
     def blacklistLeaves(self, leaves):
         ''' Blacklist a leaf and exclude it from the tree
-        
+
         :param leaves: Leaf instances
         :type leaves: list
         '''

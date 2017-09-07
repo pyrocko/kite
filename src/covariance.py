@@ -7,7 +7,7 @@ import time
 import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
-from kite.meta import (Subject, property_cached,  # noqa
+from kite.util import (Subject, property_cached,  # noqa
                        trimMatrix, derampMatrix, squareMatrix)
 
 __all__ = ['Covariance', 'CovarianceConfig']
@@ -891,7 +891,7 @@ class Covariance(object):
 
     @property_cached
     def plot(self):
-        ''' Simple overview plot to summarize the covariance
-            estimations. '''
+        ''' Simple overview plot to summarize the covariance estimations.
+        '''
         from kite.plot2d import CovariancePlot
         return CovariancePlot(self)

@@ -1,6 +1,6 @@
 import numpy as num
 
-from ..meta import Subject
+from kite.util import Subject
 from pyrocko.guts import Object, Float
 
 d2r = num.pi / 180.
@@ -84,8 +84,8 @@ class SourceProcessor(object):
     '''Interface definition of the processor '''
     __implements__ = 'ProcessorName'  # Defines What backend is implemented
 
-    def __init__(self, model_scene):
-        self._log = model_scene._log.getChild(self.__class__.__name__)
+    def __init__(self, sandbox_scene):
+        self._log = sandbox_scene._log.getChild(self.__class__.__name__)
 
     def process(sources, coords, nthreads=0):
         raise NotImplementedError()

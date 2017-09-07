@@ -4,7 +4,8 @@ import numpy as num
 from scipy import ndimage
 
 from pyrocko.guts import Object, Float, Int
-from .meta import Subject, ADict
+
+from kite.meta import Subject, ADict
 
 
 class SceneProcess(Object):

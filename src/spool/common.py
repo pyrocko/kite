@@ -1,6 +1,6 @@
 #!/usr/bin/python2
-from __future__ import division, absolute_import, print_function, \
-    unicode_literals
+from __future__ import (division, absolute_import, print_function,
+                        unicode_literals)
 
 from PySide import QtCore
 from os import path
@@ -10,8 +10,9 @@ import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from pyqtgraph import dockarea
-from ..qt_utils import _viridis_data
-from ..meta import calcPrecission, formatScalar
+
+from kite.qt_utils import _viridis_data
+from kite.util import calcPrecission, formatScalar
 
 __all__ = ['KiteView', 'KitePlot', 'KiteToolColormap',
            'KiteParameterGroup']

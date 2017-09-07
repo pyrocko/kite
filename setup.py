@@ -152,7 +152,7 @@ setup(
             depends=None,
             language=None),
         Extension(
-            'disloc_ext',
+            'sources.disloc_ext',
             sources=[pjoin('src/sources/ext', 'disloc.c')],
             include_dirs=[numpy.get_include()],
             define_macros=None,

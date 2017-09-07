@@ -1,11 +1,11 @@
 from PySide import QtGui, QtCore
 from util import get_resource
+import os
+import logging
+
 from kite.qt_utils import loadUi
 from pyrocko.guts import Object, Bool, String, Int, Tuple, load
 from os import path
-
-import os
-import logging
 
 
 config_file = path.expanduser('~/.config/kite/talpa_config.yml')

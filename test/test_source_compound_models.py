@@ -1,7 +1,7 @@
 import unittest
 import numpy as num
 from kite.sources import compound_engine as cm, EllipsoidSource, PointCompoundSource  # noqa
-from kite import ModelScene
+from kite import SandboxScene
 from . import common
 
 km = 1e3
@@ -114,7 +114,7 @@ class CompoundModelsTest(unittest.TestCase):
         def r(lo, hi):
             return num.random.randint(lo, high=hi, size=1).astype(num.float)
 
-        ms = ModelScene()
+        ms = SandboxScene()
         src = EllipsoidSource(
             easting=r(0., ms.frame.E.max()),
             northing=r(0., ms.frame.N.max()),
@@ -181,7 +181,7 @@ class CompoundModelsTest(unittest.TestCase):
         def r(lo, hi):
             return num.random.randint(lo, high=hi, size=1).astype(num.float)
 
-        ms = ModelScene()
+        ms = SandboxScene()
         src = PointCompoundSource(
             easting=r(0., ms.frame.E.max()),
             northing=r(0., ms.frame.N.max()),

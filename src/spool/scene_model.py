@@ -1,10 +1,9 @@
 from PySide import QtCore
 from pyqtgraph import SignalProxy
-from kite import Scene
-
-from ..qt_utils import SceneLogModel
-
 import logging
+
+from kite import Scene
+from kite.qt_utils import SceneLogModel
 
 
 class SceneModel(QtCore.QObject):

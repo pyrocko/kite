@@ -1,7 +1,7 @@
 from PySide import QtGui, QtCore
 
+from kite.qt_utils import loadUi
 from .util import get_resource
-from ..qt_utils import loadUi
 
 
 class ExtentDialog(QtGui.QDialog):

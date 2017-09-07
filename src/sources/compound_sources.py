@@ -1,7 +1,7 @@
 import numpy as num
 
 from . import compound_engine as ce
-from .meta import SandboxSource, SourceProcessor
+from .base import SandboxSource, SourceProcessor
 from pyrocko.guts import Float
 
 d2r = num.pi / 180.

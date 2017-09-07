@@ -1,12 +1,14 @@
 #!/usr/bin/python2
 from collections import OrderedDict
 from PySide import QtGui
-from .common import KiteView, KitePlot, KiteParameterGroup, get_resource
-from ..qt_utils import loadUi
 
 import pyqtgraph as pg
 import numpy as num
 import pyqtgraph.parametertree.parameterTypes as pTypes
+
+from kite.qt_utils import loadUi
+from .common import KiteView, KitePlot, KiteParameterGroup, get_resource
+
 
 __all__ = ['KiteScene']
 

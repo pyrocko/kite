@@ -1,16 +1,17 @@
 #!/usr/bin/python
 from PySide import QtGui, QtCore
+import sys
+import time  # noqa
+import pyqtgraph as pg
+
+from kite.qt_utils import loadUi, validateFilename, SceneLog
+from kite.scene import Scene
+
 from .scene_model import SceneModel
 from .tab_scene import KiteScene
 from .tab_quadtree import KiteQuadtree  # noqa
 from .tab_covariance import KiteCovariance  # noqa
-from ..qt_utils import loadUi, validateFilename, SceneLog
-from ..scene import Scene
 from .common import get_resource
-
-import sys
-import time  # noqa
-import pyqtgraph as pg
 
 
 class Spool(QtGui.QApplication):

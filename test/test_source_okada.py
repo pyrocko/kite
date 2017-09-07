@@ -3,7 +3,7 @@ import numpy as num
 import tempfile
 import shutil
 
-from kite import ModelScene, TestModelScene
+from kite import SandboxScene, TestSandboxScene
 from kite.sources import OkadaSource, OkadaPath
 
 from . import common
@@ -16,7 +16,7 @@ class testSourceOkada(unittest.TestCase):
     __name__ = 'SandboxTestOkada'
 
     def setUp(self):
-        self.ms = ModelScene()
+        self.ms = SandboxScene()
         self.tmpdir = tempfile.mkdtemp(prefix='kite')
         print self.tmpdir
 
@@ -84,10 +84,10 @@ class testSourceOkada(unittest.TestCase):
 
     def testModelSaveLoad(self):
         filename = self.tmpdir + '/testsave.yml'
-        msc = TestModelScene.randomOkada(nsources=2)
+        msc = TestSandboxScene.randomOkada(nsources=2)
         msc.save(filename=filename)
 
-        msd2 = ModelScene.load(filename=filename)  # noqa
+        msd2 = SandboxScene.load(filename=filename)  # noqa
         # print msc2.config
 
 

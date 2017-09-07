@@ -1,8 +1,8 @@
 import numpy as num
-
-from kite import disloc_ext
-from .meta import SandboxSourceRectangular, SandboxSource, SourceProcessor
 from pyrocko.guts import List, Bool, Float
+
+from kite.sources import disloc_ext
+from .base import SandboxSourceRectangular, SandboxSource, SourceProcessor
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
@@ -26,26 +26,24 @@ class OkadaSource(SandboxSourceRectangular):
 
     @property
     def seismic_moment(self):
-        '''Seismic moment
+        ''' Scalar Seismic moment
 
         Disregarding the opening (as for now)
-
         We assume a shear modulus of :math:`\mu = 36 \mathrm{GPa}`
-        :math:`M_0 = \mu A D`
+        and :math:`M_0 = \mu A D`
 
+        .. important ::
 
-        Warning ::
-            DEPRECATED!
-            We assume a perfect elastic solid with :math:`K = \frac{5}{3}\mu`
+            We assume a perfect elastic solid with :math:`K=\\frac{5}{3}\\mu`
 
-            Through :math:`\mu = \frac{3K(1-2\nu)}{2(1+\nu)}} this leads to
-            :math:`\mu = \frac{8(1+\nu)}{1-2\nu}
+            Through :math:`\\mu = \\frac{3K(1-2\\nu)}{2(1+\\nu)}` this leads to
+            :math:`\\mu = \\frac{8(1+\\nu)}{1-2\\nu}`
+
         :returns: Seismic moment release
         :rtype: float
         '''
-        mu = (8. * (1+self.nu))/(1-2.*self.nu)
+        mu = (8. * (1+self.nu))/(1 - 2.*self.nu)
         mu = 32e9  # GPa
-        # print mu
         A = self.length * self.width
         return mu * A * self.slip
 
@@ -53,7 +51,8 @@ class OkadaSource(SandboxSourceRectangular):
     def moment_magnitude(self):
         '''Moment magnitude from Seismic moment
 
-        We assume :math:`M_\mathrm{w} = {\frac{2}{3}}\log_{10}(M_0) - 10.7`
+        We assume :math:`M_\\mathrm{w} = {\\frac{2}{3}}\\log_{10}(M_0) - 10.7`
+
         :returns: Moment magnitude
         :rtype: float
         '''

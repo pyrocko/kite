@@ -1,14 +1,16 @@
 #!/bin/python
-from __future__ import division, absolute_import, print_function, \
-    unicode_literals
+from __future__ import (division, absolute_import, print_function,
+                        unicode_literals)
 import numpy as num
 import pyqtgraph as pg
 from pyqtgraph import dockarea
 
 from PySide import QtGui, QtCore
 from collections import OrderedDict
-from ..qt_utils import loadUi
-from ..covariance import modelCovariance
+
+from kite.qt_utils import loadUi
+from kite.covariance import modelCovariance
+
 from .common import (KiteView, KitePlot, KiteParameterGroup,
                      KiteToolColormap, get_resource)
 

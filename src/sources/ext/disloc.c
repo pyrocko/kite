@@ -326,7 +326,7 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
 static PyMethodDef OkadaExtMethods[] = {
   {"disloc", w_disloc, METH_VARARGS,
    "Calculates the static displacement for an Okada Source"},
-  {NULL, NULL, 0, 0, NULL}
+  {NULL, NULL, 0, NULL}        /* Sentinel */
 };
 
 

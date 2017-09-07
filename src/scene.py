@@ -3,14 +3,15 @@ import logging
 import numpy as num
 import utm
 import os.path as op
+from datetime import datetime as dt
 
 from pyrocko import guts
 from pyrocko.orthodrome import latlon_to_ne  # noqa
-from datetime import datetime as dt
-from .quadtree import QuadtreeConfig
-from .covariance import CovarianceConfig
-from .meta import Subject, property_cached, greatCircleDistance
-from . import scene_io
+
+from kite.quadtree import QuadtreeConfig
+from kite.covariance import CovarianceConfig
+from kite.util import Subject, property_cached, greatCircleDistance
+from kite import scene_io
 
 logging.basicConfig(level=20)
 
@@ -485,7 +486,7 @@ class BaseScene(object):
 
     @property_cached
     def phiDeg(self):
-        '''LOS horizontal orientation angle in degree, ``NxM`` matrix like
+        ''' LOS horizontal orientation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
 
         :type: :class:`numpy.ndarray`
@@ -494,17 +495,18 @@ class BaseScene(object):
 
     @property_cached
     def los_rotation_factors(self):
-        '''Trigonometric factors for rotating displacement matrices towards LOS
+        ''' Trigonometric factors to rotate displacement matrices towards LOS
 
         Rotation is as follows:
 
+        ..
             displacement_los =\
                 (los_rotation_factors[:, :, 0] * -down +
                  los_rotation_factors[:, :, 1] * east +
                  los_rotation_factors[:, :, 2] * north)
 
         :returns: Factors for rotation
-        :rtype: :class:`numpy.ndarray`, NxMx3
+        :rtype: :class:`numpy.ndarray`, ``NxMx3``
         :raises: AttributeError
         '''
         if (self.theta.size != self.phi.size):
@@ -529,7 +531,6 @@ class Scene(BaseScene):
     :type config: :class:`SceneConfig`, optional
 
     Optional parameters
-    -------------------
 
     :param displacement: Displacement in [m]
     :type displacement: :class:`numpy.ndarray`, NxM, optional
@@ -707,7 +708,7 @@ class Scene(BaseScene):
             module = eval('scene_io.%s(scene)' % mod)
             if module.validate(path, **kwargs):
                 scene._log.debug('Importing %s using %s module' %
-                                (path, mod))
+                                 (path, mod))
                 data = module.read(path, **kwargs)
                 break
         if data is None:

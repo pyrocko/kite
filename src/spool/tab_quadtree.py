@@ -1,15 +1,16 @@
 #!/usr/bin/python2
-from __future__ import division, absolute_import, print_function, \
-    unicode_literals
+from __future__ import (division, absolute_import, print_function,
+                        unicode_literals)
 
 from collections import OrderedDict
 from PySide import QtCore, QtGui
-from .common import KiteView, KitePlot, KiteParameterGroup
-from ..qt_utils import SliderWidgetParameterItem
-from ..quadtree import QuadtreeConfig
-
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
+
+from kite.qt_utils import SliderWidgetParameterItem
+from kite.quadtree import QuadtreeConfig
+
+from .common import KiteView, KitePlot, KiteParameterGroup
 
 
 class KiteQuadtree(KiteView):
