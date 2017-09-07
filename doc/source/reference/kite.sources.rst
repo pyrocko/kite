@@ -56,6 +56,7 @@ Compound Dislocation Models
 ----------------------------
 
 Compound dislocation models developed by Mehdi Nikkhoo [#f2]_. Are implemented in Python.
+More information on the routines and sources at <http://www.volcanodeformation.com>_.
 
 .. [#f2] Nikkhoo, M., Walter, T. R., Lundgren, P. R., Prats-Iraola, P. (2017): Compound dislocation models (CDMs) for volcano deformation analyses. - Geophysical Journal International, 208, 2, p. 877-894.
 
@@ -73,10 +74,10 @@ Objects Bases
 -------------
 
 .. autoclass::
-    kite.sources.meta.SandboxSource
+    kite.sources.base.SandboxSource
     :members:
 
 .. autoclass::
-    kite.sources.meta.SandboxSourceRectangular
+    kite.sources.base.SandboxSourceRectangular
     :members:
     :show-inheritance:
