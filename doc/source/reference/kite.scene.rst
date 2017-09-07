@@ -2,6 +2,10 @@ The Scene Module
 ================
 
 .. autoclass:: kite.Scene
+    :show-inheritance:
+    :members:
+
+.. autoclass:: kite.scene.BaseScene
     :members:
 
 

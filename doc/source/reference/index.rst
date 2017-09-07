@@ -1,6 +1,8 @@
 Module Reference
 ================
 
+The framework's API documentation can be found here.
+
 .. toctree::
    :maxdepth: 2
 
@@ -8,3 +10,5 @@ Module Reference
    kite.quadtree
    kite.covariance
    kite.spool
+   kite.sandboxscene
+   kite.sources

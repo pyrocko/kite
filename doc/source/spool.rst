@@ -1,10 +1,10 @@
-Spool (GUI)
-===========
+``Spool`` (GUI)
+===============
 InSAR displacement scenes are complex visual datasets, the ``Spool`` user interface offers interactive and intuitive analysis and **parametrization** of all aspects of the container
 
-    * :doc:`kite.scene`,
-    * :doc:`kite.quadtree`
-    * and :doc:`kite.covariance`
+    * :doc:`reference/kite.scene`,
+    * :doc:`reference/kite.quadtree`
+    * and :doc:`reference/kite.covariance`
 
 .. note :: Naming conventions in the GUI represent the :class:`kite.Scene` syntax!
 
@@ -42,8 +42,8 @@ Now we can utilize ``kite``\'s python framework to work with the subsampled quad
             cross_weights.append((l1.id, l2.id, w))
 
 
-Displacement
-------------
+LOS Displacement inspection
+----------------------------
 
 The first tab offers simple data inspection of plain parameters. From the side menu we can choose displacement, :abbr:`Line of Sight (LOS)` incident angles and unit their georeferenced unit vectors. :guilabel:`display` offers the components ``displacement, phi, theta, thetaDeg, degPhi, unitE, unitN, unitU``.
 
@@ -52,12 +52,14 @@ The first tab offers simple data inspection of plain parameters. From the side m
 
     An unwrapped InSAR displacement scene from a 2011 Myanmar strike-slip event (Sudhaus and Gomba, 2016 [#f1]_). Red color shows displacement away from the satellite, blue displacement towards LOS.
 
-Quadtree
---------
+.. _spool-quadtree:
+
+Quadtree manipulation
+----------------------
 
 The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. 
 
-The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`examples_03-quadtree`)
+The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`examples/03-quadtree`)
 
 * epsilon/std threshold (:attr:`~kite.Quadtree.epsilon`)
 * Fraction of NaN values within (:attr:`~kite.Quadtree.nan_allowed`)
@@ -77,8 +79,10 @@ To get a feel for the covariance and error estimation we can have a look at the 
     Absolute weight of each :class:`~kite.quadtree.QuadNode` derived from :class:`~kite.Covariance`. Yellow is low weight, blue are higher weighted leafs.
 
 
-Covariance
-----------
+.. _spool-covariance:
+
+Covariance parametrisation
+------------------------------
 
 The covariance of the InSAR scene is a measure for the noise which affects our deformation signal. In order to generate a reasonable geodynamic model we need to quantify the contribution of noise to our signal. A common model for the noise contributionin satellite interferometry is:
 
