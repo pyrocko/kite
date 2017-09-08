@@ -24,7 +24,7 @@ addons:
 
 before_install:
     - pip install --upgrade pip setuptools
-    - pip install flake8 pyyaml coveralls
+    - pip install flake8 pyyaml coveralls nose
     - git clone https://github.com/pyrocko/pyrocko.git
     - cd pyrocko; pip install .; cd -;
 
@@ -38,8 +38,7 @@ install:
     - pip install .
 
 script:
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python test/test_all.py ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coverage run --source=kite test/test_scene.py ; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then nosetest test; fi
 
 after_success:
     - coveralls
