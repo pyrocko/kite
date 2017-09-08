@@ -1,8 +1,7 @@
 #!/bin/python
 import unittest
-import os.path
 import numpy as num
-from kite import Scene, TestScene
+from kite import TestScene
 
 from . import common
 

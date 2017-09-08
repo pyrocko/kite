@@ -3,7 +3,7 @@ import numpy as num
 import os
 
 from .base import (RectangularSourceROI, PointSourceROI, SourceDelegate,
-                     SourceEditDialog)
+                   SourceEditDialog)
 from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
                           PyrockoRingfaultSource)
