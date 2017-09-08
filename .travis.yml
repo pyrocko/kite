@@ -26,7 +26,7 @@ before_install:
     - pip install --upgrade pip
     - pip install --upgrade setuptools 
     - pip install flake8 pyyaml coveralls
-    - pip install git+https://github.com/pyrocko/pyrocko.git
+    - easy_install https://github.com/pyrocko/pyrocko.git
 
 before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
