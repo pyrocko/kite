@@ -20,12 +20,13 @@ addons:
     apt:
         packages: [ python-dev, python-pyside,
              python-scipy, gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
-             python-matplotlib, python-yaml, python-tk, xvfb ]
+             python-matplotlib, python-yaml, python-tk, xvfb, git]
 
 before_install:
     - pip install --upgrade pip setuptools
     - pip install flake8 pyyaml coveralls
-    - pip install git+https://github.com/pyrocko/pyrocko.git
+    - git clone https://github.com/pyrocko/pyrocko.git
+    - cd pyrocko; pip install .; cd -;
 
 before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
@@ -34,7 +35,7 @@ before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sleep 3 ; fi
 
 install:
-    - sudo python setup.py install
+    - pip install .
 
 script:
     - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python test/test_all.py ; fi
