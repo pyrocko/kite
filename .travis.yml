@@ -23,10 +23,9 @@ addons:
              python-matplotlib, python-yaml, python-tk, xvfb ]
 
 before_install:
-    - pip install --upgrade pip
-    - pip install --upgrade setuptools 
+    - pip install --upgrade pip setuptools
     - pip install flake8 pyyaml coveralls
-    - easy_install https://github.com/pyrocko/pyrocko.git
+    - pip install git+https://github.com/pyrocko/pyrocko.git
 
 before_script:
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
