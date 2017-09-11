@@ -19,8 +19,8 @@ matrix:
 addons:
     apt:
         packages: [ python-dev, python-pyside,
-             python-scipy, gfortran, libatlas-dev, python-yaml, libopenblas-dev, libyaml-dev,
-             python-matplotlib, python-tk, xvfb, git]
+              gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
+             python-tk, xvfb, git]
 
 before_install:
     - pip install --upgrade pip setuptools
