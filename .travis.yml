@@ -19,7 +19,7 @@ matrix:
 addons:
     apt:
         packages: [ python-dev, python-pyside, python-numpy,
-             python-scipy, gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
+             python-scipy, gfortran, libatlas-dev, python-yaml, libopenblas-dev, libyaml-dev,
              python-matplotlib, python-tk, xvfb, git]
 
 before_install:
