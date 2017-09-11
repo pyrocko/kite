@@ -18,7 +18,7 @@ matrix:
 
 addons:
     apt:
-        packages: [ python-dev, python-pyside,
+        packages: [ python-dev, python-pyside, python-numpy,
              python-scipy, gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
              python-matplotlib, python-yaml, python-tk, xvfb, git]
 

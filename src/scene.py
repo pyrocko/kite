@@ -644,6 +644,7 @@ class Scene(BaseScene):
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
         self._log.debug('Saving scene config to %s' % filename)
+        self.config.regularize()
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
 
