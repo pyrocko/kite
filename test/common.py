@@ -17,6 +17,13 @@ class DownloadError(Exception):
     pass
 
 
+def _makedir(path):
+    try:
+        os.makedirs(path)
+    except OSError:
+        pass
+
+
 def get_test_data(fn):
 
     def _dir_content(url):
@@ -60,15 +67,13 @@ def get_test_data(fn):
     url = urljoin(data_uri, fn)
 
     dl_dir = data_dir
-
-    try:
-        os.makedirs(dl_dir)
-    except OSError:
-        pass
+    _makedir(dl_dir)
 
     if fn.endswith('/'):
         dl_dir = op.join(data_dir, fn)
+        _makedir(dl_dir)
         dl_files = _dir_content(url)
+
         dl_files = zip([urljoin(url, u) for u in dl_files],
                        [op.join(dl_dir, f) for f in dl_files])
     else:
