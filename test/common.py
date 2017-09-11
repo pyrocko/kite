@@ -47,7 +47,7 @@ def get_test_data(fn):
         r.raise_for_status()
 
         dl_bytes = 0
-        with open(fn_local, 'w') as f:
+        with open(fn_local, 'wb') as f:
             for d in r.iter_content(chunk_size=1024):
                 dl_bytes += len(d)
                 f.write(d)
@@ -60,6 +60,12 @@ def get_test_data(fn):
     url = urljoin(data_uri, fn)
 
     dl_dir = data_dir
+
+    try:
+        os.makedirs(dl_dir)
+    except OSError:
+        pass
+
     if fn.endswith('/'):
         dl_dir = op.join(data_dir, fn)
         dl_files = _dir_content(url)
@@ -68,11 +74,6 @@ def get_test_data(fn):
     else:
         dl_files = (url, op.join(data_dir, fn))
         return _download_file(*dl_files)
-
-    try:
-        os.makedirs(dl_dir)
-    except OSError:
-        pass
 
     return [_download_file(*f) for f in dl_files]
 

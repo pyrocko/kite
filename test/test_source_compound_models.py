@@ -126,7 +126,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         self._plot_modelScene(ms)
 
-    def test_pointCDM_against_Octave(self):
+    def _test_pointCDM_against_Octave(self):
         from scipy import io
         from os import path as p
 
