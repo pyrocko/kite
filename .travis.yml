@@ -20,7 +20,7 @@ addons:
     apt:
         packages: [ python-dev, python-pyside, python-numpy,
              python-scipy, gfortran, libatlas-dev, libopenblas-dev, libyaml-dev,
-             python-matplotlib, python-yaml, python-tk, xvfb, git]
+             python-matplotlib, python-tk, xvfb, git]
 
 before_install:
     - pip install --upgrade pip setuptools
