@@ -15,6 +15,7 @@ matrix:
           python: 2.7
           virtualenv:
               system_site_packages: true
+          dist: precise
 
 addons:
     apt:
@@ -23,23 +24,23 @@ addons:
              python-tk, xvfb, git]
 
 before_install:
-    - pip install --upgrade pip setuptools
-    - pip install --only-binary=numpy,scipy,matplotlib scipy numpy matplotlib
-    - pip install flake8 pyyaml coveralls nose
-    - git clone https://github.com/pyrocko/pyrocko.git
-    - cd pyrocko; pip install .; cd -;
+  - pip install --upgrade pip setuptools wheel
+  - pip install --only-binary=numpy,scipy,matplotlib scipy numpy matplotlib
+  - pip install flake8 pyyaml coveralls future coverage nose
+  - git clone https://github.com/pyrocko/pyrocko.git
+  - cd pyrocko; pip install .; cd -;
 
 before_script:
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sh -e /etc/init.d/xvfb start ; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sleep 3 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export DISPLAY=:99.0 ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sh -e /etc/init.d/xvfb start ; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sleep 3 ; fi
 
 install:
     - pip install .
 
 script:
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then nosetests test; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then nosetests test/; fi
 
 after_success:
     - coveralls
