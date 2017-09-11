@@ -18,12 +18,13 @@ matrix:
 
 addons:
     apt:
-        packages: [ python-dev, python-pyside, python-numpy,
+        packages: [ python-dev, python-pyside,
              python-scipy, gfortran, libatlas-dev, python-yaml, libopenblas-dev, libyaml-dev,
              python-matplotlib, python-tk, xvfb, git]
 
 before_install:
     - pip install --upgrade pip setuptools
+    - pip install --only-binary=numpy,scipy,matplotlib scipy numpy matplotlib
     - pip install flake8 pyyaml coveralls nose
     - git clone https://github.com/pyrocko/pyrocko.git
     - cd pyrocko; pip install .; cd -;
