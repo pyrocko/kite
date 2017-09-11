@@ -1,13 +1,17 @@
 # KITE
+
+[![Build Status](https://travis-ci.org/pyrocko/kite.svg?branch=master)](https://travis-ci.org/pyrocko/kite)
+[![Coverage Status](https://coveralls.io/repos/github/pyrocko/kite/badge.svg?branch=master)](https://coveralls.io/github/pyrocko/kite?branch=master)
+
 ## Introduction
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org) and Grond.
 
 Kite features simple and efficient handling of displacement data:
 
 * Import InSAR displacement data from GAMMA, ISCE, GMTSAR, ROI_PAC and Matlab
-* Efficient quadtree implementation
-* Covariance estimation from noise
-* Interactive GUI
+* Efficient **quadtree** implementation
+* **Covariance** estimation from noise
+* **Interactive GUI**
 
 ## Citation
 Recommended citation for Kite
