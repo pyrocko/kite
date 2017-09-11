@@ -145,8 +145,9 @@ class Matlab(SceneIO):
             utm_zone = 33
             utm_zone_letter = 'N'
             self._log.warning(
-                'utm_zone not defined. Defaulting to UTM Zone %d%s!' %
-                (utm_zone, utm_zone_letter))
+                'Variable utm_zone not defined. Defaulting to UTM Zone %d%s!'
+                % (utm_zone, utm_zone_letter))
+
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
                 'Could not find referencing UTM vectors in .mat file')

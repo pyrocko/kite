@@ -8,7 +8,7 @@ from requests.compat import urljoin
 op = os.path
 
 data_uri = 'http://data.pyrocko.org/testing/kite/'
-data_dir = op.join(op.dirname(op.abspath(__file__)), 'data')
+data_dir = op.join(op.dirname(op.abspath(__file__)), 'data/')
 
 logger = logging.getLogger('kite.testing')
 
@@ -32,13 +32,13 @@ def get_test_data(fn):
     def _file_size(url):
         r = requests.head(url, headers={'Accept-Encoding': 'identity'})
         r.raise_for_status()
-        print r.headers
         return int(r.headers['content-length'])
 
     def _download_file(url, fn_local):
         print url, fn_local
         if op.exists(fn_local):
             if os.stat(fn_local).st_size == _file_size(url):
+                logger.info('Using cached file %s' % fn_local)
                 return fn_local
 
         logger.info('Downloading %s...' % url)
@@ -56,7 +56,7 @@ def get_test_data(fn):
         if dl_bytes != fsize:
             print url, dl_bytes, fsize
             raise DownloadError('Download incomplete!')
-        logger.info('Download completed!')
+        logger.info('Download completed.')
         return fn_local
 
     url = urljoin(data_uri, fn)
@@ -68,7 +68,7 @@ def get_test_data(fn):
         dl_files = zip([urljoin(url, u) for u in dl_files],
                        [op.join(dl_dir, f) for f in dl_files])
     else:
-        dl_files = (url, fn)
+        dl_files = (url, op.join(data_dir, fn))
         return _download_file(*dl_files)
 
     try:
