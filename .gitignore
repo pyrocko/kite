@@ -7,5 +7,5 @@ dist/
 gh-pages
 .coverage
 *swp
-test/data
+test/data/
 htmlcov/

@@ -35,7 +35,6 @@ def get_test_data(fn):
         return int(r.headers['content-length'])
 
     def _download_file(url, fn_local):
-        print url, fn_local
         if op.exists(fn_local):
             if os.stat(fn_local).st_size == _file_size(url):
                 logger.info('Using cached file %s' % fn_local)
@@ -54,7 +53,6 @@ def get_test_data(fn):
                 f.write(d)
 
         if dl_bytes != fsize:
-            print url, dl_bytes, fsize
             raise DownloadError('Download incomplete!')
         logger.info('Download completed.')
         return fn_local
@@ -114,7 +112,6 @@ class Benchmark(object):
 
 
 def setLogLevel(level):
-    print('SETTING LOGLEVEL!')
     level = getattr(logging, level, 'DEBUG')
     logging.basicConfig(
         level=level)
