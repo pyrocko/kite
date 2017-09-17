@@ -121,10 +121,10 @@ class SandboxScene(BaseScene):
         '''
         if source not in self.sources:
             self.sources.append(source)
-        self._log.debug('%s added' % source.__class__.__name__)
         source.evParametersChanged.subscribe(self._clearModel)
-
         self._clearModel()
+
+        self._log.debug('Source %s added' % source.__class__.__name__)
 
     def removeSource(self, source):
         '''Remove displacement source to sandbox
@@ -134,7 +134,7 @@ class SandboxScene(BaseScene):
         '''
         source.evParametersChanged.unsubscribe(self._clearModel)
         self.sources.remove(source)
-        self._log.debug('%s removed' % source.__class__.__name__)
+        self._log.debug('Source %s removed' % source.__class__.__name__)
         del source
 
         self._clearModel()
