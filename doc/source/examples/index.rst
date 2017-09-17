@@ -9,3 +9,4 @@ The following examples will give a basic overview how to handles different featu
     01-loading_saving.rst
     03-quadtree.rst
     04-covariance.rst
+    05-sandbox.rst

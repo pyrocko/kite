@@ -1,9 +1,13 @@
+.. _talpa:
+
 ``Talpa`` Static Displacement Modelling (GUI)
 =============================================
 
 The tool ``talpa`` (`Talpidae; the mole`) enables interactive modelling of static displacement sources.
 
 It acts as a frontend for :mod:`kite.SandboxScene`, a modelling sandbox for InSAR scenes.
+
+Examples for a programmatic interaction with the sandbox can be found :doc:`/examples/05-sandbox`.
 
 
 Available Static Displacement Sources
@@ -73,7 +77,7 @@ Parametrisation through the source's editing dialog (:menuselection:`<right-clic
     Source parameter dialog for an :class:`~kite.sources.OkadaSource`.
 
 
-Saving and Saving a Sandbox
+Saving and Loading a Sandbox
 ----------------------------
 
 The scene can be saved and loaded through the :menuselection:`File` menu.
