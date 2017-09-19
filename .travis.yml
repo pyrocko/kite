@@ -15,7 +15,7 @@ matrix:
           python: 2.7
           virtualenv:
               system_site_packages: true
-          dist: precise
+          dist: trusty
 
 addons:
     apt:
