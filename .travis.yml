@@ -24,7 +24,8 @@ addons:
              python-tk, xvfb, git]
 
 before_install:
-  - pip install --upgrade pip setuptools wheel
+  - easy_install -U pip
+  - pip install --upgrade setuptools wheel
   - pip install --only-binary=numpy,scipy,matplotlib scipy numpy matplotlib
   - pip install flake8 pyyaml coveralls future coverage nose
   - git clone https://github.com/pyrocko/pyrocko.git
