@@ -24,11 +24,10 @@ addons:
              python-tk, xvfb, git]
 
 before_install:
-  - easy_install -U pip
-  - pip install --upgrade setuptools wheel
+  - pip install --upgrade pip setuptools wheel
   - pip install --only-binary=numpy,scipy,matplotlib scipy numpy matplotlib
   - pip install flake8 pyyaml coveralls future coverage nose
-  - easy_install https://github.com/pyrocko/pyrocko.git
+  - pip install git+https://github.com/pyrocko/pyrocko.git
 
 before_script:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then flake8 src/ apps/ test/ ; fi
