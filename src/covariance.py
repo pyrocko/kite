@@ -82,7 +82,7 @@ class CovarianceConfig(guts.Object):
         default=True,
         help='Adaptive subsampling flag for full covariance calculation.')
     covariance_matrix = Array.T(
-        shape=(None, None), dtype=num.float,
+        dtype=num.float,
         optional=True,
         serialize_as='base64',
         help='Cached covariance matrix, '
