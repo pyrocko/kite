@@ -1,7 +1,6 @@
-#!/bin/python
+#!/usr/bin/env python
 import os
 import tempfile
-import time
 
 from setuptools import setup, Extension
 from os.path import join as pjoin
@@ -92,7 +91,7 @@ else:
 
 setup(
     name='kite',
-    version='0.0.2.post%s' % time.strftime('%Y%m%d'),
+    version='0.0.2',
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'
            'BriDGes Emmily Noether-Programm (DFG)',

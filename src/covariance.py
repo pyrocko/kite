@@ -696,9 +696,10 @@ class Covariance(object):
         try:
             return sp.optimize.curve_fit(modelPowerspec,
                                          k[regime], power_spec[regime],
-                                         p0=(self.variance, 2000))
-        except RuntimeError:
-            self._log.warning('Could not fit the powerspectrum model.')
+                                         p0=(0.1, 2000))
+        except RuntimeError as e:
+            self._log.warning('Could not fit the powerspectrum model. <%s>'
+                              % e)
             return (0., 0.), 0.
 
     @property
@@ -757,7 +758,7 @@ class Covariance(object):
 
         return cov, d
 
-    def covarianceAnalytical(self, regime=0):
+    def covarianceFromModel(self, regime=0):
         '''Caluclate exponential analytical covariance
 
         Empirical Covariance function based on the power spectral model fit
@@ -766,10 +767,6 @@ class Covariance(object):
         from :func:`~kite.covariance.modelPowerspec`
 
         .. warning:: Deprecated!
-
-        .. note:: covarianceAnalytical is not a good name for this
-            function, better rename to 'covarianceFromModel',
-            'covarianceModelBased' or
 
         :return: Covariance and corresponding distances.
         :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
@@ -787,18 +784,18 @@ class Covariance(object):
     def covariance_model(self, regime=0):
         ''' Covariance model parameters for
             :func:`~kite.covariance.modelCovariance` retrieved
-            from :attr:`~kite.Covariance.covarianceAnalytical`.
+            from :attr:`~kite.Covariance.covarianceFromModel`.
 
-        .. note:: using this function implies several several model
-            fits: fit of the spectrum and fit of the cosine transform.
+        .. note:: using this function implies several model
+            fits: (1) fit of the spectrum and (2) the cosine transform.
             Not sure about the consequences, if this is useful and/or
-            meaningful
+            meaningful.
 
         :getter: Get the parameters.
         :type: tuple, ``a`` and ``b``
         '''
         if self.config.a is None or self.config.b is None:
-            cov, d = self.covarianceAnalytical(regime)
+            cov, d = self.covarianceFromModel(regime)
             cov, d = self.covariance_func
             try:
                 (a, b), _ =\
@@ -868,11 +865,12 @@ class Covariance(object):
         if self.config.variance is None:
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_func
+            ma, mb = self.covariance_model
             # print cov[1]
             ps = power_spec * spectrum.size
             # print spectrum.size
             # print num.mean(ps[-int(ps.size/9.):-1])
-            var = num.median(ps[-int(ps.size/9.):]) + cov[1]
+            var = num.median(ps[-int(ps.size/9.):]) + ma
             self.config.variance = float(var)
         return self.config.variance
 
