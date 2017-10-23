@@ -12,7 +12,7 @@ A usage scenario for the scenario could look like this - start the GUI:
 
 .. code-block :: sh
 
-    spool test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat
+    spool --load test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat
 
 .. note :: 
     The dataset :file:`test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat` is part of the `Github repositorium <https://github.com/pyrocko/kite>`_.
