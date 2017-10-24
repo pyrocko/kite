@@ -2,3 +2,4 @@ numpy
 scipy
 PyQt4
 pyrocko
+utm

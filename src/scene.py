@@ -56,10 +56,16 @@ class FrameConfig(guts.Object):
         help='Scene longitude of lower left corner')
     dLat = guts.Float.T(
         default=1.e-3,
-        help='Scene pixel spacing in x direction [deg]')
+        help='Scene pixel spacing in latitude [deg]')
     dLon = guts.Float.T(
         default=1.e-3,
-        help='Scene pixel spacing in y direction [deg]')
+        help='Scene pixel spacing in longitude [deg]')
+    dN = guts.Float.T(
+        optional=True,
+        help='Scene pixel spacing in north [m]')
+    dE = guts.Float.T(
+        optional=True,
+        help='Scene pixel spacing in east [m]')
 
 
 class Frame(object):
@@ -76,8 +82,6 @@ class Frame(object):
         self.spherical_distortion = 0.
         self.urE = 0.
         self.urN = 0.
-        self.dN = 0.
-        self.dE = 0.
         self.llEutm = None
         self.llNutm = None
         self.utm_zone = None
@@ -130,8 +134,10 @@ class Frame(object):
                                           urlat, urlon)
         self.spherical_distortion = num.abs(self.extentE - extentE_top)
 
-        self.dE = (self.extentE + extentE_top) / (2*self.cols)
-        self.dN = self.extentN / self.rows
+        if self.dE is None or self.dN is None:
+            self.dE = (self.extentE + extentE_top) / (2*self.cols)
+            self.dN = self.extentN / self.rows
+
         self.E = num.arange(self.cols) * self.dE + self.offsetE
         self.N = num.arange(self.rows) * self.dN + self.offsetN
 
@@ -184,6 +190,22 @@ class Frame(object):
     def dLon(self, dLon):
         self.config.dLon = dLon
         self._updateExtent()
+
+    @property
+    def dN(self):
+        return self.config.dN
+
+    @dN.setter
+    def dN(self, dN):
+        self.config.dN = dN
+
+    @property
+    def dE(self):
+        return self.config.dE
+
+    @dE.setter
+    def dE(self, dE):
+        self.config.dE = dE
 
     @property_cached
     def gridE(self):

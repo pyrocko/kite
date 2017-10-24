@@ -40,6 +40,8 @@ class SceneIO(object):
                 'llLat': None,  # Lower left corner londgitude
                 'dLat': None,   # Pixel delta latitude
                 'dLon': None,   # Pixel delta longitude
+                'dN': None,   # Pixel delta latitude
+                'dE': None,   # Pixel delta longitude
             },
             # Meta information
             'meta': {
@@ -298,7 +300,7 @@ class Gamma(SceneIO):
 
         displ = displ.reshape(nlines, nrows)
         displ[displ == -0.] = num.nan
-        displ = num.fliplr(displ)
+        displ = num.flipud(displ)
 
         phi = self._getAngle(filename, '*phi*')
         theta = self._getAngle(filename, '*theta*')
@@ -306,8 +308,10 @@ class Gamma(SceneIO):
 
         if isinstance(phi, num.ndarray):
             phi = phi.reshape(nlines, nrows)
+            phi = num.flipud(phi)
         if isinstance(theta, num.ndarray):
             theta = theta.reshape(nlines, nrows)
+            theta = num.flipud(theta)
 
         if fill is not None:
             theta = num.append(theta, fill)
@@ -332,9 +336,9 @@ class Gamma(SceneIO):
         if par['DEM_projection'] == 'UTM':
             self._log.debug('Parameter file provides UTM reference')
             import utm
-            c['displacement'] = num.transpose(displ/100)
-            c['theta'] = num.transpose(theta)
-            c['phi'] = num.transpose(phi)
+            c['displacement'] = displ/100.
+            c['theta'] = theta
+            c['phi'] = phi
             utm_zone = par['projection_zone']
             try:
                 utm_zone_letter = utm.latitude_to_zone_letter(
@@ -345,8 +349,8 @@ class Gamma(SceneIO):
                 utm_zone_letter = 'N'
 
             utm_e = utm_n = None
-            dN = par['post_north']
-            dE = par['post_east']
+            dN = abs(par['post_north'])
+            dE = abs(par['post_east'])
             utm_corn_e = par['corner_east']
             utm_corn_n = par['corner_north']
 
@@ -366,6 +370,10 @@ class Gamma(SceneIO):
 
             c['frame']['dLon'] =\
                 (urlon - c['frame']['llLon']) / displ.shape[1]
+
+            c['frame']['dE'] = dE
+            c['frame']['dN'] = dN
+
         else:
             self._log.debug('Parameter file provides Lat/Lon reference')
             c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
