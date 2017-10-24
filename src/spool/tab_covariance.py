@@ -186,6 +186,12 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
 
 
 class KiteCovariogram(_KiteSubplotPlot):
+
+    class VarianceLine(pg.InfiniteLine):
+        def __init__(self, *args, **kwargs):
+            pg.InfiniteLine.__init__(self, *args, **kwargs)
+            self.setCursor(QtCore.Qt.SizeVerCursor)
+
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
         self.plot.setLabels(bottom={'Distance', 'm'},
@@ -194,7 +200,7 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.cov = pg.PlotDataItem(antialias=True)
         self.cov.setZValue(10)
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_covariance)
-        self.variance = pg.InfiniteLine(
+        self.variance = self.VarianceLine(
             pen=pen_variance,
             angle=0, movable=True, hoverPen=pen_variance_highlight,
             label='Variance: {value:.5f}',
