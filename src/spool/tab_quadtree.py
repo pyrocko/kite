@@ -58,6 +58,7 @@ class QQuadLeaf(QtCore.QRectF):
         item.setPen(self.leaf_outline)
         item.setBrush(self.leaf_fill)
         item.setZValue(1e9)
+        item.setToolTip('Press Delete to remove')
         return item
 
 
@@ -185,7 +186,7 @@ class KiteQuadtreePlot(KitePlot):
             self.selected_leaves = []
 
     def blacklistSelectedLeaves(self, ev):
-        if ev.key() & QtCore.Qt.Key_Delete:
+        if ev.key() == QtCore.Qt.Key_Delete:
             self.model.quadtree.blacklistLeaves(
                 l.id for l in self.selected_leaves)
 

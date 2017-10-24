@@ -14,16 +14,21 @@ from kite.covariance import modelCovariance
 from .base import (KiteView, KitePlot, KiteParameterGroup,
                    KiteToolColormap, get_resource)
 
-analy_pen0 = pg.mkPen(
-    (51, 53, 119, 0), width=1.5)
-pen_red_dot = pg.mkPen(
-    (170, 57, 57, 255), width=2.5, style=QtCore.Qt.DotLine)
+pen_covariance = pg.mkPen(
+    (204, 0, 0), width=2.5, style=QtCore.Qt.DotLine)
+
 pen_variance = pg.mkPen(
-    (94, 151, 50, 200), width=2.5, style=QtCore.Qt.DashLine)
+    (78, 154, 6), width=2.5, style=QtCore.Qt.DashLine)
+pen_variance_highlight = pg.mkPen(
+    (115, 210, 22), width=2.5, style=QtCore.Qt.DashLine)
+
 pen_green_dash = pg.mkPen(
-    (45, 136, 45, 200), width=2.5, style=QtCore.Qt.DashLine)
+    (115, 210, 22), width=2.5, style=QtCore.Qt.DashLine)
+
 pen_roi = pg.mkPen(
-    (45, 136, 45), width=3)
+    (78, 154, 6), width=2)
+pen_roi_highlight = pg.mkPen(
+    (115, 210, 22), width=2, style=QtCore.Qt.DashLine)
 
 
 class KiteCovariance(KiteView):
@@ -80,6 +85,14 @@ class KiteCovariance(KiteView):
 
 
 class KiteNoisePlot(KitePlot):
+    class NoisePatchROI(pg.RectROI):
+        def _makePen(self):
+            # Generate the pen color for this ROI based on its current state.
+            if self.mouseHovering:
+                return pen_roi_highlight
+            else:
+                return self.pen
+
     def __init__(self, model):
         self.components_available = {
             'displacement':
@@ -90,7 +103,7 @@ class KiteNoisePlot(KitePlot):
         KitePlot.__init__(self, model=model, los_arrow=True)
 
         llE, llN, sizeE, sizeN = self.model.covariance.noise_coord
-        self.roi = pg.RectROI(
+        self.roi = self.NoisePatchROI(
             pos=(llE, llN),
             size=(sizeE, sizeN),
             sideScalers=True,
@@ -145,7 +158,7 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         _KiteSubplotPlot.__init__(self, parent_plot)
 
         self.power = pg.PlotDataItem(antialias=True)
-        self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
+        # self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
 
         self.power.setZValue(10)
         self.plot.setLabels(
@@ -154,9 +167,9 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
 
         self.plot.setLogMode(x=True, y=True)
 
-        self.legend = pg.LegendItem(offset=(0., .5))
-        self.legend.setParentItem(self.plot.graphicsItem())
-        self.legend.addItem(self.power_lin, 'Log-linear model')
+        # self.legend = pg.LegendItem(offset=(0., .5))
+        # self.legend.setParentItem(self.plot.graphicsItem())
+        # self.legend.addItem(self.power_lin, 'Log-linear model')
 
         self.addItem(self.power)
         # self.addItem(self.power_lin)
@@ -168,8 +181,8 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         covariance = self.model.covariance
         spec, k, _, _, _, _ = covariance.powerspecNoise1D()
         self.power.setData(k, spec)
-        self.power_lin.setData(
-            k, covariance.powerspecModel(k))
+        # self.power_lin.setData(
+        #     k, covariance.powerspecModel(k))
 
 
 class KiteCovariogram(_KiteSubplotPlot):
@@ -180,14 +193,15 @@ class KiteCovariogram(_KiteSubplotPlot):
 
         self.cov = pg.PlotDataItem(antialias=True)
         self.cov.setZValue(10)
-        self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_red_dot)
+        self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_covariance)
         self.variance = pg.InfiniteLine(
             pen=pen_variance,
-            angle=0, movable=True, hoverPen=None,
+            angle=0, movable=True, hoverPen=pen_variance_highlight,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
+        self.variance.setToolTip('Move to change variance')
 
         self.variance.sigPositionChangeFinished.connect(self.setVariance)
 
@@ -236,7 +250,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
         self.structure = pg.PlotDataItem(antialias=True)
         self.variance = pg.InfiniteLine(
-            pen=pen_red_dot,
+            pen=pen_covariance,
             angle=0, movable=True, hoverPen=None,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
