@@ -280,7 +280,7 @@ class Gamma(SceneIO):
             return 0.
 
         filename = phi_files[0]
-        self._log.info('Found LOS file %s in %s' % (pattern, filename))
+        self._log.info('Loading LOS %s from %s' % (pattern, filename))
         return num.memmap(filename, mode='r', dtype='>f4')
 
     def read(self, filename, **kwargs):
@@ -330,8 +330,9 @@ class Gamma(SceneIO):
             displ *= wavelength
 
         else:
+            wavelength = 'None'
             self._log.warning(
-                'Could not determine radar_frequency from .slc.par file!'
+                'Could not determine radar_frequency from *.slc.par file!'
                 ' Leaving displacement to radians.')
 
         phi = self._getLOSAngles(filename, '*phi*')
