@@ -1,4 +1,4 @@
-import os
+import os.path as op
 import glob
 import scipy.io
 import numpy as num
@@ -206,7 +206,7 @@ class Gamma(SceneIO):
 
     """
     def _getParameterFile(self, path):
-        path = os.path.dirname(os.path.realpath(path))
+        path = op.dirname(op.realpath(path))
         par_files = glob.glob('%s/*par' % path)
 
         for file in par_files:
@@ -256,7 +256,7 @@ class Gamma(SceneIO):
             return False
 
     def _getAngle(self, filename, pattern):
-        path = os.path.dirname(os.path.realpath(filename))
+        path = op.dirname(op.realpath(filename))
         phi_files = glob.glob('%s/%s' % (path, pattern))
         if len(phi_files) == 0:
             self._log.warning('Could not find %s file, defaulting to 0.'
@@ -268,7 +268,7 @@ class Gamma(SceneIO):
             return 0.
 
         filename = phi_files[0]
-        self._log.debug('Found %s in %s' % (pattern, filename))
+        self._log.info('Found %s in %s' % (pattern, filename))
         return num.memmap(filename, mode='r', dtype='>f4')
 
     def read(self, filename, **kwargs):
@@ -334,11 +334,9 @@ class Gamma(SceneIO):
         c['par_file'] = par_file
 
         if par['DEM_projection'] == 'UTM':
-            self._log.debug('Parameter file provides UTM reference')
+            self._log.info('Parameter file provides UTM reference')
             import utm
-            c['displacement'] = displ/100.
-            c['theta'] = theta
-            c['phi'] = phi
+
             utm_zone = par['projection_zone']
             try:
                 utm_zone_letter = utm.latitude_to_zone_letter(
@@ -348,9 +346,9 @@ class Gamma(SceneIO):
                                   ' defaulting to N!')
                 utm_zone_letter = 'N'
 
-            utm_e = utm_n = None
-            dN = abs(par['post_north'])
-            dE = abs(par['post_east'])
+            dN = par['post_north']
+            dE = par['post_east']
+
             utm_corn_e = par['corner_east']
             utm_corn_n = par['corner_north']
 
@@ -360,22 +358,23 @@ class Gamma(SceneIO):
             utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
             utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
 
-            c['frame']['llLat'], c['frame']['llLon'] =\
-                utm.to_latlon(utm_e.min(), utm_n.min(),
-                              utm_zone, utm_zone_letter)
+            lllat, lllon = utm.to_latlon(utm_e.min(), utm_n.min(),
+                                         utm_zone, utm_zone_letter)
+
             urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
                                          utm_zone, utm_zone_letter)
-            c['frame']['dLat'] =\
-                (urlat - c['frame']['llLat']) / displ.shape[0]
 
-            c['frame']['dLon'] =\
-                (urlon - c['frame']['llLon']) / displ.shape[1]
+            c['frame']['llLat'] = lllat
+            c['frame']['llLon'] = lllon
 
-            c['frame']['dE'] = dE
-            c['frame']['dN'] = dN
+            c['frame']['dLat'] = (urlat - lllat) / displ.shape[0]
+            c['frame']['dLon'] = (urlon - lllon) / displ.shape[1]
+
+            c['frame']['dE'] = abs(dE)
+            c['frame']['dN'] = abs(dN)
 
         else:
-            self._log.debug('Parameter file provides Lat/Lon reference')
+            self._log.info('Parameter file provides Lat/Lon reference')
             c['frame']['llLat'] = par['corner_lat'] + par['post_lat'] * nrows
             c['frame']['llLon'] = par['corner_lon']
             c['frame']['dLon'] = par['post_lon']
@@ -408,7 +407,7 @@ class ROI_PAC(SceneIO):
             return False
 
     def _getParameterFile(self, bin_file):
-        par_file = os.path.realpath(bin_file) + '.rsc'
+        par_file = op.realpath(bin_file) + '.rsc'
         try:
             self._parseParameterFile(par_file)
             self._log.debug('Found parameter file %s' % file)
@@ -551,9 +550,9 @@ class ISCE(SceneIO):
 
     @staticmethod
     def _getLOSFile(path):
-        if not os.path.isdir(path):
-            path = os.path.dirname(path)
-        rdr_files = glob.glob(os.path.join(path, '*.rdr.geo'))
+        if not op.isdir(path):
+            path = op.dirname(path)
+        rdr_files = glob.glob(op.join(path, '*.rdr.geo'))
 
         if len(rdr_files) == 0:
             raise ImportError('Could not find LOS file (*.rdr.geo)')
@@ -561,22 +560,22 @@ class ISCE(SceneIO):
 
     @staticmethod
     def _getDisplacementFile(path):
-        if os.path.isfile(path):
+        if op.isfile(path):
             disp_file = path
         else:
-            files = glob.glob(os.path.join(path, '*.unw.geo'))
+            files = glob.glob(op.join(path, '*.unw.geo'))
             if len(files) == 0:
                 raise ImportError('Could not find displacement file '
                                   '(.unw.geo) at %s', path)
             disp_file = files[0]
 
-        if not os.path.isfile('%s.xml' % disp_file):
+        if not op.isfile('%s.xml' % disp_file):
             raise ImportError('Could not find displacement XML file '
-                              '(%s.unw.geo.xml)' % os.path.basename(disp_file))
+                              '(%s.unw.geo.xml)' % op.basename(disp_file))
         return disp_file
 
     def read(self, path, **kwargs):
-        path = os.path.abspath(path)
+        path = op.abspath(path)
         c = self.container
         isce_xml = ISCEXMLParser(self._getDisplacementFile(path) + '.xml')
 
@@ -631,9 +630,9 @@ class GMTSAR(SceneIO):
         return False
 
     def _getLOSFile(self, path):
-        if not os.path.isdir(path):
-            path = os.path.dirname(path)
-        los_files = glob.glob(os.path.join(path, '*.los.*'))
+        if not op.isdir(path):
+            path = op.dirname(path)
+        los_files = glob.glob(op.join(path, '*.los.*'))
         if len(los_files) == 0:
             self._log.warning(GMTSAR.__doc__)
             raise ImportError('Could not find LOS file (*.los.*)')
@@ -641,10 +640,10 @@ class GMTSAR(SceneIO):
 
     @staticmethod
     def _getDisplacementFile(path):
-        if os.path.isfile(path):
+        if op.isfile(path):
             return path
         else:
-            files = glob.glob(os.path.join(path, '*.grd'))
+            files = glob.glob(op.join(path, '*.grd'))
             if len(files) == 0:
                 raise ImportError('Could not find displacement file '
                                   '(*.grd) at %s', path)
@@ -653,7 +652,7 @@ class GMTSAR(SceneIO):
 
     def read(self, path, **kwargs):
         from scipy.io import netcdf
-        path = os.path.abspath(path)
+        path = op.abspath(path)
         c = self.container
 
         grd = netcdf.netcdf_file(self._getDisplacementFile(path),
