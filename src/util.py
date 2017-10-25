@@ -2,6 +2,8 @@
 import numpy as num
 import scipy as sp
 
+C = 299792458  # m/s
+
 
 def squareMatrix(mat):
     if mat.shape[0] == mat.shape[1]:
