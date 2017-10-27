@@ -326,7 +326,7 @@ class Gamma(SceneIO):
             self._log.info('Scaling displacement by radar_frequency %f GHz'
                            % (radar_frequency/1e9))
             wavelength = util.C / radar_frequency
-            displ /= -num.pi
+            displ /= -4*num.pi
             displ *= wavelength
 
         else:
@@ -408,8 +408,8 @@ class Gamma(SceneIO):
             c['frame']['llLat'] = params['corner_lat']\
                 + (params['post_lat'] * nrows)
             c['frame']['llLon'] = params['corner_lon']
-            c['frame']['dLon'] = params['post_lon']
-            c['frame']['dLat'] = params['post_lat']
+            c['frame']['dLon'] = abs(params['post_lon'])
+            c['frame']['dLat'] = abs(params['post_lat'])
         return self.container
 
 
