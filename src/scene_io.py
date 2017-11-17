@@ -405,11 +405,12 @@ class Gamma(SceneIO):
 
         else:
             self._log.info('Using Lat/Lon reference')
-            c['frame']['llLat'] = params['corner_lat']\
-                + (params['post_lat'] * nrows)
+            c['frame']['llLat'] = params['corner_lat'] \
+                + params['post_lat'] * nrows
             c['frame']['llLon'] = params['corner_lon']
             c['frame']['dLon'] = abs(params['post_lon'])
             c['frame']['dLat'] = abs(params['post_lat'])
+            print(c)
         return self.container
 
 

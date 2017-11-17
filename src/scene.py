@@ -95,7 +95,7 @@ class Frame(object):
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
-        self._scene.evChanged.subscribe(self._updateExtent)
+        self._scene.evChanged.subscribe(self.updateExtent)
 
     def _updateConfig(self, config=None):
         if config is not None:
@@ -105,14 +105,14 @@ class Frame(object):
         else:
             return
 
-        self._updateExtent()
+        self.updateExtent()
         self.evChanged.notify()
 
-    def _updateExtent(self):
+    def updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
 
-        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter =\
+        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
             utm.from_latlon(self.llLat, self.llLon)
 
         self.cols = self._scene.cols
@@ -134,9 +134,8 @@ class Frame(object):
                                           urlat, urlon)
         self.spherical_distortion = num.abs(self.extentE - extentE_top)
 
-        if self.dE is None or self.dN is None:
-            self.dE = (self.extentE + extentE_top) / (2*self.cols)
-            self.dN = self.extentN / self.rows
+        self.dE = (self.extentE + extentE_top) / (2 * self.cols)
+        self.dN = self.extentN / self.rows
 
         self.E = num.arange(self.cols) * self.dE + self.offsetE
         self.N = num.arange(self.rows) * self.dN + self.offsetN
@@ -146,11 +145,11 @@ class Frame(object):
         self.urE = self.E.max()
         self.urN = self.N.max()
 
-        self.config.regularize()
-
         self.gridE = None
         self.gridN = None
         self.coordinates = None
+
+        self.config.regularize()
         return
 
     @property
@@ -161,7 +160,6 @@ class Frame(object):
     def llLat(self, llLat):
         self.config.llLat = llLat
         self._llLat = llLat
-        self._updateExtent()
 
     @property
     def llLon(self):
@@ -171,7 +169,6 @@ class Frame(object):
     def llLon(self, llLon):
         self.config.llLon = llLon
         self._llLon = llLon
-        self._updateExtent()
 
     @property
     def dLat(self):
@@ -180,7 +177,6 @@ class Frame(object):
     @dLat.setter
     def dLat(self, dLat):
         self.config.dLat = dLat
-        self._updateExtent()
 
     @property
     def dLon(self):
@@ -189,7 +185,6 @@ class Frame(object):
     @dLon.setter
     def dLon(self, dLon):
         self.config.dLon = dLon
-        self._updateExtent()
 
     @property
     def dN(self):
@@ -250,7 +245,7 @@ class Frame(object):
         '''
         self.offsetE = east
         self.offsetN = north
-        self._updateExtent()
+        self.updateExtent()
 
     def setLatLonReference(self, lat, lon):
         pass
@@ -760,6 +755,7 @@ class Scene(BaseScene):
             if mv is not None:
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
+        scene.frame.updateExtent()
 
         scene._testImport()
         return scene
