@@ -1,0 +1,37 @@
+{% set data = load_setup_py_data() %}
+
+package:
+  name: pyrocko-kite
+  version: {{ data.get('version') }}
+
+source:
+  path: kite.git/
+  # git-url: https://github.com/pyrocko/kite
+
+requirements:
+  build:
+    - python
+    - numpy
+  run:
+    - numpy
+    - scipy
+    - matplotlib
+    - pyqt
+    - pyyaml
+    - future
+    - requests
+
+test:
+  requires:
+    - nose
+  script_files:
+    - kite.git/test
+  commands:
+    - nosetests --verbosity=2 --detailed-errors test
+
+about:
+  home: https://pyrocko.org
+  license: GPL3
+  license-family: GPL
+  summary: A versatile seismology toolkit for Python.
+  doc_url: https://pyrocko.org/docs/kite
