@@ -179,12 +179,11 @@ class OkadaPath(SandboxSource):
         }
 
         segment = self.segments[pos]
-        for attr, val in segment_update.iteritems():
+        for attr, val in segment_update.items():
             segment.__setattr__(attr, val)
 
     def addNode(self, easting, northing):
         self.nodes.append([easting, northing])
-        print self.nodes
         self.segments.append(
             self._newSegment(
                 e1=self.nodes[-2][0],

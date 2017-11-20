@@ -1,7 +1,8 @@
-from PySide import QtGui, QtCore
-from util import get_resource
 import os
 import logging
+
+from PyQt5 import QtGui, QtCore
+from .util import get_resource
 
 from kite.qt_utils import loadUi
 from pyrocko.guts import Object, Bool, String, Int, Tuple, load
@@ -90,9 +91,9 @@ class ConfigDialog(QtGui.QDialog):
             self.setAttributes)
 
         self.vector_color_picker = QtGui.QColorDialog(self)
-        self.vector_color_picker.\
+        self.vector_color_picker. \
             setCurrentColor(QtGui.QColor(*config.vector_color))
-        self.vector_color_picker.\
+        self.vector_color_picker. \
             setOption(self.vector_color_picker.ShowAlphaChannel)
         self.vector_color_picker.colorSelected.connect(
             self.updateVectorColor)
@@ -111,7 +112,7 @@ class ConfigDialog(QtGui.QDialog):
 
         self.getAttributes()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def chooseStoreDir(self):
         folder = QtGui.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
@@ -153,7 +154,7 @@ class ConfigDialog(QtGui.QDialog):
     def getButtonColor(self):
         return config.vector_color
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def updateVectorColor(self, qcolor):
         config.vector_color = (qcolor.red(), qcolor.green(), qcolor.blue(),
                                qcolor.alpha())

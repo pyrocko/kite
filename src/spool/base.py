@@ -1,11 +1,9 @@
-#!/usr/bin/python2
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
-
-from PySide import QtCore
-from os import path
+#!/usr/bin/python3
 import time
 import numpy as num
+from os import path
+
+from PyQt5 import QtCore
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -37,7 +35,7 @@ class KiteView(dockarea.DockArea):
             widget=KiteToolColormap(self.main_widget))
         dock_colormap.setStretch(1, None)
 
-        for i, (name, tool) in enumerate(self.tools.iteritems()):
+        for i, (name, tool) in enumerate(self.tools.items()):
             self.tool_docks.append(
                 dockarea.Dock(
                     name,
@@ -69,7 +67,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         self.model.sigSceneChanged.connect(self.orientArrow)
         self.setFlag(self.ItemIgnoresTransformations)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def orientArrow(self):
         phi = num.median(self.model.scene.phi)
         theta = num.median(self.model.scene.theta)
@@ -193,8 +191,8 @@ class KitePlot(pg.PlotWidget):
         return self._data
         # return self._data  # num.nan_to_num(_data)
 
-    @QtCore.Slot()
-    def update(self):
+    @QtCore.pyqtSlot(object)
+    def update(self, obj=None):
         self._data = None
         ts = time.time()
 
@@ -214,16 +212,16 @@ class KitePlot(pg.PlotWidget):
 
         self.iso = iso
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event=None):
         if event is None:
             return
         elif self.image.sceneBoundingRect().contains(event[0]):
             map_pos = self.plotItem.vb.mapSceneToView(event[0])
             if not map_pos.isNull():
-                img_pos = self.image.mapFromScene(event).data
-                value = self.image.image[int(img_pos().x()),
-                                         int(img_pos().y())]
+                img_pos = self.image.mapFromScene(*event)
+                value = self.image.image[int(img_pos.x()),
+                                         int(img_pos.y())]
 
                 self.hint['east'] = map_pos.x()
                 self.hint['north'] = map_pos.y()
@@ -283,9 +281,9 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         self.setLevels(-abs_range, abs_range)
 
     def setQualitativeColormap(self):
-        l = len(_viridis_data) - 1
+        nc = len(_viridis_data) - 1
         cmap = {'mode': 'rgb'}
-        cmap['ticks'] = [[float(i)/l, c] for i, c in enumerate(_viridis_data)]
+        cmap['ticks'] = [[float(i)/nc, c] for i, c in enumerate(_viridis_data)]
         self.gradient.restoreState(cmap)
         self.setLevels(num.nanmin(self._plot.data),
                        num.nanmax(self._plot.data))
@@ -327,7 +325,7 @@ class KiteParameterGroup(pTypes.GroupParameter):
         else:
             model = self.model
 
-        for param, f in self.parameters.iteritems():
+        for param, f in self.parameters.items():
             QtCore.QCoreApplication.processEvents()
             try:
                 if callable(f):

@@ -21,7 +21,6 @@ BriDGes DFG Project, University of Kiel
         prog='talpa',
         epilog=epilog,
         description=desc,
-        version='0.1',
         parents=[],
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',

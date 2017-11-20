@@ -130,8 +130,8 @@ class Matlab(SceneIO):
         utm_zone = None
         utm_zone_letter = None
 
-        for mat_k, v in mat.iteritems():
-            for io_k in c.iterkeys():
+        for mat_k, v in mat.items():
+            for io_k in c.keys():
                 if io_k in mat_k:
                     c[io_k] = num.rot90(mat[mat_k])
                 elif 'ig_' in mat_k:

@@ -593,9 +593,9 @@ class Quadtree(object):
         t0 = time.time()
         leaves = []
         for b in self._base_nodes:
-            leaves.extend([l for l in b.iterLeafs()
-                          if l.nan_fraction < self.nan_allowed and
-                          l.id not in self.config.leaf_blacklist])
+            leaves.extend([lv for lv in b.iterLeafs()
+                          if lv.nan_fraction < self.nan_allowed and
+                          lv.id not in self.config.leaf_blacklist])
         self._log.debug(
             'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.4f s]' %
             (self.epsilon, len(leaves), time.time() - t0))
@@ -616,7 +616,7 @@ class Quadtree(object):
             :attr:`kite.quadtree.QuadNode.mean`.
         :type: :class:`numpy.ndarray`, size ``N``.
         '''
-        return num.array([l.mean for l in self.leaves])
+        return num.array([lv.mean for lv in self.leaves])
 
     @property
     def leaf_medians(self):
@@ -625,11 +625,11 @@ class Quadtree(object):
             :attr:`kite.quadtree.QuadNode.median`.
         :type: :class:`numpy.ndarray`, size ``N``.
         '''
-        return num.array([l.median for l in self.leaves])
+        return num.array([lv.median for lv in self.leaves])
 
     @property
     def _leaf_focal_points(self):
-        return num.array([l._focal_point for l in self.leaves])
+        return num.array([lv._focal_point for lv in self.leaves])
 
     @property
     def leaf_focal_points(self):
@@ -637,7 +637,7 @@ class Quadtree(object):
         :getter: Leaf focal points in local coordinates.
         :type: :class:`numpy.ndarray`, size ``(N, 2)``
         '''
-        return num.array([l.focal_point for l in self.leaves])
+        return num.array([lv.focal_point for lv in self.leaves])
 
     @property
     def leaf_coordinates(self):
@@ -672,7 +672,7 @@ class Quadtree(object):
         :getter: Median leaf LOS phi angle. :attr:`kite.Scene.phi`
         :type: :class:`numpy.ndarray`, size ``(N)``
         '''
-        return num.array([l.phi for l in self.leaves])
+        return num.array([lv.phi for lv in self.leaves])
 
     @property
     def leaf_thetas(self):
@@ -680,7 +680,7 @@ class Quadtree(object):
         :getter: Median leaf LOS theta angle. :attr:`kite.Scene.theta`
         :type: :class:`numpy.ndarray`, size ``(N)``
         '''
-        return num.array([l.theta for l in self.leaves])
+        return num.array([lv.theta for lv in self.leaves])
 
     @property_cached
     def leaf_los_rotation_factors(self):
@@ -731,12 +731,12 @@ class Quadtree(object):
         if method not in self._norm_methods.keys():
             raise AttributeError(
                 'Method %s is not in %s' %
-                (method, self._norm_methods.keys()))
+                (method, list(self._norm_methods.keys())))
         t0 = time.time()  # noqa
         array.fill(num.nan)
-        for l in self.leaves:
-            array[l._slice_rows, l._slice_cols] = \
-                self._norm_methods[method](l)
+        for lv in self.leaves:
+            array[lv._slice_rows, lv._slice_cols] = \
+                self._norm_methods[method](lv)
         array[self.scene.displacement_mask] = num.nan
         # print time.time()-t0, method
         return array
@@ -776,8 +776,8 @@ class Quadtree(object):
         nx, ny = num.ceil(num.array(self.displacement.shape) / init_length)
         self._log.debug('Creating %d base nodes' % (nx * ny))
 
-        for ir in xrange(int(nx)):
-            for ic in xrange(int(ny)):
+        for ir in range(int(nx)):
+            for ic in range(int(ny)):
                 llr = ir * init_length
                 llc = ic * init_length
                 self._base_nodes.append(QuadNode(self, llr, llc, init_length))
@@ -803,8 +803,8 @@ class Quadtree(object):
     def getMPLRectangles(self):
         from matplotlib.patches import Rectangle
         rectangles = []
-        for l in self.leaves:
-            r = Rectangle((l.llE, l.llN), l.sizeE, l.sizeN)
+        for lv in self.leaves:
+            r = Rectangle((lv.llE, lv.llN), lv.sizeE, lv.sizeN)
             rectangles.append(r)
         return rectangles
 
@@ -825,11 +825,11 @@ class Quadtree(object):
             f.write(
                 '# node_id, focal_point_E, focal_point_N, theta, phi, '
                 'mean_displacement, median_displacement, absolute_weight\n')
-            for l in self.leaves:
+            for lv in self.leaves:
                 f.write(
-                    '{l.id}, {l.focal_point[0]}, {l.focal_point[1]}, '
-                    '{l.theta}, {l.phi}, '
-                    '{l.mean}, {l.median}, {l.weight}\n'.format(l=l))
+                    '{lv.id}, {lv.focal_point[0]}, {lv.focal_point[1]}, '
+                    '{lv.theta}, {lv.phi}, '
+                    '{lv.mean}, {lv.median}, {lv.weight}\n'.format(lv=lv))
 
 
 __all__ = ['Quadtree', 'QuadtreeConfig']

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import tempfile
 
@@ -118,7 +118,7 @@ setup(
 
     install_requires=[
         'numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
-        'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
+        'progressbar2', 'utm', 'pyqtgraph>=0.10.0'],
     packages=[
         'kite',
         'kite.sources',

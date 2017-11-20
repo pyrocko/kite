@@ -1,4 +1,4 @@
-from PySide import QtCore
+from PyQt5 import QtCore
 
 # Importing available models
 from kite.qt_utils import SceneLogModel
@@ -27,11 +27,8 @@ class SandboxModel(QtCore.QObject):
     sigProcessingFinished = QtCore.Signal()
     sigProcessingStarted = QtCore.Signal(str)
 
-    def __init__(self, scene_model, *args, **kwargs):
-        QtCore.QObject.__init__(self, *args, **kwargs)
-        self.worker_thread = QtCore.QThread()
-        self.moveToThread(self.worker_thread)
-        self.worker_thread.start()
+    def __init__(self, scene_model=None, *args, **kwargs):
+        QtCore.QObject.__init__(self)
 
         self.model = None
         self.log = SceneLogModel(self)
@@ -42,7 +39,12 @@ class SandboxModel(QtCore.QObject):
 
         self.cursor_tracker = CursorTracker()
 
-        self.setModel(scene_model)
+        if scene_model:
+            self.setModel(scene_model)
+
+        self.worker_thread = QtCore.QThread()
+        self.moveToThread(self.worker_thread)
+        self.worker_thread.start()
 
     def setModel(self, model):
         self.disconnectSlots()
@@ -71,7 +73,7 @@ class SandboxModel(QtCore.QObject):
     def removeSource(self, source):
         self.model.removeSource(source)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def optimizeSource(self):
         self.sigProcessingStarted.emit('Optimizing source, stay tuned!')
         self.model.reference.optimizeSource()
@@ -94,8 +96,8 @@ class SandboxModel(QtCore.QObject):
     @classmethod
     def empty(cls):
         from ..sandbox_scene import SandboxScene
-        model = SandboxScene()
-        sandbox = cls(model)
+        sandbox = cls()
+        sandbox.setModel(SandboxScene())
         return sandbox
 
 
@@ -165,19 +167,19 @@ class SourceModel(QtCore.QAbstractTableModel):
         return True
 
     def setData(self, idx, value, role):
-        print idx
+        print('Set %s with role %s to value %s' % (idx, value, role))
 
     def removeSource(self, idx):
         src = self._sources[idx.row()]
         self.sandbox.removeSource(src.source)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def modelUpdated(self, force=False):
         if len(self._sources) != len(self.model_sources) or force:
             self.beginResetModel()
             self._createSources()
             self.endResetModel()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def modelChanged(self):
         self.modelUpdated(force=True)

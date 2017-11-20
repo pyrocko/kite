@@ -92,7 +92,7 @@ class SandboxScene(BaseScene):
         self.theta.fill(num.pi/2)
         self.phi.fill(0.)
 
-        self.frame._updateExtent()
+        self.frame.updateExtent()
         self._clearModel()
         self.evChanged.notify()
 
@@ -365,7 +365,7 @@ class TestSandboxScene(SandboxScene):
             return float(num.random.randint(
                 lo, high=hi, size=1))
 
-        for s in xrange(nsources):
+        for s in range(nsources):
             length = r(5000, 15000)
             sandbox_scene.addSource(
                 OkadaSource(

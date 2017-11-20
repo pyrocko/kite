@@ -21,7 +21,6 @@ BriDGes DFG Project, University of Kiel
         prog='spool',
         epilog=epilog,
         description=desc,
-        version='0.2',
         parents=[],
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',

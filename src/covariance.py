@@ -4,7 +4,7 @@ import numpy as num
 import scipy as sp
 import time
 
-import covariance_ext
+from . import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
 from kite.util import (Subject, property_cached,  # noqa
@@ -534,7 +534,7 @@ class Covariance(object):
             noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
             k_bin = num.insert(k + k[0]/2, 0, 0)
 
-            for i in xrange(k.size):
+            for i in range(k.size):
                 k_min = k_bin[i]
                 k_max = k_bin[i+1]
                 r = num.logical_and(k_rad > k_min, k_rad <= k_max)
@@ -557,11 +557,11 @@ class Covariance(object):
                 k_rad < num.sqrt(kN[mkN].max()**2 + kE[mkE].max()**2))
             res = interp_pspec(kN[mkN, num.newaxis],
                                kE[num.newaxis, mkE], grid=True)
-            print amp.shape, res.shape
-            print kN.size, kE.size
+            print((amp.shape, res.shape))
+            print((kN.size, kE.size))
             amp = res
             amp = num.fft.fftshift(amp)
-            print amp.min(), amp.max()
+            print((amp.min(), amp.max()))
 
         spec *= amp
         noise = num.abs(num.fft.ifft2(spec))
@@ -620,7 +620,7 @@ class Covariance(object):
         # def power1d(k):
         #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
         #     power = num.empty_like(k)
-        #     for i in xrange(k.size):
+        #     for i in range(k.size):
         #         kE = num.cos(theta) * k[i]
         #         kN = num.sin(theta) * k[i]
         #         power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
@@ -630,7 +630,7 @@ class Covariance(object):
         def power1d(k):
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
-            for i in xrange(k.size):
+            for i in range(k.size):
                 kE = num.cos(theta) * k[i]
                 kN = num.sin(theta) * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
@@ -640,7 +640,7 @@ class Covariance(object):
             ''' Mean 2D Power works! '''
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
-            for i in xrange(k.size):
+            for i in range(k.size):
                 kE = num.sin(theta) * k[i]
                 kN = num.cos(theta) * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
@@ -673,7 +673,7 @@ class Covariance(object):
         #     k_ref = kN if axis == 0 else kE
         #     p = num.empty(ps.shape[axis]/2)
         #     k = num.empty(ps.shape[axis]/2)
-        #     for r in xrange(ps.shape[axis]/2):
+        #     for r in range(ps.shape[axis]/2):
         #         mask = num.logical_and(rm >= r-.5, rm < r+.5)
         #         k[r] = k_ref[(k_ref.size/2)+r]
         #         p[r] = num.median(ps[mask]) * 4 * num.pi

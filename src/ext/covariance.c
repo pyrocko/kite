@@ -14,6 +14,12 @@
     #include <omp.h>
 #endif
 
+struct module_state {
+    PyObject *error;
+};
+
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
 
@@ -22,41 +28,39 @@ typedef enum {
     SAUBSAMPLING_SPARSE_ERROR
 } state_covariance;
 
-static PyObject *CovarianceExtError;
-
 int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_intp* shape_want) {
     int i;
 
     if (!PyArray_Check(o)) {
-        PyErr_SetString(CovarianceExtError, "not a NumPy array" );
+        PyErr_SetString(PyExc_AttributeError, "not a NumPy array" );
         return 0;
     }
 
     if (PyArray_TYPE((PyArrayObject*)o) != typenum) {
-        PyErr_SetString(CovarianceExtError, "array of unexpected type");
+        PyErr_SetString(PyExc_AttributeError, "array of unexpected type");
         return 0;
     }
 
     if (!PyArray_ISCARRAY((PyArrayObject*)o)) {
-        PyErr_SetString(CovarianceExtError, "array is not contiguous or not well behaved");
+        PyErr_SetString(PyExc_AttributeError, "array is not contiguous or not well behaved");
         return 0;
     }
 
     if (size_want != -1 && size_want != PyArray_SIZE((PyArrayObject*)o)) {
-        PyErr_SetString(CovarianceExtError, "array is of unexpected size");
+        PyErr_SetString(PyExc_AttributeError, "array is of unexpected size");
         return 0;
     }
 
 
     if (ndim_want != -1 && ndim_want != PyArray_NDIM((PyArrayObject*)o)) {
-        PyErr_SetString(CovarianceExtError, "array is of unexpected ndim");
+        PyErr_SetString(PyExc_AttributeError, "array is of unexpected ndim");
         return 0;
     }
 
     if (ndim_want != -1 && shape_want != NULL) {
         for (i=0; i<ndim_want; i++) {
             if (shape_want[i] != -1 && shape_want[i] != PyArray_DIMS((PyArrayObject*)o)[i]) {
-                PyErr_SetString(CovarianceExtError, "array is of unexpected shape");
+                PyErr_SetString(PyExc_AttributeError, "array is of unexpected shape");
                 return 0;
             }
         }
@@ -184,7 +188,7 @@ static state_covariance calc_covariance_matrix(
     return SUCCESS;
 }
 
-static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
+static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     PyObject *E_arr, *N_arr, *map_arr;
     PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
@@ -192,10 +196,13 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
     uint32_t *map, nthreads, adaptive_subsampling;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
+
+    struct module_state *st = GETSTATE(m);
     state_covariance err;
 
+
     if (! PyArg_ParseTuple(args, "OOOdddII", &E_arr, &N_arr, &map_arr, &ma, &mb, &variance, &nthreads, &adaptive_subsampling)) {
-        PyErr_SetString(CovarianceExtError, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads, adaptive_subsampling)");
+        PyErr_SetString(st->error, "usage: distances(X, Y, map, covmodel_a, covmodel_b, nthreads, adaptive_subsampling)");
         return NULL;
     }
 
@@ -212,7 +219,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
 
 
     if (PyArray_SIZE(c_E_arr) != PyArray_SIZE(c_N_arr)) {
-        PyErr_SetString(CovarianceExtError, "X and Y must have the same size!");
+        PyErr_SetString(st->error, "X and Y must have the same size!");
         return NULL;
     }
 
@@ -233,31 +240,60 @@ static PyObject* w_calc_covariance_matrix(PyObject *dummy, PyObject *args) {
 
     err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, ma, mb, variance, nthreads, adaptive_subsampling, covs);
     if (err != SUCCESS) {
-        PyErr_SetString(CovarianceExtError, "Calculating covariance failed!");
+        PyErr_SetString(st->error, "Calculating covariance failed!");
         return NULL;
     }
     return (PyObject*) cov_arr;
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
-    {"covariance_matrix", w_calc_covariance_matrix, METH_VARARGS,
+    {"covariance_matrix", (PyCFunction)w_calc_covariance_matrix, METH_VARARGS,
      "Calculates the covariance matrix for full resolution." },
-
-    {NULL, NULL, 0, NULL}         /* Sentinel */
+    {NULL, NULL}         /* Sentinel */
 };
 
-PyMODINIT_FUNC
-initcovariance_ext(void)
-{
-    PyObject *m;
+static int calc_covariance_matrix_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
 
-    m = Py_InitModule("covariance_ext", CovarianceExtMethods);
-    if (m == NULL) return;
+static int calc_covariance_matrix_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "covariance_ext",
+        NULL,
+        sizeof(struct module_state),
+        CovarianceExtMethods,
+        NULL,
+        calc_covariance_matrix_traverse,
+        calc_covariance_matrix_clear,
+        NULL
+};
+
+
+#define INITERROR return NULL
+
+PyMODINIT_FUNC
+PyInit_covariance_ext(void)
+{
+    PyObject *module = PyModule_Create(&moduledef);
+    if (module == NULL)
+        INITERROR;
     import_array();
 
-    CovarianceExtError = PyErr_NewException("covariance_ext.error", NULL, NULL);
-    Py_INCREF(CovarianceExtError);  /* required, because other code could remove `error`
-                               from the module, what would create a dangling
-                               pointer. */
-    PyModule_AddObject(m, "CovarianceExtError", CovarianceExtError);
+    struct module_state *st = GETSTATE(module);
+    st->error = PyErr_NewException("kite.covariance_ext.error", NULL, NULL);
+    if (st->error == NULL) {
+        Py_DECREF(module);
+        INITERROR;
+    }
+
+    Py_INCREF(st->error);
+    PyModule_AddObject(module, "error", st->error);
+
+    return module;
 }

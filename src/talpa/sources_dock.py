@@ -1,25 +1,25 @@
-from PySide import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 from functools import partial
 
 from .sources import __sources__
 from .util import SourceEditorDialog
 
 
-class SourcesListDock(QtGui.QDockWidget):
+class SourcesListDock(QtWidgets.QDockWidget):
 
     def __init__(self, sandbox, *args, **kwargs):
-        QtGui.QDockWidget.__init__(self, 'Sources', *args, **kwargs)
+        QtWidgets.QDockWidget.__init__(self, 'Sources', *args, **kwargs)
         self.sandbox = sandbox
 
-        layout = QtGui.QVBoxLayout()
+        layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(3, 3, 3, 3)
         sources = SourcesList(sandbox)
         sources_add_menu = SourcesAddButton(sandbox)
 
-        self.setFeatures(QtGui.QDockWidget.DockWidgetFloatable |
-                         QtGui.QDockWidget.DockWidgetMovable)
+        self.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable |
+                         QtWidgets.QDockWidget.DockWidgetMovable)
 
-        self.widget = QtGui.QWidget()
+        self.widget = QtWidgets.QWidget()
         self.widget.setLayout(layout)
         self.widget.layout().addWidget(sources)
         self.widget.layout().addWidget(sources_add_menu)
@@ -27,12 +27,12 @@ class SourcesListDock(QtGui.QDockWidget):
         self.setWidget(self.widget)
 
 
-class SourcesAddButton(QtGui.QToolButton):
+class SourcesAddButton(QtWidgets.QToolButton):
 
-    class SourcesAddMenu(QtGui.QMenu):
+    class SourcesAddMenu(QtWidgets.QMenu):
 
         def __init__(self, sandbox, *args, **kwargs):
-            QtGui.QMenu.__init__(self, *args, **kwargs)
+            QtWidgets.QMenu.__init__(self)
             self.setTitle('Add Source')
             self.sandbox = sandbox
 
@@ -54,7 +54,7 @@ class SourcesAddButton(QtGui.QToolButton):
                 if source:
                     self.sandbox.addSource(source)
 
-            action = QtGui.QAction(src.display_name, self)
+            action = QtWidgets.QAction(src.display_name, self)
             action.setToolTip('<span style="font-family: monospace;">'
                               '%s</span>' % src.__represents__)
             action.triggered.connect(
@@ -63,7 +63,7 @@ class SourcesAddButton(QtGui.QToolButton):
             return action
 
         def addSection(self, text):
-            action = QtGui.QAction(text, self)
+            action = QtWidgets.QAction(text, self)
             # action.setSeparator(True)
             font = action.font()
             font.setPointSize(9)
@@ -74,14 +74,14 @@ class SourcesAddButton(QtGui.QToolButton):
             return action
 
     def __init__(self, sandbox, parent=None):
-        QtGui.QToolButton.__init__(self, parent)
+        QtWidgets.QToolButton.__init__(self, parent)
 
         menu = self.SourcesAddMenu(sandbox, self, 'Availables sources')
 
         self.setText('Add Source')
         self.setMenu(menu)
 
-        self.setIcon(self.style().standardPixmap(
+        self.setIcon(self.style().standardIcon(
                      QtGui.QStyle.SP_FileDialogDetailedView))
         self.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
@@ -148,7 +148,7 @@ class SourcesList(QtGui.QListView):
             self.addSeparator()
 
             removeAction = self.addAction(
-                self.style().standardPixmap(
+                self.style().standardIcon(
                     QtGui.QStyle.SP_DialogCloseButton),
                 'Remove', removeSource)
 
@@ -165,13 +165,13 @@ class SourcesList(QtGui.QListView):
         sandbox.sources.setSelectionModel(self.selectionModel())
 
     def edit(self, idx, trigger, event):
-        if trigger == QtGui.QAbstractItemView.EditTrigger.DoubleClicked or\
-          trigger == QtGui.QAbstractItemView.EditTrigger.SelectedClicked:
+        if trigger == QtWidgets.QAbstractItemView.DoubleClicked or \
+          trigger == QtWidgets.QAbstractItemView.SelectedClicked:
             editing_dialog = idx.data(SourceEditorDialog)
             editing_dialog.show()
         return False
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot(object)
     def contextMenuEvent(self, event):
         idx = self.indexAt(event.pos())
         menu = self.SourceContextMenu(self.sandbox, idx, self)

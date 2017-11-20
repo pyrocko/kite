@@ -34,7 +34,12 @@ typedef npy_float64 float64_t;
 #define DEG2RAD 0.017453292519943295L
 #define PI2INV 0.15915494309189535L
 
-static PyObject *DislocExtError;
+struct module_state {
+    PyObject *error;
+};
+
+#define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+
 
 
 void Okada(double *pSS, double *pDS, double *pTS, double alp, double sd, double cd, double len, double wid,
@@ -251,35 +256,35 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     int i;
 
     if (!PyArray_Check(o)) {
-        PyErr_SetString(DislocExtError, "not a NumPy array" );
+        PyErr_SetString(PyExc_AttributeError, "not a NumPy array" );
         return 0;
     }
 
     if (PyArray_TYPE((PyArrayObject*)o) != typenum) {
-        PyErr_SetString(DislocExtError, "array of unexpected type");
+        PyErr_SetString(PyExc_AttributeError, "array of unexpected type");
         return 0;
     }
 
     if (!PyArray_ISCARRAY((PyArrayObject*)o)) {
-        PyErr_SetString(DislocExtError, "array is not contiguous or not well behaved");
+        PyErr_SetString(PyExc_AttributeError, "array is not contiguous or not well behaved");
         return 0;
     }
 
     if (size_want != -1 && size_want != PyArray_SIZE((PyArrayObject*)o)) {
-        PyErr_SetString(DislocExtError, "array is of unexpected size");
+        PyErr_SetString(PyExc_AttributeError, "array is of unexpected size");
         return 0;
     }
 
 
     if (ndim_want != -1 && ndim_want != PyArray_NDIM((PyArrayObject*)o)) {
-        PyErr_SetString(DislocExtError, "array is of unexpected ndim");
+        PyErr_SetString(PyExc_AttributeError, "array is of unexpected ndim");
         return 0;
     }
 
     if (ndim_want != -1 && shape_want != NULL) {
         for (i=0; i<ndim_want; i++) {
             if (shape_want[i] != -1 && shape_want[i] != PyArray_DIMS((PyArrayObject*)o)[i]) {
-                PyErr_SetString(DislocExtError, "array is of unexpected shape");
+                PyErr_SetString(PyExc_AttributeError, "array is of unexpected shape");
                 return 0;
             }
         }
@@ -288,17 +293,17 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
 }
 
 
-static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
+static PyObject* w_disloc(PyObject *m, PyObject *args) {
   int nstations, ndislocations;
   PyObject *output_arr, *coords_arr, *models_arr;
   npy_intp output_dims[2];
   int nthreads;
   npy_float64 *output, *coords, *models, nu;
   
-  (void) dummy;
+  struct module_state *st = GETSTATE(m);
 
   if (! PyArg_ParseTuple(args, "OOfI", &models_arr, &coords_arr, &nu, &nthreads)) {
-    PyErr_SetString(DislocExtError, "usage: disloc(model, target_coordinates)");
+    PyErr_SetString(st->error, "usage: disloc(model, target_coordinates)");
     return NULL;
   }
 
@@ -326,20 +331,47 @@ static PyObject* w_disloc(PyObject *dummy, PyObject *args) {
 static PyMethodDef OkadaExtMethods[] = {
   {"disloc", w_disloc, METH_VARARGS,
    "Calculates the static displacement for an Okada Source"},
-  {NULL, NULL, 0, NULL}        /* Sentinel */
+  {NULL, NULL}        /* Sentinel */
 };
 
+static int disloc_traverse(PyObject *m, visitproc visit, void *arg) {
+    Py_VISIT(GETSTATE(m)->error);
+    return 0;
+}
+
+static int disloc_clear(PyObject *m) {
+    Py_CLEAR(GETSTATE(m)->error);
+    return 0;
+}
+
+static struct PyModuleDef moduledef = {
+        PyModuleDef_HEAD_INIT,
+        "disloc_ext",
+        NULL,
+        sizeof(struct module_state),
+        OkadaExtMethods,
+        NULL,
+        disloc_traverse,
+        disloc_clear,
+        NULL
+};
+
+#define INITERROR return NULL
 
 PyMODINIT_FUNC
-initdisloc_ext(void) {
-  PyObject *m;
-
-  m = Py_InitModule("disloc_ext", OkadaExtMethods);
-  if (m == NULL)
-    return;
+PyInit_disloc_ext(void)
+{
+  PyObject *module = PyModule_Create(&moduledef);
+  if (module == NULL)
+    INITERROR;
   import_array();
   
-  DislocExtError = PyErr_NewException("disloc_ext.error", NULL, NULL);
-  Py_INCREF(DislocExtError);
-  PyModule_AddObject(m, "DislocExtError", DislocExtError);
+  struct module_state *st = GETSTATE(module);
+  st->error = PyErr_NewException("disloc_ext.error", NULL, NULL);
+  if (st->error == NULL) {
+      Py_DECREF(module);
+      INITERROR;
+  }
+
+  return module;
 }

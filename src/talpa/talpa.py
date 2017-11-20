@@ -1,13 +1,13 @@
 import sys
-from PySide import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from .util import get_resource
 from .multiplot import SandboxSceneDockarea, ModelReferenceDockarea
 from .sources_dock import SourcesListDock
 from .tool_dialogs import ExtentDialog
 from .config import ConfigDialog
+from .sandbox_model import SandboxModel
 
-from sandbox_model import SandboxModel
 from kite.sandbox_scene import SandboxScene
 from kite.qt_utils import loadUi, SceneLog, validateFilename
 
@@ -28,6 +28,9 @@ class Talpa(QtGui.QApplication):
 
         self.splash.finish(self.talpa_win)
 
+        self.talpa_win.actionExit.triggered.connect(self.exit)
+        self.aboutToQuit.connect(self.talpa_win.sandbox.worker_thread.quit)
+        self.aboutToQuit.connect(self.talpa_win.sandbox.deleteLater)
         self.aboutToQuit.connect(self.splash.deleteLater)
         self.aboutToQuit.connect(self.deleteLater)
 
@@ -35,7 +38,7 @@ class Talpa(QtGui.QApplication):
         rc = self.exec_()
         sys.exit(rc)
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=''):
         self.splash.showMessage("Loading %s ..." % msg.title(),
                                 QtCore.Qt.AlignBottom)
@@ -78,11 +81,13 @@ class TalpaMainWindow(QtGui.QMainWindow):
         self.sandbox.sigModelChanged.connect(
             self.createMisfitWindow)
 
-        self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
+        self.progress = QtWidgets.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
-        self.progress.setWindowTitle('processing...')
+        self.progress.setWindowTitle('processing ...')
+        self.progress.close()
+
         self.sandbox.sigProcessingFinished.connect(
             self.processingFinished)
         self.sandbox.sigProcessingStarted.connect(
@@ -103,23 +108,22 @@ class TalpaMainWindow(QtGui.QMainWindow):
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def extentDialog(self):
         ExtentDialog(self.sandbox, self).show()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def configDialog(self):
         ConfigDialog(self).show()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def processingStarted(self, text):
         self.progress.setLabelText(text)
         self.progress.show()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def processingFinished(self):
         self.progress.reset()
-        self.progress.close()
 
     def onSaveModel(self):
         filename, _ = QtGui.QFileDialog.getSaveFileName(

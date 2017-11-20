@@ -1,9 +1,10 @@
 #!/usr/bin/python2
+import numpy as num
 from collections import OrderedDict
-from PySide import QtGui
+
+from PyQt5 import QtGui, QtCore
 
 import pyqtgraph as pg
-import numpy as num
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from kite.qt_utils import loadUi
@@ -36,13 +37,14 @@ class KiteScene(KiteView):
         self.parameters = [self.param_scene]
 
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
+        
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
+        KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
 
-        KiteView.__init__(self)
-
+    @QtCore.pyqtSlot()
     def modelChanged(self):
         self.main_widget.update()
         self.main_widget.transFromFrame()
@@ -92,14 +94,14 @@ class KiteToolTransect(QtGui.QDialog):
 
         loadUi(get_resource('transect.ui'), baseinstance=self)
 
-        pxmap = self.style().standardPixmap
+        icon = self.style().standardIcon
 
         self.closeButton.setIcon(
-            pxmap(QtGui.QStyle.SP_DialogCloseButton))
+            icon(QtGui.QStyle.SP_DialogCloseButton))
         self.createButton.setIcon(
-            pxmap(QtGui.QStyle.SP_ArrowUp))
+            icon(QtGui.QStyle.SP_ArrowUp))
         self.removeButton.setIcon(
-            pxmap(QtGui.QStyle.SP_DialogDiscardButton))
+            icon(QtGui.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None

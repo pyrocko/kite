@@ -1,4 +1,4 @@
-from PySide import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 import numpy as num
 import os
 
@@ -35,7 +35,7 @@ class PyrockoSourceDialog(SourceEditDialog):
 
         self.getSourceParameters()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def chooseStoreDir(self):
         folder = QtGui.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
@@ -129,7 +129,7 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
             PyrockoSourceDialog.__init__(
                 self, ui_file='pyrocko_moment_tensor.ui', *args, **kwargs)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParameters(self):
             params = {}
             scale = float('1e%d' % self.exponent.value())
@@ -139,7 +139,7 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
                     params[param] = params[param] * scale
             self.delegate.updateModelParameters(params)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
             exponent = num.log10(
@@ -221,7 +221,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             self.addRotateHandle([.5, 1.], [0.5, 0.5])
             self.updateROIPosition()
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParametersFromROI(self):
             angle = self.angle()
             strike = float(-angle) % 360
@@ -235,7 +235,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
             self.newSourceParameters.emit(parameters)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def updateROIPosition(self):
             source = self.source
             vec_x, vec_y = self._vectorToCenter(source.strike)
@@ -336,7 +336,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             self.addScaleRotateHandle([.5, 1.], [.5, .5])
             self.updateROIPosition()
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParametersFromROI(self):
             angle = self.angle()
             strike = float(-angle) % 360
@@ -351,7 +351,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
 
             self.newSourceParameters.emit(parameters)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def updateROIPosition(self):
             source = self.source
 

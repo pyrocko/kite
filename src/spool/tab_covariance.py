@@ -1,12 +1,9 @@
-#!/bin/python
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
 import numpy as num
 import pyqtgraph as pg
-from pyqtgraph import dockarea
-
-from PySide import QtGui, QtCore
 from collections import OrderedDict
+
+from PyQt5 import QtGui, QtCore
+from pyqtgraph import dockarea
 
 from kite.qt_utils import loadUi
 from kite.covariance import modelCovariance
@@ -80,7 +77,7 @@ class KiteCovariance(KiteView):
         self.main_widget.onConfigChanged()
 
         self.param_covariance.updateValues()
-        for v in self.tools.itervalues():
+        for v in self.tools.values():
             v.update()
 
 
@@ -177,6 +174,7 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.connect(self.update)
         self.update()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
         spec, k, _, _, _, _ = covariance.powerspecNoise1D()
@@ -233,6 +231,7 @@ class KiteCovariogram(_KiteSubplotPlot):
     def setVariance(self):
         self.model.covariance.variance = self.variance.value()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
         cov, dist = covariance.covariance_func
@@ -274,6 +273,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
         self.update()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
         struc, dist = covariance.structure_func
@@ -320,7 +320,6 @@ class KiteToolNoise(QtGui.QDialog):
                 sideScalers=True,
                 movable=False,
                 pen=pen_roi)
-            self.patch_size_roi.sigRegionChangeFinished.connect(self.update)
 
             self._anisotropic = False
             self.components_available = {
@@ -331,8 +330,9 @@ class KiteToolNoise(QtGui.QDialog):
                 ]}
 
             self._component = 'synthetic_noise'
-            KitePlot.__init__(self, model=model)
 
+            KitePlot.__init__(self, model=model)
+            self.patch_size_roi.sigRegionChangeFinished.connect(self.update)
             self.addItem(self.patch_size_roi)
 
         @property
@@ -390,7 +390,7 @@ class KiteToolNoise(QtGui.QDialog):
 
         loadUi(get_resource('noise_dialog.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.noise_patch = self.NoisePlot(model)
@@ -480,6 +480,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
             self.update()
 
+        @QtCore.pyqtSlot()
         def update(self):
             self.image.updateImage(
                 self.model.covariance.weight_matrix_focal.T,
@@ -491,7 +492,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
                 xRange=(0, self.model.quadtree.nleaves),
                 yRange=(0, self.model.quadtree.nleaves))
 
-        @QtCore.Slot(object)
+        @QtCore.pyqtSlot(object)
         def mouseMoved(self, event=None):
             if event is None:
                 pass
@@ -520,7 +521,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         loadUi(get_resource('covariance_matrix.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
 
         self.weight_matrix = self.MatrixPlot(model)
         self.dockarea = dockarea.DockArea(self)

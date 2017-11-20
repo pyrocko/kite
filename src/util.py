@@ -96,13 +96,13 @@ def trimMatrix(displ):
         raise TypeError('Displacement has to be 2-dim array')
     r1 = r2 = False
     c1 = c2 = False
-    for r in xrange(displ.shape[0]):
+    for r in range(displ.shape[0]):
         if not num.all(num.isnan(displ[r, :])):
             if not r1:
                 r1 = r + 1
             else:
                 r2 = r
-    for c in xrange(displ.shape[1]):
+    for c in range(displ.shape[1]):
         if not num.all(num.isnan(displ[:, c])):
             if not c1:
                 c1 = c + 1
@@ -212,8 +212,8 @@ class Subject(object):
         """
         try:
             self._listeners.remove(listener)
-        except:
-            raise AttributeError('%s was not subscribed to ')
+        except Exception:
+            raise AttributeError('%s was not subscribed!')
 
     def unsubscribeAll(self):
         for l in self._listeners:

@@ -16,7 +16,7 @@ class PyrockoSource(object):
         SandboxSource.parametersUpdated(self)
 
     def updatePyrockoSource(self):
-        for arg, value in self._src_args.iteritems():
+        for arg, value in self._src_args.items():
             self.pyrocko_source.__setattr__(arg, value)
 
 

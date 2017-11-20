@@ -1,4 +1,4 @@
-from PySide import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 from pyqtgraph import dockarea
 import pyqtgraph as pg
 
@@ -74,7 +74,7 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
             viewbox = self.plots[0].getViewBox()
             viewbox.autoRange()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
         self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
 
@@ -125,7 +125,7 @@ class ModelReferenceLayout(pg.GraphicsLayoutWidget):
         self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
         self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
         self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
 
@@ -190,7 +190,7 @@ class DisplacementPlot(pg.PlotItem):
     def data(self):
         return self.component(self.sandbox.model)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def update(self):
         self.image.updateImage(self.data.T)
         self.transFromFrame()
@@ -201,18 +201,18 @@ class DisplacementPlot(pg.PlotItem):
             self.sandbox.frame.dE,
             self.sandbox.frame.dN)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def addSourceROIS(self):
         self.rois = []
         index = QtCore.QModelIndex()
-        for isrc in xrange(self.sandbox.sources.rowCount(index)):
+        for isrc in range(self.sandbox.sources.rowCount(index)):
             index = self.sandbox.sources.index(isrc, 0, index)
             roi = index.data(SourceROI)
             roi.setParent(self)
             self.rois.append(roi)
             self.addItem(roi)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def removeSourceROIS(self):
         if self.rois:
             for roi in self.rois:
@@ -224,7 +224,7 @@ class DisplacementPlot(pg.PlotItem):
         self.sandbox.cursor_tracker.sigMouseMoved.connect(self.mouseMoved)
         self.addItem(self.cursor)
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
 
         if self.vb.sceneBoundingRect().contains(event[0]):
@@ -246,7 +246,7 @@ class DisplacementPlot(pg.PlotItem):
             else:
                 self.cursor.show()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def drawCursor(self, pos):
         pos, _ = pos
         self.cursor.setPos(pos)
@@ -267,7 +267,7 @@ class DisplacementPlot(pg.PlotItem):
         self.hint_text.setOpacity(.6)
         self.sandbox.cursor_tracker.sigCursorMoved.connect(self.updateHintText)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot(object)
     def updateHintText(self, pos):
         pos, value = pos
         self.hint_text.setText(
@@ -345,8 +345,8 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
         self.length_scale = length_scale if length_scale > 0. else 1.
         self.scale_view = (w+h)/2 / painter.window().height()*2.5
 
-        for ix in xrange(nx):
-            for iy in xrange(ny):
+        for ix in range(nx):
+            for iy in range(ny):
                 if ivec > nvectors:
                     break
                 vec = self.vectors[ivec]
@@ -455,7 +455,7 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.axis.setLabel('Displacement / m')
         self.setSymColormap()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSymColormap(self):
         cmap = {'ticks':
                 [[0, (106, 0, 31, 255)],

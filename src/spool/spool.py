@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from PySide import QtGui, QtCore
+from PyQt5 import QtGui, QtCore
 import sys
 import time  # noqa
 import pyqtgraph as pg
@@ -47,7 +47,7 @@ class Spool(QtGui.QApplication):
         rc = self.exec_()
         sys.exit(rc)
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=''):
         self.splash.showMessage("Loading %s ..." % msg.title(),
                                 QtCore.Qt.AlignBottom)
@@ -162,7 +162,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def processingStarted(self, text):
         self.progress.setLabelText(text)
         self.progress.show()

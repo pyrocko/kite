@@ -84,6 +84,6 @@ class Downsample(SceneProcess):
         sc.frame.dLon = org['frame.dLat'] * self.factor
 
     def remove(self):
-        for prop, value in self.original.iteritems():
+        for prop, value in self.original.items():
             self.scene.__setattr__(prop, value)
         del self.original

@@ -1,12 +1,12 @@
-from PySide import QtGui, QtCore
+from PyQt5 import QtWidgets, QtCore
 
 from kite.qt_utils import loadUi
 from .util import get_resource
 
 
-class ExtentDialog(QtGui.QDialog):
+class ExtentDialog(QtWidgets.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
-        QtGui.QDialog.__init__(self, *args, **kwargs)
+        QtWidgets.QDialog.__init__(self, *args, **kwargs)
         loadUi(get_resource('dialog_extent.ui'), self)
         self.setSizeGripEnabled(False)
 
@@ -41,9 +41,9 @@ class ExtentDialog(QtGui.QDialog):
         self.spinNorthPx.setValue(
             model.config.extent_north)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def updateValues(self):
-        print 'update extent!'
+        print('update extent!')
         self.sandbox.model.setExtent(
             self.spinEastPx.value(),
             self.spinNorthPx.value())

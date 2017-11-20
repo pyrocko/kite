@@ -1,4 +1,4 @@
-from PySide import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as num
 
@@ -47,7 +47,7 @@ class RectangularSourceROI(pg.ROI):
         self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.sigClicked.connect(self.showEditingDialog)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
         strike = float((-self.angle()) % 360)
         width = float(self.size().x())
@@ -64,7 +64,7 @@ class RectangularSourceROI(pg.ROI):
             }
         self.newSourceParameters.emit(parameters)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def updateROIPosition(self):
         source = self.source
         width = source.width
@@ -79,11 +79,11 @@ class RectangularSourceROI(pg.ROI):
             -source.strike,
             finish=False)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def highlightROI(self, highlight):
         self.setMouseHover(highlight)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def showEditingDialog(self, *args):
         self.delegate.getEditingDialog().show()
 
@@ -129,7 +129,7 @@ class PointSourceROI(pg.EllipseROI):
         self.setAcceptedMouseButtons(QtCore.Qt.RightButton)
         self.sigClicked.connect(self.showEditingDialog)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
         parameters = {
             'easting': float(self.pos().x() + self.size().x()/2),
@@ -137,7 +137,7 @@ class PointSourceROI(pg.EllipseROI):
             }
         self.newSourceParameters.emit(parameters)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def updateROIPosition(self):
         source = self.source
         self.setPos(
@@ -145,11 +145,11 @@ class PointSourceROI(pg.EllipseROI):
                       source.northing - self.size().x()/2)),
             finish=False)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def highlightROI(self, highlight):
         self.setMouseHover(highlight)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def showEditingDialog(self, *args):
         self.delegate.getEditingDialog().show()
 
@@ -216,13 +216,13 @@ class SourceDelegate(QtCore.QObject):
         self.rois.append(src)
         return src
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def highlightItem(self):
         if self.model.selection_model is not None:
             self.model.selection_model.setCurrentIndex(
                 self.index, QtGui.QItemSelectionModel.SelectCurrent)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def selectionChanged(self, idx):
         if self.index.row() == idx.row()\
           and self.index.column() == idx.column():
@@ -230,12 +230,12 @@ class SourceDelegate(QtCore.QObject):
         else:
             self.highlightROI.emit(False)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSelectionModel(self):
         self.model.selection_model.currentChanged.connect(
             self.selectionChanged)
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def updateModelParameters(self, parameters):
         self.model.setItemData(self.index, parameters)
 
@@ -268,12 +268,12 @@ class SourceEditDialog(QtGui.QDialog):
         self.okButton.released.connect(
             self.close)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def getSourceParameters(self):
         for param, value in self.delegate.getSourceParameters().iteritems():
             self.__getattribute__(param).setValue(value)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSourceParameters(self):
         params = {}
         for param in self.delegate.parameters:

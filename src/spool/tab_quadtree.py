@@ -1,9 +1,6 @@
-#!/usr/bin/python2
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
-
 from collections import OrderedDict
-from PySide import QtCore, QtGui
+
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -151,7 +148,7 @@ class KiteQuadtreePlot(KitePlot):
         self.eraseBox.scale(r.width(), r.height())
         self.eraseBox.show()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseDragEvent(self, ev, axis=None):
         if ev.button() & (QtCore.Qt.LeftButton | QtCore.Qt.MidButton):
             return pg.ViewBox.mouseDragEvent(self.vb, ev, axis)

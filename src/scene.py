@@ -628,7 +628,7 @@ class Scene(BaseScene):
             self.theta
             self.phi
         except Exception as e:
-            print e
+            print(e)
             raise ImportError('Something went wrong during import - '
                               'see Exception!')
 
@@ -748,10 +748,10 @@ class Scene(BaseScene):
         for sk in ['theta', 'phi', 'displacement']:
             setattr(scene, sk, data[sk])
 
-        for fk, fv in data['frame'].iteritems():
+        for fk, fv in data['frame'].items():
             setattr(scene.frame, fk, fv)
 
-        for mk, mv in data['meta'].iteritems():
+        for mk, mv in data['meta'].items():
             if mv is not None:
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
