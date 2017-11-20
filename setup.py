@@ -15,6 +15,8 @@ except ImportError:
         def get_include(self):
             return ''
 
+version = '2017.11'
+
 
 def _check_for_openmp():
     """Check  whether the default compiler supports OpenMP.
@@ -91,7 +93,7 @@ else:
 
 setup(
     name='kite',
-    version='0.0.2',
+    version=version,
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'
            'BriDGes Emmily Noether-Programm (DFG)',
