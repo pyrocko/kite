@@ -249,7 +249,7 @@ class DislocProcessor(SourceProcessor):
         for nu in src_nu:
             src_arr = num.vstack([src.dislocSource() for src in sources
                                   if src.nu == nu])
-            res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
+            res = disloc_ext.disloc(src_arr, coords, nu, nthreads)
 
             result['displacement.e'] += res[:, 0]
             result['displacement.n'] += res[:, 1]

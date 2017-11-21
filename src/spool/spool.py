@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
 import time  # noqa
 import pyqtgraph as pg
@@ -14,13 +14,13 @@ from .tab_covariance import KiteCovariance  # noqa
 from .base import get_resource
 
 
-class Spool(QtGui.QApplication):
+class Spool(QtWidgets.QApplication):
     def __init__(self, scene=None, import_data=None, load_file=None):
-        QtGui.QApplication.__init__(self, ['Spool'])
+        QtWidgets.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
             .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
-        self.splash = QtGui.QSplashScreen(
+        self.splash = QtWidgets.QSplashScreen(
             splash_img, QtCore.Qt.WindowStaysOnTopHint)
         self.updateSplashMessage('Scene')
         self.splash.show()
@@ -65,23 +65,23 @@ class Spool(QtGui.QApplication):
         pass
 
 
-class SpoolMainWindow(QtGui.QMainWindow):
-    sigImportFile = QtCore.Signal(str)
-    sigLoadFile = QtCore.Signal(str)
-    sigLoadConfig = QtCore.Signal(str)
-    sigExportWeightMatrix = QtCore.Signal(str)
-    sigLoadingModule = QtCore.Signal(str)
+class SpoolMainWindow(QtWidgets.QMainWindow):
+    sigImportFile = QtCore.pyqtSignal(str)
+    sigLoadFile = QtCore.pyqtSignal(str)
+    sigLoadConfig = QtCore.pyqtSignal(str)
+    sigExportWeightMatrix = QtCore.pyqtSignal(str)
+    sigLoadingModule = QtCore.pyqtSignal(str)
 
     def __init__(self, *args, **kwargs):
-        QtGui.QMainWindow.__init__(self, *args, **kwargs)
-        self.loadUi()
+        QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
+        loadUi(get_resource('spool.ui'), baseinstance=self)
 
         self.views = [KiteScene, KiteQuadtree, KiteCovariance]
 
         self.ptree = KiteParameterTree(showHeader=False)
-        self.ptree_dock = QtGui.QDockWidget('Parameters', self)
-        self.ptree_dock.setFeatures(QtGui.QDockWidget.DockWidgetFloatable |
-                                    QtGui.QDockWidget.DockWidgetMovable)
+        self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
+        self.ptree_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable |
+                                    QtWidgets.QDockWidget.DockWidgetMovable)
         self.ptree_dock.setWidget(self.ptree)
         self.addDockWidget(
             QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
@@ -118,13 +118,13 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.actionAbout_Spool.triggered.connect(
             self.aboutDialog().show)
         self.actionHelp.triggered.connect(
-            lambda: QtGui.QDesktopServices.openUrl('http://pyrocko.org'))
+            lambda: QtGui.QDesktopServices.openUrl('https://pyrocko.org'))
 
         self.log = SceneLog(self, self.model)
         self.actionLog.triggered.connect(
             self.log.show)
 
-        self.progress = QtGui.QProgressDialog('', None, 0, 0, self)
+        self.progress = QtWidgets.QProgressDialog('', None, 0, 0, self)
         self.progress.setValue(0)
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
@@ -132,12 +132,9 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.model.sigProcessingFinished.connect(self.progress.reset)
 
     def aboutDialog(self):
-        self._about = QtGui.QDialog()
+        self._about = QtGui.QDialog(self)
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
-
-    def loadUi(self):
-        loadUi(get_resource('spool.ui'), baseinstance=self)
 
     def addScene(self, scene):
         self.model.setScene(scene)
@@ -168,14 +165,14 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.progress.show()
 
     def onSaveConfig(self):
-        filename, _ = QtGui.QFileDialog.getSaveFileName(
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
         if not validateFilename(filename):
             return
         self.model.scene.saveConfig(filename)
 
     def onSaveScene(self):
-        filename, _ = QtGui.QFileDialog.getSaveFileName(
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')
         if not validateFilename(filename):
@@ -183,14 +180,14 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.model.scene.save(filename)
 
     def onLoadConfig(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             filter='YAML file *.yml (*.yml)', caption='Load scene YAML config')
         if not validateFilename(filename):
             return
         self.sigLoadConfig.emit(filename)
 
     def onOpenScene(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Load kite scene')
         if not validateFilename(filename):
@@ -198,7 +195,7 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.model.loadFile(filename)
 
     def onImportScene(self):
-        filename, _ = QtGui.QFileDialog.getOpenFileName(
+        filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
             filter='Supported Formats, *.grd, *.geo, *unw*, *.mat '
                    '(*.grd,*.geo,*unw*,*.mat);;'
@@ -211,14 +208,14 @@ class SpoolMainWindow(QtGui.QMainWindow):
         self.sigImportFile.emit(filename)
 
     def onExportQuadtree(self):
-        filename, _ = QtGui.QFileDialog.getSaveFileName(
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
         if not validateFilename(filename):
             return
         self.model.quadtree.export(filename)
 
     def onExportWeightMatrix(self):
-        filename, _ = QtGui.QFileDialog.getSaveFileName(
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter='Text File *.txt (*.txt)',
             caption='Export Covariance Weights',)
         if not validateFilename(filename):

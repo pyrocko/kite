@@ -40,6 +40,7 @@ class SandboxScene(BaseScene):
         self.evChanged = Subject()
         self.evModelUpdated = Subject()
         self.evConfigChanged = Subject()
+        self._initialised = False
 
         self.config = config if config else SandboxSceneConfig()
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
@@ -83,18 +84,36 @@ class SandboxScene(BaseScene):
         self.cols = east
         self.rows = north
 
-        self.north = num.zeros((self.rows, self.cols))
-        self.east = num.zeros_like(self.north)
-        self.down = num.zeros_like(self.north)
+        self._north = num.zeros((self.rows, self.cols))
+        self._east = num.zeros_like(self._north)
+        self._down = num.zeros_like(self._north)
 
-        self.theta = num.zeros_like(self.north)
-        self.phi = num.zeros_like(self.north)
+        self.theta = num.zeros_like(self._north)
+        self.phi = num.zeros_like(self._north)
         self.theta.fill(num.pi/2)
         self.phi.fill(0.)
 
         self.frame.updateExtent()
         self._clearModel()
         self.evChanged.notify()
+
+    @property
+    def north(self):
+        if not self._initialised:
+            self.processSources()
+        return self._north
+
+    @property
+    def east(self):
+        if not self._initialised:
+            self.processSources()
+        return self._east
+
+    @property
+    def down(self):
+        if not self._initialised:
+            self.processSources()
+        return self._down
 
     @property_cached
     def displacement(self):
@@ -103,15 +122,15 @@ class SandboxScene(BaseScene):
         los_factors = self.los_rotation_factors
 
         self._displacement =\
-            (los_factors[:, :, 0] * -self.down +
-             los_factors[:, :, 1] * self.east +
-             los_factors[:, :, 2] * self.north)
+            (los_factors[:, :, 0] * -self._down +
+             los_factors[:, :, 1] * self._east +
+             los_factors[:, :, 2] * self._north)
         return self._displacement
 
     @property_cached
     def max_horizontal_displacement(self):
         ''' Maximum horizontal displacement '''
-        return num.sqrt(self.north**2 + self.east**2).max()
+        return num.sqrt(self._north**2 + self._east**2).max()
 
     def addSource(self, source):
         '''Add displacement source to sandbox
@@ -145,9 +164,10 @@ class SandboxScene(BaseScene):
             self.frame.coordinates,
             self.sources)
 
-        self.north += result['north'].reshape(self.rows, self.cols)
-        self.east += result['east'].reshape(self.rows, self.cols)
-        self.down += result['down'].reshape(self.rows, self.cols)
+        self._north += result['north'].reshape(self.rows, self.cols)
+        self._east += result['east'].reshape(self.rows, self.cols)
+        self._down += result['down'].reshape(self.rows, self.cols)
+        self._initialised = True
 
     def processCustom(self, coordinates, sources, result_dict=None):
         return self._process(coordinates, sources, result_dict)
@@ -181,8 +201,9 @@ class SandboxScene(BaseScene):
                 coordinates,
                 nthreads=0)
 
+            src_type = proc_sources[0].__class__.__name__
             self._log.debug('Processed %s (nsources:%d) using %s [%.4f s]'
-                            % (src.__class__.__name__, len(proc_sources),
+                            % (src_type, len(proc_sources),
                                processor.__name__, time.time() - t0))
 
             result['north'] += proc_result['displacement.n']
@@ -240,10 +261,11 @@ class SandboxScene(BaseScene):
             config=config)
 
     def _clearModel(self):
-        for arr in [self.north, self.east, self.down]:
+        for arr in [self._north, self._east, self._down]:
             arr.fill(0.)
         self.displacement = None
         self._los_factors = None
+        self._initialised = False
 
         self.max_horizontal_displacement = None
 

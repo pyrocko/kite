@@ -189,10 +189,10 @@ class KiteQuadtreePlot(KitePlot):
 
 
 class KiteParamQuadtree(KiteParameterGroup):
-    sigEpsilon = QtCore.Signal(float)
-    sigNanFraction = QtCore.Signal(float)
-    sigTileMaximum = QtCore.Signal(float)
-    sigTileMinimum = QtCore.Signal(float)
+    sigEpsilon = QtCore.pyqtSignal(float)
+    sigNanFraction = QtCore.pyqtSignal(float)
+    sigTileMaximum = QtCore.pyqtSignal(float)
+    sigTileMinimum = QtCore.pyqtSignal(float)
 
     def __init__(self, model, plot, *args, **kwargs):
         self.plot = plot

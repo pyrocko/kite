@@ -92,7 +92,7 @@ class SourcesList(QtGui.QListView):
     class SourceItemDelegate(QtGui.QStyledItemDelegate):
 
         def paint(self, painter, option, index):
-            options = QtGui.QStyleOptionViewItemV4(option)
+            options = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(options, index)
 
             style = QtGui.QApplication.style() if options.widget is None\
@@ -116,7 +116,7 @@ class SourcesList(QtGui.QListView):
             painter.restore()
 
         def sizeHint(self, option, index):
-            options = QtGui.QStyleOptionViewItemV4(option)
+            options = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(options, index)
 
             doc = QtGui.QTextDocument()
@@ -127,21 +127,17 @@ class SourcesList(QtGui.QListView):
 
     class SourceContextMenu(QtGui.QMenu):
 
-        def __init__(self, sandbox, idx, *args, **kwargs):
+        def __init__(self, parent, idx, *args, **kwargs):
             QtGui.QMenu.__init__(self, *args, **kwargs)
-            self.sandbox = sandbox
+            self.parent = parent
+            self.sandbox = parent.sandbox
             self.idx = idx
 
             def removeSource():
                 self.sandbox.sources.removeSource(self.idx)
 
-            def editSource():
-                editing_dialog = self.sandbox.sources.data(
-                    self.idx, SourceEditorDialog)
-                editing_dialog.show()
-
             editAction = self.addAction(
-                'Edit', editSource)
+                'Edit', lambda: self.parent.editSource(self.idx))
 
             self.addMenu(
                 SourcesAddButton.SourcesAddMenu(self.sandbox, self))
@@ -167,12 +163,17 @@ class SourcesList(QtGui.QListView):
     def edit(self, idx, trigger, event):
         if trigger == QtWidgets.QAbstractItemView.DoubleClicked or \
           trigger == QtWidgets.QAbstractItemView.SelectedClicked:
-            editing_dialog = idx.data(SourceEditorDialog)
-            editing_dialog.show()
+            self.editSource(idx)
         return False
+
+    @QtCore.pyqtSlot(QtCore.QObject)
+    def editSource(self, idx):
+        editing_dialog = idx.data(SourceEditorDialog)
+        editing_dialog.show()
+        editing_dialog.raise_()
 
     @QtCore.pyqtSlot(object)
     def contextMenuEvent(self, event):
         idx = self.indexAt(event.pos())
-        menu = self.SourceContextMenu(self.sandbox, idx, self)
+        menu = self.SourceContextMenu(self, idx, self)
         menu.popup(event.globalPos())

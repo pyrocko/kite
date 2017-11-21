@@ -92,7 +92,7 @@ else:
     omp_lib = []
 
 setup(
-    name='kite',
+    name='pyrocko-kite',
     version=version,
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'
@@ -107,15 +107,14 @@ setup(
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Physics',
         'Topic :: Scientific/Engineering :: Visualization',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: C',
         'Operating System :: POSIX',
         'Operating System :: MacOS',
         ],
     keywords=[
         'insar satellite radar earthquake optimization'],
-
+    python_requires='>=3.5',
     install_requires=[
         'numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
         'progressbar2', 'utm', 'pyqtgraph>=0.10.0'],

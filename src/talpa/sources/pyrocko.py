@@ -8,20 +8,21 @@ from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
                           PyrockoRingfaultSource)
 
-from ..config import config
+from ..config import getConfig
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
 
 
 class PyrockoSourceDialog(SourceEditDialog):
-    completer = QtGui.QCompleter()
-    completer_model = QtGui.QFileSystemModel(completer)
-    completer.setModel(completer_model)
-    completer.setMaxVisibleItems(8)
 
     def __init__(self, delegate, ui_file, *args, **kwargs):
         SourceEditDialog.__init__(self, delegate, ui_file, *args, **kwargs)
+
+        self.completer = QtGui.QCompleter()
+        self.completer_model = QtGui.QFileSystemModel(self.completer)
+        self.completer.setModel(self.completer_model)
+        self.completer.setMaxVisibleItems(8)
 
         self.chooseStoreDirButton.released.connect(
             self.chooseStoreDir)
@@ -76,7 +77,7 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
             strike=45.,
             rake=0,
             slip=2,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -162,7 +163,7 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -280,7 +281,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -397,7 +398,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
             diameter=10000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 

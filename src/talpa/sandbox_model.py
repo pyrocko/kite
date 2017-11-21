@@ -14,37 +14,36 @@ for module in sources.__sources__:
 
 
 class CursorTracker(QtCore.QObject):
-    sigCursorMoved = QtCore.Signal(object)
-    sigMouseMoved = QtCore.Signal(object)
+    sigCursorMoved = QtCore.pyqtSignal(object)
+    sigMouseMoved = QtCore.pyqtSignal(object)
 
 
 class SandboxModel(QtCore.QObject):
 
-    sigModelUpdated = QtCore.Signal()
-    sigModelChanged = QtCore.Signal()
-    sigLogRecord = QtCore.Signal(object)
+    sigModelUpdated = QtCore.pyqtSignal()
+    sigModelChanged = QtCore.pyqtSignal()
+    sigLogRecord = QtCore.pyqtSignal(object)
 
-    sigProcessingFinished = QtCore.Signal()
-    sigProcessingStarted = QtCore.Signal(str)
+    sigProcessingFinished = QtCore.pyqtSignal()
+    sigProcessingStarted = QtCore.pyqtSignal(str)
 
-    def __init__(self, scene_model=None, *args, **kwargs):
+    def __init__(self, sandbox_model=None, *args, **kwargs):
         QtCore.QObject.__init__(self)
 
-        self.model = None
+        self.model = sandbox_model
         self.log = SceneLogModel(self)
         self.sources = SourceModel(self)
+        self.cursor_tracker = CursorTracker(self)
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit
 
-        self.cursor_tracker = CursorTracker()
-
-        if scene_model:
-            self.setModel(scene_model)
-
         self.worker_thread = QtCore.QThread()
         self.moveToThread(self.worker_thread)
         self.worker_thread.start()
+
+        if self.model:
+            self.setModel(self.model)
 
     def setModel(self, model):
         self.disconnectSlots()
@@ -103,7 +102,7 @@ class SandboxModel(QtCore.QObject):
 
 class SourceModel(QtCore.QAbstractTableModel):
 
-    selectionModelChanged = QtCore.Signal()
+    selectionModelChanged = QtCore.pyqtSignal()
 
     def __init__(self, sandbox, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)

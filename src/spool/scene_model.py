@@ -7,24 +7,23 @@ from kite.qt_utils import SceneLogModel
 
 
 class SceneModel(QtCore.QObject):
-    ''' Proxy for :class:`kite.Scene` so we can change the scene
-    '''
-    sigSceneModelChanged = QtCore.Signal(object)
+    ''' Proxy for :class:`kite.Scene` so we can change the scene '''
+    sigSceneModelChanged = QtCore.pyqtSignal(object)
 
-    sigSceneChanged = QtCore.Signal()
-    sigConfigChanged = QtCore.Signal()
+    sigSceneChanged = QtCore.pyqtSignal()
+    sigConfigChanged = QtCore.pyqtSignal()
 
-    sigFrameChanged = QtCore.Signal()
-    sigQuadtreeChanged = QtCore.Signal(object)
-    _sigQuadtreeChanged = QtCore.Signal()
-    sigQuadtreeConfigChanged = QtCore.Signal()
-    sigCovarianceChanged = QtCore.Signal()
-    sigCovarianceConfigChanged = QtCore.Signal()
+    sigFrameChanged = QtCore.pyqtSignal()
+    sigQuadtreeChanged = QtCore.pyqtSignal(object)
+    _sigQuadtreeChanged = QtCore.pyqtSignal()
+    sigQuadtreeConfigChanged = QtCore.pyqtSignal()
+    sigCovarianceChanged = QtCore.pyqtSignal()
+    sigCovarianceConfigChanged = QtCore.pyqtSignal()
 
-    sigProcessingStarted = QtCore.Signal(str)
-    sigProcessingFinished = QtCore.Signal()
+    sigProcessingStarted = QtCore.pyqtSignal(str)
+    sigProcessingFinished = QtCore.pyqtSignal()
 
-    sigLogRecord = QtCore.Signal(object)
+    sigLogRecord = QtCore.pyqtSignal(object)
 
     def __init__(self):
         QtCore.QObject.__init__(self)
@@ -35,11 +34,11 @@ class SceneModel(QtCore.QObject):
         self.covariance = None
         self.log = SceneLogModel(self)
 
-        self._ = SignalProxy(self._sigQuadtreeChanged,
-                             rateLimit=5,
-                             delay=0,
-                             slot=lambda: self.sigQuadtreeChanged
-                                              .emit(object))
+        self._ = SignalProxy(
+            self._sigQuadtreeChanged,
+            rateLimit=5,
+            delay=0,
+            slot=lambda: self.sigQuadtreeChanged.emit(object))
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit

@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtWidgets
 import pyqtgraph as pg
 import numpy as num
 
@@ -11,7 +11,7 @@ r2d = 180. / num.pi
 
 class RectangularSourceROI(pg.ROI):
 
-    newSourceParameters = QtCore.Signal(object)
+    newSourceParameters = QtCore.pyqtSignal(object)
 
     pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
     pen_handle = pg.mkPen(((38, 50, 56, 100)), width=1.25)
@@ -79,7 +79,7 @@ class RectangularSourceROI(pg.ROI):
             -source.strike,
             finish=False)
 
-    @QtCore.pyqtSlot()
+    @QtCore.pyqtSlot(bool)
     def highlightROI(self, highlight):
         self.setMouseHover(highlight)
 
@@ -97,7 +97,7 @@ class RectangularSourceROI(pg.ROI):
 
 class PointSourceROI(pg.EllipseROI):
 
-    newSourceParameters = QtCore.Signal(object)
+    newSourceParameters = QtCore.pyqtSignal(object)
 
     pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
     pen_handle = pg.mkPen(((38, 50, 56, 100)), width=1.25)
@@ -165,8 +165,8 @@ class SourceDelegate(QtCore.QObject):
 
     __represents__ = 'SourceToImplement'
 
-    sourceParametersChanged = QtCore.Signal()
-    highlightROI = QtCore.Signal(bool)
+    sourceParametersChanged = QtCore.pyqtSignal()
+    highlightROI = QtCore.pyqtSignal(bool)
 
     parameters = ['List', 'of', 'parameters', 'from', 'kite.source']
     ro_parameters = ['Read-Only', 'parameters']
@@ -216,16 +216,17 @@ class SourceDelegate(QtCore.QObject):
         self.rois.append(src)
         return src
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.pyqtSlot()
     def highlightItem(self):
         if self.model.selection_model is not None:
             self.model.selection_model.setCurrentIndex(
-                self.index, QtGui.QItemSelectionModel.SelectCurrent)
+                self.index, QtCore.QItemSelectionModel.SelectCurrent)
 
     @QtCore.pyqtSlot()
-    def selectionChanged(self, idx):
-        if self.index.row() == idx.row()\
-          and self.index.column() == idx.column():
+    def emitHighlightROI(self):
+        selected = self.model.selection_model.currentIndex()
+        if self.index.row() == selected.row()\
+           and self.index.column() == selected.column():
             self.highlightROI.emit(True)
         else:
             self.highlightROI.emit(False)
@@ -233,14 +234,14 @@ class SourceDelegate(QtCore.QObject):
     @QtCore.pyqtSlot()
     def setSelectionModel(self):
         self.model.selection_model.currentChanged.connect(
-            self.selectionChanged)
+            self.emitHighlightROI)
 
     @QtCore.pyqtSlot(object)
     def updateModelParameters(self, parameters):
         self.model.setItemData(self.index, parameters)
 
     def setSourceParameters(self, parameters):
-        for param, value in parameters.iteritems():
+        for param, value in parameters.items():
             self.source.__setattr__(param, value)
         self.source.parametersUpdated()
         self.sourceParametersChanged.emit()
@@ -252,10 +253,10 @@ class SourceDelegate(QtCore.QObject):
         return params
 
 
-class SourceEditDialog(QtGui.QDialog):
+class SourceEditDialog(QtWidgets.QDialog):
 
     def __init__(self, delegate, ui_file, *args, **kwargs):
-        QtGui.QDialog.__init__(self, *args, **kwargs)
+        QtWidgets.QDialog.__init__(self, *args, **kwargs)
         loadUi(get_resource(ui_file), self)
         self.delegate = delegate
 
@@ -270,7 +271,7 @@ class SourceEditDialog(QtGui.QDialog):
 
     @QtCore.pyqtSlot()
     def getSourceParameters(self):
-        for param, value in self.delegate.getSourceParameters().iteritems():
+        for param, value in self.delegate.getSourceParameters().items():
             self.__getattribute__(param).setValue(value)
 
     @QtCore.pyqtSlot()

@@ -547,7 +547,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
 
 class QCalculateWeightMatrix(QtCore.QObject):
-    sigCalculateWeightMatrix = QtCore.Signal()
+    sigCalculateWeightMatrix = QtCore.pyqtSignal()
 
     def __init__(self, model, parent):
         QtCore.QObject.__init__(self)

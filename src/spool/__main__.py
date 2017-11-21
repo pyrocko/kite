@@ -8,6 +8,9 @@ def main(args=None):
     '''
     Spool app deployed through setuptools
     '''
+    if args is None:
+        args = sys.argv[1:]
+
     epilog = '''Spool is part of the kite InSAR framework.
 More at http://pyrocko.org, http://github.com/pyrocko
 
@@ -73,3 +76,7 @@ Available Synthetic Displacement:
         Spool(import_data=ns.load)
     elif ns.file is not None:
         Spool(load_file=ns.file)
+
+
+if __name__ == '__main__':
+    main()
