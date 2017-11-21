@@ -115,9 +115,6 @@ setup(
     keywords=[
         'insar satellite radar earthquake optimization'],
     python_requires='>=3.5',
-    install_requires=[
-        'numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
-        'progressbar2', 'utm', 'pyqtgraph>=0.10.0'],
     packages=[
         'kite',
         'kite.sources',

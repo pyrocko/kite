@@ -12,14 +12,15 @@ requirements:
   build:
     - python
     - numpy
+    - openmp
   run:
+    - pyrocko
+    - python
     - numpy
     - scipy
-    - matplotlib
     - pyqt
-    - pyyaml
-    - future
-    - requests
+    - pyqtgraph
+    - matplotlib
 
 test:
   requires:

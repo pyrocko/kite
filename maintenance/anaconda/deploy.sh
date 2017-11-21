@@ -37,6 +37,8 @@ case $resp in
     * ) conda config --set anaconda_upload no;
         ;;
 esac
+conda config --add channels conda-forge
+conda config --add channels pyrocko
 conda-build $BUILD_DIR
 
 # Workaround for https://github.com/travis-ci/travis-ci/issues/6522

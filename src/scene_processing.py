@@ -1,6 +1,5 @@
 #!/bin/python
 import numpy as num
-
 from scipy import ndimage
 
 from pyrocko.guts import Object, Float, Int
