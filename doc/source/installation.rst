@@ -1,6 +1,18 @@
 Installation
 ============
-Kite has been tested on *Debian based distributions* (eg. Ubuntu and Mint).
+
+Kite has been tested on Anaconda, *Debian based distributions* (eg. Ubuntu and Mint) and MacOSX.
+
+Anaconda3 using ``conda``
+--------------------------
+
+Pre-built packages are available for Linux 64-Bit and MacOS. You can use can use the ``conda`` package manager to install Kite:
+
+.. code-block:: sh
+    :caption: Packages are available on Anaconda Cloud
+
+    conda install -c pyrocko pyrocko-kite
+
 
 Debian / Ubuntu
 ---------------
