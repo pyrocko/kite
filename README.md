@@ -4,7 +4,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/pyrocko/kite/badge.svg?branch=master)](https://coveralls.io/github/pyrocko/kite?branch=master)
 
 ## Introduction
-This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](http://www.pyrocko.org) and Grond.
+This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](https://www.pyrocko.org) and Grond.
 
 Kite features simple and efficient handling of displacement data:
 
@@ -25,8 +25,8 @@ Recommended citation for Kite
 
 ### Requires libraries
 
-* PySide with OpenGL support (Qt4)
-* pyQtGraph
+* PyQt5 with OpenGL support
+* PyQtGraph
 * NumPy
 * SciPy
 
@@ -54,7 +54,7 @@ sudo pip install git+https://github.com/pyrocko/kite.git
 ```
 
 # Documentation
-Find the documentation at https://pyrocko.github.io/kite/.
+Find the documentation at https://pyrocko.org/docs/kite.
 
 ## Short Example
 ```python

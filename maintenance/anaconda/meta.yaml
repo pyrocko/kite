@@ -1,7 +1,7 @@
 {% set data = load_setup_py_data() %}
 
 package:
-  name: pyrocko-kite
+  name: kite
   version: {{ data.get('version') }}
 
 source:
@@ -22,19 +22,19 @@ requirements:
     - matplotlib
     - utm
 
-test:
-  script_files:
-    - test
-  requires:
-    - nose
-  imports:
-    - kite
-  commands:
-    - nosetests --verbosity=2 --detailed-errors test
+# test:
+#   script_files:
+#     - test
+#   requires:
+#     - nose
+#   imports:
+#     - kite
+#   commands:
+#     - nosetests --verbosity=2 --detailed-errors test
 
 about:
   home: https://pyrocko.org
   license: GPL3
   license-family: GPL
-  summary: A versatile seismology toolkit for Python.
+  summary: Tools for InSAR displacement processing and modelling.
   doc_url: https://pyrocko.org/docs/kite
