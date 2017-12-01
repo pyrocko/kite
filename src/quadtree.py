@@ -336,8 +336,6 @@ class Quadtree(object):
     :class:`~kite.quadtree.QuadNode` 's. The leaves can also be exported in a
     *CSV* format through :func:`~kite.Quadtree.export`.
     '''
-    evChanged = Subject()
-    evConfigChanged = Subject()
 
     _corrections = {
         'mean':
@@ -357,6 +355,8 @@ class Quadtree(object):
     }
 
     def __init__(self, scene, config=QuadtreeConfig()):
+        self.evChanged = Subject()
+        self.evConfigChanged = Subject()
         self._leaves = None
         self.scene = scene
         self.displacement = self.scene.displacement

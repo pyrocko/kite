@@ -92,7 +92,7 @@ else:
     omp_lib = []
 
 setup(
-    name='pyrocko-kite',
+    name='kite',
     version=version,
     description='Handle SAR displacement data towards pyrocko',
     author='Marius P. Isken, Henriette Sudhaus;'

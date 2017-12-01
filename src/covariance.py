@@ -113,10 +113,11 @@ class Covariance(object):
     :param config: Config object
     :type config: :class:`~kite.covariance.CovarianceConfig`
     '''
-    evChanged = Subject()
-    evConfigChanged = Subject()
 
     def __init__(self, scene, config=CovarianceConfig()):
+        self.evChanged = Subject()
+        self.evConfigChanged = Subject()
+
         self.frame = scene.frame
         self.quadtree = scene.quadtree
         self.scene = scene

@@ -40,6 +40,8 @@ esac
 conda config --add channels conda-forge
 conda config --add channels pyrocko
 conda-build $BUILD_DIR
+conda config --remove channles conda-forge
+conda config --remove channels pyrocko
 
 # Workaround for https://github.com/travis-ci/travis-ci/issues/6522
 # Turn off exit on failure.

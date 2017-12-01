@@ -67,13 +67,16 @@ class FrameConfig(guts.Object):
         optional=True,
         help='Scene pixel spacing in east [m]')
 
+    def get_frame(self, scene):
+        return Frame(scene, config=self)
+
 
 class Frame(object):
     ''' UTM frame holding geographical references for :class:`kite.scene.Scene`
     '''
-    evChanged = Subject()
 
     def __init__(self, scene, config=FrameConfig()):
+        self.evChanged = Subject()
         self._scene = scene
         self._log = scene._log.getChild('Frame')
 
@@ -277,6 +280,14 @@ class Frame(object):
         col = int(N/self.dN) if N > 0 else 0
         return row, col
 
+    def __eq__(self, other):
+        return self.llLat == other.llLat and\
+            self.llLon == other.llLon and\
+            self.dE == other.dE and\
+            self.dN == other.dN and\
+            self.rows == other.rows and\
+            self.cols == other.cols
+
     def __str__(self):
         return (
             'Lower right latitude:  {frame.llLat:.4f} N\n'
@@ -342,16 +353,16 @@ class SceneConfig(guts.Object):
         sub-objects configuration.
     '''
     meta = Meta.T(
-        default=Meta(),
+        default=Meta.D(),
         help='Scene metainformation')
     frame = FrameConfig.T(
-        default=FrameConfig(),
+        default=FrameConfig.D(),
         help='Frame/reference configuration')
     quadtree = QuadtreeConfig.T(
-        default=QuadtreeConfig(),
+        default=QuadtreeConfig.D(),
         help='Quadtree parameters')
     covariance = CovarianceConfig.T(
-        default=CovarianceConfig(),
+        default=CovarianceConfig.D(),
         help='Covariance parameters')
 
 
@@ -540,6 +551,26 @@ class BaseScene(object):
                 * num.sin(self.phi)
         return self._los_factors
 
+    def __add__(self, other):
+        if not self.frame == other.frame:
+            raise AttributeError('Scene frames do not align!')
+        self.displacement += other.displacement
+
+        tmin = self.meta.time_master \
+            if self.meta.time_master < other.meta.time_master \
+            else other.meta.time_master
+
+        tmax = self.meta.time_slave \
+            if self.meta.time_slave > other.meta.time_slave \
+            else other.meta.time_slave
+
+        self.meta.time_master = tmin
+        self.meta.time_slave = tmax
+        return self
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
 
 class Scene(BaseScene):
     '''Scene of unwrapped InSAR ground dispacements measurements
@@ -565,10 +596,11 @@ class Scene(BaseScene):
     :param dLon: Pixel spacing in longitude [deg]
     :type dLon: float, optional
     '''
-    evChanged = Subject()
-    evConfigChanged = Subject()
 
     def __init__(self, config=SceneConfig(), **kwargs):
+        self.evChanged = Subject()
+        self.evConfigChanged = Subject()
+
         self.config = config
         self.meta = self.config.meta
 
