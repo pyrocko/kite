@@ -145,7 +145,7 @@ class PointSourceROI(pg.EllipseROI):
                       source.northing - self.size().x()/2)),
             finish=False)
 
-    @QtCore.pyqtSlot()
+    @QtCore.pyqtSlot(bool)
     def highlightROI(self, highlight):
         self.setMouseHover(highlight)
 

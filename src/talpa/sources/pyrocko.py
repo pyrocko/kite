@@ -144,11 +144,11 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
             exponent = num.log10(
-                num.max([v for k, v in params.iteritems()
+                num.max([v for k, v in params.items()
                          if k in self.scaling_params]))
             scale = float('1e%d' % int(exponent))
 
-            for param, value in params.iteritems():
+            for param, value in params.items():
                 if param in self.scaling_params:
                     self.__getattribute__(param).setValue(value / scale)
                 else:
