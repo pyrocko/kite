@@ -121,6 +121,8 @@ class Matlab(SceneIO):
             return False
 
     def read(self, filename, **kwargs):
+        rotate = kwargs.pop('rotate', True)
+
         import utm
         c = self.container
 
@@ -133,9 +135,17 @@ class Matlab(SceneIO):
         for mat_k, v in mat.iteritems():
             for io_k in c.iterkeys():
                 if io_k in mat_k:
-                    c[io_k] = num.rot90(mat[mat_k])
+                    if rotate:
+                        c[io_k] = num.rot90(mat[mat_k])
+                    else:
+                        c[io_k] = mat[mat_k]
+
                 elif 'ig_' in mat_k:
-                    c['displacement'] = num.rot90(mat[mat_k])
+                    if rotate:
+                        c['displacement'] = num.rot90(mat[mat_k])
+                    else:
+                        c['displacement'] = mat[mat_k]
+
                 elif 'xx' in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
