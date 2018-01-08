@@ -471,6 +471,7 @@ class BaseScene(object):
             self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
+        self.phiDeg = None
         self.los_rotation_factors = None
         self.evChanged.notify()
 
@@ -500,6 +501,7 @@ class BaseScene(object):
             self._theta = value
         else:
             _setDataNumpy(self, '_theta', value)
+        self.thetaDeg = None
         self.los_rotation_factors = None
         self.evChanged.notify()
 
@@ -644,9 +646,10 @@ class Scene(BaseScene):
         '''
         if self.displacement is None:
             raise SceneError('Can not display an empty scene.')
-        from kite.spool import Spool
-        spool = Spool(scene=self)
-        return spool.spool_win.buildViews()
+
+        from kite.spool import spool
+        spool(scene=self)
+
 
     def _testImport(self):
         try:

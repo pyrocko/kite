@@ -3,7 +3,7 @@ import time
 import numpy as num
 from os import path
 
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -62,8 +62,14 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             brush=(0, 0, 0, 180),
             pen=(255, 255, 255),
             pxMode=True)
-        self.orientArrow()
 
+        self.label = QtGui.QGraphicsSimpleTextItem(
+            'LOS', parent=self)
+        self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
+        # self.label.setFont(QtGui.QFont(
+        #     "Helvetica", weight=QtGui.QFont.DemiBold))
+
+        self.orientArrow()
         self.model.sigSceneChanged.connect(self.orientArrow)
         self.setFlag(self.ItemIgnoresTransformations)
 
@@ -85,6 +91,13 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             tailWidth=6,
             headLen=25)
         self.arrow.setRotation(self.arrow.opts['angle'])
+
+        rect_label = self.label.boundingRect()
+        rect_arr = self.arrow.boundingRect()
+
+        self.label.setPos(
+            rect_arr.width()/2 - rect_label.width()/2,
+            rect_label.height()*1.33)
 
     def setParentItem(self, parent):
         pg.GraphicsWidget.setParentItem(self, parent)

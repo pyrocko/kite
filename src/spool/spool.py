@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
+import gc
 import time  # noqa
 import pyqtgraph as pg
 
@@ -37,15 +38,13 @@ class Spool(QtWidgets.QApplication):
 
         if scene is not None:
             self.addScene(scene)
-        if import_data is not None:
+        elif import_data is not None:
             self.importScene(import_data)
-        if load_file is not None:
+        elif load_file is not None:
             self.loadScene(load_file)
 
         self.splash.finish(self.spool_win)
         self.spool_win.show()
-        rc = self.exec_()
-        sys.exit(rc)
 
     @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=''):
@@ -60,9 +59,6 @@ class Spool(QtWidgets.QApplication):
 
     def loadScene(self, filename):
         self.spool_win.model.loadFile(filename)
-
-    def __del__(self):
-        pass
 
 
 class SpoolMainWindow(QtWidgets.QMainWindow):
@@ -230,7 +226,14 @@ class KiteParameterTree(pg.parametertree.ParameterTree):
     pass
 
 
-__all__ = ['Spool']
+def spool(*args, **kwargs):
+    spool_app = Spool(*args, **kwargs)
+    spool_app.exec_()
+
+    spool_app.quit()
+
+
+__all__ = ['Spool', 'spool']
 
 if __name__ == '__main__':
     from kite.scene import SceneSynTest
