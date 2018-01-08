@@ -884,7 +884,7 @@ class Covariance(object):
         '''
         self._log.debug('Exporting Covariance.weight_matrix to %s' % filename)
         header = 'Exported kite.Covariance.weight_matrix, '\
-                 'for more information visit http://pyrocko.com\n'\
+                 'for more information visit https://pyrocko.org\n'\
                  '\nThe matrix is symmetric and ordered by QuadNode.id:\n'
         header += ', '.join([l.id for l in self.quadtree.leaves])
         num.savetxt(filename, self.weight_matrix, header=header)
