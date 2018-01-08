@@ -51,18 +51,11 @@ Adding Sources
 A selection of different displacement sources can be added to the modelling sandbox by right clicking on the source list.
 
 
-.. figure:: ../_images/talpa-src_add.png
-    :class: gif
+.. figure:: ../_images/talpa-src_add.gif
     :width: 80%
     :align: center
 
     Adding a source to the :class:`kite.SandboxScene` using the GUI.
-
-.. raw :: html
-
-    <script type='text/javascript'>
-        $('img.gif').gifplayer();
-    </script>
 
 
 Manipulating Sources
