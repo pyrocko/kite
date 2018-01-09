@@ -193,7 +193,8 @@ class Gamma(SceneIO):
 
     .. warning :: Look vector files - expected to have a particular name
 
-    Expects four files:
+    Expects:
+    --------
 
         * [:file:`*`] Binary file from Gamma with displacement in radians
           or meter.
@@ -421,7 +422,8 @@ class ROI_PAC(SceneIO):
     The unwrapped displacement is expected in radians and will be scaled
     to meters by `WAVELENGTH` parsed from the :file:`*.rsc` file.
 
-    Expects two files:
+    Expects:
+    --------
 
         * Binary file from ROI_PAC (:file:`*`)
         * Parameter file (:file:`<binary_file>.rsc`)
@@ -557,12 +559,11 @@ class ISCEXMLParser(object):
 
 class ISCE(SceneIO):
     """
-    Reading geocoded displacement maps (unwrapped igs) originating
-        from ISCE software.
+    Reading geocoded, unwraped displacement maps
+        processed with ISCE software (https://winsar.unavco.org/isce.html).
 
-    .. note:: reference / link to ISCE site...
-
-    Expects three files in the same folder:
+    Expects:
+    --------
 
         * Unwrapped displacement binary (:file:`*.unw.geo`)
         * Metadata XML (:file:`*.unw.geo.xml`)
@@ -649,7 +650,8 @@ class GMTSAR(SceneIO):
         awk {'print $1, $2, $4'} |
         SAT_look 20050731.PRM -bos > 20050731.los.enu
 
-    Expects two binary files:
+    Expects:
+    --------
 
         * Displacement grid (NetCDF, :file:`*los_ll.grd`) in cm
           (get transformed to meters)
