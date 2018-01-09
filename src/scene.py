@@ -458,7 +458,7 @@ class BaseScene(object):
             * :math:`0` is **East**
             * :math:`\\frac{\\pi}{2}` is **North**!
 
-        :setter: Set the phi matrix for scene's displacement, can be int
+        :setter: Set the phi matrix for scene's displacement, can be ``int``
                  for static look vector.
         :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
@@ -488,7 +488,7 @@ class BaseScene(object):
             * :math:`-\\frac{\\pi}{2}` is **Down**
             * :math:`\\frac{\\pi}{2}` is **Up**
 
-        :setter: Set the theta matrix for scene's displacement, can be int
+        :setter: Set the theta matrix for scene's displacement, can be ``int``
                  for static look vector.
         :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
@@ -818,7 +818,7 @@ class LOSUnitVectors(object):
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         '''
-        return num.cos(self._scene.phi) * num.sin(self._scene.theta)
+        return self._scene.los_rotation_factors[:, :, 1]
 
     @property_cached
     def unitN(self):
@@ -826,7 +826,7 @@ class LOSUnitVectors(object):
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         '''
-        return num.sin(self._scene.phi) * num.sin(self._scene.theta)
+        return self._scene.los_rotation_factors[:, :, 2]
 
     @property_cached
     def unitU(self):
@@ -834,7 +834,7 @@ class LOSUnitVectors(object):
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         '''
-        return num.cos(self._scene.theta)
+        return self._scene.los_rotation_factors[:, :, 0]
 
 
 class TestScene(Scene):
