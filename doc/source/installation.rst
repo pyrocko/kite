@@ -17,10 +17,12 @@ Pre-built packages are available for Linux 64-Bit and MacOS. You can use can use
 Debian / Ubuntu
 ---------------
 
+As a mandatory prerequisit you have to install ``pyrocko`` - `Installation Instructions <https://pyrocko.org/docs/current/install/index.html>`_
+
 .. code-block :: sh
     :caption: Installation through from source and ``apt``
 
-    sudo apt-get install python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-yaml python3-scipy python3-numpy
+    sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy
     git clone https://github.com/pyrocko/kite
     cd kite
     sudo python3 setup.py install

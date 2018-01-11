@@ -140,7 +140,7 @@ class _KiteSubplotPlot(QtGui.QWidget):
 
         self.plot = pg.PlotWidget(background='default')
         self.plot.showGrid(True, True, alpha=.5)
-        self.plot.setMenuEnabled(False)
+        self.plot.setMenuEnabled(True)
         self.plot.enableAutoRange()
 
         self.layout = QtGui.QVBoxLayout(self)
