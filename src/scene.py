@@ -277,6 +277,15 @@ class Frame(object):
         col = int(N/self.dN) if N > 0 else 0
         return row, col
 
+    
+    def __eq__(self, other):
+        return self.llLat == other.llLat and\
+            self.llLon == other.llLon and\
+            self.dE == other.dE and\
+            self.dN == other.dN and\
+            self.rows == other.rows and\
+            self.cols == other.cols
+
     def __str__(self):
         return (
             'Lower right latitude:  {frame.llLat:.4f} N\n'
