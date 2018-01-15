@@ -540,6 +540,26 @@ class BaseScene(object):
                 * num.sin(self.phi)
         return self._los_factors
 
+    def __add__(self, other):
+        if not self.frame == other.frame:
+            raise AttributeError('Scene frames do not align!')
+        self.displacement += other.displacement
+
+        tmin = self.meta.time_master \
+            if self.meta.time_master < other.meta.time_master \
+            else other.meta.time_master
+
+        tmax = self.meta.time_slave \
+            if self.meta.time_slave > other.meta.time_slave \
+            else other.meta.time_slave
+
+        self.meta.time_master = tmin
+        self.meta.time_slave = tmax
+        return self
+
+    def __iadd__(self, other):
+        return self.__add__(other)
+
 
 class Scene(BaseScene):
     '''Scene of unwrapped InSAR ground dispacements measurements
