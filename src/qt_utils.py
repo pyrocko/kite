@@ -77,6 +77,8 @@ _viridis_data.reverse()
 
 
 def validateFilename(filename):
+    if not filename:
+        return False
     filename = op.abspath(filename)
     filedir = op.dirname(filename)
     if filename == '' or filedir == '':

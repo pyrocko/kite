@@ -109,6 +109,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
         self.progress.setLabelText(text)
         self.progress.show()
 
+    @QtCore.pyqtSlot()
     def onSaveModel(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter='YAML *.yml (*.yml)',
@@ -117,6 +118,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
             return
         self.sandbox.model.save(filename)
 
+    @QtCore.pyqtSlot()
     def loadModel(self, filename=None):
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
