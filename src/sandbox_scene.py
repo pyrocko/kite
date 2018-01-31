@@ -92,7 +92,7 @@ class SandboxScene(BaseScene):
         self.theta.fill(num.pi/2)
         self.phi.fill(0.)
 
-        self.frame._updateExtent()
+        self.frame.updateExtent()
         self._clearModel()
         self.evChanged.notify()
 
