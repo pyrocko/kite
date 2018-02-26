@@ -13,6 +13,8 @@ __all__ = ['OkadaSource', 'OkadaPath', 'DislocProcessor']
 
 
 class OkadaSource(SandboxSourceRectangular):
+    '''Rectangular Okada source modell.
+    '''
 
     __implements__ = 'disloc'
 

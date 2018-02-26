@@ -1,4 +1,4 @@
-The Quadtree Module
+Quadtree Module
 ===================
 
 The quadtree reduces the amount of displacement information contained in a full resolution displacement scene by adaptively subsampling in areas of complex signal (a visual example can be found here :doc:`../spool`. The complexity of the signal is defined through the standard deviation within a tile (or :class:`~kite.quadtree.QuadNode`) of the data. The quadtree parameters define thresholds when a :class:`~kite.quadtree.QuadNode` is split. The four essential threshold controlling the tree are:
@@ -15,13 +15,13 @@ Programming example of the quadtree can be found here :doc:`../examples/03-quadt
     :members:
 
 
-The QuadtreeConfig
+QuadtreeConfig
 ------------------
 The ``QuadtreeConfig`` holds the necessary configuration to reconstruct and save an instance.
 
 .. autoclass:: kite.quadtree.QuadtreeConfig
 
-The QuadNode Class
+QuadNode Object
 ------------------
 
 .. autoclass:: kite.quadtree.QuadNode

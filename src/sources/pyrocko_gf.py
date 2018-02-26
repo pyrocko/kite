@@ -21,7 +21,9 @@ class PyrockoSource(object):
 
 
 class PyrockoRectangularSource(SandboxSourceRectangular, PyrockoSource):
-
+    '''Classical Haskell source model modified for bilateral rupture.
+    See :class:`pyrocko.gf.seismosizer.RectangularSource`.
+    '''
     __implements__ = 'pyrocko'
 
     decimation_factor = Int.T(
@@ -57,7 +59,10 @@ class PyrockoRectangularSource(SandboxSourceRectangular, PyrockoSource):
 
 
 class PyrockoMomentTensor(SandboxSource, PyrockoSource):
+    '''A moment tensor point source.
 
+    See :class:`pyrocko.gf.seismosizer.MomentTensor`.
+    '''
     __implements__ = 'pyrocko'
 
     store_dir = String.T(
@@ -105,7 +110,10 @@ class PyrockoMomentTensor(SandboxSource, PyrockoSource):
 
 
 class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
+    '''A double-couple point source.
 
+    See :class:`pyrocko.gf.seismosizer.DCSource`.
+    '''
     __implements__ = 'pyrocko'
 
     strike = Float.T(
@@ -151,7 +159,10 @@ class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
 
 
 class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
+    '''A ring fault with vertical doublecouples.
 
+    See :class:`pyrocko.gf.seismosizer.RingfaultSource`.
+    '''
     __implements__ = 'pyrocko'
 
     store_dir = String.T(
