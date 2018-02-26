@@ -652,7 +652,7 @@ class GMTSAR(SceneIO):
           (gets transformed to meters)
         * LOS binary data (see instruction, :file:`*los.enu`)
 
-    Calculate the corresponding unit look vectors with GMT5SAR``SAT_look``:
+    Calculate the corresponding unit look vectors with GMT5SAR ``SAT_look``:
 
     .. code-block:: sh
 
