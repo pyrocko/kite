@@ -70,8 +70,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Kite'
-copyright = u'2017 BridGeS Project | CAU Kiel - Marius Paul Isken, '\
-             'Henriette Sudhaus, Andreas Steinberg, Sebastian Heimann'
+copyright = u'2018 The kite developers'
 author = u'Marius Isken'
 
 # The version info for the project you're documenting, acts as replacement for
