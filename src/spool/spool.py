@@ -16,7 +16,7 @@ from .base import get_resource
 
 
 class Spool(QtWidgets.QApplication):
-    def __init__(self, scene=None, import_data=None, load_file=None):
+    def __init__(self, scene=None, import_file=None, load_file=None):
         QtWidgets.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
@@ -38,8 +38,8 @@ class Spool(QtWidgets.QApplication):
 
         if scene is not None:
             self.addScene(scene)
-        elif import_data is not None:
-            self.importScene(import_data)
+        elif import_file is not None:
+            self.importScene(import_file)
         elif load_file is not None:
             self.loadScene(load_file)
 
