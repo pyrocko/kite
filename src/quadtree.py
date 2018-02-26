@@ -801,6 +801,12 @@ class Quadtree(object):
         raise NotImplementedError
 
     def getMPLRectangles(self):
+        '''
+        Get the quadtree as a list of matplotlib rectangles.
+
+        :returns: Rectangles for plotting
+        :rtype: list of :class:`matplotlib.patcjes.Rectangle`
+        '''
         from matplotlib.patches import Rectangle
         rectangles = []
         for lv in self.leaves:
