@@ -23,7 +23,7 @@ A basic analytical displacement source is :class:`~kite.sources.OkadaSource`. We
 2. Pyrocko Sources
 ~~~~~~~~~~~~~~~~~~
 
-We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see :mod:`pyrocko.apps.fomosto`)
+We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see https://pyrocko.org/docs/current/apps/fomosto/index.html)
 
 Implemented source types - Point sources and extended.
 

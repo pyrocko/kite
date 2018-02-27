@@ -1,5 +1,5 @@
-Covariance Calculation
-=========================================
+Covariance calculation
+===============================
 
 This is a brief document describing where we learn how to access how we can calculate and use the covariance and weight properties of the quadtree. More, detailed information how  ``kite`` calculates the covariance matrix can be found at the module docmentation :mod:`kite.Covariance`.
 

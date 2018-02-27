@@ -1,4 +1,4 @@
-Scene Module
+``Scene`` Module
 ================
 
 .. autoclass:: kite.Scene
@@ -14,7 +14,7 @@ Scene I/O Modules
 .. automodule:: kite.scene_io
     :members:
 
-SceneConfig
+``SceneConfig``
 ----------------------
 
 .. autoclass:: kite.scene.SceneConfig
@@ -25,19 +25,19 @@ A ``Scene`` holds several configuration objects:
 
 .. autoclass:: kite.scene.Meta
 
-Frame
+``Frame``
 ---------
 
 .. autoclass:: kite.scene.Frame
     :members:
 
-FrameConfig
+``FrameConfig``
 +++++++++++++++
 
 .. autoclass:: kite.scene.FrameConfig
 
 
-LOSUnitVectors
+``LOSUnitVectors``
 ------------------
 
 .. autoclass:: kite.scene.LOSUnitVectors

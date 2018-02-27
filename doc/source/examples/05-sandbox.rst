@@ -1,5 +1,5 @@
-Static Modelling Sandbox
-========================
+Modelling static displacement
+==============================
 
 Kite comes with a :class:`~kite.SandboxScene`, which is a playground for static displacement sources of different kinds and modelling engines. It support analytical backends such as Okada ``disloc``-code [#f1]_ and Compound dislocation model ([#f2]_; http://www.volcanoedeformation.com/). Numerical forward modelling is enabled through :mod:`pyrocko.gf`, this allows us to put geometrically more complex sources into the modelling sandbox.
 

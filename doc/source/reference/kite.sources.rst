@@ -1,5 +1,5 @@
-Sandbox Sources
-================
+List of Sandbox Sources
+========================
 
 .. note ::
     * Easting and Northing is in meter.

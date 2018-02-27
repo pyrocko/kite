@@ -1,4 +1,4 @@
-Covariance Module
+``Covariance`` Module
 =====================
 
 .. autoclass:: kite.Covariance
