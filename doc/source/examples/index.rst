@@ -1,7 +1,7 @@
-Programming Examples
-=====================
+Examples and Tutorials
+======================
 
-The following examples will give a basic overview how to handles different features of the framework.
+These examples give a basic overview how to import InSAR displacement scenes, configure the quadtree subsampling and compute its covariance matrix.
 
 
 .. toctree::

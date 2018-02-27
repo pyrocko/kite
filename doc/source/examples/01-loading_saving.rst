@@ -60,7 +60,7 @@ Scene Inspection with ``spool``
 --------------------------------
 
 
-You can use start :doc:`../spool` to inspect the scene and manipulate it's properties.
+You can use start :doc:`../tools/spool` to inspect the scene and manipulate it's properties.
 
 ::
 

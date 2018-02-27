@@ -25,7 +25,7 @@ The GUI ``spool`` offers an interactive parametrisation of the quadtree. Start t
 Scripted quadtree parametrisation
 ---------------------------------
 
-The parametrization of the tree can be done through the :doc:`../spool` or the python interface of :class:`~kite.Quadtree`.
+The parametrization of the tree can be done through the :doc:`../tools/spool` or the python interface of :class:`~kite.Quadtree`.
 
 ::
     

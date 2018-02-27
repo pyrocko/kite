@@ -1,7 +1,7 @@
 .. _talpa:
 
-``Talpa`` Static Displacement Modelling (GUI)
-=============================================
+Static Displacement Modelling with ``Talpa``
+============================================
 
 The tool ``talpa`` (`Talpidae; the mole`) enables interactive modelling of static displacement sources.
 
@@ -51,7 +51,7 @@ Adding Sources
 A selection of different displacement sources can be added to the modelling sandbox by right clicking on the source list.
 
 
-.. figure:: ../_images/talpa-src_add.png
+.. figure:: ../../_images/talpa-src_add.png
     :class: gif
     :width: 80%
     :align: center
@@ -70,7 +70,7 @@ Manipulating Sources
 
 The spatial parameters of the the sandbox's source can be interacted with by click-and-drag. Advanced parameters, in this case dip, rake and slip are accesses through the editing dialog.
 
-.. figure:: ../_images/talpa-src_mod.gif
+.. figure:: ../../_images/talpa-src_mod.gif
     :width: 80%
     :align: center
 
@@ -79,7 +79,7 @@ The spatial parameters of the the sandbox's source can be interacted with by cli
 
 Parametrisation through the source's editing dialog (:menuselection:`<right-click> --> Edit`).
 
-.. figure:: ../_images/talpa-src_dialog.png
+.. figure:: ../../_images/talpa-src_dialog.png
     :align: center
 
     Source parameter dialog for an :class:`~kite.sources.OkadaSource`.
