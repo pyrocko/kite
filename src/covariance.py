@@ -86,8 +86,7 @@ class CovarianceConfig(guts.Object):
         optional=True,
         serialize_as='base64',
         help='Cached covariance matrix, '
-             'see :attr:`~kite.Covariance.covariance_matrix`',
-        )
+             'see :attr:`~kite.Covariance.covariance_matrix`')
 
 
 class Covariance(object):
@@ -276,8 +275,8 @@ class Covariance(object):
         '''
         t0 = time.time()
 
-        stdmax = max([n.std for n in self.quadtree.nodes])  # noqa
-        lmax = max([n.std for n in self.quadtree.nodes])  # noqa
+        stdmax = max([n.std for n in self.quadtree.nodes])
+        lmax = max([n.std for n in self.quadtree.nodes])
 
         def costFunction(n):
             nl = num.log2(n.length)/num.log2(lmax)
@@ -759,6 +758,68 @@ class Covariance(object):
 
         return cov, d
 
+    @property_cached
+    def covariance_func_spatial(self):
+        nbins = 30
+        npairs = 300000
+        noise_data = self.noise_data
+
+        dist_bins = num.linspace(
+            0,
+            noise_data.shape[0] * self.scene.frame.dE,
+            nbins)
+
+        scene = self.scene
+
+        # Select random coordinates
+        idx0 = num.random.randint(0, noise_data.size, npairs)
+        idx1 = num.random.randint(0, noise_data.size, npairs)
+
+        c_grid = num.mgrid[0:noise_data.shape[0], 0:noise_data.shape[1]]
+        grdN = (c_grid[0] * scene.frame.dN).ravel()
+        grdE = (c_grid[1] * scene.frame.dE).ravel()
+
+        distances = num.sqrt((grdN[idx0] - grdN[idx1])**2 +
+                             (grdE[idx0] - grdE[idx1])**2)
+
+        noise_data = noise_data.ravel()
+        cov_all = noise_data[idx0] * noise_data[idx1]
+        vario_all = (noise_data[idx0] - noise_data[idx1])**2
+
+        vario_b = []
+        covario_b = []
+
+        for i in num.arange(nbins-1):
+            # current distance bin
+            curr_bin = num.where(
+                (distances > dist_bins[i])
+                & (distances <= dist_bins[i+1])
+                & num.isfinite(cov_all))
+
+            # mask = num.isfinite(cov_all[curr_bin])
+            # print curr_bin[mask]
+            # print curr_bin
+            # variances and covariances for the current distance
+            # are summed and stored
+            # the variograms gets semi-variogram as well
+            vario_b = num.hstack(
+                (vario_b,
+                 num.sum(vario_all[curr_bin])/(2*vario_all[curr_bin].size)))
+            covario_b = num.hstack(
+                (covario_b,
+                 num.sum(cov_all[curr_bin])/(cov_all[curr_bin].size)))
+
+        return covario_b, dist_bins
+
+    def getCovarianceFunction(self):
+        ''' Calculate the covariance function
+
+        :return: The covariance and distance
+        :rtype: tuple
+        '''
+
+        return self.covariance_func
+
     def covarianceFromModel(self, regime=0):
         '''Caluclate exponential analytical covariance
 
@@ -785,7 +846,7 @@ class Covariance(object):
     def covariance_model(self, regime=0):
         ''' Covariance model parameters for
             :func:`~kite.covariance.modelCovariance` retrieved
-            from :attr:`~kite.Covariance.covarianceFromModel`.
+            from :attr:`~kite.Covariance.getCovarianceFunction`.
 
         .. note:: using this function implies several model
             fits: (1) fit of the spectrum and (2) the cosine transform.
@@ -796,8 +857,8 @@ class Covariance(object):
         :type: tuple, ``a`` and ``b``
         '''
         if self.config.a is None or self.config.b is None:
-            cov, d = self.covarianceFromModel(regime)
-            cov, d = self.covariance_func
+            # cov, d = self.covarianceFromModel(regime)
+            cov, d = self.getCovarianceFunction()
             try:
                 (a, b), _ =\
                     sp.optimize.curve_fit(modelCovariance, d, cov,
@@ -812,10 +873,10 @@ class Covariance(object):
     def covariance_model_rms(self):
         '''
         :getter: RMS missfit between :class:`~kite.Covariance.covariance_model`
-            and :class:`~kite.Covariance.covariance_func`
+            and :class:`~kite.Covariance.getCovarianceFunction`
         :type: float
         '''
-        cov, d = self.covariance_func
+        cov, d = self.getCovarianceFunction()
         cov_mod = modelCovariance(d, *self.covariance_model)
 
         return num.sqrt(num.mean((cov - cov_mod)**2))
