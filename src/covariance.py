@@ -174,6 +174,7 @@ class Covariance(object):
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_func = None
+        # self.covariance_func_spatial = None
         self.weight_matrix = None
         self.weight_matrix_focal = None
         self._initialized = False
@@ -758,26 +759,28 @@ class Covariance(object):
 
         return cov, d
 
-    @property_cached
+    @property
     def covariance_func_spatial(self):
-        nbins = 30
-        npairs = 300000
-        noise_data = self.noise_data
+        self._log.debug('Estimating covariance (spatial)...')
 
-        dist_bins = num.linspace(
-            0,
-            noise_data.shape[0] * self.scene.frame.dE,
-            nbins)
+        nbins = 75
+        npairs_max = 300000
 
         scene = self.scene
+        noise_data = self.noise_data
+
+        max_distance = min((noise_data.shape[0] * self.scene.frame.dE),
+                           (noise_data.shape[1] * self.scene.frame.dN))
+        dist_bins = num.linspace(0, max_distance, nbins)
 
         # Select random coordinates
-        idx0 = num.random.randint(0, noise_data.size, npairs)
-        idx1 = num.random.randint(0, noise_data.size, npairs)
+        rand_idx = num.random.randint(0, noise_data.size, (2, npairs_max))
+        idx0 = rand_idx[0, :]
+        idx1 = rand_idx[1, :]
 
         c_grid = num.mgrid[0:noise_data.shape[0], 0:noise_data.shape[1]]
-        grdN = (c_grid[0] * scene.frame.dN).ravel()
-        grdE = (c_grid[1] * scene.frame.dE).ravel()
+        grdE = (c_grid[0] * scene.frame.dE).ravel()
+        grdN = (c_grid[1] * scene.frame.dN).ravel()
 
         distances = num.sqrt((grdN[idx0] - grdN[idx1])**2 +
                              (grdE[idx0] - grdE[idx1])**2)
@@ -786,30 +789,12 @@ class Covariance(object):
         cov_all = noise_data[idx0] * noise_data[idx1]
         vario_all = (noise_data[idx0] - noise_data[idx1])**2
 
-        vario_b = []
-        covario_b = []
-
-        for i in num.arange(nbins-1):
-            # current distance bin
-            curr_bin = num.where(
-                (distances > dist_bins[i])
-                & (distances <= dist_bins[i+1])
-                & num.isfinite(cov_all))
-
-            # mask = num.isfinite(cov_all[curr_bin])
-            # print curr_bin[mask]
-            # print curr_bin
-            # variances and covariances for the current distance
-            # are summed and stored
-            # the variograms gets semi-variogram as well
-            vario_b = num.hstack(
-                (vario_b,
-                 num.sum(vario_all[curr_bin])/(2*vario_all[curr_bin].size)))
-            covario_b = num.hstack(
-                (covario_b,
-                 num.sum(cov_all[curr_bin])/(cov_all[curr_bin].size)))
-
-        return covario_b, dist_bins
+        bins = sp.digitize(distances, dist_bins, right=True)
+        variance = num.array([num.nanmean(vario_all[bins == ib])/2
+                              for ib in range(nbins-1)])
+        covariance = num.array([num.nanmean(cov_all[bins == ib])
+                                for ib in range(nbins-1)])
+        return covariance, dist_bins
 
     def getCovarianceFunction(self):
         ''' Calculate the covariance function
@@ -818,7 +803,7 @@ class Covariance(object):
         :rtype: tuple
         '''
 
-        return self.covariance_func
+        return self.covariance_func_spatial
 
     def covarianceFromModel(self, regime=0):
         '''Caluclate exponential analytical covariance

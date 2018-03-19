@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 import unittest
 import numpy as num
 import matplotlib.pyplot as plt
@@ -64,12 +64,26 @@ class TestCovariance(unittest.TestCase):
 
         fig, _ = plt.subplots(1, len(d))
         for i, (title, mat) in enumerate(d):
-            print '%s Max %f' % (title, num.nanmax(mat)), mat.shape
+            print('%s Max %f' % ((title, num.nanmax(mat)), mat.shape))
             fig.axes[i].imshow(mat)
             fig.axes[i].set_title(title)
         plt.show()
 
+    def test_covariance_spatial(self):
+        cov = self.sc.covariance
+        quad = self.sc.quadtree  # noqa
+
+        @benchmark
+        def calc(c):
+            cov, dist = c.covariance_func_spatial
+            # assert num.all(num.isfinite(cov))
+
+        for i in range(10):
+            calc(cov)
+
+        print(benchmark)
+
 
 if __name__ == '__main__':
     unittest.main(exit=False)
-    print benchmark
+    print(benchmark)

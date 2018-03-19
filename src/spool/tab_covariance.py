@@ -195,9 +195,13 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.plot.setLabels(bottom={'Distance', 'm'},
                             left='Covariance (m<sup>2</sup>)')
 
-        self.cov = pg.PlotDataItem(antialias=True)
+        self.cov = pg.PlotDataItem(antialias=True, alpha=.3)
         self.cov.setZValue(10)
+
+        self.cov_spatial = pg.PlotDataItem(antialias=True)
+
         self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_covariance)
+
         self.variance = self.VarianceLine(
             pen=pen_variance,
             angle=0, movable=True, hoverPen=pen_variance_highlight,
@@ -206,13 +210,12 @@ class KiteCovariogram(_KiteSubplotPlot):
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
         self.variance.setToolTip('Move to change variance')
-
         self.variance.sigPositionChangeFinished.connect(self.setVariance)
 
-        self.addItem(self.variance)
-
         self.addItem(self.cov)
+        self.addItem(self.cov_spatial)
         self.addItem(self.cov_model)
+        self.addItem(self.variance)
         # self.cov_lin_pow = pg.PlotDataItem(antialias=True,
         #                                    pen=pen_green_dash)
         # self.addItem(self.cov_lin_pow)
@@ -234,9 +237,13 @@ class KiteCovariogram(_KiteSubplotPlot):
     @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
-        cov, dist = covariance.covariance_func
 
+        cov, dist = covariance.covariance_func
         self.cov.setData(dist, cov)
+
+        cov, dist = covariance.covariance_func_spatial
+        self.cov_spatial.setData(dist, cov)
+
         self.cov_model.setData(
             dist, modelCovariance(dist, *covariance.covariance_model))
         # self.cov_lin_pow.setData(
