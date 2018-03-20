@@ -1,18 +1,25 @@
 import numpy as num
 import pyqtgraph as pg
+import pyqtgraph.parametertree.parameterTypes as pTypes
+
 from collections import OrderedDict
 
 from PyQt5 import QtGui, QtCore
 from pyqtgraph import dockarea
 
 from kite.qt_utils import loadUi
-from kite.covariance import modelCovariance
 
 from .base import (KiteView, KitePlot, KiteParameterGroup,
                    KiteToolColormap, get_resource)
 
+pen_covariance_model = pg.mkPen(
+    (204, 0, 0), width=2, style=QtCore.Qt.DotLine)
+
 pen_covariance = pg.mkPen(
-    (204, 0, 0), width=2.5, style=QtCore.Qt.DotLine)
+    (255, 255, 255, 100), width=1.25)
+
+pen_covariance_active = pg.mkPen(
+    (255, 255, 255), width=1.25)
 
 pen_variance = pg.mkPen(
     (78, 154, 6), width=2.5, style=QtCore.Qt.DashLine)
@@ -37,12 +44,12 @@ class KiteCovariance(KiteView):
         covariance_plot = KiteNoisePlot(model)
         self.main_widget = covariance_plot
         self.tools = {
-            'Covariance.powerspecNoise':
-                KiteNoisePowerspec(covariance_plot),
-            'Covariance.covariance_func':
+            # 'Covariance.powerspecNoise':
+            #     KiteNoisePowerspec(covariance_plot),
+            'Semi-Variogram: Covariance.structure_spatial':
+                KiteStructureFunction(covariance_plot),
+            'Covariogram: Covariance.covariance_spatial':
                 KiteCovariogram(covariance_plot),
-            # 'Covariance.structure_func':
-            #     KiteStructureFunction(covariance_plot),
         }
 
         self.param_covariance = KiteParamCovariance(model)
@@ -185,6 +192,14 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
 
 class KiteCovariogram(_KiteSubplotPlot):
 
+    legend_template = {
+        'exponential':
+            'Model: {0:.2g} e^(-d/{1:.1f}) | RMS: {rms:.4e}',
+        'exponential_cosine':
+            'Model: {0:.2g} e^(-d/{1:.1f}) - cos((d-({2:.1f}))/{3:.1f}) '
+            '| RMS: {rms:.4e}'
+    }
+
     class VarianceLine(pg.InfiniteLine):
         def __init__(self, *args, **kwargs):
             pg.InfiniteLine.__init__(self, *args, **kwargs)
@@ -192,15 +207,17 @@ class KiteCovariogram(_KiteSubplotPlot):
 
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
-        self.plot.setLabels(bottom={'Distance', 'm'},
+        self.plot.setLabels(bottom=('Distance', 'm'),
                             left='Covariance (m<sup>2</sup>)')
 
-        self.cov = pg.PlotDataItem(antialias=True, alpha=.3)
-        self.cov.setZValue(10)
+        self.cov_spectral = pg.PlotDataItem(antialias=True)
+        self.cov_spectral.setZValue(10)
 
         self.cov_spatial = pg.PlotDataItem(antialias=True)
 
-        self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_covariance)
+        self.cov_model = pg.PlotDataItem(
+            antialias=True,
+            pen=pen_covariance_model)
 
         self.variance = self.VarianceLine(
             pen=pen_variance,
@@ -212,7 +229,7 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.variance.setToolTip('Move to change variance')
         self.variance.sigPositionChangeFinished.connect(self.setVariance)
 
-        self.addItem(self.cov)
+        self.addItem(self.cov_spectral)
         self.addItem(self.cov_spatial)
         self.addItem(self.cov_model)
         self.addItem(self.variance)
@@ -224,7 +241,6 @@ class KiteCovariogram(_KiteSubplotPlot):
 
         self.legend.setParentItem(self.plot.graphicsItem())
         self.legend.addItem(self.cov_model, '')
-        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f}) | RMS: {rms:.4e}'
 
         self.model.sigCovarianceChanged.connect(
             self.update)
@@ -238,37 +254,56 @@ class KiteCovariogram(_KiteSubplotPlot):
     def update(self):
         covariance = self.model.covariance
 
-        cov, dist = covariance.covariance_func
-        self.cov.setData(dist, cov)
+        cov_spectral, dist = covariance.covariance_spectral
+        self.cov_spectral.setData(dist, cov_spectral)
 
-        cov, dist = covariance.covariance_func_spatial
-        self.cov_spatial.setData(dist, cov)
+        cov_spatial, dist = covariance.covariance_spatial
+        self.cov_spatial.setData(dist, cov_spatial)
+
+        if self.model.covariance.config.sampling_method == 'spatial':
+            self.cov_spatial.setPen(pen_covariance_active)
+            self.cov_spectral.setPen(pen_covariance)
+
+        else:
+            self.cov_spatial.setPen(pen_covariance)
+            self.cov_spectral.setPen(pen_covariance_active)
+
+        model = self.model.covariance.getModelFunction()
 
         self.cov_model.setData(
-            dist, modelCovariance(dist, *covariance.covariance_model))
-        # self.cov_lin_pow.setData(
-        #     dist, covariance.covarianceAnalytical(3)[0])
+            dist,
+            model(dist, *covariance.covariance_model))
+
+        tmpl = self.legend_template[covariance.config.model_function]
 
         self.legend.items[-1][1].setText(
-            self.legend.template.format(
+            tmpl.format(
                 *covariance.covariance_model,
                 rms=covariance.covariance_model_rms))
         self.variance.setValue(covariance.variance)
 
 
 class KiteStructureFunction(_KiteSubplotPlot):
+
+    class VarianceLine(pg.InfiniteLine):
+        def __init__(self, *args, **kwargs):
+            pg.InfiniteLine.__init__(self, *args, **kwargs)
+            self.setCursor(QtCore.Qt.SizeVerCursor)
+
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
 
-        self.structure = pg.PlotDataItem(antialias=True)
-        self.variance = pg.InfiniteLine(
-            pen=pen_covariance,
-            angle=0, movable=True, hoverPen=None,
+        self.structure = pg.PlotDataItem(
+            antialias=True,
+            pen=pen_covariance_active)
+        self.variance = self.VarianceLine(
+            pen=pen_variance,
+            angle=0, movable=True, hoverPen=pen_variance_highlight,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
-        self.plot.setLabels(bottom={'Distance', 'm'},
+        self.plot.setLabels(bottom=('Distance', 'm'),
                             left='Covariance (m<sup>2</sup>)')
 
         self.addItem(self.structure)
@@ -283,8 +318,9 @@ class KiteStructureFunction(_KiteSubplotPlot):
     @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
-        struc, dist = covariance.structure_func
-        self.structure.setData(dist, struc)
+        struc, dist = covariance.getStructure()
+        self.structure.setData(dist[num.isfinite(struc)],
+                               struc[num.isfinite(struc)])
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
@@ -576,17 +612,20 @@ The calculation is expensive and may take several minutes.
 
 
 class KiteParamCovariance(KiteParameterGroup):
+    sigSamplingMethod = QtCore.pyqtSignal(str)
+    sigSpatialBins = QtCore.pyqtSignal(int)
+    sigSpatialPairs = QtCore.pyqtSignal(int)
+
     def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.covariance'
 
+        self.sp = model
+
         self.parameters = OrderedDict([
-            ('powerspec_model_rms', None),
             ('variance', None),
-            ('covariance_model [a]',
-             lambda c: c.covariance_model[0]),
-            ('covariance_model [b]',
-             lambda c: c.covariance_model[1]),
+            ('covariance_model',
+             lambda c: ', '.join('%g' % p for p in c.covariance_model)),
             ('covariance_model_rms', None),
             ('noise_patch_size_km2', None),
             ('noise_patch_coord',
@@ -599,3 +638,62 @@ class KiteParamCovariance(KiteParameterGroup):
             model=model,
             model_attr='covariance',
             **kwargs)
+
+        def changeSamplingMethod():
+            model.covariance.setSamplingMethod(sampling_method.value())
+
+        p = {'name': 'sampling_method',
+             'values': {
+                'spatial random': 'spatial',
+                'spectral': 'spectral',
+                 },
+             'value': model.covariance.config.sampling_method
+             }
+        sampling_method = pTypes.ListParameter(**p)
+        sampling_method.sigValueChanged.connect(changeSamplingMethod)
+
+        def changeSpatialBins():
+            model.covariance.setSpatialBins(spatial_bins.value())
+
+        p = {'name': 'spatial_bins',
+             'value': model.covariance.config.spatial_bins,
+             'type': 'int',
+             'limits': (25, 500),
+             'step': 5,
+             'edditable': True
+             }
+
+        spatial_bins = pTypes.SimpleParameter(**p)
+        spatial_bins.sigValueChanged.connect(changeSpatialBins)
+
+        def changeSpatialPairs():
+            model.covariance.setSpatialPairs(spatial_pairs.value())
+
+        p = {'name': 'spatial_pairs',
+             'value': model.covariance.config.spatial_pairs,
+             'type': 'int',
+             'limits': (0, 1000000),
+             'step': 50000,
+             'edditable': True
+             }
+
+        spatial_pairs = pTypes.SimpleParameter(**p)
+        spatial_pairs.sigValueChanged.connect(changeSpatialPairs)
+
+        def changeModelFunction():
+            model.covariance.setModelFunction(model_function.value())
+
+        p = {'name': 'model_function',
+             'values': {
+                'exponential': 'exponential',
+                'exp + cosine': 'exponential_cosine',
+                 },
+             'value': model.covariance.config.model_function
+             }
+        model_function = pTypes.ListParameter(**p)
+        model_function.sigValueChanged.connect(changeModelFunction)
+
+        self.pushChild(model_function)
+        self.pushChild(spatial_bins)
+        self.pushChild(spatial_pairs)
+        self.pushChild(sampling_method)

@@ -1,7 +1,6 @@
 #!/usr/bin/python
 from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
-import gc
 import time  # noqa
 import pyqtgraph as pg
 

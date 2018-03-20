@@ -242,7 +242,8 @@ class KiteParamQuadtree(KiteParameterGroup):
                             model.quadtree.epsilon_min)*.1, 3),
              'limits': (model.quadtree.epsilon_min,
                         3*model.quadtree._epsilon_init),
-             'editable': True}
+             'editable': True
+             }
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
@@ -258,7 +259,8 @@ class KiteParamQuadtree(KiteParameterGroup):
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
-             'editable': True, }
+             'editable': True
+             }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
         self.nan_allowed.sigValueChanged.connect(updateNanFrac)
@@ -275,7 +277,8 @@ class KiteParamQuadtree(KiteParameterGroup):
              'limits': (50, 50000),
              'step': 100,
              'editable': True,
-             'suffix': 'm'}
+             'suffix': 'm'
+             }
         self.tile_size_min = pTypes.SimpleParameter(**p)
         self.tile_size_min.itemClass = SliderWidgetParameterItem
 
@@ -316,8 +319,8 @@ class KiteParamQuadtree(KiteParameterGroup):
                 'Median (Jonsson, 2002)': 'median',
                 'Bilinear (Jonsson, 2002)': 'bilinear',
                 'SD (Jonsson, 2002)': 'std',
-             },
-             'value': QuadtreeConfig.correction.default()}
+                 },
+             'value': model.quadtree.config.correction}
         correction_method = pTypes.ListParameter(**p)
         correction_method.sigValueChanged.connect(changeCorrection)
 

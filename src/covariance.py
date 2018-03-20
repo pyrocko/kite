@@ -19,7 +19,7 @@ noise_regimes = [
     (0, num.inf)]
 
 
-def modelCovariance(distance, a, b):
+def modelCovarianceExponential(distance, a, b):
     '''Exponential function model to approximate a positive-definite covariance
 
     We assume the following simple covariance model to describe the empirical
@@ -27,18 +27,44 @@ def modelCovariance(distance, a, b):
 
     .. math::
 
-        cov(dist) = c \\cdot e^{\\frac{-dist}{b}}
+        cov(d) = c \\cdot e^{\\frac{-d}{b}}
 
     :param distance: Distance between
     :type distance: float or :class:`numpy.ndarray`
-    :param a: Linear model parameter
+    :param a: Linear model coefficient
     :type a: float
-    :param b: Exponential model parameter
+    :param b: Exponential model coefficient
     :type b: float
     :returns: Covariance at ``distance``
     :rtype: :class:`numpy.ndarray`
     '''
     return a * num.exp(-distance/b)
+
+
+def modelCovarianceExponentialCosine(distance, a, b, c, d):
+    '''Exponential function model to approximate a positive-definite covariance
+
+    We assume the following simple covariance model to describe the empirical
+    noise observations:
+
+    .. math::
+
+        cov(d) = c \\cdot e^{\\frac{-d}{b}} \\cdot \cos{\\frac{d-c}{d}}
+
+    :param distance: Distance between
+    :type distance: float or :class:`numpy.ndarray`
+    :param a: Linear model coefficient
+    :type a: float
+    :param b: Exponential model coefficient
+    :type b: float
+    :param c: Cosinus distance correction
+    :type c: float
+    :param c: Cosinus coefficient
+    :type c: float
+    :returns: Covariance at ``distance``
+    :rtype: :class:`numpy.ndarray`
+    '''
+    return a * num.exp(-distance/b) * num.cos((distance-c)/d)
 
 
 def modelPowerspec(k, beta, D):
@@ -67,14 +93,25 @@ class CovarianceConfig(guts.Object):
         serialize_as='list',
         optional=True,
         help='Noise patch coordinates and size,')
-    a = guts.Float.T(
+    model_coefficients = guts.Tuple.T(
         optional=True,
-        help='Exponential covariance model; scaling factor. '
-             'See :func:`~kite.covariance.modelCovariance`')
-    b = guts.Float.T(
-        optional=True,
-        help='Exponential covariance model; exponential decay. '
-             'See :func:`~kite.covariance.modelCovariance`')
+        help='Covariance model coefficients. Either two (exponential) '
+             'or three (exponential and cosine term) coefficients.'
+             'See also :func:`~kite.covariance.modelCovariance`')
+    model_function = guts.StringChoice.T(
+        choices=['exponential', 'exponential_cosine'],
+        default='exponential',
+        help='Covariance approximation function.')
+    sampling_method = guts.StringChoice.T(
+        choices=['spectral', 'spatial'],
+        default='spatial',
+        help='Method for estimating the covariance and structure function')
+    spatial_bins = guts.Int.T(
+        default=75,
+        help='Number of distance bins for spatial covariance sampling.')
+    spatial_pairs = guts.Int.T(
+        default=200000,
+        help='Number of random pairs for spatial covariance sampling.')
     variance = guts.Float.T(
         optional=True,
         help='Variance of the model')
@@ -148,12 +185,10 @@ class Covariance(object):
         self.config = config
 
         if config.noise_coord is None\
-           and (config.a is not None or
-                config.b is not None or
+           and (config.model_coefficients is not None or
                 config.variance is not None):
             self.noise_data  # init data array
-            self.config.a = config.a
-            self.config.b = config.b
+            self.config.model_coefficients = config.model_coefficients
             self.config.variance = config.variance
 
         self._clear(config=False)
@@ -161,20 +196,20 @@ class Covariance(object):
 
     def _clear(self, config=True, spectrum=True):
         if config:
-            self.config.a = None
-            self.config.b = None
+            self.config.model_coefficients = None
             self.config.variance = None
             self.config.covariance_matrix = None
 
         if spectrum:
-            self.structure_func = None
+            self.structure_spectral = None
             self._powerspec1d_cached = None
             self._powerspec2d_cached = None
 
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
-        self.covariance_func = None
-        # self.covariance_func_spatial = None
+        self.covariance_spectral = None
+        self.covariance_spatial = None
+        self.structure_spatial = None
         self.weight_matrix = None
         self.weight_matrix_focal = None
         self._initialized = False
@@ -261,7 +296,6 @@ class Covariance(object):
     def noise_data(self, data):
         data = data.copy()
         data = derampMatrix(trimMatrix(data))
-        data = trimMatrix(data)
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
@@ -284,12 +318,11 @@ class Covariance(object):
             ns = n.std/stdmax
             return nl*(1.-ns)*(1.-n.nan_fraction)
 
-        nodes = sorted(self.quadtree.nodes,
-                       key=costFunction)
+        fitness = num.array([costFunction(n) for n in self.quadtree.nodes])
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.4f s]'
                         % (time.time() - t0))
-        return nodes[0]
+        return self.quadtree.nodes[num.argmin(fitness)]
 
     def _mapLeaves(self, nx, ny):
         ''' Helper function returning appropriate
@@ -403,7 +436,9 @@ class Covariance(object):
         self._leaf_mapping = {}
 
         t0 = time.time()
-        ma, mb = self.covariance_model
+
+        model = self.getModelFunction()
+
         if method == 'focal':
             dist_matrix = num.zeros((nl, nl))
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
@@ -412,10 +447,15 @@ class Covariance(object):
                 leaf1, leaf2 = self._mapLeaves(nx, ny)
                 dist = self._leafFocalDistance(leaf1, leaf2)
                 dist_matrix[(nx, ny), (ny, nx)] = dist
-            cov_matrix = modelCovariance(dist_matrix, ma, mb)
+            cov_matrix = model(dist_matrix, *self.covariance_model)
             num.fill_diagonal(cov_matrix, self.variance)
 
         elif method == 'full':
+            if self.config.model_function == 'exponential_cosine':
+                raise AttributeError(
+                    'Exponential Cosine Model not supported yet!')
+
+            ma, mb = self.covariance_model
             leaf_map = num.empty((len(self.quadtree.leaves), 4),
                                  dtype=num.uint32)
             for nl, leaf in enumerate(self.quadtree.leaves):
@@ -430,7 +470,7 @@ class Covariance(object):
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
                             leaf_map, ma, mb, self.variance, nthreads,
-                            self.config.adaptive_subsampling)\
+                            self.config.model_adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
         else:
             raise TypeError('Covariance calculation %s method not defined!'
@@ -663,80 +703,6 @@ class Covariance(object):
         dk = 1./k.min() / (2. * nk)
         return power(k), k, dk, spectrum, kE, kN
 
-        # def power1Ddisc():
-        #     self._log.info('Using discrete summation')
-        #     ps = power_spec
-        #     d = num.abs(num.arange(-ps.shape[0]/2,
-        #                            ps.shape[0]/2))
-        #     rm = num.sqrt(d[:, num.newaxis]**2 + d[num.newaxis, :]**2)
-
-        #     axis = num.argmax(ps.shape)
-        #     k_ref = kN if axis == 0 else kE
-        #     p = num.empty(ps.shape[axis]/2)
-        #     k = num.empty(ps.shape[axis]/2)
-        #     for r in range(ps.shape[axis]/2):
-        #         mask = num.logical_and(rm >= r-.5, rm < r+.5)
-        #         k[r] = k_ref[(k_ref.size/2)+r]
-        #         p[r] = num.median(ps[mask]) * 4 * num.pi
-        #     return p, k
-
-        # power, k = power1Ddisc()
-        # dk = k[1] - k[0]
-        # return power, k, dk, spectrum, kE, kN
-
-    def _powerspecFit(self, regime=3):
-        '''Fitting a function to data noise power spectrum.
-        '''
-        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
-
-        def selectRegime(k, k1, k2):
-            return num.logical_and(k > k1, k < k2)
-
-        regime = selectRegime(k, *noise_regimes[regime])
-
-        try:
-            return sp.optimize.curve_fit(modelPowerspec,
-                                         k[regime], power_spec[regime],
-                                         p0=(0.1, 2000))
-        except RuntimeError as e:
-            self._log.warning('Could not fit the powerspectrum model. <%s>'
-                              % e)
-            return (0., 0.), 0.
-
-    @property
-    def powerspec_model(self):
-        '''Fit function to power spectrum based on the spectral model parameters
-            :func:`~kite.covariance.modelPowerspec`
-
-        :returns: Model parameters ``a`` and ``b``
-        :rtype: tuple, floats
-        '''
-        p, _ = self._powerspecFit()
-        return p
-
-    @property
-    def powerspec_model_rms(self):
-        '''
-        :getter: RMS missfit between :class:`~kite.Covariance.powerspecNoise1D`
-            and :class:`~kite.Covariance.powerspec_model``
-        :type: float
-        '''
-        power_spec, k, _, _, _, _ = self.powerspecNoise1D()
-        power_spec_mod = self.powerspecModel(k)
-        return num.sqrt(num.mean((power_spec - power_spec_mod)**2))
-
-    def powerspecModel(self, k):
-        ''' Calculates the model power spectrum based on the fit of
-            :func:`~kite.covariance.powerspec_model`.
-
-        :param k: Wavenumber(s)
-        :type k: float or :class:`numpy.ndarray`
-        :returns: Power at wavenumber ``k``
-        :rtype: float or :class:`numpy.ndarray`
-        '''
-        p = self.powerspec_model
-        return modelPowerspec(k, *p)
-
     def _powerCosineTransform(self, p_spec):
         '''Calculating the cosine transform of the power spectrum.
 
@@ -745,8 +711,44 @@ class Covariance(object):
         cos = sp.fftpack.idct(p_spec, type=3)
         return cos
 
+    def setSamplingMethod(self, method):
+        ''' Set the sampling method '''
+        assert method in CovarianceConfig.sampling_method.choices
+
+        self.config.sampling_method = method
+        self._clear(config=True, spectrum=False)
+        self.evChanged.notify()
+        self._log.debug('Changed sampling method to %s' % method)
+
+    def setSpatialBins(self, nbins):
+        ''' Set number of spatial bins '''
+        self.config.spatial_bins = nbins
+        self._clear(config=True, spectrum=False)
+        self.evChanged.notify()
+        self._log.debug('Changed spatial distance bins to %s' % nbins)
+
+    def setSpatialPairs(self, npairs):
+        ''' Set number of random spatial pairs '''
+        self.config.spatial_pairs = npairs
+        self._clear(config=True, spectrum=False)
+        self.evChanged.notify()
+        self._log.debug('Changed random pairs to %s' % npairs)
+
+    def setModelFunction(self, model):
+        assert model in CovarianceConfig.model_function.choices
+        self.config.model_function = model
+        self._clear(config=True, spectrum=True)
+        self.evChanged.notify()
+        self._log.debug('Changed model function to %s' % model)
+
+    def getModelFunction(self):
+        if self.config.model_function == 'exponential':
+            return modelCovarianceExponential
+        if self.config.model_function == 'exponential_cosine':
+            return modelCovarianceExponentialCosine
+
     @property_cached
-    def covariance_func(self):
+    def covariance_spectral(self):
         ''' Covariance function estimated directly from the power spectrum of
             displacement noise patch using the cosine transform.
 
@@ -759,22 +761,23 @@ class Covariance(object):
 
         return cov, d
 
-    @property
-    def covariance_func_spatial(self):
+    @property_cached
+    def covariance_spatial(self):
         self._log.debug('Estimating covariance (spatial)...')
 
-        nbins = 75
-        npairs_max = 300000
+        nbins = self.config.spatial_bins
+        npairs = self.config.spatial_pairs
 
         scene = self.scene
         noise_data = self.noise_data
 
         max_distance = min((noise_data.shape[0] * self.scene.frame.dE),
                            (noise_data.shape[1] * self.scene.frame.dN))
-        dist_bins = num.linspace(0, max_distance, nbins)
+        dist_bins = num.linspace(0, max_distance, nbins + 1)
 
         # Select random coordinates
-        rand_idx = num.random.randint(0, noise_data.size, (2, npairs_max))
+        rstate = num.random.RandomState(noise_data.size)
+        rand_idx = rstate.randint(0, noise_data.size, (2, npairs))
         idx0 = rand_idx[0, :]
         idx1 = rand_idx[1, :]
 
@@ -789,43 +792,34 @@ class Covariance(object):
         cov_all = noise_data[idx0] * noise_data[idx1]
         vario_all = (noise_data[idx0] - noise_data[idx1])**2
 
-        bins = sp.digitize(distances, dist_bins, right=True)
-        variance = num.array([num.nanmean(vario_all[bins == ib])/2
-                              for ib in range(nbins-1)])
-        covariance = num.array([num.nanmean(cov_all[bins == ib])
-                                for ib in range(nbins-1)])
-        return covariance, dist_bins
+        bins = num.digitize(distances, dist_bins, right=True)
+        bin_distances = dist_bins[1:] - dist_bins[1]/2
 
-    def getCovarianceFunction(self):
+        covariance = num.full_like(bin_distances, fill_value=num.nan)
+        variance = num.full_like(bin_distances, fill_value=num.nan)
+
+        for ib in range(nbins):
+            selection = bins == ib
+            if selection.sum() != 0:
+                covariance[ib] = num.nanmean(cov_all[selection])
+                variance[ib] = num.nanmean(vario_all[selection])/2
+
+        self._structure_spatial = (variance[~num.isnan(variance)],
+                                   bin_distances[~num.isnan(variance)])
+
+        return (covariance[~num.isnan(covariance)],
+                bin_distances[~num.isnan(covariance)])
+
+    def getCovariance(self):
         ''' Calculate the covariance function
 
         :return: The covariance and distance
         :rtype: tuple
         '''
-
-        return self.covariance_func_spatial
-
-    def covarianceFromModel(self, regime=0):
-        '''Caluclate exponential analytical covariance
-
-        Empirical Covariance function based on the power spectral model fit
-        and not directly on the power spectrum as in
-        :func:`~kite.covariance.covariance_func`
-        from :func:`~kite.covariance.modelPowerspec`
-
-        .. warning:: Deprecated!
-
-        :return: Covariance and corresponding distances.
-        :rtype: tuple, :class:`numpy.ndarray` (covariance_analytical, distance)
-        '''
-        _, k, dk, _, kN, kE = self.powerspecNoise1D()
-        (a, b) = self.powerspec_model
-
-        spec = modelPowerspec(k, a, b)
-        d = num.arange(1, spec.size+1) * dk
-
-        cos = self._powerCosineTransform(spec)
-        return cos, d
+        if self.config.sampling_method == 'spatial':
+            return self.covariance_spatial
+        elif self.config.sampling_method == 'spectral':
+            return self.covariance_spectral
 
     @property
     def covariance_model(self, regime=0):
@@ -841,18 +835,31 @@ class Covariance(object):
         :getter: Get the parameters.
         :type: tuple, ``a`` and ``b``
         '''
-        if self.config.a is None or self.config.b is None:
-            # cov, d = self.covarianceFromModel(regime)
-            cov, d = self.getCovarianceFunction()
+        if self.config.model_coefficients is None:
+            covariance, distance = self.getCovariance()
+            model = self.getModelFunction()
+
+            if self.config.model_function == 'exponential':
+                coeff = (num.mean(covariance), num.mean(distance))
+
+            elif self.config.model_function == 'exponential_cosine':
+                coeff = (num.mean(covariance), num.mean(distance),
+                         num.mean(distance)*-.1, .1)
+
             try:
-                (a, b), _ =\
-                    sp.optimize.curve_fit(modelCovariance, d, cov,
-                                          p0=(.001, 500.))
-                self.config.a, self.config.b = (float(a), float(b))
+                coeff, _ = sp.optimize.curve_fit(
+                    model,
+                    distance,
+                    covariance,
+                    p0=coeff)
             except RuntimeError:
-                self._log.warning('Could not fit the covariance model')
-                self.config.a, self.config.b = (1., 1000.)
-        return self.config.a, self.config.b
+                self._log.warning('Could not fit the %s'
+                                  ' covariance model'
+                                  % self.config.model_function)
+            finally:
+                self.config.model_coefficients = tuple(map(float, coeff))
+
+        return self.config.model_coefficients
 
     @property
     def covariance_model_rms(self):
@@ -861,15 +868,21 @@ class Covariance(object):
             and :class:`~kite.Covariance.getCovarianceFunction`
         :type: float
         '''
-        cov, d = self.getCovarianceFunction()
-        cov_mod = modelCovariance(d, *self.covariance_model)
+        cov, d = self.getCovariance()
+        model = self.getModelFunction()
+        cov_mod = model(d, *self.covariance_model)
 
         return num.sqrt(num.mean((cov - cov_mod)**2))
 
     @property_cached
-    def structure_func(self):
+    def structure_spatial(self):
+        self.covariance_spatial
+        return self._structure_spatial
+
+    @property_cached
+    def structure_spectral(self):
         ''' Structure function derived from ``noise_patch``
-            :type: tuple, :class:`numpy.ndarray` (structure_func, distance)
+            :type: tuple, :class:`numpy.ndarray` (structure_spectral, distance)
 
         Adapted from
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
@@ -877,7 +890,7 @@ class Covariance(object):
         power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         d = num.arange(1, power_spec.size+1) * dk
 
-        def structure_func(power_spec, d, k):
+        def structure_spectral(power_spec, d, k):
             struc_func = num.zeros_like(k)
             for i, d in enumerate(d):
                 for ik, tk in enumerate(k):
@@ -886,8 +899,25 @@ class Covariance(object):
             struc_func *= 2./1
             return struc_func
 
-        struc_func = structure_func(power_spec, d, k)
+        struc_func = structure_spectral(power_spec, d, k)
         return struc_func, d
+
+    def getStructure(self, method=None):
+        ''' Get the structure function
+
+        :param method: Either `spatial` or `spectral`, if `None`
+            the method is taken from config
+        :type method: str (optional)
+
+        :return: (variance, distance)
+        :rtype: tuple
+        '''
+        if method is None:
+            method = self.config.sampling_method
+        if method == 'spatial':
+            return self.structure_spatial
+        elif method == 'spectral':
+            return self.structure_spectral
 
     @property
     def variance(self):
@@ -903,22 +933,32 @@ class Covariance(object):
     @variance.setter
     def variance(self, value):
         self.config.variance = float(value)
-        self._clear(config=False, spectrum=False)
+        # self._clear(config=False, spectrum=False, spatial=False)
         self.evChanged.notify()
 
     @variance.getter
     def variance(self):
 
-        if self.config.variance is None:
+        if self.config.variance is None and \
+           self.config.sampling_method == 'spatial':
+            structure_spatial, dist = self.structure_spatial
+
+            last_20p = -int(structure_spatial.size * .2)
+            self.config.variance = float(
+                num.mean(structure_spatial[(last_20p):]))
+
+        elif (self.config.variance is None and
+              self.config.sampling_method == 'spectral'):
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
-            cov, _ = self.covariance_func
-            ma, mb = self.covariance_model
+            cov, _ = self.covariance_spectral
+            ma, mb = self.covariance_model[0], self.covariance_model[1]
             # print cov[1]
             ps = power_spec * spectrum.size
             # print spectrum.size
             # print num.mean(ps[-int(ps.size/9.):-1])
             var = num.median(ps[-int(ps.size/9.):]) + ma
             self.config.variance = float(var)
+
         return self.config.variance
 
     def export_weight_matrix(self, filename):
