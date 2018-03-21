@@ -282,8 +282,7 @@ class QuadtreeConfig(guts.Object):
              ' ``[\'mean\', \'median\', \'bilinear\', \'std\']``')
     epsilon = guts.Float.T(
         optional=True,
-        help='Threshold for node splitting, measure for '
-             'quadtree nodes\' variance')
+        help='Variance threshold when a node is split')
     nan_allowed = guts.Float.T(
         default=0.9,
         help='Allowed NaN fraction per tile')

@@ -242,7 +242,8 @@ class KiteParamQuadtree(KiteParameterGroup):
                             model.quadtree.epsilon_min)*.1, 3),
              'limits': (model.quadtree.epsilon_min,
                         3*model.quadtree._epsilon_init),
-             'editable': True
+             'editable': True,
+             'tip': QuadtreeConfig.epsilon.help
              }
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
@@ -259,7 +260,8 @@ class KiteParamQuadtree(KiteParameterGroup):
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
-             'editable': True
+             'editable': True,
+             'tip': QuadtreeConfig.nan_allowed.help
              }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
@@ -277,7 +279,8 @@ class KiteParamQuadtree(KiteParameterGroup):
              'limits': (50, 50000),
              'step': 100,
              'editable': True,
-             'suffix': 'm'
+             'suffix': 'm',
+             'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)
         self.tile_size_min.itemClass = SliderWidgetParameterItem
@@ -288,7 +291,9 @@ class KiteParamQuadtree(KiteParameterGroup):
 
         p.update({'name': 'tile_size_max',
                   'value': model.quadtree.tile_size_max,
-                  'default': QuadtreeConfig.tile_size_max.default()})
+                  'default': QuadtreeConfig.tile_size_max.default(),
+                  'tip': QuadtreeConfig.tile_size_max.help
+                  })
         self.tile_size_max = pTypes.SimpleParameter(**p)
         self.tile_size_max.itemClass = SliderWidgetParameterItem
 
@@ -305,7 +310,9 @@ class KiteParamQuadtree(KiteParameterGroup):
                 'QuadNode.median': 'median',
                 'QuadNode.weight': 'weight',
              },
-             'value': 'mean'}
+             'value': 'mean',
+             'tip': 'Change displayed component'
+             }
         self.components = pTypes.ListParameter(**p)
         self.components.sigValueChanged.connect(changeComponent)
 
@@ -320,7 +327,9 @@ class KiteParamQuadtree(KiteParameterGroup):
                 'Bilinear (Jonsson, 2002)': 'bilinear',
                 'SD (Jonsson, 2002)': 'std',
                  },
-             'value': model.quadtree.config.correction}
+             'value': model.quadtree.config.correction,
+             'tip': QuadtreeConfig.correction.help
+             }
         correction_method = pTypes.ListParameter(**p)
         correction_method.sigValueChanged.connect(changeCorrection)
 

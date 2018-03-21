@@ -8,6 +8,7 @@ from PyQt5 import QtGui, QtCore
 from pyqtgraph import dockarea
 
 from kite.qt_utils import loadUi
+from kite.covariance import CovarianceConfig
 
 from .base import (KiteView, KitePlot, KiteParameterGroup,
                    KiteToolColormap, get_resource)
@@ -655,7 +656,8 @@ class KiteParamCovariance(KiteParameterGroup):
                 'spatial random': 'spatial',
                 'spectral': 'spectral',
                  },
-             'value': model.covariance.config.sampling_method
+             'value': model.covariance.config.sampling_method,
+             'tip': CovarianceConfig.sampling_method.help,
              }
         sampling_method = pTypes.ListParameter(**p)
         sampling_method.sigValueChanged.connect(changeSamplingMethod)
@@ -668,7 +670,8 @@ class KiteParamCovariance(KiteParameterGroup):
              'type': 'int',
              'limits': (25, 500),
              'step': 5,
-             'edditable': True
+             'edditable': True,
+             'tip': CovarianceConfig.spatial_bins.help
              }
 
         spatial_bins = pTypes.SimpleParameter(**p)
@@ -682,7 +685,8 @@ class KiteParamCovariance(KiteParameterGroup):
              'type': 'int',
              'limits': (0, 1000000),
              'step': 50000,
-             'edditable': True
+             'edditable': True,
+             'tip': CovarianceConfig.spatial_pairs.help
              }
 
         spatial_pairs = pTypes.SimpleParameter(**p)
@@ -696,7 +700,8 @@ class KiteParamCovariance(KiteParameterGroup):
                 'exponential': 'exponential',
                 'exp + cosine': 'exponential_cosine',
                  },
-             'value': model.covariance.config.model_function
+             'value': model.covariance.config.model_function,
+             'tip': CovarianceConfig.model_function.help
              }
         model_function = pTypes.ListParameter(**p)
         model_function.sigValueChanged.connect(changeModelFunction)

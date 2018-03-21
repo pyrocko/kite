@@ -97,7 +97,7 @@ class CovarianceConfig(guts.Object):
         optional=True,
         help='Covariance model coefficients. Either two (exponential) '
              'or three (exponential and cosine term) coefficients.'
-             'See also :func:`~kite.covariance.modelCovariance`')
+             'See also :func:`~kite.covariance.modelCovariance`.')
     model_function = guts.StringChoice.T(
         choices=['exponential', 'exponential_cosine'],
         default='exponential',
@@ -105,7 +105,7 @@ class CovarianceConfig(guts.Object):
     sampling_method = guts.StringChoice.T(
         choices=['spectral', 'spatial'],
         default='spatial',
-        help='Method for estimating the covariance and structure function')
+        help='Method for estimating the covariance and structure function.')
     spatial_bins = guts.Int.T(
         default=75,
         help='Number of distance bins for spatial covariance sampling.')
@@ -114,7 +114,7 @@ class CovarianceConfig(guts.Object):
         help='Number of random pairs for spatial covariance sampling.')
     variance = guts.Float.T(
         optional=True,
-        help='Variance of the model')
+        help='Variance of the model.')
     adaptive_subsampling = guts.Bool.T(
         default=True,
         help='Adaptive subsampling flag for full covariance calculation.')
@@ -123,7 +123,7 @@ class CovarianceConfig(guts.Object):
         optional=True,
         serialize_as='base64',
         help='Cached covariance matrix, '
-             'see :attr:`~kite.Covariance.covariance_matrix`')
+             'see :attr:`~kite.Covariance.covariance_matrix`.')
 
     def __init__(self, *args, **kwargs):
         if len(kwargs) != 0:

@@ -208,7 +208,9 @@ class KiteParamScene(KiteParameterGroup):
                  'los.unitN': 'unitN',
                  'los.unitU': 'unitU',
                  },
-             'value': 'displacement'}
+             'value': 'displacement',
+             'tip': 'Change the displayed component of the displacement field.'
+             }
         component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
         self.pushChild(component)
