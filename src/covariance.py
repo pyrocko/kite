@@ -4,7 +4,7 @@ import numpy as num
 import scipy as sp
 import time
 
-from . import covariance_ext
+from kite import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
 from kite.util import (Subject, property_cached,  # noqa
@@ -476,8 +476,9 @@ class Covariance(object):
             cov_matrix = covariance_ext.covariance_matrix(
                             self.scene.frame.gridE.filled(),
                             self.scene.frame.gridN.filled(),
-                            leaf_map, ma, mb, self.variance, nthreads,
-                            self.config.model_adaptive_subsampling)\
+                            leaf_map,
+                            self.covariance_model, self.variance,
+                            nthreads, self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
         else:
             raise TypeError('Covariance calculation %s method not defined!'

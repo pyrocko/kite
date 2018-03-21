@@ -36,7 +36,7 @@ class TestCovariance(unittest.TestCase):
         self.sc.covariance.syntheticNoise()
         self.sc.covariance.variance
 
-    @benchmark
+    # @benchmark
     def test_covariance_parallel(self):
         cov = self.sc.covariance
         cov._calcCovarianceMatrix(method='full', nthreads=0)
@@ -75,7 +75,7 @@ class TestCovariance(unittest.TestCase):
 
         @benchmark
         def calc(c):
-            cov, dist = c.covariance_func_spatial
+            cov, dist = c.covariance_spatial
             # assert num.all(num.isfinite(cov))
 
         for i in range(10):
