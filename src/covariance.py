@@ -125,6 +125,13 @@ class CovarianceConfig(guts.Object):
         help='Cached covariance matrix, '
              'see :attr:`~kite.Covariance.covariance_matrix`')
 
+    def __init__(self, *args, **kwargs):
+        if len(kwargs) != 0:
+            if 'a' in kwargs and 'b' in kwargs:
+                kwargs['model_coefficients'] = (
+                    kwargs.pop('a'), kwargs.pop('b'))
+        guts.Object.__init__(self, *args, **kwargs)
+
 
 class Covariance(object):
     '''Construct the variance-covariance matrix of quadtree subsampled data.
