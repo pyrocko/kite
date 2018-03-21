@@ -19,6 +19,8 @@ struct module_state {
 };
 
 #define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
+#define EXPONENTIAL 2
+#define EXPONENTIAL_COSINE 4
 
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
@@ -68,6 +70,14 @@ int good_array(PyObject* o, int typenum, npy_intp size_want, int ndim_want, npy_
     return 1;
 }
 
+static float64_t covariance_model_exp(float64_t dist, float64_t *model_coeff) {
+    return model_coeff[0] * exp(-dist / model_coeff[1]);
+}
+
+static float64_t covariance_model_exp_cosine(float64_t dist, float64_t *model_coeff) {
+    return model_coeff[0] * exp(-dist / model_coeff[1]) * cos((dist-model_coeff[2])/model_coeff[3]);
+}
+
 static state_covariance calc_covariance_matrix(
                 float64_t *E,
                 float64_t *N,
@@ -86,11 +96,21 @@ static state_covariance calc_covariance_matrix(
     npy_intp il1, il2, npx, l_length;
     uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
     float64_t cov, dist;
+    float64_t (*cov_model) (float64_t, float64_t *);
 
+    // Silence warnings
     (void) tid;
     (void) nthreads;
+    cov_model = &covariance_model_exp;
+
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
+
+    if (model_ncoeff == EXPONENTIAL)
+        cov_model = &covariance_model_exp;
+    else if (model_ncoeff == EXPONENTIAL_COSINE)
+        cov_model = &covariance_model_exp_cosine;
+
 
     // Defining adaptive subsampling strategy
     for (il1=0; il1<nleafs; il1++) {
@@ -110,14 +130,14 @@ static state_covariance calc_covariance_matrix(
         if (nthreads == 0)
             nthreads = omp_get_num_procs();
         #pragma omp parallel \
-            shared (E, N, map, model_coeff, model_ncoeff, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
+            shared (E, N, map, model_coeff, cov_model, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
             private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
                      l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
                      npx, cov, l1hit, l2hit, tid, dist) \
             num_threads (nthreads)
         {
-            tid = omp_get_thread_num();
-            #pragma omp for schedule (dynamic)
+        tid = omp_get_thread_num();
+        #pragma omp for schedule (guided)
     #endif
         for (il1=0; il1<nleafs; il1++) {
             l1row_beg = map[il1*4+0];
@@ -162,12 +182,8 @@ static state_covariance calc_covariance_matrix(
                                     dist = sqrt(SQR(E[icl1]-E[icl2]) + SQR(N[icl1]-N[icl2]));
                                     if (dist == 0.)
                                         cov += variance;
-                                    else {
-                                        if (model_ncoeff == 2)
-                                            cov += model_coeff[0] * exp(-dist / model_coeff[1]);
-                                        else
-                                            cov += model_coeff[0] * exp(-dist / model_coeff[1]) * cos((dist - model_coeff[2])/model_coeff[3]);
-                                    }
+                                    else 
+                                        cov += cov_model(dist, model_coeff);
                                     npx++;
                                 }
                             }
