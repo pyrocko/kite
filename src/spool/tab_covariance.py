@@ -349,6 +349,10 @@ class KiteToolNoise(QtGui.QDialog):
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
 
+        @QtCore.pyqtSlot()
+        def update(self):
+            KitePlot.update(self)
+
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
 
@@ -424,6 +428,10 @@ class KiteToolNoise(QtGui.QDialog):
 
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
+
+        @QtCore.pyqtSlot()
+        def update(self):
+            KitePlot.update(self)
 
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
