@@ -458,11 +458,6 @@ class Covariance(object):
             num.fill_diagonal(cov_matrix, self.variance)
 
         elif method == 'full':
-            if self.config.model_function == 'exponential_cosine':
-                raise AttributeError(
-                    'Exponential Cosine Model not supported yet!')
-
-            ma, mb = self.covariance_model
             leaf_map = num.empty((len(self.quadtree.leaves), 4),
                                  dtype=num.uint32)
             for nl, leaf in enumerate(self.quadtree.leaves):

@@ -93,8 +93,6 @@ class Frame(object):
         self.N = None
         self.E = None
 
-        self._dNE_overwrite = False
-
         self.offsetE = 0.
         self.offsetN = 0.
 
@@ -139,10 +137,9 @@ class Frame(object):
                                           urlat, urlon)
         self.spherical_distortion = num.abs(self.extentE - extentE_top)
 
-        if not self._dNE_overwrite:
-            self.dE = (self.extentE + extentE_top) / (2 * self.cols)
-            self.dN = self.extentN / self.rows
-            self._dNE_overwrite = False
+        self.config.dE = (self.extentE + extentE_top) / (2 * self.cols)
+        self.config.dN = self.extentN / self.rows
+        self._dNE_overwrite = False
 
         self.E = num.arange(self.cols) * self.dE + self.offsetE
         self.N = num.arange(self.rows) * self.dN + self.offsetN
@@ -199,7 +196,6 @@ class Frame(object):
 
     @dN.setter
     def dN(self, dN):
-        self._dNE_overwrite = True
         self.config.dN = dN
 
     @property
@@ -208,7 +204,6 @@ class Frame(object):
 
     @dE.setter
     def dE(self, dE):
-        self._dNE_overwrite = True
         self.config.dE = dE
 
     @property_cached

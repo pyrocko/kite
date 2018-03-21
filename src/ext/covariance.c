@@ -74,7 +74,8 @@ static state_covariance calc_covariance_matrix(
                 npy_intp *shape_coord,
                 uint32_t *map,
                 uint32_t nleafs,
-                float64_t *model_coeff,
+                float64_t model_coeff[],
+                uint32_t model_ncoeff,
                 float64_t variance,
                 uint32_t nthreads,
                 uint32_t adaptive_subsampling,
@@ -84,15 +85,12 @@ static state_covariance calc_covariance_matrix(
     npy_intp icl1, icl2, nrows, ncols;
     npy_intp il1, il2, npx, l_length;
     uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
-    float64_t cov, dist, ma, mb;
+    float64_t cov, dist;
 
     (void) tid;
     (void) nthreads;
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
-
-    printf("ncoeff %ld\n", sizeof(model_coeff));
-    return SUCCESS;
 
     // Defining adaptive subsampling strategy
     for (il1=0; il1<nleafs; il1++) {
@@ -112,7 +110,7 @@ static state_covariance calc_covariance_matrix(
         if (nthreads == 0)
             nthreads = omp_get_num_procs();
         #pragma omp parallel \
-            shared (E, N, map, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
+            shared (E, N, map, model_coeff, model_ncoeff, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
             private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
                      l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
                      npx, cov, l1hit, l2hit, tid, dist) \
@@ -164,8 +162,12 @@ static state_covariance calc_covariance_matrix(
                                     dist = sqrt(SQR(E[icl1]-E[icl2]) + SQR(N[icl1]-N[icl2]));
                                     if (dist == 0.)
                                         cov += variance;
-                                    else
-                                        cov += ma * exp(-dist / mb);
+                                    else {
+                                        if (model_ncoeff == 2)
+                                            cov += model_coeff[0] * exp(-dist / model_coeff[1]);
+                                        else
+                                            cov += model_coeff[0] * exp(-dist / model_coeff[1]) * cos((dist - model_coeff[2])/model_coeff[3]);
+                                    }
                                     npx++;
                                 }
                             }
@@ -186,7 +188,7 @@ static state_covariance calc_covariance_matrix(
                     #endif
                 }
                 cov_arr[il1*(nleafs)+il2] = cov/npx;
-                cov_arr[il2*(nleafs)+il1] = cov_arr[il1*(nleafs)+il2];
+                cov_arr[il2*(nleafs)+il1] = cov/npx;
             }
         }
     #if defined(_OPENMP)
@@ -197,18 +199,18 @@ static state_covariance calc_covariance_matrix(
 }
 
 static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
-    PyObject *E_arr, *N_arr, *map_arr, *model_coeff;
+    PyObject *E_arr, *N_arr, *map_arr, *coeff;
     PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
-    float64_t *x, *y, *covs, variance;
-    uint32_t *map, nthreads, adaptive_subsampling, icoeff, nmodel_coeff;
+    float64_t *x, *y, *covs, variance, model_coeff[4];
+    uint32_t *map, nthreads, adaptive_subsampling, i, model_ncoeff;
     npy_intp shape_coord[2], shape_dist[2], nleafs;
     npy_intp shape_want_map[2] = {-1, 4};
 
     struct module_state *st = GETSTATE(m);
     state_covariance err;
 
-    if (! PyArg_ParseTuple(args, "OOOOdII", &E_arr, &N_arr, &map_arr, &model_coeff, &variance, &nthreads, &adaptive_subsampling)) {
+    if (! PyArg_ParseTuple(args, "OOOOdII", &E_arr, &N_arr, &map_arr, &coeff, &variance, &nthreads, &adaptive_subsampling)) {
         PyErr_SetString(st->error, "usage: distances(EastCoords, NorthCoords, map, model_coefficients, nthreads, adaptive_subsampling)");
         return NULL;
     }
@@ -234,12 +236,9 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     map = PyArray_DATA(c_map_arr);
     nleafs = PyArray_SIZE(c_map_arr)/4;
 
-    nmodel_coeff = (uint32_t) PyTuple_Size(model_coeff);
-    float64_t cmodel_coeff[(int) nmodel_coeff];
-    for (icoeff = 0; icoeff < nmodel_coeff; icoeff++) {
-        printf("%f, ", PyFloat_AsDouble(PyTuple_GetItem(model_coeff, icoeff)));
-        cmodel_coeff[icoeff] = PyFloat_AsDouble(PyTuple_GetItem(model_coeff, icoeff));
-    }
+    model_ncoeff = (uint32_t) PyTuple_Size(coeff);
+    for (i=0; i < model_ncoeff; i++)
+        model_coeff[i] = PyFloat_AsDouble(PyTuple_GetItem(coeff, i));
 
     shape_coord[0] = (npy_intp) PyArray_DIMS(c_E_arr)[0];
     shape_coord[1] = (npy_intp) PyArray_DIMS(c_E_arr)[1];
@@ -251,7 +250,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
-    err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, cmodel_coeff, variance, nthreads, adaptive_subsampling, covs);
+    err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, model_coeff, (int) model_ncoeff, variance, nthreads, adaptive_subsampling, covs);
     if (err != SUCCESS) {
         PyErr_SetString(st->error, "Calculating covariance failed!");
         return NULL;
