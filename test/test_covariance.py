@@ -52,10 +52,10 @@ class TestCovariance(unittest.TestCase):
             cov.setModelFunction('exponential_cosine')
             return cov._calcCovarianceMatrix(method='full', nthreads=0)
 
-        # res = calc_exp()
-        # ref = num.load('test/covariance_ref.npy')
-        calc_exp_cos()
-        # num.testing.assert_array_equal(ref, res)
+        res = calc_exp()
+        ref = num.load('test/covariance_ref.npy')
+        # calc_exp_cos()
+        num.testing.assert_array_equal(ref, res)
         print(benchmark)
 
     @benchmark
