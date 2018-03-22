@@ -83,7 +83,7 @@ static state_covariance calc_covariance_matrix(
                 float64_t *N,
                 npy_intp *shape_coord,
                 uint32_t *map,
-                uint32_t nleafs,
+                uint32_t nleaves,
                 float64_t model_coeff[],
                 uint32_t model_ncoeff,
                 float64_t variance,
@@ -94,7 +94,7 @@ static state_covariance calc_covariance_matrix(
     npy_intp l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col;
     npy_intp icl1, icl2, nrows, ncols;
     npy_intp il1, il2, npx, l_length;
-    uint32_t leaf_subsampling[nleafs], l1hit, l2hit, tid;
+    uint32_t subsampling[nleaves], l1hit, l2hit, tid;
     float64_t cov, dist;
     float64_t (*cov_model) (float64_t, float64_t *);
 
@@ -111,14 +111,13 @@ static state_covariance calc_covariance_matrix(
     else if (model_ncoeff == EXPONENTIAL_COSINE)
         cov_model = &covariance_model_exp_cosine;
 
-
     // Defining adaptive subsampling strategy
-    for (il1=0; il1<nleafs; il1++) {
+    for (il1=0; il1<nleaves; il1++) {
         if (adaptive_subsampling) {
             l_length = map[il1*4+1] - map[il1*4+0];
-            leaf_subsampling[il1] = ceil(LOG2(l_length));
+            subsampling[il1] = ceil(LOG2(l_length));
         } else {
-           leaf_subsampling[il1] = 1;
+           subsampling[il1] = 1;
         }
     }
 
@@ -129,84 +128,86 @@ static state_covariance calc_covariance_matrix(
     #if defined(_OPENMP)
         if (nthreads == 0)
             nthreads = omp_get_num_procs();
+    #endif
+    #if defined(_OPENMP)
         #pragma omp parallel \
-            shared (E, N, map, model_coeff, cov_model, cov_arr, nrows, ncols, nleafs, leaf_subsampling) \
-            private (l1row_beg, l1row_end, l1col_beg, l1col_end, il1row, il1col, icl1, \
+            shared (E, N, map, model_coeff, cov_model, cov_arr, nrows, ncols, nleaves, subsampling) \
+            private (il1row, il1col, icl1, l1row_beg, l1row_end, l1col_beg, l1col_end, \
                      l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
                      npx, cov, l1hit, l2hit, tid, dist) \
             num_threads (nthreads)
         {
         tid = omp_get_thread_num();
-        #pragma omp for schedule (guided)
+        #pragma omp for schedule (dynamic)
     #endif
-        for (il1=0; il1<nleafs; il1++) {
-            l1row_beg = map[il1*4+0];
-            l1row_end = map[il1*4+1];
-            l1col_beg = map[il1*4+2];
-            l1col_end = map[il1*4+3];
-            // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, leaf_subsampling[il1]);
-            for (il2=il1; il2<nleafs; il2++) {
-                l2row_beg = map[il2*4+0];
-                l2row_end = map[il2*4+1];
-                l2col_beg = map[il2*4+2];
-                l2col_end = map[il2*4+3];
+    for (il1=0; il1<nleaves; il1++) {
+        l1row_beg = map[il1*4+0];
+        l1row_end = map[il1*4+1];
+        l1col_beg = map[il1*4+2];
+        l1col_end = map[il1*4+3];
+        // printf("l(%lu): %lu-%lu:%lu-%lu (ss %d)\n", il1, l1row_beg, l1row_end, l1col_beg, l1col_end, subsampling[il1]);
+        for (il2=il1; il2<nleaves; il2++) {
+            l2row_beg = map[il2*4+0];
+            l2row_end = map[il2*4+1];
+            l2col_beg = map[il2*4+2];
+            l2col_end = map[il2*4+3];
 
-                l1hit = 0;
-                l2hit = 0;
+            l1hit = 0;
+            l2hit = 0;
 
-                cov = 0.;
-                npx = 0;
-                while(! (l1hit && l2hit)) {
-                    // printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), leaf_subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), leaf_subsampling[il2]);
-                    for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
-                        if (il1row > nrows)
+            cov = 0.;
+            npx = 0;
+            while(! (l1hit && l2hit)) {
+                // printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), subsampling[il2]);
+                for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
+                    if (il1row > nrows)
+                        continue;
+                    for (il1col=l1col_beg; il1col<l1col_end; il1col+=subsampling[il1]) {
+                        if (il1col > ncols)
                             continue;
-                        for (il1col=l1col_beg; il1col<l1col_end; il1col+=leaf_subsampling[il1]) {
-                            if (il1col > ncols)
-                                continue;
-                            icl1 = il1row*ncols + il1col;
-                            if (npy_isnan(E[icl1]) || npy_isnan(N[icl1]))
-                                continue;
-                            l1hit = 1;
+                        icl1 = il1row*ncols + il1col;
+                        if (npy_isnan(E[icl1]) || npy_isnan(N[icl1]))
+                            continue;
+                        l1hit = 1;
 
-                            for (il2row=l2row_beg; il2row<l2row_end; il2row++) {
-                                if (il2row > nrows)
+                        for (il2row=l2row_beg; il2row<l2row_end; il2row++) {
+                            if (il2row > nrows)
+                                continue;
+                            for (il2col=l2col_beg; il2col<l2col_end; il2col+=subsampling[il2]) {
+                                if (il2col > ncols)
                                     continue;
-                                for (il2col=l2col_beg; il2col<l2col_end; il2col+=leaf_subsampling[il2]) {
-                                    if (il2col > ncols)
-                                        continue;
-                                    icl2 = il2row*ncols + il2col;
-                                    if (npy_isnan(E[icl2]) || npy_isnan(N[icl2]))
-                                        continue;
-                                    l2hit = 1;
-                                    dist = sqrt(SQR(E[icl1]-E[icl2]) + SQR(N[icl1]-N[icl2]));
-                                    if (dist == 0.)
-                                        cov += variance;
-                                    else 
-                                        cov += cov_model(dist, model_coeff);
-                                    npx++;
-                                }
+                                icl2 = il2row*ncols + il2col;
+                                if (npy_isnan(E[icl2]) || npy_isnan(N[icl2]))
+                                    continue;
+                                l2hit = 1;
+                                dist = sqrt(SQR(E[icl1]-E[icl2]) + SQR(N[icl1]-N[icl2]));
+                                if (dist == 0.)
+                                    cov += variance;
+                                else
+                                    cov += cov_model(dist, model_coeff);
+                                npx++;
                             }
                         }
                     }
-                    #if defined(_OPENMP)
-                        #pragma omp critical
-                        {
-                    #endif
-                        if (! l1hit) {
-                            leaf_subsampling[il1] = floor(leaf_subsampling[il1]/2);
-                        }
-                        if (! l2hit) {
-                            leaf_subsampling[il2] = floor(leaf_subsampling[il2]/2);
-                        }
-                    #if defined(_OPENMP)
-                        }
-                    #endif
                 }
-                cov_arr[il1*(nleafs)+il2] = cov/npx;
-                cov_arr[il2*(nleafs)+il1] = cov/npx;
+                #if defined(_OPENMP)
+                    #pragma omp critical
+                    {
+                #endif
+                    if (! l1hit) {
+                        subsampling[il1] = floor(subsampling[il1]/2);
+                    }
+                    if (! l2hit) {
+                        subsampling[il2] = floor(subsampling[il2]/2);
+                    }
+                #if defined(_OPENMP)
+                    }
+                #endif
             }
+            cov_arr[il1*(nleaves)+il2] = cov/npx;
+            cov_arr[il2*(nleaves)+il1] = cov_arr[il1*(nleaves)+il2];
         }
+    }
     #if defined(_OPENMP)
         }
     #endif
@@ -220,7 +221,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
 
     float64_t *x, *y, *covs, variance, model_coeff[4];
     uint32_t *map, nthreads, adaptive_subsampling, i, model_ncoeff;
-    npy_intp shape_coord[2], shape_dist[2], nleafs;
+    npy_intp shape_coord[2], shape_dist[2], nleaves;
     npy_intp shape_want_map[2] = {-1, 4};
 
     struct module_state *st = GETSTATE(m);
@@ -250,7 +251,7 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     x = PyArray_DATA(c_E_arr);
     y = PyArray_DATA(c_N_arr);
     map = PyArray_DATA(c_map_arr);
-    nleafs = PyArray_SIZE(c_map_arr)/4;
+    nleaves = PyArray_SIZE(c_map_arr)/4;
 
     model_ncoeff = (uint32_t) PyTuple_Size(coeff);
     for (i=0; i < model_ncoeff; i++)
@@ -258,15 +259,15 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
 
     shape_coord[0] = (npy_intp) PyArray_DIMS(c_E_arr)[0];
     shape_coord[1] = (npy_intp) PyArray_DIMS(c_E_arr)[1];
-    shape_dist[0] = nleafs;
-    shape_dist[1] = nleafs;
+    shape_dist[0] = nleaves;
+    shape_dist[1] = nleaves;
 
     cov_arr = (PyArrayObject*) PyArray_EMPTY(2, shape_dist, NPY_FLOAT64, 0);
     // printf("size distance matrix: %lu\n", PyArray_SIZE(cov_arr));
     // printf("size coord matrix: %lu\n", PyArray_SIZE(E_arr));
     covs = PyArray_DATA(cov_arr);
 
-    err = calc_covariance_matrix(x, y, shape_coord, map, nleafs, model_coeff, (int) model_ncoeff, variance, nthreads, adaptive_subsampling, covs);
+    err = calc_covariance_matrix(x, y, shape_coord, map, nleaves, model_coeff, (int) model_ncoeff, variance, nthreads, adaptive_subsampling, covs);
     if (err != SUCCESS) {
         PyErr_SetString(st->error, "Calculating covariance failed!");
         return NULL;

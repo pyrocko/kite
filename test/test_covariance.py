@@ -36,10 +36,27 @@ class TestCovariance(unittest.TestCase):
         self.sc.covariance.syntheticNoise()
         self.sc.covariance.variance
 
-    # @benchmark
     def test_covariance_parallel(self):
+        self.sc.quadtree.epsilon = .07
+        self.sc.quadtree.tile_size_max = 11000
+
         cov = self.sc.covariance
-        cov._calcCovarianceMatrix(method='full', nthreads=0)
+        cov.config.adaptive_subsampling = True
+
+        @benchmark
+        def calc_exp():
+            return cov._calcCovarianceMatrix(method='full', nthreads=0)
+
+        @benchmark
+        def calc_exp_cos():
+            cov.setModelFunction('exponential_cosine')
+            return cov._calcCovarianceMatrix(method='full', nthreads=0)
+
+        # res = calc_exp()
+        # ref = num.load('test/covariance_ref.npy')
+        calc_exp_cos()
+        # num.testing.assert_array_equal(ref, res)
+        print(benchmark)
 
     @benchmark
     def _test_covariance_single_thread(self):
