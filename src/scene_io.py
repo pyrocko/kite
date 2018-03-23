@@ -138,41 +138,60 @@ class Matlab(SceneIO):
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
                     utm_n = mat[mat_k].flatten()
+                elif 'lats' in mat_k:
+                    lats = mat[mat_k].flatten()
+                elif 'dlat' in mat_k:
+                    c['frame']['dLat'] = mat[mat_k]
+                elif 'dlon' in mat_k:
+                    c['frame']['dLon'] = mat[mat_k]
+                elif 'lons' in mat_k:
+                    lons = mat[mat_k].flatten()
                 elif 'utm_zone' in mat_k:
                     utm_zone = int(mat['utm_zone'][0][:-1])
                     utm_zone_letter = str(mat['utm_zone'][0][-1])
 
-        if utm_zone is None:
-            utm_zone = 33
-            utm_zone_letter = 'N'
-            self._log.warning(
-                'Variable utm_zone not defined. Defaulting to UTM Zone %d%s!'
-                % (utm_zone, utm_zone_letter))
+        if lats is None:
+            c['frame']['llLat'] = num.min(lats[num.nonzero(lats)])
+            c['frame']['llLon'] = num.min(lons[num.nonzero(lons)])
 
-        if not (num.all(utm_e) or num.all(utm_n)):
-            self._log.warning(
-                'Could not find referencing UTM vectors in .mat file!')
-            utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
-            utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
+        else:
+            if utm_zone is None:
+                utm_zone = 33
+                utm_zone_letter = 'N'
+                self._log.warning(
+                    'Variable utm_zone not defined. Defaulting to UTM Zone %d%s!'
+                    % (utm_zone, utm_zone_letter))
 
-        if utm_e.min() < 1e4 or utm_n.min() < 1e4:
-            utm_e *= 1e3
-            utm_n *= 1e3
-
-        c['frame']['dE'] = num.abs(utm_e[1] - utm_e[0])
-        c['frame']['dN'] = num.abs(utm_n[1] - utm_n[0])
-        try:
-            c['frame']['llLat'], c['frame']['llLon'] =\
-                utm.to_latlon(utm_e.min(), utm_n.min(),
-                              utm_zone, utm_zone_letter)
-
-        except utm.error.OutOfRangeError:
-            self._log.warning(
-                'Could not interpret spatial vectors,'
-                ' referencing to 0, 0 (lat, lon)')
-            c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
+            if not (num.all(utm_e) or num.all(utm_n)):
+                self._log.warning(
+                    'Could not find referencing UTM vectors in .mat file')
+                utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
+                utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
+    
+            if utm_e.min() < 1e4 or utm_n.min() < 1e4:
+                utm_e *= 1e3
+                utm_n *= 1e3
+            try:
+                c['frame']['llLat'], c['frame']['llLon'] =\
+                    utm.to_latlon(utm_e.min(), utm_n.min(),
+                                  utm_zone, utm_zone_letter)
+    
+                urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
+                                             utm_zone, utm_zone_letter)
+                c['frame']['dLat'] =\
+                    (urlat - c['frame']['llLat']) /\
+                    c['displacement'].shape[0]
+    
+                c['frame']['dLon'] =\
+                    (urlon - c['frame']['llLon']) /\
+                    c['displacement'].shape[1]
+            except utm.error.OutOfRangeError:
+                c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
+                c['frame']['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
+                c['frame']['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
+                self._log.warning('Could not interpret spatial vectors, '
+                                  'referencing to 0, 0 (lat, lon)')
         return c
-
 
 class Gamma(SceneIO):
     """
