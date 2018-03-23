@@ -39,8 +39,6 @@ class SceneIO(object):
             'frame': {
                 'llLon': None,  # Lower left corner latitude
                 'llLat': None,  # Lower left corner londgitude
-                'dLat': None,   # Pixel delta latitude
-                'dLon': None,   # Pixel delta longitude
                 'dN': None,   # Pixel delta latitude
                 'dE': None,   # Pixel delta longitude
             },
@@ -153,33 +151,26 @@ class Matlab(SceneIO):
 
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
-                'Could not find referencing UTM vectors in .mat file')
+                'Could not find referencing UTM vectors in .mat file!')
             utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
             utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
+
+        c['frame']['dE'] = num.abs(utm_e[1] - utm_e[0])
+        c['frame']['dN'] = num.abs(utm_n[1] - utm_n[0])
         try:
             c['frame']['llLat'], c['frame']['llLon'] =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
                               utm_zone, utm_zone_letter)
 
-            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
-                                         utm_zone, utm_zone_letter)
-            c['frame']['dLat'] =\
-                (urlat - c['frame']['llLat']) /\
-                c['displacement'].shape[0]
-
-            c['frame']['dLon'] =\
-                (urlon - c['frame']['llLon']) /\
-                c['displacement'].shape[1]
         except utm.error.OutOfRangeError:
+            self._log.warning(
+                'Could not interpret spatial vectors,'
+                ' referencing to 0, 0 (lat, lon)')
             c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
-            c['frame']['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
-            c['frame']['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
-            self._log.warning('Could not interpret spatial vectors, '
-                              'referencing to 0, 0 (lat, lon)')
         return c
 
 
@@ -257,7 +248,8 @@ class Gamma(SceneIO):
                 self._log.info('Found SLC parameter file %s' % file)
                 return params
 
-        raise ImportError('Could not find SLC parameter file *.slc.par')
+        raise ImportError('Could not find SLC parameter file *.slc.par'
+                          ' with parameters %s' % required_params)
 
     def validate(self, filename, **kwargs):
         try:
@@ -301,8 +293,7 @@ class Gamma(SceneIO):
         try:
             params_slc = self._getSLCParameters(par_file)
         except ImportError as e:
-            params_slc = {}
-            self._log.warning(e.message)
+            raise e
 
         fill = None
 
@@ -388,17 +379,11 @@ class Gamma(SceneIO):
             utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
             utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
 
-            lllat, lllon = utm.to_latlon(utm_e.min(), utm_n.min(),
+            llLat, llLon = utm.to_latlon(utm_e.min(), utm_n.min(),
                                          utm_zone, utm_zone_letter)
 
-            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
-                                         utm_zone, utm_zone_letter)
-
-            c['frame']['llLat'] = lllat
-            c['frame']['llLon'] = lllon
-
-            c['frame']['dLat'] = (urlat - lllat) / displ.shape[0]
-            c['frame']['dLon'] = (urlon - lllon) / displ.shape[1]
+            c['frame']['llLat'] = llLat
+            c['frame']['llLon'] = llLon
 
             c['frame']['dE'] = abs(dE)
             c['frame']['dN'] = abs(dN)

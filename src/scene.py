@@ -10,7 +10,7 @@ from pyrocko.orthodrome import latlon_to_ne  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
-from kite.util import Subject, property_cached, greatCircleDistance
+from kite.util import Subject, property_cached
 from kite import scene_io
 
 logging.basicConfig(level=20)
@@ -54,21 +54,22 @@ class FrameConfig(guts.Object):
     llLon = guts.Float.T(
         default=0.,
         help='Scene longitude of lower left corner')
-    dLat = guts.Float.T(
-        default=1.e-3,
-        help='Scene pixel spacing in latitude [deg]')
-    dLon = guts.Float.T(
-        default=1.e-3,
-        help='Scene pixel spacing in longitude [deg]')
     dN = guts.Float.T(
-        optional=True,
+        default=25.,
         help='Scene pixel spacing in north [m]')
     dE = guts.Float.T(
-        optional=True,
+        default=25.,
         help='Scene pixel spacing in east [m]')
 
     def get_frame(self, scene):
         return Frame(scene, config=self)
+
+    def __init__(self, *args, **kwargs):
+        if 'dLat' in kwargs:
+            kwargs.pop('dLat')
+        if 'dLon' in kwargs:
+            kwargs.pop('dLon')
+        guts.Object.__init__(self, *args, **kwargs)
 
 
 class Frame(object):
@@ -80,11 +81,7 @@ class Frame(object):
         self._scene = scene
         self._log = scene._log.getChild('Frame')
 
-        self.extentE = 0.
-        self.extentN = 0.
         self.spherical_distortion = 0.
-        self.urE = 0.
-        self.urN = 0.
         self.llEutm = None
         self.llNutm = None
         self.utm_zone = None
@@ -115,46 +112,20 @@ class Frame(object):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
 
-        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
-            utm.from_latlon(self.llLat, self.llLon)
-
         self.cols = self._scene.cols
         self.rows = self._scene.rows
 
-        urlat = self.llLat + self.dLat * self.rows
-        urlon = self.llLon + self.dLon * self.cols
-        self.urEutm, self.urNutm, _, _ = utm.from_latlon(urlat, urlon,
-                                                         self.utm_zone)
+        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
+            utm.from_latlon(self.llLat, self.llLon)
 
-        # Width at the bottom of the scene
-        self.extentE = greatCircleDistance(self.llLat, self.llLon,
-                                           self.llLat, urlon)
-        self.extentN = greatCircleDistance(self.llLat, self.llLon,
-                                           urlat, self.llLon)
-
-        # Width at the N' top of the scene
-        extentE_top = greatCircleDistance(urlat, self.llLon,
-                                          urlat, urlon)
-        self.spherical_distortion = num.abs(self.extentE - extentE_top)
-
-        self.config.dE = (self.extentE + extentE_top) / (2 * self.cols)
-        self.config.dN = self.extentN / self.rows
-        self._dNE_overwrite = False
-
-        self.E = num.arange(self.cols) * self.dE + self.offsetE
-        self.N = num.arange(self.rows) * self.dN + self.offsetN
-
-        self.llE = 0
-        self.llN = 0
-        self.urE = self.E.max()
-        self.urN = self.N.max()
+        self.E = None
+        self.N = None
 
         self.gridE = None
         self.gridN = None
         self.coordinates = None
 
         self.config.regularize()
-        return
 
     @property
     def llLat(self):
@@ -163,7 +134,7 @@ class Frame(object):
     @llLat.setter
     def llLat(self, llLat):
         self.config.llLat = llLat
-        self._llLat = llLat
+        self.updateExtent()
 
     @property
     def llLon(self):
@@ -172,23 +143,7 @@ class Frame(object):
     @llLon.setter
     def llLon(self, llLon):
         self.config.llLon = llLon
-        self._llLon = llLon
-
-    @property
-    def dLat(self):
-        return self.config.dLat
-
-    @dLat.setter
-    def dLat(self, dLat):
-        self.config.dLat = dLat
-
-    @property
-    def dLon(self):
-        return self.config.dLon
-
-    @dLon.setter
-    def dLon(self, dLon):
-        self.config.dLon = dLon
+        self.updateExtent()
 
     @property
     def dN(self):
@@ -197,6 +152,7 @@ class Frame(object):
     @dN.setter
     def dN(self, dN):
         self.config.dN = dN
+        self.updateExtent()
 
     @property
     def dE(self):
@@ -205,6 +161,23 @@ class Frame(object):
     @dE.setter
     def dE(self, dE):
         self.config.dE = dE
+        self.updateExtent()
+
+    @property_cached
+    def E(self):
+        return num.arange(self.cols) * self.dE + self.offsetE
+
+    @property_cached
+    def N(self):
+        return num.arange(self.rows) * self.dN + self.offsetN
+
+    @property
+    def urE(self):
+        return self.E.max()
+
+    @property
+    def urN(self):
+        return self.N.max()
 
     @property_cached
     def gridE(self):
