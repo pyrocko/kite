@@ -119,7 +119,7 @@ class SceneModel(QtCore.QObject):
             'Calculating <span style="font-family: monospace">'
             'Covariance.weight_matrix</span>,'
             ' this can take a few minutes...')
-        self.scene.covariance.weight_matrix
+        # self.scene.covariance.weight_matrix
         self.sigProcessingFinished.emit()
 
     @QtCore.pyqtSlot(str)

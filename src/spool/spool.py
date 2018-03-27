@@ -123,7 +123,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.setValue(0)
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
-        self.progress.setWindowTitle('processing...')
+        self.progress.setWindowTitle('Processing...')
         self.model.sigProcessingFinished.connect(self.progress.reset)
 
     def aboutDialog(self):
@@ -228,7 +228,6 @@ class KiteParameterTree(pg.parametertree.ParameterTree):
 def spool(*args, **kwargs):
     spool_app = Spool(*args, **kwargs)
     spool_app.exec_()
-
     spool_app.quit()
 
 

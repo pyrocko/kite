@@ -601,14 +601,19 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 class QCalculateWeightMatrix(QtCore.QObject):
     sigCalculateWeightMatrix = QtCore.pyqtSignal()
 
+    class CovarianceResultMessageBox(QtGui.QMessageBox):
+        def __init__(self, *args, **kwargs):
+            QtGui.QMessageBox.__init__(self, *args, **kwargs)
+            self.setWindowTitle('Calculation Result')
+
     def __init__(self, model, parent):
         QtCore.QObject.__init__(self)
         self.sigCalculateWeightMatrix.connect(
             model.calculateWeightMatrix)
 
-        ret = QtGui.QMessageBox.information(
+        diag = QtGui.QMessageBox.information(
             parent,
-            'Calculate full weight matrix',
+            'Calculate Full Weight Matrix',
             '''<html><head/><body><p>
 This will calculate the quadtree's full weight matrix
 (<span style='font-family: monospace'>Covariance.weight_matrix</span>)
@@ -616,7 +621,11 @@ for this noise/covariance configuration.</p><p>
 The calculation is expensive and may take several minutes.
 </p></body></html>
 ''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
-        if ret == QtGui.QMessageBox.Ok:
+
+        res = self.CovarianceResultMessageBox(parent)
+
+        model.sigProcessingFinished.connect(res.show)
+        if diag == QtGui.QMessageBox.Ok:
             self.sigCalculateWeightMatrix.emit()
 
 
