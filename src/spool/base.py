@@ -124,9 +124,6 @@ class KitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(
-            bottom=('Easting', 'm'),
-            left=('Northing', 'm'))
 
         self.hint = {
             'east': 0.,
@@ -144,12 +141,26 @@ class KitePlot(pg.PlotWidget):
         self.hint_text.anchor(
             itemPos=(1., 0.),
             parentPos=(1., 0.))
-        self.hint_text.text_template =\
-            '<span style="font-family: monospace; color: #fff;'\
-            'background-color: #000;">'\
-            'East {east:08.2f} m | North {north:08.2f} m | '\
-            '{measure} {value:{length}.{precision}f}</span>'
         self.hint_text.setOpacity(.6)
+
+        if self.model.frame.spacing == 'meter':
+            self.hint_text.text_template =\
+                '<span style="font-family: monospace; color: #fff;'\
+                'background-color: #000;">'\
+                'East {east:08.2f} m | North {north:08.2f} m |'\
+                ' {measure} {value:{length}.{precision}f}</span>'
+            self.setLabels(
+                bottom=('Easting', 'm'),
+                left=('Northing', 'm'))
+        elif self.model.frame.spacing == 'degree':
+            self.hint_text.text_template =\
+                '<span style="font-family: monospace; color: #fff;'\
+                'background-color: #000;">'\
+                'Long {east:08.2f}&deg; | Lat {north:08.2f}&deg; |'\
+                ' {measure} {value:{length}.{precision}f}</span>'
+            self.setLabels(
+                bottom='Longitude',
+                left='Latitude')
 
         self.addItem(self.image)
         self.update()

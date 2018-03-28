@@ -56,24 +56,29 @@ class FrameConfig(guts.Object):
         help='Scene longitude of lower left corner')
     dN = guts.Float.T(
         default=25.,
-        help='Scene pixel spacing in north [m]')
+        help='Scene pixel spacing in north, give [m] or [deg]')
     dE = guts.Float.T(
         default=25.,
-        help='Scene pixel spacing in east [m]')
-
-    def get_frame(self, scene):
-        return Frame(scene, config=self)
+        help='Scene pixel spacing in east, give [m] or [deg]')
+    spacing = guts.StringChoice.T(
+        choices=('degree', 'meter'),
+        default='meter',
+        help='Unit of pixel space')
 
     def __init__(self, *args, **kwargs):
-        if 'dLat' in kwargs:
-            kwargs.pop('dLat')
-        if 'dLon' in kwargs:
-            kwargs.pop('dLon')
+        self.old_import = False
+        for arg in ('dLat', 'dLon'):
+            if arg in kwargs:
+                kwargs.pop(arg)
+                self.old_import = True
+
         guts.Object.__init__(self, *args, **kwargs)
 
 
 class Frame(object):
-    ''' UTM frame holding geographical references for :class:`kite.scene.Scene`
+    ''' Frame holding geographical references for :class:`kite.scene.Scene`
+
+    The pixel spacing is given by ``dE`` and ``dN`` which can meters or degree.
     '''
 
     def __init__(self, scene, config=FrameConfig()):
@@ -81,17 +86,13 @@ class Frame(object):
         self._scene = scene
         self._log = scene._log.getChild('Frame')
 
-        self.spherical_distortion = 0.
-        self.llEutm = None
-        self.llNutm = None
-        self.utm_zone = None
-        self.llN = None
-        self.llE = None
         self.N = None
         self.E = None
 
-        self.offsetE = 0.
-        self.offsetN = 0.
+        self.llEutm = None
+        self.llNutm = None
+        self.utm_zone = None
+        self.utm_zone_letter = None
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
@@ -105,8 +106,9 @@ class Frame(object):
         else:
             return
 
+        if self.config.old_import:
+            self._log.warning('Importing an old kite format!')
         self.updateExtent()
-        self.evChanged.notify()
 
     def updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
@@ -126,6 +128,7 @@ class Frame(object):
         self.coordinates = None
 
         self.config.regularize()
+        self.evChanged.notify()
 
     @property
     def llLat(self):
@@ -163,21 +166,21 @@ class Frame(object):
         self.config.dE = dE
         self.updateExtent()
 
+    @property
+    def spacing(self):
+        return self.config.spacing
+
+    @spacing.setter
+    def spacing(self, unit):
+        self.config.spacing = unit
+
     @property_cached
     def E(self):
-        return num.arange(self.cols) * self.dE + self.offsetE
+        return num.arange(self.cols) * self.dE
 
     @property_cached
     def N(self):
-        return num.arange(self.rows) * self.dN + self.offsetN
-
-    @property
-    def urE(self):
-        return self.E.max()
-
-    @property
-    def urN(self):
-        return self.N.max()
+        return num.arange(self.rows) * self.dN
 
     @property_cached
     def gridE(self):
@@ -212,33 +215,6 @@ class Frame(object):
                                   self.cols, axis=1).flatten()
         return coords
 
-    def setENOffset(self, east, north):
-        '''Set scene offsets in local cartesian coordinates.
-
-        :param east: East offset in [m]
-        :type east: float, :class:`numpy.ndarray` or None
-        :param north: North offset in [m]
-        :type north: float, :class:`numpy.ndarray` or None
-        '''
-        self.offsetE = east
-        self.offsetN = north
-        self.updateExtent()
-
-    def setLatLonReference(self, lat, lon):
-        pass
-
-    def mapMatrixEN(self, row, col):
-        ''' Maps matrix row, column to local easting and northing.
-
-        :param row: Matrix row number
-        :type row: int
-        :param col: Matrix column number
-        :type col: int
-        :returns: Easting and northing in local coordinates
-        :rtype: tuple (float), (easting, northing)
-        '''
-        return row * self.dE, col * self.dN
-
     def mapENMatrix(self, E, N):
         ''' Maps local coordinates (easting and northing) to matrix
             row and column
@@ -262,35 +238,18 @@ class Frame(object):
             self.rows == other.rows and\
             self.cols == other.cols
 
-    def __str__(self):
-        return (
-            'Lower right latitude:  {frame.llLat:.4f} N\n'
-            'Lower right longitude: {frame.llLon:.4f} E\n'
-            '\n\n'
-            'UTM Zone:              {frame.utm_zone}{frame.utm_zone_letter}\n'
-            'Lower right easting:   {frame.llE:.4f} m\n'
-            'Lower right northing:  {frame.llN:.4f} m'
-            '\n\n'
-            'Pixel spacing east:    {frame.dE:.4f} m\n'
-            'Pixel spacing north:   {frame.dN:.4f} m\n'
-            'Extent east:           {frame.extentE:.4f} m\n'
-            'Extent north:          {frame.extentN:.4f} m\n'
-            'Dimensions:            {frame.cols} x {frame.rows} px\n'
-            'Spherical distortion:  {frame.spherical_distortion:.4f} m\n'
-        ).format(frame=self)
-
 
 class Meta(guts.Object):
     ''' Meta configuration for ``Scene``.
     '''
     scene_title = guts.String.T(
-        default='Undefined',
+        default='Unnamed Scene',
         help='Scene title')
     scene_id = guts.String.T(
         default='None',
         help='Scene identification')
     satellite_name = guts.String.T(
-        default='Undefined',
+        default='Undefined Mission',
         help='Satellite mission name')
     wavelength = guts.Float.T(
         optional=True,

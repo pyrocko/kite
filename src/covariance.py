@@ -484,6 +484,7 @@ class Covariance(object):
         return cov_matrix
 
     def isMatrixPosDefinite(self, full=False):
+        self._log.debug('Checking wheter matrix is positive-definite')
         if full:
             matrix = self.covariance_matrix
         else:

@@ -175,7 +175,8 @@ class QuadNode(object):
     @property
     def llE(self):
         '''
-        :getter: Lower left east coordinate in local coordinates (*meter*).
+        :getter: Lower left east coordinate in local coordinates
+            (*meters* or *degree*).
         :type: float
         '''
         return self.scene.frame.E[self.llc]
@@ -183,7 +184,8 @@ class QuadNode(object):
     @property
     def llN(self):
         '''
-        :getter: Lower left north coordinate in local coordinates (*meter*).
+        :getter: Lower left north coordinate in local coordinates
+            (*meter* or *degree*).
         :type: float
         '''
         return self.scene.frame.N[self.llr]
@@ -191,7 +193,7 @@ class QuadNode(object):
     @property_cached
     def sizeE(self):
         '''
-        :getter: Size in eastern direction in *meters*.
+        :getter: Size in eastern direction in *meters* or *degree*.
         :type: float
         '''
         sizeE = self.length * self.scene.frame.dE
@@ -202,7 +204,7 @@ class QuadNode(object):
     @property_cached
     def sizeN(self):
         '''
-        :getter: Size in northern direction in *meters*.
+        :getter: Size in northern direction in *meters* or *degree*.
         :type: float
         '''
         sizeN = self.length * self.scene.frame.dN
@@ -276,7 +278,7 @@ class QuadtreeConfig(guts.Object):
     reconstruct a particular tree
     '''
     correction = guts.StringChoice.T(
-        choices=['mean', 'median', 'bilinear', 'std'],
+        choices=('mean', 'median', 'bilinear', 'std'),
         default='median',
         help='Node correction for splitting, available methods '
              ' ``[\'mean\', \'median\', \'bilinear\', \'std\']``')
@@ -288,10 +290,10 @@ class QuadtreeConfig(guts.Object):
         help='Allowed NaN fraction per tile')
     tile_size_min = guts.Float.T(
         default=250.,
-        help='Minimum allowed tile size in *meter*')
+        help='Minimum allowed tile size in *meters* or *degree*')
     tile_size_max = guts.Float.T(
         default=25e3,
-        help='Maximum allowed tile size in *meter*')
+        help='Maximum allowed tile size in *meters* or *degree*')
     leaf_blacklist = guts.List.T(
         optional=True,
         default=[],
@@ -328,29 +330,38 @@ class Quadtree(object):
         * :attr:`~kite.Quadtree.epsilon`, RMS threshold
         * :attr:`~kite.Quadtree.nan_fraction`, allowed :attr:`numpy.nan` in
           node
-        * :attr:`~kite.Quadtree.tile_size_max`, maximum node size in *meter*
-        * :attr:`~kite.Quadtree.tile_size_min`, minimum node size in *meter*
+        * :attr:`~kite.Quadtree.tile_size_max`, maximum node size in
+            *meters* or *degree*
+        * :attr:`~kite.Quadtree.tile_size_min`, minimum node size in
+            *meter* or *degree*
 
     :attr:`~kite.Quadtree.leaves` hold the current tree's
     :class:`~kite.quadtree.QuadNode` 's. The leaves can also be exported in a
     *CSV* format through :func:`~kite.Quadtree.export`.
     '''
 
-    _corrections = {
+    _displacement_corrections = {
         'mean':
-        ['Std around mean', lambda n: n.corr_mean],
+            ('Standard deviation around mean',
+             lambda n: n.corr_mean),
         'median':
-        ['Std around median', lambda n: n.corr_median],
+            ('Standard deviation around median',
+             lambda n: n.corr_median),
         'bilinear':
-        ['Std around bilinear detrended node', lambda n: n.corr_bilinear],
+            ('Standard deviation around bilinear detrended node',
+             lambda n: n.corr_bilinear),
         'std':
-        ['Standard deviation (std)', lambda n: n.std],
+            ('Standard deviation (std)',
+             lambda n: n.std),
+        }
 
-    }
     _norm_methods = {
-        'mean': lambda n: n.mean,
-        'median': lambda n: n.median,
-        'weight': lambda n: n.weight,
+        'mean':
+            lambda n: n.mean,
+        'median':
+            lambda n: n.median,
+        'weight':
+            lambda n: n.weight,
     }
 
     def __init__(self, scene, config=QuadtreeConfig()):
@@ -402,13 +413,14 @@ class Quadtree(object):
         :type correction: str
         :raises: AttributeError
         '''
-        if correction not in self._corrections.keys():
+        if correction not in self._displacement_corrections.keys():
             raise AttributeError('Method %s not in %s'
-                                 % (correction, self._corrections))
+                                 % (correction,
+                                    self._displacement_corrections))
         self._log.debug('Changing to split method \'%s\'' % correction)
 
         self.config.correction = correction
-        self._corr_func = self._corrections[correction][1]
+        self._corr_func = self._displacement_corrections[correction][1]
 
         # Clearing cached properties through None
         self.leaf_center_distance = None
@@ -731,13 +743,12 @@ class Quadtree(object):
             raise AttributeError(
                 'Method %s is not in %s' %
                 (method, list(self._norm_methods.keys())))
-        t0 = time.time()  # noqa
+
         array.fill(num.nan)
         for lv in self.leaves:
             array[lv._slice_rows, lv._slice_cols] = \
                 self._norm_methods[method](lv)
         array[self.scene.displacement_mask] = num.nan
-        # print time.time()-t0, method
         return array
 
     @property

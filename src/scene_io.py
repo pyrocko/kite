@@ -39,8 +39,9 @@ class SceneIO(object):
             'frame': {
                 'llLon': None,  # Lower left corner latitude
                 'llLat': None,  # Lower left corner londgitude
-                'dN': None,   # Pixel delta latitude
-                'dE': None,   # Pixel delta longitude
+                'dN': None,   # Pixel delta in north, meter or degree
+                'dE': None,   # Pixel delta in east, meter or degree
+                'spacing': 'meter',  # Pixel spacing unit
             },
             # Meta information
             'meta': {
@@ -603,11 +604,12 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
-        c['frame']['dLat'] = num.abs(coord_lat['delta'])
-        c['frame']['dLon'] = num.abs(coord_lon['delta'])
+        c['frame']['dN'] = num.abs(coord_lat['delta'])
+        c['frame']['dE'] = num.abs(coord_lon['delta'])
         nlon = int(coord_lon['size'])
         nlat = int(coord_lat['size'])
 
+        c['frame']['spacing'] = 'degree'
         c['frame']['llLat'] = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
         c['frame']['llLon'] = coord_lon['startingvalue']
