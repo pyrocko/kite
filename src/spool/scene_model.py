@@ -1,6 +1,7 @@
 from PyQt5 import QtCore
 from pyqtgraph import SignalProxy
 import logging
+from datetime import datetime
 
 from kite import Scene
 from kite.qt_utils import SceneLogModel
@@ -22,6 +23,7 @@ class SceneModel(QtCore.QObject):
 
     sigProcessingStarted = QtCore.pyqtSignal(str)
     sigProcessingFinished = QtCore.pyqtSignal()
+    sigCalculateWeightMatrixFinished = QtCore.pyqtSignal(object)
 
     sigLogRecord = QtCore.pyqtSignal(object)
 
@@ -115,12 +117,14 @@ class SceneModel(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def calculateWeightMatrix(self):
+        t0 = datetime.now()
         self.sigProcessingStarted.emit(
             'Calculating <span style="font-family: monospace">'
             'Covariance.weight_matrix</span>,'
             ' this can take a few minutes...')
-        # self.scene.covariance.weight_matrix
+        self.scene.covariance.weight_matrix
         self.sigProcessingFinished.emit()
+        self.sigCalculateWeightMatrixFinished.emit(datetime.now()-t0)
 
     @QtCore.pyqtSlot(str)
     def importFile(self, filename):

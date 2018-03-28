@@ -447,7 +447,7 @@ class Covariance(object):
         model = self.getModelFunction()
 
         if method == 'focal':
-            dist_matrix = num.zeros((nl, nl))
+            dist_matrix = num.empty((nl, nl))
             dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
 
             for nx, ny in dist_iter:
@@ -482,6 +482,23 @@ class Covariance(object):
         self._log.debug('Created covariance matrix - %s mode [%0.4f s]' %
                         (method, time.time()-t0))
         return cov_matrix
+
+    def isMatrixPosDefinite(self, full=False):
+        if full:
+            matrix = self.covariance_matrix
+        else:
+            matrix = self.covariance_matrix_focal
+
+        try:
+            chol_decomp = num.linalg.cholesky(matrix)
+        except num.linalg.linalg.LinAlgError:
+            pos_def = False
+        else:
+            pos_def = ~num.all(num.iscomplex(chol_decomp))
+        finally:
+            if not pos_def:
+                self._log.warning('Covariance matrix is not positiv definite!')
+            return pos_def
 
     @staticmethod
     def _leafFocalDistance(leaf1, leaf2):

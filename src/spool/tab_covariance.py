@@ -57,8 +57,9 @@ class KiteCovariance(KiteView):
         self.parameters = [self.param_covariance]
 
         self.dialogInspectNoise = KiteToolNoise(model, spool)
-        self.dialogInspectCovariance = KiteToolWeightMatrix(
-            model, spool)
+        self.dialogInspectCovariance = KiteToolWeightMatrix(model, spool)
+        self.dialogCovarianceInfo = CovarianceCalcResultDialog(model, spool)
+        self.dialogCovarianceWarning = CovarianceNotPosDefWarning(model, spool)
 
         spool.actionInspect_Noise.triggered.connect(
             self.dialogInspectNoise.show)
@@ -73,7 +74,12 @@ class KiteCovariance(KiteView):
         spool.actionInspect_Weights.setEnabled(True)
         spool.actionCalculate_WeightMatrix.setEnabled(True)
 
-        model.sigSceneModelChanged.connect(self.modelChanged)
+        model.sigSceneModelChanged.connect(
+            self.modelChanged)
+        model.sigCalculateWeightMatrixFinished.connect(
+            self.dialogCovarianceInfo.show)
+        model.sigCovarianceChanged.connect(
+            self.dialogCovarianceWarning.test)
 
         KiteView.__init__(self)
 
@@ -87,6 +93,28 @@ class KiteCovariance(KiteView):
         self.param_covariance.updateValues()
         for v in self.tools.values():
             v.update()
+
+
+class CovarianceNotPosDefWarning(QtGui.QMessageBox):
+    def __init__(self, model, *args, **kwargs):
+        QtGui.QMessageBox.__init__(self, *args, **kwargs)
+        self.setIcon(QtGui.QMessageBox.Warning)
+
+        self.setWindowTitle('Covariance Warning')
+        self.setText('<b><span style="font-family: monospace;">'
+                     'Covariance.covariance_matrix_focal</span>'
+                     ' is not positiv definit!</b>')
+        self.setInformativeText(
+            'Change the <span style="font-family: monospace;">'
+            'Covariance.model_function</span> to exponential<br>'
+            'or move the noise patch to fix.')
+        self.model = model
+
+    @QtCore.pyqtSlot()
+    def test(self):
+        covariance = self.model.covariance
+        if not covariance.isMatrixPosDefinite(full=False):
+            self.show()
 
 
 class KiteNoisePlot(KitePlot):
@@ -601,11 +629,6 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 class QCalculateWeightMatrix(QtCore.QObject):
     sigCalculateWeightMatrix = QtCore.pyqtSignal()
 
-    class CovarianceResultMessageBox(QtGui.QMessageBox):
-        def __init__(self, *args, **kwargs):
-            QtGui.QMessageBox.__init__(self, *args, **kwargs)
-            self.setWindowTitle('Calculation Result')
-
     def __init__(self, model, parent):
         QtCore.QObject.__init__(self)
         self.sigCalculateWeightMatrix.connect(
@@ -622,11 +645,40 @@ The calculation is expensive and may take several minutes.
 </p></body></html>
 ''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
 
-        res = self.CovarianceResultMessageBox(parent)
-
-        model.sigProcessingFinished.connect(res.show)
         if diag == QtGui.QMessageBox.Ok:
             self.sigCalculateWeightMatrix.emit()
+
+
+class CovarianceCalcResultDialog(QtGui.QMessageBox):
+
+    text_tmpl = ('<span style="font-family: monospace;">'
+                 'Covariance.covariance_matrix</span>')
+
+    def __init__(self, model, *args, **kwargs):
+        QtGui.QMessageBox.__init__(self, *args, **kwargs)
+
+        self.setIcon(QtGui.QMessageBox.Information)
+        self.model = model
+        self.setWindowTitle('Covariance Calculation')
+        self.setTextFormat(QtCore.Qt.RichText)
+
+    @QtCore.pyqtSlot(object)
+    def show(self, elapsed_time, *args, **kwargs):
+
+        if self.model.covariance.isMatrixPosDefinite(full=True):
+            self.setIcon(QtGui.QMessageBox.Information)
+            self.setText('Yeeeha!!<br>%s is positiv definit!' % self.text_tmpl)
+            self.setInformativeText('')
+        else:
+            self.setIcon(QtGui.QMessageBox.Warning)
+            self.setText('<b>%s is not positiv definit!</b>' % self.text_tmpl)
+            self.setInformativeText(
+                'Change the <span style="font-family: monospace;">'
+                'Covariance.model_function</span> to exponential'
+                ' or moving the noise patch.')
+
+        self.setDetailedText('Elapsed time: %s' % elapsed_time)
+        QtGui.QMessageBox.show(self, *args, **kwargs)
 
 
 class KiteParamCovariance(KiteParameterGroup):
