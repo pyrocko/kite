@@ -116,7 +116,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -139,6 +139,7 @@
      <string>About</string>
     </property>
     <addaction name="actionHelp"/>
+    <addaction name="actionAbout_Qt5"/>
     <addaction name="actionAbout_Spool"/>
    </widget>
    <widget class="QMenu" name="menuTools">
@@ -160,8 +161,7 @@
   <action name="actionExit">
    <property name="icon">
     <iconset theme="application-exit">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Exit</string>
@@ -176,8 +176,7 @@
    </property>
    <property name="icon">
     <iconset theme="help-about">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>About spool</string>
@@ -189,8 +188,7 @@
    </property>
    <property name="icon">
     <iconset theme="help-contents">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Online help</string>
@@ -216,8 +214,7 @@
   <action name="actionSave_config">
    <property name="icon">
     <iconset theme="document-export">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Save scene config (*.yml)</string>
@@ -235,8 +232,7 @@
    </property>
    <property name="icon">
     <iconset theme="application-export">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Load scene</string>
@@ -251,8 +247,7 @@
    </property>
    <property name="icon">
     <iconset theme="document-import">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Load scene config</string>
@@ -278,8 +273,7 @@
   <action name="actionExport_quadtree">
    <property name="icon">
     <iconset theme="application-export">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Export quadtree</string>
@@ -340,8 +334,7 @@
   <action name="actionExport_weights">
    <property name="icon">
     <iconset theme="application-export">
-     <normaloff/>
-    </iconset>
+     <normaloff>.</normaloff>.</iconset>
    </property>
    <property name="text">
     <string>Export weight matrix</string>
@@ -378,6 +371,11 @@
    </property>
    <property name="toolTip">
     <string>Calculate comlete weight matrix (Covaraince.weight_matrix)</string>
+   </property>
+  </action>
+  <action name="actionAbout_Qt5">
+   <property name="text">
+    <string>About Qt5</string>
    </property>
   </action>
  </widget>

@@ -112,6 +112,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
         self.actionAbout_Spool.triggered.connect(
             self.aboutDialog().show)
+        self.actionAbout_Qt5.triggered.connect(
+            lambda: QtGui.QMessageBox.aboutQt(self))
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('https://pyrocko.org'))
 
