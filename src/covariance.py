@@ -444,18 +444,18 @@ class Covariance(object):
 
         t0 = time.time()
 
-        model = self.getModelFunction()
-
         if method == 'focal':
-            dist_matrix = num.empty((nl, nl))
-            dist_iter = num.nditer(num.triu_indices_from(dist_matrix))
+            model = self.getModelFunction()
 
-            for nx, ny in dist_iter:
-                leaf1, leaf2 = self._mapLeaves(nx, ny)
-                dist = self._leafFocalDistance(leaf1, leaf2)
-                dist_matrix[(nx, ny), (ny, nx)] = dist
+            coords = self.quadtree.leaf_focal_points
+            dist_matrix = num.sqrt(
+                (coords[:, 0] - coords[:, 0, num.newaxis])**2
+                + (coords[:, 1] - coords[:, 1, num.newaxis])**2)
             cov_matrix = model(dist_matrix, *self.covariance_model)
             num.fill_diagonal(cov_matrix, self.variance)
+
+            for nx, ny in num.nditer(num.triu_indices_from(dist_matrix)):
+                self._mapLeaves(nx, ny)
 
         elif method == 'full':
             leaf_map = num.empty((len(self.quadtree.leaves), 4),
