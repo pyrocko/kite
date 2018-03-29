@@ -972,11 +972,11 @@ class Covariance(object):
               self.config.sampling_method == 'spectral'):
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_spectral
-            ma, mb = self.covariance_model[0], self.covariance_model[1]
-            # print cov[1]
+            ma = self.covariance_model[0]
+            # print(cov[1])
             ps = power_spec * spectrum.size
-            # print spectrum.size
-            # print num.mean(ps[-int(ps.size/9.):-1])
+            # print(spectrum.size)
+            # print(num.mean(ps[-int(ps.size/9.):-1]))
             var = num.median(ps[-int(ps.size/9.):]) + ma
             self.config.variance = float(var)
 
