@@ -317,19 +317,24 @@ class Covariance(object):
         '''
         t0 = time.time()
 
-        stdmax = max([n.std for n in self.quadtree.nodes])
-        lmax = max([n.std for n in self.quadtree.nodes])
+        min_pixel = 1024
+
+        node_selection = [n for n in self.quadtree.nodes
+                          if n.npixel > min_pixel]
+
+        stdmax = max([n.std for n in node_selection])
+        lmax = max([n.std for n in node_selection])
 
         def costFunction(n):
             nl = num.log2(n.length)/num.log2(lmax)
             ns = n.std/stdmax
             return nl*(1.-ns)*(1.-n.nan_fraction)
 
-        fitness = num.array([costFunction(n) for n in self.quadtree.nodes])
+        fitness = num.array([costFunction(n) for n in node_selection])
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.4f s]'
                         % (time.time() - t0))
-        return self.quadtree.nodes[num.argmin(fitness)]
+        return node_selection[num.argmin(fitness)]
 
     def _mapLeaves(self, nx, ny):
         ''' Helper function returning appropriate
@@ -973,7 +978,7 @@ class Covariance(object):
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_spectral
             ma = self.covariance_model[0]
-            # print(cov[1])
+            # print(cov[1]) 
             ps = power_spec * spectrum.size
             # print(spectrum.size)
             # print(num.mean(ps[-int(ps.size/9.):-1]))

@@ -143,7 +143,7 @@ class KitePlot(pg.PlotWidget):
             parentPos=(1., 0.))
         self.hint_text.setOpacity(.6)
 
-        if self.model.frame.spacing == 'meter':
+        if self.model.frame.isMeter():
             self.hint_text.text_template =\
                 '<span style="font-family: monospace; color: #fff;'\
                 'background-color: #000;">'\
@@ -152,11 +152,11 @@ class KitePlot(pg.PlotWidget):
             self.setLabels(
                 bottom=('Easting', 'm'),
                 left=('Northing', 'm'))
-        elif self.model.frame.spacing == 'degree':
+        elif self.model.frame.isDegree():
             self.hint_text.text_template =\
                 '<span style="font-family: monospace; color: #fff;'\
                 'background-color: #000;">'\
-                'Long {east:08.2f}&deg; | Lat {north:08.2f}&deg; |'\
+                'Long {east:03.3f}&deg; | Lat {north:02.3f}&deg; |'\
                 ' {measure} {value:{length}.{precision}f}</span>'
             self.setLabels(
                 bottom='Longitude',
@@ -184,8 +184,12 @@ class KitePlot(pg.PlotWidget):
             offset=(-10., 40.))
 
     def transFromFrame(self):
+        frame = self.model.frame
+
         self.image.resetTransform()
-        self.image.scale(self.model.frame.dE, self.model.frame.dN)
+        self.image.scale(frame.dE, frame.dN)
+        if frame.isDegree():
+            self.image.translate(frame.llLon, frame.llLat)
 
     def scalebar(self):
         ''' Not working '''

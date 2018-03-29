@@ -272,14 +272,18 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateTileSizeMin():
             self.sigTileMinimum.emit(self.tile_size_min.value())
 
+        frame = model.frame
+        max_px = max(frame.shape)
+        max_d = max(frame.dE, frame.dN)
+        limits = (max_d * 5, max_d * (max_px / 4))
         p = {'name': 'tile_size_min',
              'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
              'type': 'int',
-             'limits': (50, 50000),
+             'limits': limits,
              'step': 100,
              'editable': True,
-             'suffix': 'm',
+             'suffix': 'm' if frame.isMeter() else 'deg',
              'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)

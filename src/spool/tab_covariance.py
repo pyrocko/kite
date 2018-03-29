@@ -236,8 +236,10 @@ class KiteCovariogram(_KiteSubplotPlot):
 
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
-        self.plot.setLabels(bottom=('Distance', 'm'),
-                            left='Covariance (m<sup>2</sup>)')
+        frame = self.model.frame
+        self.plot.setLabels(
+            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
+            left='Covariance (m<sup>2</sup>)')
 
         self.cov_spectral = pg.PlotDataItem(antialias=True)
         self.cov_spectral.setZValue(10)
@@ -321,6 +323,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
+        frame = self.model.frame
 
         self.structure = pg.PlotDataItem(
             antialias=True,
@@ -332,8 +335,9 @@ class KiteStructureFunction(_KiteSubplotPlot):
             labelOpts={'position': .975,
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
-        self.plot.setLabels(bottom=('Distance', 'm'),
-                            left='Covariance (m<sup>2</sup>)')
+        self.plot.setLabels(
+            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
+            left='Covariance (m<sup>2</sup>)')
 
         self.addItem(self.structure)
         self.addItem(self.variance)

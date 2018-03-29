@@ -128,7 +128,7 @@ class Frame(object):
         self.coordinates = None
 
         self.config.regularize()
-        self.evChanged.notify()
+        self.evChanged.notify()        
 
     @property
     def llLat(self):
@@ -229,6 +229,16 @@ class Frame(object):
         row = int(E/self.dE) if E > 0 else 0
         col = int(N/self.dN) if N > 0 else 0
         return row, col
+
+    @property
+    def shape(self):
+        return self._scene.shape
+
+    def isMeter(self):
+        return self.config.spacing == 'meter'
+
+    def isDegree(self):
+        return self.config.spacing == 'degree'
 
     def __eq__(self, other):
         return self.llLat == other.llLat and\
@@ -378,6 +388,10 @@ class BaseScene(object):
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         '''
         return num.isnan(self.displacement)
+
+    @property
+    def shape(self):
+        return self._displacement.shape
 
     @property
     def phi(self):

@@ -46,6 +46,10 @@ class QuadNode(object):
             self.displacement.size
 
     @property_cached
+    def npixel(self):
+        return self.displacement.shape[0] * self.displacement.shape[1]
+
+    @property_cached
     def mean(self):
         ''' Mean displacement
         :type: float
@@ -223,8 +227,7 @@ class QuadNode(object):
         yield self
         if self.children is not None:
             for c in self.children:
-                for rc in c.iterChildren():
-                    yield rc
+                yield from c.iterChildren()
 
     def iterLeaves(self):
         ''' Iterator over the leaves, evaluating parameters from
@@ -289,10 +292,10 @@ class QuadtreeConfig(guts.Object):
         default=0.9,
         help='Allowed NaN fraction per tile')
     tile_size_min = guts.Float.T(
-        default=250.,
+        optional=True,
         help='Minimum allowed tile size in *meters* or *degree*')
     tile_size_max = guts.Float.T(
-        default=25e3,
+        optional=True,
         help='Maximum allowed tile size in *meters* or *degree*')
     leaf_blacklist = guts.List.T(
         optional=True,
@@ -515,18 +518,24 @@ class Quadtree(object):
     @property
     def tile_size_min(self):
         ''' Minimum allowed tile size in *meter*.
-        Measured along long edge ``(max(dE, dN))``
+        Measured along long edge ``(max(dE, dN))``.
+        Minimum tile size defaults to 1/20th of the largest dimension
 
         :getter: Returns the minimum allowed tile size
         :setter: Sets the minimum threshold
         :type: float
         '''
+        if self.config.tile_size_min is None:
+            frame = self.scene.frame
+            max_px = max(frame.shape)
+            self.config.tile_size_min = max(frame.dE, frame.dN) * (max_px/20)
+
         return self.config.tile_size_min
 
     @tile_size_min.setter
     def tile_size_min(self, value):
         if value > self.tile_size_max:
-            self._log.warning('tile_size_min > tile_size_max is required')
+            self._log.warning('tile_size_min > tile_size_max is required!')
             return
         self.config.tile_size_min = value
         self._tileSizeChanged()
@@ -535,11 +544,17 @@ class Quadtree(object):
     def tile_size_max(self):
         ''' Maximum allowed tile size in *meter*.
         Measured along long edge ``(max(dE, dN))``
+        Maximum tile size defaults to 1/5th of the largest dimension
 
         :getter: Returns the maximum allowed tile size
         :setter: Sets the maximum threshold
         :type: float
         '''
+        if self.config.tile_size_max is None:
+            frame = self.scene.frame
+            max_px = max(frame.shape)
+            self.config.tile_size_max = max(frame.dE, frame.dN) * (max_px/5)
+
         return self.config.tile_size_max
 
     @tile_size_max.setter
