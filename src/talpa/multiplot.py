@@ -12,35 +12,55 @@ d2r = num.pi / 180.
 
 class SandboxSceneLayout(pg.GraphicsLayoutWidget):
 
+    PLOT_VIEWS = ['north', 'east', 'down', 'los']
+
     def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.sandbox = sandbox
 
         self.plots = [
-            # DisplacementPlot(
-            #     sandbox,
-            #     title='North',
-            #     component=lambda m: m.north),
-            # DisplacementPlot(
-            #     sandbox,
-            #     title='East',
-            #     component=lambda m: m.east),
-            DisplacementVectorPlot(
-                sandbox,
-                title='Down',
-                component=lambda m: m.down),
-            # DisplacementPlot(
-            #     sandbox,
-            #     title='LOS',
-            #     component=lambda m: m.displacement)
+                DisplacementPlot(
+                    sandbox,
+                    title='North',
+                    component=lambda m: m.north),
+                DisplacementPlot(
+                    sandbox,
+                    title='East',
+                    component=lambda m: m.east),
+                DisplacementVectorPlot(
+                    sandbox,
+                    title='Down',
+                    component=lambda m: m.down),
+                DisplacementPlot(
+                    sandbox,
+                    title='LOS',
+                    component=lambda m: m.displacement)
             ]
-        self.plots[-1].addHintText()
+
+        for plt in self.plots:
+            plt.vb.menu = QtWidgets.QMenu(self)
+
+        self.updateViews()
+        getConfig().qconfig.updated.connect(self.updateViews)
 
         self._mov_sig = pg.SignalProxy(
             self.scene().sigMouseMoved,
             rateLimit=60, slot=self.mouseMoved)
 
-        for ip, plt in enumerate(self.plots):
+    @QtCore.pyqtSlot()
+    def updateViews(self):
+        self.clear()
+        for plt in self.plots:
+            plt.removeHintText()
+
+        config_mask = [
+            getConfig().__getattribute__(cfg)
+            for cfg in ('view_north', 'view_east', 'view_down', 'view_los')]
+
+        visible_plots = [plt for ip, plt in enumerate(self.plots)
+                         if config_mask[ip]]
+
+        for ip, plt in enumerate(visible_plots):
             row = ip / 2
             col = ip % 2 + 1
 
@@ -53,21 +73,10 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
                 plt.setXLink(self.plots[0])
                 plt.setYLink(self.plots[0])
 
-        def getAxis(plt, orientation, label):
-            axis = pg.AxisItem(
-                orientation=orientation,
-                linkView=plt.vb)
-            axis.setLabel(label, units='m')
-            return axis
+        if len(visible_plots) > 0:
+            visible_plots[-1].addHintText()
+            visible_plots[-1].autoRange(items=[visible_plots[-1].image])
 
-        # plts = self.plots
-        # self.addItem(getAxis(plts[0], 'left', 'Northing'), row=0, col=0)
-        # self.addItem(getAxis(plts[1], 'left', 'Northing'), row=1, col=0)
-        # self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
-        # self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
-
-        for plt in self.plots:
-            plt.vb.menu = QtWidgets.QMenu(self)
 
     def resizeEvent(self, ev):
         pg.GraphicsLayoutWidget.resizeEvent(self, ev)
@@ -177,6 +186,8 @@ class DisplacementPlot(pg.PlotItem):
             parentPos=(.01, .01))
         self.title_label.setOpacity(.6)
 
+        self.hint_text = None
+
         self.sandbox.sigModelUpdated.connect(
             self.update)
         self.sandbox.sources.modelAboutToBeReset.connect(
@@ -268,6 +279,11 @@ class DisplacementPlot(pg.PlotItem):
             'Displacement {2:2.4f} m</span>'
         self.hint_text.setOpacity(.6)
         self.sandbox.cursor_tracker.sigCursorMoved.connect(self.updateHintText)
+
+    def removeHintText(self):
+        if self.hint_text is not None:
+            self.removeItem(self.hint_text)
+            self.hint_text = None
 
     @QtCore.pyqtSlot(object)
     def updateHintText(self, pos):

@@ -77,6 +77,9 @@
        <property name="frameShadow">
         <enum>QFrame::Raised</enum>
        </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
        <widget class="QWidget" name="appearance">
         <layout class="QVBoxLayout" name="verticalLayout_3">
          <item>
@@ -89,6 +92,124 @@
              <widget class="QCheckBox" name="show_cursor">
               <property name="text">
                <string>Show synchronized Mouse cursor</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
+          <widget class="QGroupBox" name="groupBox_4">
+           <property name="title">
+            <string>Displacement Views</string>
+           </property>
+           <property name="flat">
+            <bool>false</bool>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
+           <layout class="QFormLayout" name="formLayout_4">
+            <property name="sizeConstraint">
+             <enum>QLayout::SetDefaultConstraint</enum>
+            </property>
+            <property name="fieldGrowthPolicy">
+             <enum>QFormLayout::ExpandingFieldsGrow</enum>
+            </property>
+            <property name="labelAlignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+            <property name="formAlignment">
+             <set>Qt::AlignJustify|Qt::AlignTop</set>
+            </property>
+            <property name="horizontalSpacing">
+             <number>65</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="view_north">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>North</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1">
+             <widget class="QCheckBox" name="view_east">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>East</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="0">
+             <widget class="QCheckBox" name="view_down">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="sizeIncrement">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="baseSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Down</string>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QCheckBox" name="view_los">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>0</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Line of Sight</string>
               </property>
              </widget>
             </item>
@@ -279,7 +400,7 @@
          <item>
           <widget class="QLabel" name="gf_help">
            <property name="text">
-            <string>&lt;a href='http://pyrocko.org/v0.3/apps/fomosto/tutorial.html' style='text-decoration: none;'&gt;How to create Green's function stores?&lt;/a&gt;</string>
+            <string>&lt;a href='http://pyrocko.org/v0.3/apps/fomosto/tutorial.html' style='text-decoration: none;'&gt;How to create a Green's function database?&lt;/a&gt;</string>
            </property>
           </widget>
          </item>

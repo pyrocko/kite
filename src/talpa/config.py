@@ -5,7 +5,7 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from .util import get_resource
 
 from kite.qt_utils import loadUi
-from pyrocko.guts import Object, Bool, String, Int, Float, Tuple, load
+from pyrocko.guts import Object, Bool, String, Int, Float, Tuple, List, load
 from os import path
 
 
@@ -37,6 +37,22 @@ class TalpaConfig(Object):
     vector_pen_thickness = Float.T(
         default=1.,
         help='Thickness of the arrows.')
+
+    view_north = Bool.T(
+        default=True,
+        help='Show the north view of displacement.')
+
+    view_east = Bool.T(
+        default=True,
+        help='Show the east view of displacement.')
+
+    view_down = Bool.T(
+        default=True,
+        help='Show the down view of displacement.')
+
+    view_los = Bool.T(
+        default=True,
+        help='Show the los view of displacement.')
 
     def __init__(self, *args, **kwargs):
 
@@ -86,7 +102,8 @@ def getConfig():
 class ConfigDialog(QtWidgets.QDialog):
 
     attributes = ['show_cursor', 'default_gf_dir', 'nvectors', 'vector_color',
-                  'vector_relative_length', 'vector_pen_thickness']
+                  'vector_relative_length', 'vector_pen_thickness',
+                  'view_east', 'view_north', 'view_down', 'view_los']
 
     def __init__(self, *args, **kwargs):
         QtWidgets.QDialog.__init__(self, *args, **kwargs)
@@ -148,6 +165,7 @@ class ConfigDialog(QtWidgets.QDialog):
             else:
                 qw.setValue(value)
 
+    @QtCore.pyqtSlot()
     def setAttributes(self):
         for attr in self.attributes:
             qw = self.__getattribute__(attr)
