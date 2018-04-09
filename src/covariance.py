@@ -157,6 +157,8 @@ class Covariance(object):
     :type config: :class:`~kite.covariance.CovarianceConfig`
     '''
 
+    NOISE_PATCH_MIN_PX = 1024
+
     def __init__(self, scene, config=CovarianceConfig()):
         self.evChanged = Subject()
         self.evConfigChanged = Subject()
@@ -263,7 +265,7 @@ class Covariance(object):
         if self.noise_coord is None:
             return 0.
         size = (self.noise_coord[2] * self.noise_coord[3])*1e-6
-        if size < 75:
+        if self.noise_data.size < self.NOISE_PATCH_MIN_PX:
             self._log.warning('Defined noise patch is instably small')
         return size
 
@@ -317,10 +319,8 @@ class Covariance(object):
         '''
         t0 = time.time()
 
-        min_pixel = 1024
-
         node_selection = [n for n in self.quadtree.nodes
-                          if n.npixel > min_pixel]
+                          if n.npixel > self.NOISE_NODE_MIN_PX]
 
         stdmax = max([n.std for n in node_selection])
         lmax = max([n.std for n in node_selection])
