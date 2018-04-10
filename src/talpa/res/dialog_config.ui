@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>567</width>
-    <height>352</height>
+    <height>377</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -225,7 +225,7 @@
             </sizepolicy>
            </property>
            <property name="title">
-            <string>Displacement Vectors</string>
+            <string>Horizontal Displacement Vectors</string>
            </property>
            <layout class="QFormLayout" name="formLayout">
             <item row="0" column="0">

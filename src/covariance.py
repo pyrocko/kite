@@ -320,7 +320,7 @@ class Covariance(object):
         t0 = time.time()
 
         node_selection = [n for n in self.quadtree.nodes
-                          if n.npixel > self.NOISE_NODE_MIN_PX]
+                          if n.npixel > self.NOISE_PATCH_MIN_PX]
 
         stdmax = max([n.std for n in node_selection])
         lmax = max([n.std for n in node_selection])
