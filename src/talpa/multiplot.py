@@ -77,7 +77,6 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
             visible_plots[-1].addHintText()
             visible_plots[-1].autoRange(items=[visible_plots[-1].image])
 
-
     def resizeEvent(self, ev):
         pg.GraphicsLayoutWidget.resizeEvent(self, ev)
         if hasattr(self, 'plots'):

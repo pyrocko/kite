@@ -525,15 +525,15 @@ class Scene(BaseScene):
     '''Scene of unwrapped InSAR ground dispacements measurements
 
     :param config: Configuration object
-    :type config: :class:`SceneConfig`, optional
+    :type config: :class:`~kite.scene.SceneConfig`, optional
 
     Optional parameters
 
     :param displacement: Displacement in [m]
     :type displacement: :class:`numpy.ndarray`, NxM, optional
-    :param theta: Theta look angle, see :attr:`Scene.theta`
+    :param theta: Theta look angle, see :attr:`BaseScene.theta`
     :type theta: :class:`numpy.ndarray`, NxM, optional
-    :param phi: Phi look angle, see :attr:`Scene.phi`
+    :param phi: Phi look angle, see :attr:`BaseScene.phi`
     :type phi: :class:`numpy.ndarray`, NxM, optional
 
     :param llLat: Lower left latitude in [deg]

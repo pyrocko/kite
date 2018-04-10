@@ -188,8 +188,6 @@ class KitePlot(pg.PlotWidget):
 
         self.image.resetTransform()
         self.image.scale(frame.dE, frame.dN)
-        if frame.isDegree():
-            self.image.translate(frame.llLon, frame.llLat)
 
     def scalebar(self):
         ''' Not working '''
@@ -230,15 +228,6 @@ class KitePlot(pg.PlotWidget):
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
         self.mouseMoved()
-        # self.addIsocurves()
-
-    def addIsocurve(self, level=0.):
-        iso = pg.IsocurveItem(level=level, pen='g')
-        iso.setZValue(1000)
-        iso.setData(pg.gaussianFilter(self.data, (5, 5)))
-        iso.setParentItem(self.image)
-
-        self.iso = iso
 
     @QtCore.pyqtSlot(object)
     def mouseMoved(self, event=None):
