@@ -264,7 +264,7 @@ class Meta(guts.Object):
     wavelength = guts.Float.T(
         optional=True,
         help='Wavelength in [m]')
-    orbit_direction = guts.StringChoice.T(
+    orbital_node = guts.StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',
         help='Orbital direction, ascending/descending')

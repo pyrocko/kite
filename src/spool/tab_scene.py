@@ -37,7 +37,7 @@ class KiteScene(KiteView):
         self.parameters = [self.param_scene]
 
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
-        
+
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
@@ -259,8 +259,8 @@ class KiteParamSceneMeta(KiteParameterGroup):
              lambda sc: sc.meta.scene_id),
             ('satellite_name',
              lambda sc: sc.meta.satellite_name),
-            ('orbit_direction',
-             lambda sc: sc.meta.orbit_direction),
+            ('orbital_node',
+             lambda sc: sc.meta.orbital_node),
             ('time_master',
              lambda sc: str_to_time(sc.meta.time_master)),
             ('time_slave',
