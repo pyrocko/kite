@@ -128,7 +128,7 @@ class Frame(object):
         self.coordinates = None
 
         self.config.regularize()
-        self.evChanged.notify()        
+        self.evChanged.notify()
 
     @property
     def llLat(self):
@@ -596,7 +596,6 @@ class Scene(BaseScene):
 
         from kite.spool import spool
         spool(scene=self)
-
 
     def _testImport(self):
         try:
