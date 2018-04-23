@@ -152,7 +152,7 @@ class QuadNode(object):
         :type: float
         '''
         phi = self.scene.phi[self._slice_rows, self._slice_cols]
-        return num.median(phi[~self.displacement_mask])
+        return num.nanmedian(phi[~self.displacement_mask])
 
     @property_cached
     def theta(self):
@@ -160,7 +160,7 @@ class QuadNode(object):
         :type: float
         '''
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
-        return num.median(theta[~self.displacement_mask])
+        return num.nanmedian(theta[~self.displacement_mask])
 
     @property_cached
     def gridE(self):
