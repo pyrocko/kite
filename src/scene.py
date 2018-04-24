@@ -611,7 +611,6 @@ class Scene(BaseScene):
         from kite.spool import spool
         spool(scene=self)
 
-
     def _testImport(self):
         try:
             self.frame.E
