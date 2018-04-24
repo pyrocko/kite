@@ -46,7 +46,7 @@ class SceneIO(object):
             # Meta information
             'meta': {
                 'title': None,
-                'orbit_direction': None,
+                'orbital_node': None,
                 'satellite_name': None,
                 'wavelength': None,
                 'time_master': None,
