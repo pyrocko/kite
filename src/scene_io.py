@@ -21,6 +21,15 @@ def safe_cast(val, to_type, default=None):
         return default
 
 
+class AttribDict(dict):
+
+    def __getattr__(self, item):
+        return self[item]
+
+    def __setattr__(self, item, value):
+        self[item] = value
+
+
 class SceneIO(object):
     """ Prototype class for SARIO objects """
     def __init__(self, scene=None):
@@ -31,30 +40,30 @@ class SceneIO(object):
             self._log = logging.getLogger('SceneIO/%s'
                                           % self.__class__.__name__)
 
-        self.container = {
-            'phi': 0.,    # Look orientation counter-clockwise angle from east
-            'theta': 0.,  # Look elevation angle (up from horizontal in degree)
-                          # 90deg North
-            'displacement': None,  # Displacement towards LOS
-            'frame': {
-                'llLon': None,  # Lower left corner latitude
-                'llLat': None,  # Lower left corner londgitude
-                'dN': None,   # Pixel delta in north, meter or degree
-                'dE': None,   # Pixel delta in east, meter or degree
-                'spacing': 'meter',  # Pixel spacing unit
-            },
+        self.container = AttribDict(
+            phi=0.,    # Look orientation counter-clockwise angle from east
+            theta=0.,  # Look elevation angle (up from horizontal in degree)
+                       # 90deg North
+            displacement=None,  # Displacement towards LOS
+            frame=AttribDict(
+                llLon=None,  # Lower left corner latitude
+                llLat=None,  # Lower left corner londgitude
+                dN=None,   # Pixel delta in north, meter or degree
+                dE=None,   # Pixel delta in east, meter or degree
+                spacing='meter',  # Pixel spacing unit
+            ),
             # Meta information
-            'meta': {
-                'title': None,
-                'orbital_node': None,
-                'satellite_name': None,
-                'wavelength': None,
-                'time_master': None,
-                'time_slave': None
-            },
+            meta=AttribDict(
+                title=None,
+                orbital_node=None,
+                satellite_name=None,
+                wavelength=None,
+                time_master=None,
+                time_slave=None
+            ),
             # All extra information
-            'extra': {}
-        }
+            extra={}
+        )
 
     def read(self, filename, **kwargs):
         """ Read function of the file format
@@ -134,7 +143,7 @@ class Matlab(SceneIO):
                 if io_k in mat_k:
                     c[io_k] = num.rot90(mat[mat_k])
                 elif 'ig_' in mat_k:
-                    c['displacement'] = num.rot90(mat[mat_k])
+                    c.displacement = num.rot90(mat[mat_k])
                 elif 'xx' in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
@@ -153,17 +162,17 @@ class Matlab(SceneIO):
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
                 'Could not find referencing UTM vectors in .mat file!')
-            utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
-            utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
+            utm_e = num.linspace(100000, 110000, c.displacement.shape[0])
+            utm_n = num.linspace(1100000, 1110000, c.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
 
-        c['frame']['dE'] = num.abs(utm_e[1] - utm_e[0])
-        c['frame']['dN'] = num.abs(utm_n[1] - utm_n[0])
+        c.frame.dE = num.abs(utm_e[1] - utm_e[0])
+        c.frame.dN = num.abs(utm_n[1] - utm_n[0])
         try:
-            c['frame']['llLat'], c['frame']['llLon'] =\
+            c.frame.llLat, c.frame.llLon =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
                               utm_zone, utm_zone_letter)
 
@@ -171,7 +180,7 @@ class Matlab(SceneIO):
             self._log.warning(
                 'Could not interpret spatial vectors,'
                 ' referencing to 0, 0 (lat, lon)')
-            c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
+            c.frame.llLat, c.frame.llLon = (0., 0.)
         return c
 
 
@@ -344,15 +353,15 @@ class Gamma(SceneIO):
 
         c = self.container
 
-        c['displacement'] = displ
-        c['theta'] = theta
-        c['phi'] = phi
+        c.displacement = displ
+        c.theta = theta
+        c.phi = phi
 
-        c['meta']['wavelength'] = wavelength
-        c['meta']['title'] = params.get('title', 'None')
+        c.meta.wavelength = wavelength
+        c.meta.title = params.get('title', 'None')
 
-        c['bin_file'] = filename
-        c['par_file'] = par_file
+        c.bin_file = filename
+        c.par_file = par_file
 
         if params['DEM_projection'] == 'UTM':
             import utm
@@ -383,19 +392,19 @@ class Gamma(SceneIO):
             llLat, llLon = utm.to_latlon(utm_e.min(), utm_n.min(),
                                          utm_zone, utm_zone_letter)
 
-            c['frame']['llLat'] = llLat
-            c['frame']['llLon'] = llLon
+            c.frame.llLat = llLat
+            c.frame.llLon = llLon
 
-            c['frame']['dE'] = abs(dE)
-            c['frame']['dN'] = abs(dN)
+            c.frame.dE = abs(dE)
+            c.frame.dN = abs(dN)
 
         else:
             self._log.info('Using Lat/Lon reference')
-            c['frame']['llLat'] = params['corner_lat'] \
+            c.frame.llLat = params['corner_lat'] \
                 + params['post_lat'] * nrows
-            c['frame']['llLon'] = params['corner_lon']
-            c['frame']['dLon'] = abs(params['post_lon'])
-            c['frame']['dLat'] = abs(params['post_lat'])
+            c.frame.llLon = params['corner_lon']
+            c.frame.dLon = abs(params['post_lon'])
+            c.frame.dLat = abs(params['post_lat'])
             print(c)
         return self.container
 
@@ -430,7 +439,7 @@ class ROI_PAC(SceneIO):
         par_file = op.realpath(bin_file) + '.rsc'
         try:
             self._parseParameterFile(par_file)
-            self._log.info('Found parameter file %s' % file)
+            self._log.info('Found parameter file %s' % bin_file)
             return par_file
         except (ImportError, IOError):
             raise ImportError('Could not find ROI_PAC parameter file (%s)'
@@ -499,19 +508,19 @@ class ROI_PAC(SceneIO):
         displ *= z_scale
 
         c = self.container
-        c['displacement'] = displ
-        c['theta'] = 90. - look
-        c['phi'] = -heading - 180
+        c.displacement = displ
+        c.theta = 90. - look
+        c.phi = -heading - 180
 
-        c['meta']['title'] = par.get('TITLE', 'None')
-        c['meta']['wavelength'] = par['WAVELENGTH']
-        c['bin_file'] = filename
-        c['par_file'] = par_file
+        c.meta.title = par.get('TITLE', 'None')
+        c.meta.wavelength = par['WAVELENGTH']
+        c.bin_file = filename
+        c.par_file = par_file
 
-        c['frame']['llLat'] = par['Y_FIRST'] + par['Y_STEP'] * nrows
-        c['frame']['llLon'] = par['X_FIRST']
-        c['frame']['dLon'] = par['X_STEP']
-        c['frame']['dLat'] = par['Y_STEP']
+        c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
+        c.frame.llLon = par['X_FIRST']
+        c.frame.dLon = par['X_STEP']
+        c.frame.dLat = par['Y_STEP']
         return self.container
 
 
@@ -604,26 +613,27 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
-        c['frame']['dN'] = num.abs(coord_lat['delta'])
-        c['frame']['dE'] = num.abs(coord_lon['delta'])
+        c.frame.dN = num.abs(coord_lat['delta'])
+        c.frame.dE = num.abs(coord_lon['delta'])
+
         nlon = int(coord_lon['size'])
         nlat = int(coord_lat['size'])
 
-        c['frame']['spacing'] = 'degree'
-        c['frame']['llLat'] = coord_lat['startingvalue'] +\
+        c.frame.spacing = 'degree'
+        c.frame.llLat = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
-        c['frame']['llLon'] = coord_lon['startingvalue']
+        c.frame.llLon = coord_lon['startingvalue']
 
         displ = num.memmap(self._getDisplacementFile(path),
                            dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
         displ[displ == 0.] = num.nan
-        c['displacement'] = displ
+        c.displacement = displ
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
-        c['phi'] = los_data[:, :nlon]
-        c['theta'] = los_data[:, nlon:] + num.pi/2
+        c.phi = los_data[:, :nlon]
+        c.theta = los_data[:, nlon:] + num.pi/2
 
         return c
 
@@ -685,16 +695,16 @@ class GMTSAR(SceneIO):
                                  mode='r', version=2)
         displ = grd.variables['z'][:].copy()
         displ /= 1e2  # los_ll.grd files come in cm
-        c['displacement'] = displ
-        shape = c['displacement'].shape
+        c.displacement = displ
+        shape = c.displacement.shape
         # LatLon
-        c['frame']['llLat'] = grd.variables['lat'][:].min()
-        c['frame']['llLon'] = grd.variables['lon'][:].min()
+        c.frame.llLat = grd.variables['lat'][:].min()
+        c.frame.llLon = grd.variables['lon'][:].min()
 
-        c['frame']['dLat'] = (grd.variables['lat'][:].max() -
-                              c['frame']['llLat'])/shape[0]
-        c['frame']['dLon'] = (grd.variables['lon'][:].max() -
-                              c['frame']['llLon'])/shape[1]
+        c.frame.dLat = (grd.variables['lat'][:].max() -
+                              c.frame.llLat)/shape[0]
+        c.frame.dLon = (grd.variables['lon'][:].max() -
+                              c.frame.llLon)/shape[1]
 
         # Theta and Phi
         try:
@@ -707,12 +717,12 @@ class GMTSAR(SceneIO):
             phi = num.rad2deg(num.arccos(u))
             theta[n < 0] += 180.
 
-            c['phi'] = phi
-            c['theta'] = theta
+            c.phi = phi
+            c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
             self._log.warning('Defaulting theta and phi to 0./2*pi [rad]')
-            c['theta'] = num.pi/2
-            c['phi'] = 0.
+            c.theta = num.pi/2
+            c.phi = 0.
 
         return c
