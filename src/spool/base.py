@@ -74,7 +74,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         phi = num.median(self.model.scene.phi)
         theta = num.median(self.model.scene.theta)
 
-        angle = -num.rad2deg(phi)
+        angle = 180. + num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
