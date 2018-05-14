@@ -78,7 +78,8 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         phi = num.median(self.model.scene.phi)
         theta = num.median(self.model.scene.theta)
 
-        angle = -num.rad2deg(phi)
+        angle =  180-num.rad2deg(phi)
+        print(angle)
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
@@ -90,7 +91,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             tailLen=tailLen,
             tailWidth=6,
             headLen=25)
-        self.arrow.setRotation(self.arrow.opts['angle'])
+        #self.arrow.setRotation(self.arrow.opts['angle'])
 
         rect_label = self.label.boundingRect()
         rect_arr = self.arrow.boundingRect()

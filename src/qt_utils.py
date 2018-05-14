@@ -96,15 +96,15 @@ def loadUi(uifile, baseinstance=None):
 
 
 class SliderWidget(QtGui.QWidget):
-    '''
+    """
     shows a horizontal/vertical slider with a label showing its value
-    '''
+    """
     sigValueChanged = QtCore.Signal(object)  # value
 
     def __init__(self, horizontal=True, parent=None):
-        '''
+        """
         horizontal -> True/False
-        '''
+        """
         QtGui.QWidget.__init__(self, parent)
         self.mn, self.mx = None, None
         self.precission = 0
@@ -142,9 +142,9 @@ class SliderWidget(QtGui.QWidget):
         self._updateLabel(val)
 
     def setRange(self, mn, mx):
-        '''
+        """
         mn, mx -> arbitrary values that are not equal
-        '''
+        """
         if mn == mx:
             raise ValueError('limits must be different values')
         self.mn = float(min(mn, mx))
@@ -185,8 +185,8 @@ class SliderWidget(QtGui.QWidget):
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
-    ''' Enabling Slider widget for Parameter
-    '''
+    """ Enabling Slider widget for Parameter
+    """
     def makeWidget(self):
         opts = self.param.opts
         w = SliderWidget()
