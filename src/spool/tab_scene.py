@@ -253,14 +253,6 @@ class KiteParamSceneMeta(KiteParameterGroup):
             return dt.strftime(dt.fromtimestamp(d), fmt)
 
         self.parameters = OrderedDict([
-            ('scene_title',
-             lambda sc: sc.meta.scene_title),
-            ('scene_id',
-             lambda sc: sc.meta.scene_id),
-            ('satellite_name',
-             lambda sc: sc.meta.satellite_name),
-            ('orbital_node',
-             lambda sc: sc.meta.orbital_node),
             ('time_master',
              lambda sc: str_to_time(sc.meta.time_master)),
             ('time_slave',
@@ -275,3 +267,53 @@ class KiteParamSceneMeta(KiteParameterGroup):
                                     model=model,
                                     model_attr='scene',
                                     **kwargs)
+
+        def update_meta_info(key, value):
+            self.model.scene.meta.__setattr__(key, value)
+
+        p = {'name': 'scene_title',
+             'value': self.model.scene.meta.scene_title,
+             'type': 'str',
+             'tip': 'Title of the displacement scene'
+             }
+
+        self.scene_title = pTypes.SimpleParameter(**p)
+        self.scene_title.sigValueChanged.connect(
+            lambda v: update_meta_info('scene_title', v.value()))
+
+        p = {'name': 'scene_id',
+             'value': self.model.scene.meta.scene_id,
+             'type': 'str'
+             }
+
+        self.scene_id = pTypes.SimpleParameter(**p)
+        self.scene_id.sigValueChanged.connect(
+            lambda v: update_meta_info('scene_id', v.value()))
+
+        p = {'name': 'satellite_name',
+             'value': self.model.scene.meta.satellite_name,
+             'type': 'str',
+             'tip': 'Name of the satellite'
+             }
+
+        self.satellite_name = pTypes.SimpleParameter(**p)
+        self.satellite_name.sigValueChanged.connect(
+            lambda v: update_meta_info('satellite_name', v.value()))
+
+        p = {'name': 'orbital_node',
+             'values': {
+                'Ascending': 'Ascending',
+                'Descending': 'Descending',
+                'Undefined': 'Undefined',
+             },
+             'value': self.model.scene.meta.orbital_node,
+             'tip': 'Satellite orbit direction'
+             }
+        self.orbital_node = pTypes.ListParameter(**p)
+        self.orbital_node.sigValueChanged.connect(
+            lambda v: update_meta_info('orbital_node', v.value()))
+
+        self.pushChild(self.orbital_node)
+        self.pushChild(self.satellite_name)
+        self.pushChild(self.scene_id)
+        self.pushChild(self.scene_title)

@@ -75,8 +75,8 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
     @QtCore.pyqtSlot()
     def orientArrow(self):
-        phi = num.median(self.model.scene.phi)
-        theta = num.median(self.model.scene.theta)
+        phi = num.nanmedian(self.model.scene.phi)
+        theta = num.nanmedian(self.model.scene.theta)
 
         angle =  180-num.rad2deg(phi)
         print(angle)

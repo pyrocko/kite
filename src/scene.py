@@ -128,7 +128,7 @@ class Frame(object):
         self.coordinates = None
 
         self.config.regularize()
-        self.evChanged.notify()        
+        self.evChanged.notify()
 
     @property
     def llLat(self):
@@ -284,6 +284,20 @@ class Meta(guts.Object):
     filename = guts.String.T(
         optional=True)
 
+    def __init__(self, *args, **kwargs):
+        self.old_import = False
+
+        mapping = {
+            'orbit_direction': 'orbital_node'
+        }
+
+        for old, new in mapping.items():
+            if old in kwargs.keys():
+                kwargs[new] = kwargs.pop(old, None)
+                self.old_import = True
+
+        guts.Object.__init__(self, *args, **kwargs)
+
     @property
     def time_separation(self):
         """
@@ -400,7 +414,7 @@ class BaseScene(object):
     @property
     def phi(self):
         """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-            in [rad]
+            in [rad] counter-clockwise from East
 
         .. important ::
 
@@ -601,7 +615,6 @@ class Scene(BaseScene):
 
         from kite.spool import spool
         spool(scene=self)
-
 
     def _testImport(self):
         try:
