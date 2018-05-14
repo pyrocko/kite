@@ -101,21 +101,21 @@ class Matlab(SceneIO):
     """
     Variable naming conventions for Matlab :file:`.mat` container:
 
-        ================== ==================== ============ =====
-        Property           Matlab ``.mat`` name type         unit    
-        ================== ==================== ============ =====
-        Scene.displacement ``ig_``              n x m array  [m]
-        Scene.phi          ``phi``              n x m array  [rad]
-        Scene.theta        ``theta``            n x m array  [rad]
-        Scene.frame.x      ``xx``               n x 1 vector [m]
-        Scene.frame.y      ``yy``               m x 1 vector [m]
+        ================== ==================== ===================== =====
+        Property           Matlab ``.mat`` name type                  unit
+        ================== ==================== ===================== =====
+        Scene.displacement ``ig_``              n x m array           [m]
+        Scene.phi          ``phi``              float or n x m array  [rad]
+        Scene.theta        ``theta``            float or n x m array  [rad]
+        Scene.frame.x      ``xx``               n x 1 vector          [m]
+        Scene.frame.y      ``yy``               m x 1 vector          [m]
         Scene.utm_zone     ``utm_zone``         str ('33T')  
-        ================== ==================== ============ =====
+        ================== ==================== ===================== =====
 
     Displacement is expected to be in meters. Note that the displacement maps
     could also be pixel offset maps rather than unwrapped SAR interferograms.
     For SAR azimuth pixel offset maps calculate ``phi`` from the heading
-    direction and set ``theta=0``. For SAR range pixel offsets use the same
+    direction and set ``theta=0.``. For SAR range pixel offsets use the same
     LOS angles as for InSAR.
 
     """
@@ -157,6 +157,18 @@ class Matlab(SceneIO):
                 elif 'utm_zone' in mat_k:
                     utm_zone = int(mat['utm_zone'][0][:-1])
                     utm_zone_letter = str(mat['utm_zone'][0][-1])
+                elif 'phi' in mat_k:
+                    phi0 = mat[mat_k].flatten()
+                elif 'theta' in mat_k:
+                    theta0 = mat[mat_k].flatten()
+
+        if len(theta0) == 1:
+            c.theta = num.ones(num.shape(c.displacement)) * theta0
+
+        if len(theta0) == 1:
+            c.phi = num.ones(num.shape(c.displacement)) * phi0
+
+
 
         if utm_zone is None:
             utm_zone = 33
