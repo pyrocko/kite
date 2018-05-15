@@ -47,7 +47,7 @@ class QuadNode(object):
 
     @property_cached
     def npixel(self):
-        return self.displacement.shape[0] * self.displacement.shape[1]
+        return self.displacement.size
 
     @property_cached
     def mean(self):
