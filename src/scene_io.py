@@ -31,7 +31,7 @@ class AttribDict(dict):
 
 
 class SceneIO(object):
-    """ Prototype class for SARIO objects """
+    """ Prototype class for SARIO objects. """
     def __init__(self, scene=None):
         if scene is not None:
             self._log = scene._log.getChild('IO/%s' % self.__class__.__name__)
@@ -101,18 +101,22 @@ class Matlab(SceneIO):
     """
     Variable naming conventions for Matlab :file:`.mat` container:
 
-        ================== ==================== ============
-        Property           Matlab ``.mat`` name type
-        ================== ==================== ============
-        Scene.displacement ``ig_``              n x m array
-        Scene.phi          ``phi``              n x m array
-        Scene.theta        ``theta``            n x m array
-        Scene.frame.x      ``xx``               n x 1 vector
-        Scene.frame.y      ``yy``               m x 1 vector
-        Scene.utm_zone     ``utm_zone``         str ('33T')
-        ================== ==================== ============
+        ================== ==================== ===================== =====
+        Property           Matlab ``.mat`` name type                  unit
+        ================== ==================== ===================== =====
+        Scene.displacement ``ig_``              n x m array           [m]
+        Scene.phi          ``phi``              float or n x m array  [rad]
+        Scene.theta        ``theta``            float or n x m array  [rad]
+        Scene.frame.x      ``xx``               n x 1 vector          [m]
+        Scene.frame.y      ``yy``               m x 1 vector          [m]
+        Scene.utm_zone     ``utm_zone``         str ('33T')  
+        ================== ==================== ===================== =====
 
-    Displacement is expected to be in meters.
+    Displacement is expected to be in meters. Note that the displacement maps
+    could also be pixel offset maps rather than unwrapped SAR interferograms.
+    For SAR azimuth pixel offset maps calculate ``phi`` from the heading
+    direction and set ``theta=0.``. For SAR range pixel offsets use the same
+    LOS angles as for InSAR.
 
     """
     def validate(self, filename, **kwargs):
@@ -137,6 +141,8 @@ class Matlab(SceneIO):
         utm_n = None
         utm_zone = None
         utm_zone_letter = None
+        phi0 = None
+        theta0 = None
 
         for mat_k, v in mat.items():
             for io_k in c.keys():
@@ -151,6 +157,18 @@ class Matlab(SceneIO):
                 elif 'utm_zone' in mat_k:
                     utm_zone = int(mat['utm_zone'][0][:-1])
                     utm_zone_letter = str(mat['utm_zone'][0][-1])
+                elif 'phi' in mat_k:
+                    phi0 = mat[mat_k].flatten()
+                elif 'theta' in mat_k:
+                    theta0 = mat[mat_k].flatten()
+
+        if len(theta0) == 1:
+            c.theta = num.ones(num.shape(c.displacement)) * theta0
+
+        if len(theta0) == 1:
+            c.phi = num.ones(num.shape(c.displacement)) * phi0
+
+
 
         if utm_zone is None:
             utm_zone = 33
@@ -193,7 +211,6 @@ class Gamma(SceneIO):
     .. note :: Expects:
 
         * [:file:`*`] Binary file from Gamma with displacement in radians
-          or meter.
         * [:file:`*.slc.par`] If you want to translate radians to
           meters using the `radar_frequency`.
         * [:file:`*par`] Parameter file, describing ``corner_lat, corner_lon,
@@ -338,7 +355,7 @@ class Gamma(SceneIO):
 
         phi = self._getLOSAngles(filename, '*phi*')
         theta = self._getLOSAngles(filename, '*theta*')
-        theta = num.cos(theta)
+        theta = theta
 
         if isinstance(phi, num.ndarray):
             phi = phi.reshape(nlines, nrows)
@@ -439,7 +456,7 @@ class ROI_PAC(SceneIO):
         par_file = op.realpath(bin_file) + '.rsc'
         try:
             self._parseParameterFile(par_file)
-            self._log.info('Found parameter file %s' % bin_file)
+            self._log.info('Found parameter file %s' % par_file)
             return par_file
         except (ImportError, IOError):
             raise ImportError('Could not find ROI_PAC parameter file (%s)'
@@ -451,7 +468,7 @@ class ROI_PAC(SceneIO):
 
         params = {}
         required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-                    'Y_STEP', 'WAVELENGTH']
+                    'Y_STEP', 'WAVELENGTH','LAT_REF1', 'LON_REF1']
 
         rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
         with open(par_file, 'r') as par:
@@ -470,6 +487,7 @@ class ROI_PAC(SceneIO):
             'Parameter file %s does not hold required parameters' % par_file)
 
     def read(self, filename, **kwargs):
+        import utm
         """
         :param filename: ROI_PAC binary file
         :type filename: str
@@ -483,15 +501,23 @@ class ROI_PAC(SceneIO):
         par_file = kwargs.pop('par_file', self._getParameterFile(filename))
 
         par = self._parseParameterFile(par_file)
-
+        print(par)
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
+        lat_ref = par['LAT_REF1']
+        lon_ref = par['LON_REF1']             
         look_ref1 = par['LOOK_REF1']
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
+        
+        
+        utm_zone_letter = utm.latitude_to_zone_letter(
+                    par['LAT_REF1'])
+        utm_zone = utm.latlon_to_zone_number(par['LAT_REF1'], par['LON_REF1'])
+        
         look = num.mean(
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
@@ -508,6 +534,7 @@ class ROI_PAC(SceneIO):
         displ *= z_scale
 
         c = self.container
+
         c.displacement = displ
         c.theta = 90. - look
         c.phi = -heading - 180
@@ -522,7 +549,6 @@ class ROI_PAC(SceneIO):
         c.frame.dLon = par['X_STEP']
         c.frame.dLat = par['Y_STEP']
         return self.container
-
 
 class ISCEXMLParser(object):
     def __init__(self, filename):

@@ -60,20 +60,20 @@ class SandboxScene(BaseScene):
 
     @property
     def sources(self):
-        '''
+        """
         :returns: List of sources attached sandbox
         :rtype: list
-        '''
+        """
         return self.config.sources
 
     def setExtent(self, east, north):
-        '''Set the sandbox's extend in pixels
+        """Set the sandbox's extent in pixels
 
         :param east: Pixels in East
         :type east: int
         :param north: Pixels in North
         :type north: int
-        '''
+        """
         if self.reference is not None:
             self._log.warning('Cannot change a referenced model!')
             return
@@ -117,7 +117,7 @@ class SandboxScene(BaseScene):
 
     @property_cached
     def displacement(self):
-        ''' Displacement in LOS '''
+        """ Displacement projected to LOS """
         self.processSources()
         los_factors = self.los_rotation_factors
 
@@ -129,15 +129,15 @@ class SandboxScene(BaseScene):
 
     @property_cached
     def max_horizontal_displacement(self):
-        ''' Maximum horizontal displacement '''
+        """ Maximum horizontal displacement """
         return num.sqrt(self._north**2 + self._east**2).max()
 
     def addSource(self, source):
-        '''Add displacement source to sandbox
+        """Add displacement source to sandbox
 
-        :param source: Displacment Source
+        :param source: Displacement Source
         :type source: :class:`kite.sources.meta.SandboxSource`
-        '''
+        """
         if source not in self.sources:
             self.sources.append(source)
         source.evParametersChanged.subscribe(self._clearModel)
@@ -146,11 +146,11 @@ class SandboxScene(BaseScene):
         self._log.debug('Source %s added' % source.__class__.__name__)
 
     def removeSource(self, source):
-        '''Remove displacement source to sandbox
+        """Remove displacement source from sandbox
 
-        :param source: Displacment Source
+        :param source: Displacement Source
         :type source: :class:`kite.sources.meta.SandboxSource`
-        '''
+        """
         source.evParametersChanged.unsubscribe(self._clearModel)
         self.sources.remove(source)
         self._log.debug('Source %s removed' % source.__class__.__name__)
@@ -159,7 +159,7 @@ class SandboxScene(BaseScene):
         self._clearModel()
 
     def processSources(self):
-        ''' Process displacement sources and update displacements '''
+        """ Process displacement sources and update displacements """
         result = self._process(
             self.frame.coordinates,
             self.sources)
@@ -213,11 +213,13 @@ class SandboxScene(BaseScene):
         return result
 
     def loadReferenceScene(self, filename):
-        '''Load a reference kite scene container into the sandbox
+        """Load a reference kite scene container into the sandbox
+
+        A reference scene could be actually measured InSAR displacements.
 
         :param filename: filename of the scene container to load [.npy, .yml]
         :type filename: str
-        '''
+        """
         from .scene import Scene
         self._log.debug('Loading reference scene from %s' % filename)
         scene = Scene.load(filename)
@@ -225,11 +227,13 @@ class SandboxScene(BaseScene):
         self.config.reference_scene = filename
 
     def setReferenceScene(self, scene):
-        '''Set a reference scene
+        """Set a reference scene.
+
+        A reference scene could be actually measured InSAR displacements.
 
         :param scene: Kite scene
         :type scene: :class:`kite.Scene`
-        '''
+        """
         self.frame._updateConfig(scene.frame.config)
         self.setExtent(scene.cols, scene.rows)
 
@@ -242,11 +246,11 @@ class SandboxScene(BaseScene):
         self._clearModel()
 
     def getKiteScene(self):
-        '''Return a :class:`kite.Scene` from current model.
+        """Return a :class:`kite.Scene` from current model.
 
         :returns: Scene
         :rtype: :class:`Scene`
-        '''
+        """
         from .scene import Scene, SceneConfig
         self._log.debug('Creating kite.Scene from SandboxScene')
 
@@ -272,11 +276,11 @@ class SandboxScene(BaseScene):
         self.evModelUpdated.notify()
 
     def save(self, filename):
-        '''Save the sandbox as kite scene container
+        """Save the sandbox as kite scene container
 
         :param filename: filename to save under
         :type filename: str
-        '''
+        """
         _file, ext = op.splitext(filename)
         filename = filename if ext in ['.yml'] else filename + '.yml'
         self._log.debug('Saving model scene to %s' % filename)
@@ -287,13 +291,13 @@ class SandboxScene(BaseScene):
 
     @classmethod
     def load(cls, filename):
-        '''Load a :class:`kite.SandboxScene`
+        """Load a :class:`kite.SandboxScene`
 
         :param filename: Config file to load [.yml]
         :type filename: str
         :returns: A sandbox from config file
         :rtype: :class:`kite.SandboxScene`
-        '''
+        """
         config = guts.load(filename=filename)
         sandbox_scene = cls(config=config)
         sandbox_scene._log.debug('Loading config from %s' % filename)
