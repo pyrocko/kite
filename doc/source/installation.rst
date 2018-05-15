@@ -43,6 +43,7 @@ Install without root, installing `pyrocko` is a prerequisite. Please visit http:
 	sudo port install py35-yaml
 	sudo port install py35-pyqt5
 	sudo port install py35-setuptools
+    sudo pip3 install git+https://github.com/pyqtgraph/pyqtgraph
 	 
     git clone https://gitext.gfz-potsdam.de/isken/kite.git
     cd kite
