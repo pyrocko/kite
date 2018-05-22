@@ -12,6 +12,9 @@ from kite.util import (Subject, property_cached,  # noqa
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
+NOISE_PATCH_MIN_PX = 1024
+NOISE_PATCH_MAX_NAN = 0.6
+
 noise_regimes = [
     (1./2000, num.inf),
     (1./2000, 1./500),
@@ -156,8 +159,6 @@ class Covariance(object):
     :param config: Config object
     :type config: :class:`~kite.covariance.CovarianceConfig`
     """
-
-    NOISE_PATCH_MIN_PX = 1024
 
     def __init__(self, scene, config=CovarianceConfig()):
         self.evChanged = Subject()
@@ -320,7 +321,8 @@ class Covariance(object):
         t0 = time.time()
 
         node_selection = [n for n in self.quadtree.nodes
-                          if n.npixel > self.NOISE_PATCH_MIN_PX]
+                          if n.npixel > NOISE_PATCH_MIN_PX
+                          and n.nan_fraction < NOISE_PATCH_MAX_NAN]
 
         stdmax = max([n.std for n in node_selection])
         lmax = max([n.std for n in node_selection])
@@ -978,7 +980,7 @@ class Covariance(object):
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
             cov, _ = self.covariance_spectral
             ma = self.covariance_model[0]
-            # print(cov[1]) 
+            # print(cov[1])
             ps = power_spec * spectrum.size
             # print(spectrum.size)
             # print(num.mean(ps[-int(ps.size/9.):-1]))
