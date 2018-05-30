@@ -500,7 +500,7 @@ class Quadtree(object):
         """ Lowest allowed epsilon
         :type: float
         """
-        return self._epsilon_init * .2
+        return self._epsilon_init * .1
 
     @property
     def nan_allowed(self):
