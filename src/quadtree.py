@@ -5,14 +5,6 @@ from pyrocko import guts
 from .util import Subject, property_cached, derampMatrix
 
 
-try:
-    nanmedian = num.nanmedian
-
-except AttributeError:
-    def nanmedian(x, **kwargs):
-        return num.median(x[num.isfinite(x)], **kwargs)
-
-
 class QuadNode(object):
     """ A node (or *tile*) in held by :class:`~kite.Quadtree`. Each node in the
     tree hold a back reference to the quadtree and scene to access
@@ -69,7 +61,7 @@ class QuadNode(object):
         """ Median displacement
         :type: float
         """
-        return float(nanmedian(self.displacement))
+        return float(num.nanmedian(self.displacement))
 
     @property_cached
     def std(self):
@@ -160,7 +152,7 @@ class QuadNode(object):
         :type: float
         """
         phi = self.scene.phi[self._slice_rows, self._slice_cols]
-        return nanmedian(phi[self.displacement_mask])
+        return num.nanmedian(phi[~self.displacement_mask])
 
     @property_cached
     def theta(self):
@@ -168,7 +160,7 @@ class QuadNode(object):
         :type: float
         """
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
-        return nanmedian(theta[self.displacement_mask])
+        return num.nanmedian(theta[~self.displacement_mask])
 
     @property_cached
     def gridE(self):
@@ -449,6 +441,8 @@ class Quadtree(object):
         self.leaves = None
         self.leaf_center_distance = None
         self.leaf_los_rotation_factors = None
+        self.leaf_means = None
+        self.leaf_medians = None
 
     def _initTree(self):
         t0 = time.time()
@@ -643,7 +637,7 @@ class Quadtree(object):
         """
         return len(self.leaves)
 
-    @property
+    @property_cached
     def leaf_means(self):
         """
         :getter: Leaf mean displacements from
@@ -652,7 +646,7 @@ class Quadtree(object):
         """
         return num.array([lf.mean for lf in self.leaves])
 
-    @property
+    @property_cached
     def leaf_medians(self):
         """
         :getter: Leaf median displacements from
