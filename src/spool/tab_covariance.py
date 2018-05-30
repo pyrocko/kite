@@ -671,7 +671,7 @@ class CovarianceCalcResultDialog(QtGui.QMessageBox):
 
         if self.model.covariance.isMatrixPosDefinite(full=True):
             self.setIcon(QtGui.QMessageBox.Information)
-            self.setText('Yeeeha!!<br>%s is positiv definit!' % self.text_tmpl)
+            self.setText('Finished, %s is positiv definit!' % self.text_tmpl)
             self.setInformativeText('')
         else:
             self.setIcon(QtGui.QMessageBox.Warning)
