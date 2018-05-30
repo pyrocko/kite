@@ -78,8 +78,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         phi = num.nanmedian(self.model.scene.phi)
         theta = num.nanmedian(self.model.scene.theta)
 
-        angle =  180-num.rad2deg(phi)
-        print(angle)
+        angle = 180. - num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
@@ -91,7 +90,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             tailLen=tailLen,
             tailWidth=6,
             headLen=25)
-        #self.arrow.setRotation(self.arrow.opts['angle'])
+        self.arrow.setRotation(self.arrow.opts['angle'])
 
         rect_label = self.label.boundingRect()
         rect_arr = self.arrow.boundingRect()
@@ -157,7 +156,7 @@ class KitePlot(pg.PlotWidget):
             self.hint_text.text_template =\
                 '<span style="font-family: monospace; color: #fff;'\
                 'background-color: #000;">'\
-                'Long {east:03.3f}&deg; | Lat {north:02.3f}&deg; |'\
+                'Lon {east:03.3f}&deg; | Lat {north:02.3f}&deg; |'\
                 ' {measure} {value:{length}.{precision}f}</span>'
             self.setLabels(
                 bottom='Longitude',
@@ -291,12 +290,11 @@ class KiteToolColormap(pg.HistogramLUTWidget):
                  [.5, (255, 255, 255)],
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
-        lvl_min = num.nanmin(self._plot.data)
-        lvl_max = num.nanmax(self._plot.data)
-        abs_range = max(abs(lvl_min), abs(lvl_max))
+
+        lvl_max = num.nanmax(num.abs(self._plot.data)) * 1.01
 
         self.gradient.restoreState(cmap)
-        self.setLevels(-abs_range, abs_range)
+        self.setLevels(-lvl_max, lvl_max)
 
     def setQualitativeColormap(self):
         nc = len(_viridis_data) - 1
