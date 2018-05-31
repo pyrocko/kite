@@ -236,8 +236,7 @@ class PyrockoProcessor(SourceProcessor):
             self.engine.store_dirs = [store_dir]
 
             talpa_sources = [src for src in sources
-                             if src.store_dir == store_dir
-                             and src._cached_result is None]
+                             if src.store_dir == store_dir]
 
             pyr_sources = [src.pyrocko_source for src in talpa_sources]
 

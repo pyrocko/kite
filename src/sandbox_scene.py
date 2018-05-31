@@ -186,7 +186,12 @@ class SandboxScene(BaseScene):
 
         for impl in set([src.__implements__ for src in sources]):
             proc_sources = [src for src in sources
-                            if src.__implements__ == impl]
+                            if src.__implements__ == impl
+                            and src._cached_result is None]
+
+            if not proc_sources:
+                continue
+
             processor = avail_processors.get(impl, None)
 
             if processor is None:
