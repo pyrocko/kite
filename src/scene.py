@@ -67,9 +67,15 @@ class FrameConfig(guts.Object):
 
     def __init__(self, *args, **kwargs):
         self.old_import = False
-        for arg in ('dLat', 'dLon'):
-            if arg in kwargs:
-                kwargs.pop(arg)
+        mapping = {
+            'dE': 'dLon',
+            'dN': 'dLat'
+        }
+
+        for new, old in mapping.items():
+            if old in kwargs:
+                kwargs[new] = kwargs.pop(old)
+                kwargs['spacing'] = 'degree'
                 self.old_import = True
 
         guts.Object.__init__(self, *args, **kwargs)
@@ -107,7 +113,8 @@ class Frame(object):
             return
 
         if self.config.old_import:
-            self._log.warning('Importing an old kite format!')
+            self._log.warning('Importing an old kite format...\n '
+                              'Please check your pixel spacing - dE, dN!')
         self.updateExtent()
 
     def updateExtent(self):
