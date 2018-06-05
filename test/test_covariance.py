@@ -36,6 +36,10 @@ class TestCovariance(unittest.TestCase):
         self.sc.covariance.syntheticNoise()
         self.sc.covariance.variance
 
+    def test_quadtree_noise(self):
+        rstate = num.random.RandomState()
+        self.sc.covariance.getQuadtreeNoise(rstate=rstate)
+
     def test_covariance_parallel(self):
         self.sc.quadtree.epsilon = .07
         self.sc.quadtree.tile_size_max = 11000

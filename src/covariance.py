@@ -561,7 +561,7 @@ class Covariance(object):
         return num.mean(weight_mat, axis=0)[nl]
 
     def syntheticNoise(self, shape=(1024, 1024), dEdN=None,
-                       anisotropic=False):
+                       anisotropic=False, rstate=None):
         """Create random synthetic noise from data noise power spectrum.
 
         This function uses the power spectrum of the data noise
@@ -588,7 +588,10 @@ class Covariance(object):
         nE = shape[1] + (shape[1] % 2)
         nN = shape[0] + (shape[0] % 2)
 
-        rfield = num.random.rand(nN, nE)
+        if rstate is None:
+            rstate = num.random.RandomState()
+
+        rfield = rstate.rand(nN, nE)
         spec = num.fft.fft2(rfield)
 
         if not dEdN:
@@ -636,6 +639,29 @@ class Covariance(object):
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
         return noise
+
+    def getQuadtreeNoise(self, rstate=None, gather=num.nanmedian):
+        '''Create noise for a :class:`~kite.quadtree.Quadtree`
+
+        Use :meth:`~kite.covariance.Covariance.getSyntheticNoise` to create
+        data-driven noise on each quadtree leaf, summarized by
+        :param gather:.
+        :param gather: Function gathering leaf's noise realisation,
+            defaults to num.median.
+        :type normalisation: callable, optional
+        :returns: Array of noise level at each quadtree leaf.
+        :rtype: :class:`numpy.ndarray`
+        '''
+        syn_noise = self.syntheticNoise(
+            shape=self.scene.displacement.shape,
+            rstate=rstate)
+        qt = self.quadtree
+        noise_quadtree = num.full(qt.nleaves, num.nan)
+
+        for il, lv in enumerate(qt.leaves):
+            noise_quadtree = gather(
+                syn_noise[lv._slice_rows, lv._slice_cols])
+        return noise_quadtree
 
     def powerspecNoise1D(self, data=None, ndeg=512, nk=512):
         if self._powerspec1d_cached is None:
