@@ -656,12 +656,12 @@ class Covariance(object):
             shape=self.scene.displacement.shape,
             rstate=rstate)
         qt = self.quadtree
-        noise_quadtree = num.full(qt.nleaves, num.nan)
+        noise_quadtree_arr = num.full(qt.nleaves, num.nan)
 
         for il, lv in enumerate(qt.leaves):
-            noise_quadtree = gather(
+            noise_quadtree_arr[il] = gather(
                 syn_noise[lv._slice_rows, lv._slice_cols])
-        return noise_quadtree
+        return noise_quadtree_arr
 
     def powerspecNoise1D(self, data=None, ndeg=512, nk=512):
         if self._powerspec1d_cached is None:
