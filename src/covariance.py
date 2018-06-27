@@ -612,7 +612,7 @@ class Covariance(object):
                 r = num.logical_and(k_rad > k_min, k_rad <= k_max)
                 if i == (k.size-1):
                     r = k_rad > k_min
-                if r.sum() == 0:
+                if not num.any(r):
                     continue
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.] = self.variance
@@ -638,7 +638,9 @@ class Covariance(object):
         spec *= amp
         noise = num.abs(num.fft.ifft2(spec))
         noise -= num.mean(noise)
-        return noise
+
+        # remove shape % 2 padding
+        return noise[:shape[0], :shape[1]]
 
     def getQuadtreeNoise(self, rstate=None, gather=num.nanmedian):
         '''Create noise for a :class:`~kite.quadtree.Quadtree`
@@ -652,10 +654,12 @@ class Covariance(object):
         :returns: Array of noise level at each quadtree leaf.
         :rtype: :class:`numpy.ndarray`
         '''
+        qt = self.quadtree
+
         syn_noise = self.syntheticNoise(
             shape=self.scene.displacement.shape,
             rstate=rstate)
-        qt = self.quadtree
+        syn_noise[self.scene.displacement_mask] = num.nan
         noise_quadtree_arr = num.full(qt.nleaves, num.nan)
 
         for il, lv in enumerate(qt.leaves):

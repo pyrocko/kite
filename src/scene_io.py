@@ -109,7 +109,7 @@ class Matlab(SceneIO):
         Scene.theta        ``theta``            float or n x m array  [rad]
         Scene.frame.x      ``xx``               n x 1 vector          [m]
         Scene.frame.y      ``yy``               m x 1 vector          [m]
-        Scene.utm_zone     ``utm_zone``         str ('33T')  
+        Scene.utm_zone     ``utm_zone``         str ('33T')
         ================== ==================== ===================== =====
 
     Displacement is expected to be in meters. Note that the displacement maps
@@ -507,17 +507,16 @@ class ROI_PAC(SceneIO):
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
         lat_ref = par['LAT_REF1']
-        lon_ref = par['LON_REF1']             
+        lon_ref = par['LON_REF1']
         look_ref1 = par['LOOK_REF1']
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
-        
-        
+
         utm_zone_letter = utm.latitude_to_zone_letter(
                     par['LAT_REF1'])
         utm_zone = utm.latlon_to_zone_number(par['LAT_REF1'], par['LON_REF1'])
-        
+
         look = num.mean(
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
@@ -549,6 +548,7 @@ class ROI_PAC(SceneIO):
         c.frame.dLon = par['X_STEP']
         c.frame.dLat = par['Y_STEP']
         return self.container
+
 
 class ISCEXMLParser(object):
     def __init__(self, filename):

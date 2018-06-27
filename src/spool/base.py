@@ -78,19 +78,19 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         phi = num.nanmedian(self.model.scene.phi)
         theta = num.nanmedian(self.model.scene.theta)
 
-        angle = 180. - num.rad2deg(phi)
+        angle = -num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
         tailLen = 15 + theta_f * 15.
 
         self.arrow.setStyle(
-            angle=angle,
+            angle=0.,
             tipAngle=tipAngle,
             tailLen=tailLen,
             tailWidth=6,
             headLen=25)
-        self.arrow.setRotation(self.arrow.opts['angle'])
+        self.arrow.setRotation(angle)
 
         rect_label = self.label.boundingRect()
         rect_arr = self.arrow.boundingRect()
