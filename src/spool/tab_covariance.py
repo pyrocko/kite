@@ -582,9 +582,9 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             elif self.image.sceneBoundingRect().contains(event[0]):
                 map_pos = self.plotItem.vb.mapSceneToView(event[0])
                 if not map_pos.isNull():
-                    img_pos = self.image.mapFromScene(event).data
-                    value = self.image.image[int(img_pos().x()),
-                                             int(img_pos().y())]
+                    img_pos = self.image.mapFromScene(*event)
+                    value = self.image.image[int(img_pos.x()),
+                                             int(img_pos.y())]
 
                     self.hint['leaf1'] = int(map_pos.x())
                     self.hint['leaf2'] = int(map_pos.y())

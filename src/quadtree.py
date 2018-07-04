@@ -118,6 +118,15 @@ class QuadNode(object):
         return E, N
 
     @property_cached
+    def focal_point_meter(self):
+        """ Node focal point in local coordinates respecting NaN values
+        :type: tuple, float - (easting, northing)
+        """
+        E = float(num.median(self.gridEmeter.compressed()))
+        N = float(num.median(self.gridNmeter.compressed()))
+        return E, N
+
+    @property_cached
     def displacement(self):
         """ Displacement array, slice from :attr:`kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
@@ -171,12 +180,28 @@ class QuadNode(object):
         return self.scene.frame.gridE[self._slice_rows, self._slice_cols]
 
     @property_cached
+    def gridEmeter(self):
+        """ Grid holding local east coordinates,
+            see :attr:`kite.scene.Frame.gridEmeter`.
+        :type: :class:`numpy.ndarray`
+        """
+        return self.scene.frame.gridEmeter[self._slice_rows, self._slice_cols]
+
+    @property_cached
     def gridN(self):
         """ Grid holding local north coordinates,
             see :attr:`kite.scene.Frame.gridN`.
         :type: :class:`numpy.ndarray`
         """
         return self.scene.frame.gridN[self._slice_rows, self._slice_cols]
+
+    @property_cached
+    def gridNmeter(self):
+        """ Grid holding local north coordinates,
+            see :attr:`kite.scene.Frame.gridNmeter`.
+        :type: :class:`numpy.ndarray`
+        """
+        return self.scene.frame.gridNmeter[self._slice_rows, self._slice_cols]
 
     @property
     def llE(self):
@@ -666,6 +691,14 @@ class Quadtree(object):
         :type: :class:`numpy.ndarray`, size ``(N, 2)``
         """
         return num.array([lf.focal_point for lf in self.leaves])
+
+    @property
+    def leaf_focal_points_meter(self):
+        """
+        :getter: Leaf focal points in meter.
+        :type: :class:`numpy.ndarray`, size ``(N, 2)``
+        """
+        return num.array([lf.focal_point_meter for lf in self.leaves])
 
     @property
     def leaf_coordinates(self):

@@ -483,7 +483,7 @@ class Covariance(object):
         if method == 'focal':
             model = self.getModelFunction()
 
-            coords = self.quadtree.leaf_focal_points
+            coords = self.quadtree.leaf_focal_points_meter
             dist_matrix = num.sqrt(
                 (coords[:, 0] - coords[:, 0, num.newaxis])**2
                 + (coords[:, 1] - coords[:, 1, num.newaxis])**2)
@@ -505,8 +505,8 @@ class Covariance(object):
 
             nleaves = self.quadtree.nleaves
             cov_matrix = covariance_ext.covariance_matrix(
-                            self.scene.frame.gridE.filled(),
-                            self.scene.frame.gridN.filled(),
+                            self.scene.frame.gridEmeter.filled(),
+                            self.scene.frame.gridNmeter.filled(),
                             leaf_map,
                             self.covariance_model, self.variance,
                             nthreads, self.config.adaptive_subsampling)\

@@ -224,8 +224,8 @@ class Frame(object):
             self._log.info('Transforming latlon grid to meters...')
             gridN, gridE = latlon_to_ne_numpy(
                 self.llLat, self.llLon,
-                self.gridN.data.ravel(),
-                self.gridE.data.ravel())
+                self.llLat + self.gridN.data.ravel(),
+                self.llLon + self.gridE.data.ravel())
 
             valid_data = num.isnan(self._scene.displacement)
             gridE = num.ma.masked_array(
