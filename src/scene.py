@@ -176,6 +176,26 @@ class Frame(object):
         self.updateExtent()
 
     @property
+    def dEmeter(self):
+        if self.isMeter():
+            return self.dE
+        else:
+            _, dEmeter = latlon_to_ne(
+                self.llLat, self.llLon,
+                self.llLat, self.llLon + self.dE)
+        return dEmeter
+
+    @property
+    def dNmeter(self):
+        if self.isMeter():
+            return self.dN
+        else:
+            dNmeter, _ = latlon_to_ne(
+                self.llLat, self.llLon,
+                self.llLat + self.dN, self.llLon)
+        return dNmeter
+
+    @property
     def spacing(self):
         return self.config.spacing
 
