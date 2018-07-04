@@ -171,6 +171,7 @@ class Covariance(object):
         self._powerspec1d_cached = None
         self._powerspec2d_cached = None
         self._powerspec3d_cached = None
+        self._noise_data_grid = None
         self._initialized = False
         self._nthreads = 0
         self._log = scene._log.getChild('Covariance')
@@ -215,6 +216,7 @@ class Covariance(object):
             self._powerspec1d_cached = None
             self._powerspec2d_cached = None
 
+        self._noise_data_grid = None
         self.covariance_matrix = None
         self.covariance_matrix_focal = None
         self.covariance_spectral = None
@@ -309,6 +311,33 @@ class Covariance(object):
         data[num.isnan(data)] = 0.
         self._noise_data = data
         self._clear()
+
+    @property
+    def noise_data_gridE(self):
+        return self._get_noise_data_grid()[0]
+
+    @property
+    def noise_data_gridN(self):
+        return self._get_noise_data_grid()[1]
+
+    def _get_noise_data_grid(self):
+        if self._noise_data_grid is None:
+            scene = self.scene
+
+            llE, llN = scene.frame.mapENMatrix(*self.noise_coord[:2])
+            sE, sN = scene.frame.mapENMatrix(*self.noise_coord[2:])
+            slice_E = slice(llE, llE + sE + 1)
+            slice_N = slice(llN, llN + sN + 1)
+
+            gridE = scene.frame.gridEmeter[slice_N, slice_E]
+            gridN = scene.frame.gridNmeter[slice_N, slice_E]
+
+            gridE = trimMatrix(self.noise_data, data=gridE)
+            gridN = trimMatrix(self.noise_data, data=gridN)
+
+            self._noise_data_grid = (gridE, gridN)
+
+        return self._noise_data_grid
 
     def selectNoiseNode(self):
         """ Choose noise node from quadtree
@@ -825,13 +854,17 @@ class Covariance(object):
 
         nbins = self.config.spatial_bins
         npairs = self.config.spatial_pairs
+        noise_data = self.noise_data.ravel()
 
-        scene = self.scene
-        noise_data = self.noise_data
+        grdE = self.noise_data_gridE
+        grdN = self.noise_data_gridN
 
-        max_distance = min((noise_data.shape[0] * self.scene.frame.dE),
-                           (noise_data.shape[1] * self.scene.frame.dN))
+        max_distance = min(abs(grdE.min() - grdE.max()),
+                           abs(grdN.min() - grdN.max()))
         dist_bins = num.linspace(0, max_distance, nbins + 1)
+
+        grdE = grdE.ravel()
+        grdN = grdN.ravel()
 
         # Select random coordinates
         rstate = num.random.RandomState(noise_data.size)
@@ -839,14 +872,9 @@ class Covariance(object):
         idx0 = rand_idx[0, :]
         idx1 = rand_idx[1, :]
 
-        c_grid = num.mgrid[0:noise_data.shape[0], 0:noise_data.shape[1]]
-        grdE = (c_grid[0] * scene.frame.dE).ravel()
-        grdN = (c_grid[1] * scene.frame.dN).ravel()
-
         distances = num.sqrt((grdN[idx0] - grdN[idx1])**2 +
                              (grdE[idx0] - grdE[idx1])**2)
 
-        noise_data = noise_data.ravel()
         cov_all = noise_data[idx0] * noise_data[idx1]
         vario_all = (noise_data[idx0] - noise_data[idx1])**2
 

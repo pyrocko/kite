@@ -89,7 +89,7 @@ def derampGMatrix(displ):
     return displ - ramp_f
 
 
-def trimMatrix(displ):
+def trimMatrix(displ, data=None):
     """Trim displacement matrix from all NaN rows and columns
     """
     if displ.ndim != 2:
@@ -110,6 +110,10 @@ def trimMatrix(displ):
             if c1 is False:
                 c1 = c
             c2 = c
+
+    if data is not None:
+        return data[r1:(r2+1), c1:(c2+1)]
+
     return displ[r1:(r2+1), c1:(c2+1)]
 
 

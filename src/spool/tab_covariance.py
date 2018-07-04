@@ -236,9 +236,8 @@ class KiteCovariogram(_KiteSubplotPlot):
 
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
-        frame = self.model.frame
         self.plot.setLabels(
-            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
+            bottom=('Distance', 'm'),
             left='Covariance (m<sup>2</sup>)')
 
         self.cov_spectral = pg.PlotDataItem(antialias=True)

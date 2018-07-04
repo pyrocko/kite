@@ -6,7 +6,7 @@ import os.path as op
 from datetime import datetime as dt
 
 from pyrocko import guts
-from pyrocko.orthodrome import latlon_to_ne  # noqa
+from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
@@ -99,6 +99,7 @@ class Frame(object):
         self.llNutm = None
         self.utm_zone = None
         self.utm_zone_letter = None
+        self._meter_grid = None
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
@@ -132,6 +133,7 @@ class Frame(object):
 
         self.gridE = None
         self.gridN = None
+        self._meter_grid = None
         self.coordinates = None
 
         self.config.regularize()
@@ -213,6 +215,42 @@ class Frame(object):
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
+    def _calculateMeterGrid(self):
+        if self.isMeter():
+            raise ValueError('Frame is defined in meter! '
+                             'Use gridE and gridN for meter grids')
+
+        if self._meter_grid is None:
+            self._log.info('Transforming latlon grid to meters...')
+            gridN, gridE = latlon_to_ne_numpy(
+                self.llLat, self.llLon,
+                self.gridN.data.ravel(),
+                self.gridE.data.ravel())
+
+            valid_data = num.isnan(self._scene.displacement)
+            gridE = num.ma.masked_array(
+                gridE.reshape(self.gridE.shape),
+                valid_data, fill_value=num.nan)
+            gridN = num.ma.masked_array(
+                gridN.reshape(self.gridN.shape),
+                valid_data, fill_value=num.nan)
+            self._meter_grid = (gridE, gridN)
+
+        return self._meter_grid
+
+    @property_cached
+    def gridEmeter(self):
+        if self.isMeter():
+            return self.gridE
+
+        return self._calculateMeterGrid()[0]
+
+    @property_cached
+    def gridNmeter(self):
+        if self.isMeter():
+            return self.gridN
+        return self._calculateMeterGrid()[1]
+
     @property_cached
     def coordinates(self):
         """Local east and north coordinates [m] of all pixels in ``NxM`` matrix.
@@ -237,9 +275,9 @@ class Frame(object):
         :returns: Row and column
         :rtype: tuple (int), (row, column)
         """
-        row = int(E/self.dE) if E > 0 else 0
-        col = int(N/self.dN) if N > 0 else 0
-        return row, col
+        row = round(E/self.dE) if E > 0 else 0
+        col = round(N/self.dN) if N > 0 else 0
+        return int(row), int(col)
 
     @property
     def shape(self):

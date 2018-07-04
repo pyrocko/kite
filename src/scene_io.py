@@ -168,8 +168,6 @@ class Matlab(SceneIO):
         if len(theta0) == 1:
             c.phi = num.ones(num.shape(c.displacement)) * phi0
 
-
-
         if utm_zone is None:
             utm_zone = 33
             utm_zone_letter = 'N'
