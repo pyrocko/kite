@@ -1,10 +1,10 @@
-``Spool`` (GUI)
-===============
+InSAR Scene Inspection with ``Spool``
+=====================================
 InSAR displacement scenes are complex visual datasets, the ``Spool`` user interface offers interactive and intuitive analysis and **parametrization** of all aspects of the container
 
-    * :doc:`reference/kite.scene`,
-    * :doc:`reference/kite.quadtree`
-    * and :doc:`reference/kite.covariance`
+    * :doc:`../reference/kite.scene`,
+    * :doc:`../reference/kite.quadtree`
+    * and :doc:`../reference/kite.covariance`
 
 .. note :: Naming conventions in the GUI represent the :class:`kite.Scene` syntax!
 
@@ -47,7 +47,7 @@ LOS Displacement inspection
 
 The first tab offers simple data inspection of plain parameters. From the side menu we can choose displacement, :abbr:`Line of Sight (LOS)` incident angles and unit their georeferenced unit vectors. :guilabel:`display` offers the components ``displacement, phi, theta, thetaDeg, degPhi, unitE, unitN, unitU``.
 
-.. figure:: ../_images/spool-scene.png
+.. figure:: ../../_images/spool-scene.png
     :alt: InSAR unwrapped displacement scene from Myanmar 2011 earthquake event
 
     An unwrapped InSAR displacement scene from a 2011 Myanmar strike-slip event (Sudhaus and Gomba, 2016 [#f1]_). Red color shows displacement away from the satellite, blue displacement towards LOS.
@@ -59,21 +59,21 @@ Quadtree manipulation
 
 The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. 
 
-The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`examples/03-quadtree`)
+The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`../examples/03-quadtree`)
 
 * epsilon/std threshold (:attr:`~kite.Quadtree.epsilon`)
 * Fraction of NaN values within (:attr:`~kite.Quadtree.nan_allowed`)
 * Maximum and minium dimension of the tile
   (:attr:`~kite.Quadtree.tile_size_max` and :attr:`~kite.Quadtree.tile_size_min`)
 
-.. figure:: ../_images/spool-quadtree_mean.png
+.. figure:: ../../_images/spool-quadtree_mean.png
     :alt: Quadtree parametrization and properties
 
     Interactive quadtree parametrization through the :command:`spool` GUI. Shown here is the mean displacement of the leafs (:attr:`kite.quadtree.QuadNode.mean`).
 
 To get a feel for the covariance and error estimation we can have a look at the absolute weights of the leafs (see :attr:`kite.quadtree.QuadNode.weight` or :func:`kite.Covariance.getLeafWeight`).
 
-.. figure:: ../_images/spool-quadtree_weight.png
+.. figure:: ../../_images/spool-quadtree_weight.png
     :alt: Quadtree nodes with associated errors/weights derived from kite.Covariance
 
     Absolute weight of each :class:`~kite.quadtree.QuadNode` derived from :class:`~kite.Covariance`. Yellow is low weight, blue are higher weighted leafs.
@@ -82,7 +82,7 @@ To get a feel for the covariance and error estimation we can have a look at the 
 .. _spool-covariance:
 
 Covariance parametrisation
-------------------------------
+----------------------------
 
 The covariance of the InSAR scene is a measure for the noise which affects our deformation signal. In order to generate a reasonable geodynamic model we need to quantify the contribution of noise to our signal. A common model for the noise contributionin satellite interferometry is:
 
@@ -90,12 +90,12 @@ The covariance of the InSAR scene is a measure for the noise which affects our d
     
     d_{total} = d_{signal} + [d_{atmosphere} + d_{topography} + d_{err_baseline} + d_{other}]
 
-.. figure:: ../_images/spool-covariance.png
+.. figure:: ../../_images/spool-covariance.png
     :alt: Covariance parametrization through spool GUI
 
     Covariance parametrization through the GUI. The center panels shows the noise selector (green), the 2D plots illustrate (from top) :attr:`~kite.Covariance.covariance_func`, :attr:`~kite.Covariance.structure_func` and the :func:`~kite.Covariance.noiseSpectrum`.
 
-.. figure:: ../_images/spool-covariance_noise.png
+.. figure:: ../../_images/spool-covariance_noise.png
     :width: 50%
     :align: center
     :alt: Noise patch used for covariance/error analysis

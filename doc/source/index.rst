@@ -22,11 +22,17 @@ Overview
 --------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   installation
-   examples/index
-   spool
-   talpa
-   reference/index
-   contributing
+    installation
+    examples/index
+    tools/index
+    reference/index
+    contributing
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

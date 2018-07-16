@@ -1,30 +1,31 @@
-from PySide import QtCore
+from PyQt5 import QtCore
 from pyqtgraph import SignalProxy
 import logging
+from datetime import datetime
 
 from kite import Scene
 from kite.qt_utils import SceneLogModel
 
 
 class SceneModel(QtCore.QObject):
-    ''' Proxy for :class:`kite.Scene` so we can change the scene
-    '''
-    sigSceneModelChanged = QtCore.Signal()
+    ''' Proxy for :class:`kite.Scene` so we can change the scene '''
+    sigSceneModelChanged = QtCore.pyqtSignal(object)
 
-    sigSceneChanged = QtCore.Signal()
-    sigConfigChanged = QtCore.Signal()
+    sigSceneChanged = QtCore.pyqtSignal()
+    sigConfigChanged = QtCore.pyqtSignal()
 
-    sigFrameChanged = QtCore.Signal()
-    sigQuadtreeChanged = QtCore.Signal()
-    _sigQuadtreeChanged = QtCore.Signal()
-    sigQuadtreeConfigChanged = QtCore.Signal()
-    sigCovarianceChanged = QtCore.Signal()
-    sigCovarianceConfigChanged = QtCore.Signal()
+    sigFrameChanged = QtCore.pyqtSignal()
+    sigQuadtreeChanged = QtCore.pyqtSignal(object)
+    _sigQuadtreeChanged = QtCore.pyqtSignal()
+    sigQuadtreeConfigChanged = QtCore.pyqtSignal()
+    sigCovarianceChanged = QtCore.pyqtSignal()
+    sigCovarianceConfigChanged = QtCore.pyqtSignal()
 
-    sigProcessingStarted = QtCore.Signal(str)
-    sigProcessingFinished = QtCore.Signal()
+    sigProcessingStarted = QtCore.pyqtSignal(str)
+    sigProcessingFinished = QtCore.pyqtSignal()
+    sigCalculateWeightMatrixFinished = QtCore.pyqtSignal(object)
 
-    sigLogRecord = QtCore.Signal(object)
+    sigLogRecord = QtCore.pyqtSignal(object)
 
     def __init__(self):
         QtCore.QObject.__init__(self)
@@ -35,10 +36,11 @@ class SceneModel(QtCore.QObject):
         self.covariance = None
         self.log = SceneLogModel(self)
 
-        self._ = SignalProxy(self._sigQuadtreeChanged,
-                             rateLimit=5,
-                             delay=0,
-                             slot=lambda: self.sigQuadtreeChanged.emit())
+        self._ = SignalProxy(
+            self._sigQuadtreeChanged,
+            rateLimit=5,
+            delay=0,
+            slot=lambda: self.sigQuadtreeChanged.emit(object))
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit
@@ -58,7 +60,7 @@ class SceneModel(QtCore.QObject):
         self.covariance = scene.covariance
 
         self.connectSlots()
-        self.sigSceneModelChanged.emit()
+        self.sigSceneModelChanged.emit(object)
 
     def disconnectSlots(self):
         if self.scene is None:
@@ -105,7 +107,7 @@ class SceneModel(QtCore.QObject):
 
         self.scene._log.addHandler(self._log_handler)
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def exportWeightMatrix(self, filename):
         self.sigProcessingStarted.emit(
             'Calculating <span style="font-family: monospace">'
@@ -113,28 +115,30 @@ class SceneModel(QtCore.QObject):
         self.scene.covariance.export_weight_matrix(filename)
         self.sigProcessingFinished.emit()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def calculateWeightMatrix(self):
+        t0 = datetime.now()
         self.sigProcessingStarted.emit(
             'Calculating <span style="font-family: monospace">'
             'Covariance.weight_matrix</span>,'
             ' this can take a few minutes...')
         self.scene.covariance.weight_matrix
         self.sigProcessingFinished.emit()
+        self.sigCalculateWeightMatrixFinished.emit(datetime.now()-t0)
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def importFile(self, filename):
         self.sigProcessingStarted.emit('Importing scene...')
         self.setScene(Scene.import_data(filename))
         self.sigProcessingFinished.emit()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def loadFile(self, filename):
         self.sigProcessingStarted.emit('Loading scene...')
         self.setScene(Scene.load(filename))
         self.sigProcessingFinished.emit()
 
-    @QtCore.Slot(str)
+    @QtCore.pyqtSlot(str)
     def loadConfig(self, filename):
         self.scene.load_config(filename)
 
@@ -144,18 +148,18 @@ class QSceneQuadtreeProxy(QtCore.QObject):
         QtCore.QObject.__init__(self, scene_proxy)
         self.scene_proxy = scene_proxy
 
-    @QtCore.Slot(float)
+    @QtCore.pyqtSlot(float)
     def setEpsilon(self, value):
         self.scene_proxy.quadtree.epsilon = value
 
-    @QtCore.Slot(float)
+    @QtCore.pyqtSlot(float)
     def setNanFraction(self, value):
         self.scene_proxy.quadtree.nan_allowed = value
 
-    @QtCore.Slot(float)
+    @QtCore.pyqtSlot(float)
     def setTileMaximum(self, value):
         self.scene_proxy.quadtree.tile_size_max = value
 
-    @QtCore.Slot(float)
+    @QtCore.pyqtSlot(float)
     def setTileMinimum(self, value):
         self.scene_proxy.quadtree.tile_size_min = value

@@ -13,6 +13,8 @@ __all__ = ['OkadaSource', 'OkadaPath', 'DislocProcessor']
 
 
 class OkadaSource(SandboxSourceRectangular):
+    '''Rectangular Okada source modell.
+    '''
 
     __implements__ = 'disloc'
 
@@ -179,12 +181,11 @@ class OkadaPath(SandboxSource):
         }
 
         segment = self.segments[pos]
-        for attr, val in segment_update.iteritems():
+        for attr, val in segment_update.items():
             segment.__setattr__(attr, val)
 
     def addNode(self, easting, northing):
         self.nodes.append([easting, northing])
-        print self.nodes
         self.segments.append(
             self._newSegment(
                 e1=self.nodes[-2][0],
@@ -250,7 +251,7 @@ class DislocProcessor(SourceProcessor):
         for nu in src_nu:
             src_arr = num.vstack([src.dislocSource() for src in sources
                                   if src.nu == nu])
-            res = disloc_ext.disloc(src_arr, coords, src.nu, nthreads)
+            res = disloc_ext.disloc(src_arr, coords, nu, nthreads)
 
             result['displacement.e'] += res[:, 0]
             result['displacement.n'] += res[:, 1]

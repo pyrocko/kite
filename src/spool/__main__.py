@@ -1,27 +1,26 @@
 #!/bin/python
 import sys
 import argparse as ap
-from kite.spool import Spool
+from kite.spool import spool
 
 
 def main(args=None):
     '''
     Spool app deployed through setuptools
     '''
+    if args is None:
+        args = sys.argv[1:]
+
     epilog = '''Spool is part of the kite InSAR framework.
-More at http://pyrocko.org, http://github.com/pyrocko
 
-BriDGes DFG Project, University of Kiel
-
- Marius Isken (marius.isken@gfz-potsdam.de)
- Henriette Sudhaus'''
+Author: Marius Isken (marius.isken@gfz-potsdam.de)
+Documentation: https://pyrocko.org'''
     desc = 'InSAR deformation inspector, quadtree and covariance'
 
     parser = ap.ArgumentParser(
         prog='spool',
         epilog=epilog,
         description=desc,
-        version='0.2',
         parents=[],
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',
@@ -69,8 +68,12 @@ Available Synthetic Displacement:
             sys.exit(0)
 
     if sc:
-        Spool(scene=sc)
+        spool(scene=sc)
     elif ns.load is not None:
-        Spool(import_data=ns.load)
+        spool(import_file=ns.load)
     elif ns.file is not None:
-        Spool(load_file=ns.file)
+        spool(load_file=ns.file)
+
+
+if __name__ == '__main__':
+    main()

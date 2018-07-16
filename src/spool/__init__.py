@@ -1,4 +1,4 @@
 #!/bin/python
-from .spool import Spool
+from .spool import Spool, spool
 
-__all__ = ['Spool']
+__all__ = ['Spool', 'spool']

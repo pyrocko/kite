@@ -1,45 +1,66 @@
-from PySide import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 from pyqtgraph import dockarea
 import pyqtgraph as pg
 
-from .config import config
+from .config import getConfig
 from .util import SourceROI
 
 import numpy as num
-
 
 d2r = num.pi / 180.
 
 
 class SandboxSceneLayout(pg.GraphicsLayoutWidget):
+
+    PLOT_VIEWS = ['north', 'east', 'down', 'los']
+
     def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.sandbox = sandbox
 
         self.plots = [
-            DisplacementPlot(
-                sandbox,
-                title='North',
-                component=lambda m: m.north),
-            DisplacementPlot(
-                sandbox,
-                title='East',
-                component=lambda m: m.east),
-            DisplacementVectorPlot(
-                sandbox,
-                title='Down',
-                component=lambda m: m.down),
-            DisplacementPlot(
-                sandbox,
-                title='LOS',
-                component=lambda m: m.displacement)]
-        self.plots[-1].addHintText()
+                DisplacementPlot(
+                    sandbox,
+                    title='North',
+                    component=lambda m: m.north),
+                DisplacementPlot(
+                    sandbox,
+                    title='East',
+                    component=lambda m: m.east),
+                DisplacementVectorPlot(
+                    sandbox,
+                    title='Down',
+                    component=lambda m: m.down),
+                DisplacementPlot(
+                    sandbox,
+                    title='LOS',
+                    component=lambda m: m.displacement)
+            ]
+
+        for plt in self.plots:
+            plt.vb.menu = QtWidgets.QMenu(self)
+
+        self.updateViews()
+        getConfig().qconfig.updated.connect(self.updateViews)
 
         self._mov_sig = pg.SignalProxy(
             self.scene().sigMouseMoved,
             rateLimit=60, slot=self.mouseMoved)
 
-        for ip, plt in enumerate(self.plots):
+    @QtCore.pyqtSlot()
+    def updateViews(self):
+        self.clear()
+        for plt in self.plots:
+            plt.removeHintText()
+
+        config_mask = [
+            getConfig().__getattribute__(cfg)
+            for cfg in ('view_north', 'view_east', 'view_down', 'view_los')]
+
+        visible_plots = [plt for ip, plt in enumerate(self.plots)
+                         if config_mask[ip]]
+
+        for ip, plt in enumerate(visible_plots):
             row = ip / 2
             col = ip % 2 + 1
 
@@ -52,21 +73,9 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
                 plt.setXLink(self.plots[0])
                 plt.setYLink(self.plots[0])
 
-        def getAxis(plt, orientation, label):
-            axis = pg.AxisItem(
-                orientation=orientation,
-                linkView=plt.vb)
-            axis.setLabel(label, units='m')
-            return axis
-
-        plts = self.plots
-        self.addItem(getAxis(plts[0], 'left', 'Northing'), row=0, col=0)
-        self.addItem(getAxis(plts[1], 'left', 'Northing'), row=1, col=0)
-        self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
-        self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
-
-        for plt in self.plots:
-            plt.vb.menu = QtGui.QMenu(self)
+        if len(visible_plots) > 0:
+            visible_plots[-1].addHintText()
+            visible_plots[-1].autoRange(items=[visible_plots[-1].image])
 
     def resizeEvent(self, ev):
         pg.GraphicsLayoutWidget.resizeEvent(self, ev)
@@ -74,12 +83,13 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
             viewbox = self.plots[0].getViewBox()
             viewbox.autoRange()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
         self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
 
 
 class ModelReferenceLayout(pg.GraphicsLayoutWidget):
+
     def __init__(self, sandbox, *args, **kwargs):
         pg.GraphicsLayoutWidget.__init__(self, **kwargs)
         self.sandbox = sandbox
@@ -125,22 +135,22 @@ class ModelReferenceLayout(pg.GraphicsLayoutWidget):
         self.addItem(getAxis(plts[0], 'bottom', 'Easting'), row=2, col=1)
         self.addItem(getAxis(plts[1], 'bottom', 'Easting'), row=2, col=2)
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
         self.sandbox.cursor_tracker.sigMouseMoved.emit(event)
 
 
-class CursorRect(QtGui.QGraphicsRectItem):
+class CursorRect(QtWidgets.QGraphicsRectItem):
     pen = pg.mkPen((0, 0, 0, 120), width=1.)
     cursor = QtCore.QRectF(
         (QtCore.QPointF(-1.5, -1.5)),
         (QtCore.QPointF(1.5, 1.5)))
 
     def __init__(self):
-        QtGui.QGraphicsRectItem.__init__(self, self.cursor)
+        QtWidgets.QGraphicsRectItem.__init__(self, self.cursor)
         self.setPen(self.pen)
         self.setZValue(1e9)
-        self.setFlag(QtGui.QGraphicsItem.ItemIgnoresTransformations)
+        self.setFlag(QtWidgets.QGraphicsItem.ItemIgnoresTransformations)
 
 
 class DisplacementPlot(pg.PlotItem):
@@ -175,6 +185,8 @@ class DisplacementPlot(pg.PlotItem):
             parentPos=(.01, .01))
         self.title_label.setOpacity(.6)
 
+        self.hint_text = None
+
         self.sandbox.sigModelUpdated.connect(
             self.update)
         self.sandbox.sources.modelAboutToBeReset.connect(
@@ -190,7 +202,7 @@ class DisplacementPlot(pg.PlotItem):
     def data(self):
         return self.component(self.sandbox.model)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def update(self):
         self.image.updateImage(self.data.T)
         self.transFromFrame()
@@ -201,18 +213,18 @@ class DisplacementPlot(pg.PlotItem):
             self.sandbox.frame.dE,
             self.sandbox.frame.dN)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def addSourceROIS(self):
         self.rois = []
         index = QtCore.QModelIndex()
-        for isrc in xrange(self.sandbox.sources.rowCount(index)):
+        for isrc in range(self.sandbox.sources.rowCount(index)):
             index = self.sandbox.sources.index(isrc, 0, index)
             roi = index.data(SourceROI)
             roi.setParent(self)
             self.rois.append(roi)
             self.addItem(roi)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def removeSourceROIS(self):
         if self.rois:
             for roi in self.rois:
@@ -224,7 +236,7 @@ class DisplacementPlot(pg.PlotItem):
         self.sandbox.cursor_tracker.sigMouseMoved.connect(self.mouseMoved)
         self.addItem(self.cursor)
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
 
         if self.vb.sceneBoundingRect().contains(event[0]):
@@ -241,12 +253,12 @@ class DisplacementPlot(pg.PlotItem):
             self.sandbox.cursor_tracker.sigCursorMoved.emit((map_pos, value))
             self.cursor.hide()
         else:
-            if not config.show_cursor:
+            if not getConfig().show_cursor:
                 self.cursor.hide()
             else:
                 self.cursor.show()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def drawCursor(self, pos):
         pos, _ = pos
         self.cursor.setPos(pos)
@@ -267,7 +279,12 @@ class DisplacementPlot(pg.PlotItem):
         self.hint_text.setOpacity(.6)
         self.sandbox.cursor_tracker.sigCursorMoved.connect(self.updateHintText)
 
-    @QtCore.Slot()
+    def removeHintText(self):
+        if self.hint_text is not None:
+            self.removeItem(self.hint_text)
+            self.hint_text = None
+
+    @QtCore.pyqtSlot(object)
     def updateHintText(self, pos):
         pos, value = pos
         self.hint_text.setText(
@@ -283,12 +300,10 @@ class DisplacementVectorPlot(DisplacementPlot):
         self.addItem(vectors)
 
 
-class DisplacementVectors(QtGui.QGraphicsItemGroup):
-
-    nvectors = config.nvectors
+class DisplacementVectors(QtWidgets.QGraphicsItemGroup):
 
     def __init__(self, plot, *args, **kwargs):
-        QtGui.QGraphicsItemGroup.__init__(
+        QtWidgets.QGraphicsItemGroup.__init__(
             self, parent=plot, *args, **kwargs)
         self.vb = plot.vb
         self.plot = plot
@@ -300,8 +315,8 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
         self.vectors = []
 
         self.vb.geometryChanged.connect(self.prepareGeometryChange)
-        config.qconfig.updated.connect(self.createVectors)
-        config.qconfig.updated.connect(self.updateColor)
+        getConfig().qconfig.updated.connect(self.createVectors)
+        getConfig().qconfig.updated.connect(self.updateVectorAppearance)
 
         self.createVectors()
 
@@ -309,16 +324,18 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
         for vec in self.vectors:
             vec.hide()
 
-        if len(self.vectors) < config.nvectors:
-            while len(self.vectors) < config.nvectors:
+        if len(self.vectors) < getConfig().nvectors:
+            while len(self.vectors) < getConfig().nvectors:
                 vec = Vector(self)
                 self.vectors.append(vec)
                 self.addToGroup(vec)
 
-    def updateColor(self):
-        Vector.arrow_color.setRgb(*config.vector_color)
+    def updateVectorAppearance(self):
+        Vector.arrow_color.setRgb(*getConfig().vector_color)
         Vector.arrow_brush.setColor(Vector.arrow_color)
         Vector.arrow_pen.setBrush(Vector.arrow_brush)
+        Vector.arrow_pen.setWidth(getConfig().vector_pen_thickness)
+        Vector.relative_length = getConfig().vector_relative_length
 
     def boundingRect(self):
         return self.vb.viewRect()
@@ -328,7 +345,7 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
         h = r.height()
         w = r.width()
 
-        nvectors = config.nvectors
+        nvectors = getConfig().nvectors
 
         nx = int(num.sqrt(nvectors) * float(w)/h)
         ny = int(num.sqrt(nvectors) * float(h)/w)
@@ -345,8 +362,8 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
         self.length_scale = length_scale if length_scale > 0. else 1.
         self.scale_view = (w+h)/2 / painter.window().height()*2.5
 
-        for ix in xrange(nx):
-            for iy in xrange(ny):
+        for ix in range(nx):
+            for iy in range(ny):
                 if ivec > nvectors:
                     break
                 vec = self.vectors[ivec]
@@ -382,13 +399,16 @@ class DisplacementVectors(QtGui.QGraphicsItemGroup):
             self.vectors[ivec].hide()
             ivec += 1
 
-        QtGui.QGraphicsItemGroup.paint(self, painter, option, parent)
+        QtWidgets.QGraphicsItemGroup.paint(self, painter, option, parent)
 
 
-class Vector(QtGui.QGraphicsItem):
+class Vector(QtWidgets.QGraphicsItem):
 
-    arrow_color = QtGui.QColor(*config.vector_color)
-    arrow_brush = QtGui.QBrush(arrow_color, QtCore.Qt.SolidPattern)
+    arrow_color = QtGui.QColor(
+        *getConfig().vector_color)
+    arrow_brush = QtGui.QBrush(
+        arrow_color,
+        QtCore.Qt.SolidPattern)
     arrow_pen = QtGui.QPen(
         arrow_brush,
         1,
@@ -396,8 +416,10 @@ class Vector(QtGui.QGraphicsItem):
         QtCore.Qt.RoundCap,
         QtCore.Qt.RoundJoin)
 
+    relative_length = getConfig().vector_relative_length
+
     def __init__(self, parent):
-        QtGui.QGraphicsItem.__init__(self, parent=parent)
+        QtWidgets.QGraphicsItem.__init__(self, parent=parent)
 
         self.p1 = QtCore.QPointF()
         self.p2 = QtCore.QPointF()
@@ -410,6 +432,8 @@ class Vector(QtGui.QGraphicsItem):
         return QtCore.QRectF(self.p1, self.p2)
 
     def setOrientation(self, dEast, dNorth):
+        dEast *= (self.relative_length / 100)
+        dNorth *= (self.relative_length / 100)
         self.p2.setX(dEast)
         self.p2.setY(dNorth)
         self.line.setP2(self.p2)
@@ -421,7 +445,7 @@ class Vector(QtGui.QGraphicsItem):
         painter.setRenderHint(QtGui.QPainter.Antialiasing)
         painter.setCompositionMode(QtGui.QPainter.CompositionMode_SourceOver)
 
-        arrow_length = self.line.length() * .3
+        arrow_length = self.line.length() * .3 * (self.relative_length / 100.)
         d = self.line.angle()
         head_p1 = self.p2 - QtCore.QPointF(
             num.sin(d*d2r + num.pi/3) * arrow_length,
@@ -432,7 +456,7 @@ class Vector(QtGui.QGraphicsItem):
             num.cos(d*d2r + num.pi - num.pi/3) * arrow_length)
 
         painter.drawLine(self.line)
-        painter.drawPolyline([head_p1, self.p2, head_p2])
+        painter.drawPolyline(*[head_p1, self.p2, head_p2])
 
 
 class ColormapPlots(pg.HistogramLUTWidget):
@@ -455,7 +479,7 @@ class ColormapPlots(pg.HistogramLUTWidget):
         self.axis.setLabel('Displacement / m')
         self.setSymColormap()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def setSymColormap(self):
         cmap = {'ticks':
                 [[0, (106, 0, 31, 255)],

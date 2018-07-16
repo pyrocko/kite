@@ -16,12 +16,14 @@ class PyrockoSource(object):
         SandboxSource.parametersUpdated(self)
 
     def updatePyrockoSource(self):
-        for arg, value in self._src_args.iteritems():
+        for arg, value in self._src_args.items():
             self.pyrocko_source.__setattr__(arg, value)
 
 
 class PyrockoRectangularSource(SandboxSourceRectangular, PyrockoSource):
-
+    '''Classical Haskell source model modified for bilateral rupture.
+    See :class:`pyrocko.gf.seismosizer.RectangularSource`.
+    '''
     __implements__ = 'pyrocko'
 
     decimation_factor = Int.T(
@@ -57,7 +59,10 @@ class PyrockoRectangularSource(SandboxSourceRectangular, PyrockoSource):
 
 
 class PyrockoMomentTensor(SandboxSource, PyrockoSource):
+    '''A moment tensor point source.
 
+    See :class:`pyrocko.gf.seismosizer.MomentTensor`.
+    '''
     __implements__ = 'pyrocko'
 
     store_dir = String.T(
@@ -105,7 +110,10 @@ class PyrockoMomentTensor(SandboxSource, PyrockoSource):
 
 
 class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
+    '''A double-couple point source.
 
+    See :class:`pyrocko.gf.seismosizer.DCSource`.
+    '''
     __implements__ = 'pyrocko'
 
     strike = Float.T(
@@ -151,7 +159,10 @@ class PyrockoDoubleCouple(SandboxSource, PyrockoSource):
 
 
 class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
+    '''A ring fault with vertical doublecouples.
 
+    See :class:`pyrocko.gf.seismosizer.RingfaultSource`.
+    '''
     __implements__ = 'pyrocko'
 
     store_dir = String.T(
@@ -225,8 +236,7 @@ class PyrockoProcessor(SourceProcessor):
             self.engine.store_dirs = [store_dir]
 
             talpa_sources = [src for src in sources
-                             if src.store_dir == store_dir
-                             and src._cached_result is None]
+                             if src.store_dir == store_dir]
 
             pyr_sources = [src.pyrocko_source for src in talpa_sources]
 

@@ -1,4 +1,4 @@
-The SandboxScene Module
+``SandboxScene`` Module
 =======================
 
 .. autoclass:: kite.sandbox_scene.SandboxSceneConfig

@@ -8,6 +8,9 @@ def main(args=None):
     '''
     Talpa app deployed through setuptools
     '''
+    if args is None:
+        args = sys.argv[1:]
+
     epilog = '''Talpa is part of the kite InSAR framework.
 More at http://pyrocko.org, http://github.com/pyrocko
 
@@ -21,7 +24,6 @@ BriDGes DFG Project, University of Kiel
         prog='talpa',
         epilog=epilog,
         description=desc,
-        version='0.1',
         parents=[],
         formatter_class=ap.RawTextHelpFormatter,
         prefix_chars='-',
@@ -36,4 +38,8 @@ BriDGes DFG Project, University of Kiel
 
     ns = parser.parse_args(args)
 
-    Talpa(ns.file)
+    Talpa(filename=ns.file)
+
+
+if __name__ == '__main__':
+    main()

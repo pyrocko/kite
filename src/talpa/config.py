@@ -1,15 +1,18 @@
-from PySide import QtGui, QtCore
-from util import get_resource
 import os
 import logging
 
+from PyQt5 import QtCore, QtWidgets, QtGui
+from .util import get_resource
+
 from kite.qt_utils import loadUi
-from pyrocko.guts import Object, Bool, String, Int, Tuple, load
+from pyrocko.guts import Object, Bool, String, Int, Float, Tuple, List, load
 from os import path
 
 
 config_file = path.expanduser('~/.config/kite/talpa_config.yml')
 logger = logging.getLogger('TalpaConfig')
+
+config_instance = None
 
 
 class TalpaConfig(Object):
@@ -25,12 +28,39 @@ class TalpaConfig(Object):
 
     vector_color = Tuple.T(
         default=(0, 0, 0, 100),
-        help='Color of displacement arrow, RGBA (0, 0 ,0 , 100)')
+        help='Color of the displacement arrows, RGBA (0, 0, 0, 100)')
 
-    class QConfig(QtCore.QObject):
-        updated = QtCore.Signal()
+    vector_relative_length = Int.T(
+        default=100,
+        help='Relative length of the arrow.')
 
-    qconfig = QConfig()
+    vector_pen_thickness = Float.T(
+        default=1.,
+        help='Thickness of the arrows.')
+
+    view_north = Bool.T(
+        default=True,
+        help='Show the north view of displacement.')
+
+    view_east = Bool.T(
+        default=True,
+        help='Show the east view of displacement.')
+
+    view_down = Bool.T(
+        default=True,
+        help='Show the down view of displacement.')
+
+    view_los = Bool.T(
+        default=True,
+        help='Show the los view of displacement.')
+
+    def __init__(self, *args, **kwargs):
+
+        class QConfig(QtCore.QObject):
+            updated = QtCore.pyqtSignal()
+
+        Object.__init__(self, *args, **kwargs)
+        self.qconfig = QConfig()
 
     def saveConfig(self):
         self.regularize()
@@ -54,31 +84,35 @@ def createDefaultConfig():
 
 
 def getConfig():
-    if not path.isfile(config_file):
-        createDefaultConfig()
-    try:
-        logger.info('Loading config from %s...' % config_file)
-        config = load(filename=config_file)
-    except KeyError:
-        createDefaultConfig()
-        config = TalpaConfig()
-    return config
+    global config_instance
+
+    if not config_instance:
+        if not path.isfile(config_file):
+            createDefaultConfig()
+        try:
+            logger.info('Loading config from %s...' % config_file)
+            config_instance = load(filename=config_file)
+        except KeyError:
+            createDefaultConfig()
+            config_instance = TalpaConfig()
+
+    return config_instance
 
 
-config = getConfig()
+class ConfigDialog(QtWidgets.QDialog):
 
-
-class ConfigDialog(QtGui.QDialog):
-
-    attributes = ['show_cursor', 'default_gf_dir', 'nvectors', 'vector_color']
-
-    completer = QtGui.QCompleter()
-    completer_model = QtGui.QFileSystemModel(completer)
-    completer.setModel(completer_model)
-    completer.setMaxVisibleItems(8)
+    attributes = ['show_cursor', 'default_gf_dir', 'nvectors', 'vector_color',
+                  'vector_relative_length', 'vector_pen_thickness',
+                  'view_east', 'view_north', 'view_down', 'view_los']
 
     def __init__(self, *args, **kwargs):
-        QtGui.QDialog.__init__(self, *args, **kwargs)
+        QtWidgets.QDialog.__init__(self, *args, **kwargs)
+
+        self.completer = QtWidgets.QCompleter()
+        self.completer_model = QtWidgets.QFileSystemModel(self.completer)
+        self.completer.setModel(self.completer_model)
+        self.completer.setMaxVisibleItems(8)
+
         loadUi(get_resource('dialog_config.ui'), self)
 
         self.ok_button.released.connect(
@@ -89,10 +123,10 @@ class ConfigDialog(QtGui.QDialog):
         self.apply_button.released.connect(
             self.setAttributes)
 
-        self.vector_color_picker = QtGui.QColorDialog(self)
-        self.vector_color_picker.\
-            setCurrentColor(QtGui.QColor(*config.vector_color))
-        self.vector_color_picker.\
+        self.vector_color_picker = QtWidgets.QColorDialog(self)
+        self.vector_color_picker. \
+            setCurrentColor(QtGui.QColor(*getConfig().vector_color))
+        self.vector_color_picker. \
             setOption(self.vector_color_picker.ShowAlphaChannel)
         self.vector_color_picker.colorSelected.connect(
             self.updateVectorColor)
@@ -111,9 +145,9 @@ class ConfigDialog(QtGui.QDialog):
 
         self.getAttributes()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def chooseStoreDir(self):
-        folder = QtGui.QFileDialog.getExistingDirectory(
+        folder = QtWidgets.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
         if folder != '':
             self.default_gf_dir.setText(folder)
@@ -123,7 +157,7 @@ class ConfigDialog(QtGui.QDialog):
     def getAttributes(self):
         for attr in self.attributes:
             qw = self.__getattribute__(attr)
-            value = config.__getattribute__(attr)
+            value = getConfig().__getattribute__(attr)
             if isinstance(value, bool):
                 qw.setChecked(value)
             elif isinstance(value, str):
@@ -131,19 +165,20 @@ class ConfigDialog(QtGui.QDialog):
             else:
                 qw.setValue(value)
 
+    @QtCore.pyqtSlot()
     def setAttributes(self):
         for attr in self.attributes:
             qw = self.__getattribute__(attr)
-            if isinstance(qw, QtGui.QCheckBox):
+            if isinstance(qw, QtWidgets.QCheckBox):
                 value = qw.isChecked()
-            elif isinstance(qw, QtGui.QLineEdit):
+            elif isinstance(qw, QtWidgets.QLineEdit):
                 value = str(qw.text())
             else:
                 value = qw.value()
 
-            config.__setattr__(attr, value)
+            getConfig().__setattr__(attr, value)
 
-        config.saveConfig()
+        getConfig().saveConfig()
 
     def setButtonColor(self, rgba):
         self.vector_color.setStyleSheet(
@@ -151,10 +186,10 @@ class ConfigDialog(QtGui.QDialog):
             'border: none;' % rgba)
 
     def getButtonColor(self):
-        return config.vector_color
+        return getConfig().vector_color
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot(QtGui.QColor)
     def updateVectorColor(self, qcolor):
-        config.vector_color = (qcolor.red(), qcolor.green(), qcolor.blue(),
-                               qcolor.alpha())
-        self.setButtonColor(config.vector_color)
+        getConfig().vector_color = (
+            qcolor.red(), qcolor.green(), qcolor.blue(), qcolor.alpha())
+        self.setButtonColor(getConfig().vector_color)

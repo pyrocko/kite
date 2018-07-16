@@ -1,9 +1,10 @@
 #!/usr/bin/python2
+import numpy as num
 from collections import OrderedDict
-from PySide import QtGui
+
+from PyQt5 import QtGui, QtCore
 
 import pyqtgraph as pg
-import numpy as num
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from kite.qt_utils import loadUi
@@ -36,13 +37,14 @@ class KiteScene(KiteView):
         self.parameters = [self.param_scene]
 
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
+
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
+        KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
 
-        KiteView.__init__(self)
-
+    @QtCore.pyqtSlot()
     def modelChanged(self):
         self.main_widget.update()
         self.main_widget.transFromFrame()
@@ -92,14 +94,14 @@ class KiteToolTransect(QtGui.QDialog):
 
         loadUi(get_resource('transect.ui'), baseinstance=self)
 
-        pxmap = self.style().standardPixmap
+        icon = self.style().standardIcon
 
         self.closeButton.setIcon(
-            pxmap(QtGui.QStyle.SP_DialogCloseButton))
+            icon(QtGui.QStyle.SP_DialogCloseButton))
         self.createButton.setIcon(
-            pxmap(QtGui.QStyle.SP_ArrowUp))
+            icon(QtGui.QStyle.SP_ArrowUp))
         self.removeButton.setIcon(
-            pxmap(QtGui.QStyle.SP_DialogDiscardButton))
+            icon(QtGui.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None
@@ -206,7 +208,9 @@ class KiteParamScene(KiteParameterGroup):
                  'los.unitN': 'unitN',
                  'los.unitU': 'unitU',
                  },
-             'value': 'displacement'}
+             'value': 'displacement',
+             'tip': 'Change the displayed component of the displacement field.'
+             }
         component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
         self.pushChild(component)
@@ -220,15 +224,11 @@ class KiteParamSceneFrame(KiteParameterGroup):
         self.parameters = OrderedDict([
             ('cols', None),
             ('rows', None),
-            ('llLat', None),
-            ('llLon', None),
-            ('dLat', None),
-            ('dLon', None),
-            ('extentE', None),
-            ('extentN', None),
-            ('spherical_distortion', None),
             ('dN', None),
             ('dE', None),
+            ('spacing', None),
+            ('llLat', None),
+            ('llLon', None),
             ('llNutm', None),
             ('llEutm', None),
             ('utm_zone', None),
@@ -253,14 +253,6 @@ class KiteParamSceneMeta(KiteParameterGroup):
             return dt.strftime(dt.fromtimestamp(d), fmt)
 
         self.parameters = OrderedDict([
-            ('scene_title',
-             lambda sc: sc.meta.scene_title),
-            ('scene_id',
-             lambda sc: sc.meta.scene_id),
-            ('satellite_name',
-             lambda sc: sc.meta.satellite_name),
-            ('orbit_direction',
-             lambda sc: sc.meta.orbit_direction),
             ('time_master',
              lambda sc: str_to_time(sc.meta.time_master)),
             ('time_slave',
@@ -275,3 +267,53 @@ class KiteParamSceneMeta(KiteParameterGroup):
                                     model=model,
                                     model_attr='scene',
                                     **kwargs)
+
+        def update_meta_info(key, value):
+            self.model.scene.meta.__setattr__(key, value)
+
+        p = {'name': 'scene_title',
+             'value': self.model.scene.meta.scene_title,
+             'type': 'str',
+             'tip': 'Title of the displacement scene'
+             }
+
+        self.scene_title = pTypes.SimpleParameter(**p)
+        self.scene_title.sigValueChanged.connect(
+            lambda v: update_meta_info('scene_title', v.value()))
+
+        p = {'name': 'scene_id',
+             'value': self.model.scene.meta.scene_id,
+             'type': 'str'
+             }
+
+        self.scene_id = pTypes.SimpleParameter(**p)
+        self.scene_id.sigValueChanged.connect(
+            lambda v: update_meta_info('scene_id', v.value()))
+
+        p = {'name': 'satellite_name',
+             'value': self.model.scene.meta.satellite_name,
+             'type': 'str',
+             'tip': 'Name of the satellite'
+             }
+
+        self.satellite_name = pTypes.SimpleParameter(**p)
+        self.satellite_name.sigValueChanged.connect(
+            lambda v: update_meta_info('satellite_name', v.value()))
+
+        p = {'name': 'orbital_node',
+             'values': {
+                'Ascending': 'Ascending',
+                'Descending': 'Descending',
+                'Undefined': 'Undefined',
+             },
+             'value': self.model.scene.meta.orbital_node,
+             'tip': 'Satellite orbit direction'
+             }
+        self.orbital_node = pTypes.ListParameter(**p)
+        self.orbital_node.sigValueChanged.connect(
+            lambda v: update_meta_info('orbital_node', v.value()))
+
+        self.pushChild(self.orbital_node)
+        self.pushChild(self.satellite_name)
+        self.pushChild(self.scene_id)
+        self.pushChild(self.scene_title)

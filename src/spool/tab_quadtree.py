@@ -1,9 +1,6 @@
-#!/usr/bin/python2
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
-
 from collections import OrderedDict
-from PySide import QtCore, QtGui
+
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -151,7 +148,7 @@ class KiteQuadtreePlot(KitePlot):
         self.eraseBox.scale(r.width(), r.height())
         self.eraseBox.show()
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseDragEvent(self, ev, axis=None):
         if ev.button() & (QtCore.Qt.LeftButton | QtCore.Qt.MidButton):
             return pg.ViewBox.mouseDragEvent(self.vb, ev, axis)
@@ -192,10 +189,10 @@ class KiteQuadtreePlot(KitePlot):
 
 
 class KiteParamQuadtree(KiteParameterGroup):
-    sigEpsilon = QtCore.Signal(float)
-    sigNanFraction = QtCore.Signal(float)
-    sigTileMaximum = QtCore.Signal(float)
-    sigTileMinimum = QtCore.Signal(float)
+    sigEpsilon = QtCore.pyqtSignal(float)
+    sigNanFraction = QtCore.pyqtSignal(float)
+    sigTileMaximum = QtCore.pyqtSignal(float)
+    sigTileMinimum = QtCore.pyqtSignal(float)
 
     def __init__(self, model, plot, *args, **kwargs):
         self.plot = plot
@@ -245,7 +242,9 @@ class KiteParamQuadtree(KiteParameterGroup):
                             model.quadtree.epsilon_min)*.1, 3),
              'limits': (model.quadtree.epsilon_min,
                         3*model.quadtree._epsilon_init),
-             'editable': True}
+             'editable': True,
+             'tip': QuadtreeConfig.epsilon.help
+             }
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
@@ -261,7 +260,9 @@ class KiteParamQuadtree(KiteParameterGroup):
              'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
-             'editable': True, }
+             'editable': True,
+             'tip': QuadtreeConfig.nan_allowed.help
+             }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
         self.nan_allowed.sigValueChanged.connect(updateNanFrac)
@@ -271,14 +272,20 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateTileSizeMin():
             self.sigTileMinimum.emit(self.tile_size_min.value())
 
+        frame = model.frame
+        max_px = max(frame.shape)
+        max_d = max(frame.dE, frame.dN)
+        limits = (max_d * 5, max_d * (max_px / 4))
         p = {'name': 'tile_size_min',
              'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
              'type': 'int',
-             'limits': (50, 50000),
+             'limits': limits,
              'step': 100,
              'editable': True,
-             'suffix': 'm'}
+             'suffix': 'm' if frame.isMeter() else 'deg',
+             'tip': QuadtreeConfig.tile_size_min.help
+             }
         self.tile_size_min = pTypes.SimpleParameter(**p)
         self.tile_size_min.itemClass = SliderWidgetParameterItem
 
@@ -288,7 +295,9 @@ class KiteParamQuadtree(KiteParameterGroup):
 
         p.update({'name': 'tile_size_max',
                   'value': model.quadtree.tile_size_max,
-                  'default': QuadtreeConfig.tile_size_max.default()})
+                  'default': QuadtreeConfig.tile_size_max.default(),
+                  'tip': QuadtreeConfig.tile_size_max.help
+                  })
         self.tile_size_max = pTypes.SimpleParameter(**p)
         self.tile_size_max.itemClass = SliderWidgetParameterItem
 
@@ -305,7 +314,9 @@ class KiteParamQuadtree(KiteParameterGroup):
                 'QuadNode.median': 'median',
                 'QuadNode.weight': 'weight',
              },
-             'value': 'mean'}
+             'value': 'mean',
+             'tip': 'Change displayed component'
+             }
         self.components = pTypes.ListParameter(**p)
         self.components.sigValueChanged.connect(changeComponent)
 
@@ -319,8 +330,10 @@ class KiteParamQuadtree(KiteParameterGroup):
                 'Median (Jonsson, 2002)': 'median',
                 'Bilinear (Jonsson, 2002)': 'bilinear',
                 'SD (Jonsson, 2002)': 'std',
-             },
-             'value': QuadtreeConfig.correction.default()}
+                 },
+             'value': model.quadtree.config.correction,
+             'tip': QuadtreeConfig.correction.help
+             }
         correction_method = pTypes.ListParameter(**p)
         correction_method.sigValueChanged.connect(changeCorrection)
 

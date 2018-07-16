@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 import os
 import tempfile
 
@@ -15,7 +15,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '2017.11'
+version = '2018.02.26'
 
 
 def _check_for_openmp():
@@ -107,18 +107,14 @@ setup(
         'Topic :: Scientific/Engineering :: Image Recognition',
         'Topic :: Scientific/Engineering :: Physics',
         'Topic :: Scientific/Engineering :: Visualization',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.5',
         'Programming Language :: C',
         'Operating System :: POSIX',
         'Operating System :: MacOS',
         ],
     keywords=[
         'insar satellite radar earthquake optimization'],
-
-    install_requires=[
-        'numpy>=1.8.0', 'pyrocko', 'scipy', 'pyyaml',
-        'progressbar', 'utm', 'pyqtgraph>=0.10.0'],
+    python_requires='>=3.5',
     packages=[
         'kite',
         'kite.sources',

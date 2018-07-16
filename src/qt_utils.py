@@ -1,16 +1,10 @@
-#!/usr/bin/python2
-from __future__ import (print_function, division, unicode_literals,
-                        absolute_import)
-
 import os
 import logging
 import numpy as num
-
 from os import path as op
-from pyqtgraph.Qt import QtGui, QtCore
+
+from PyQt5 import QtGui, QtCore, uic
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
-from PySide.QtCore import QMetaObject
-from PySide.QtUiTools import QUiLoader
 
 
 SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
@@ -83,6 +77,8 @@ _viridis_data.reverse()
 
 
 def validateFilename(filename):
+    if not filename:
+        return False
     filename = op.abspath(filename)
     filedir = op.dirname(filename)
     if filename == '' or filedir == '':
@@ -95,152 +91,20 @@ def validateFilename(filename):
     return True
 
 
-# -*- coding: utf-8 -*-
-# Copyright (c) 2011 Sebastian Wiesner <lunaryorn@gmail.com>
-# Modifications by Charl Botha <cpbotha@vxlabs.com>
-# * customWidgets support (registerCustomWidget() causes segfault in
-#   pyside 1.1.2 on Ubuntu 12.04 x86_64)
-# * workingDirectory support in loadUi
-
-# found this here:
-# https://github.com/lunaryorn/snippets/blob/master/qt4/designer/pyside_dynamic.py
-
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the "Software"),
-# to deal in the Software without restriction, including without limitation
-# the rights to use, copy, modify, merge, publish, distribute, sublicense,
-# and/or sell copies of the Software, and to permit persons to whom the
-# Software is furnished to do so, subject to the following conditions:
-
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-# DEALINGS IN THE SOFTWARE.
-
-"""
-    How to load a user interface dynamically with PySide.
-    .. moduleauthor::  Sebastian Wiesner  <lunaryorn@gmail.com>
-"""
-
-
-class UiLoader(QUiLoader):
-    """
-    Subclass :class:`~PySide.QtUiTools.QUiLoader` to create the user interface
-    in a base instance.
-    Unlike :class:`~PySide.QtUiTools.QUiLoader` itself this class does not
-    create a new instance of the top-level widget, but creates the user
-    interface in an existing instance of the top-level class.
-    This mimics the behaviour of :func:`PyQt4.uic.loadUi`.
-    """
-
-    def __init__(self, baseinstance, customWidgets=None):
-        """
-        Create a loader for the given ``baseinstance``.
-        The user interface is created in ``baseinstance``, which must be an
-        instance of the top-level class in the user interface to load, or a
-        subclass thereof.
-        ``customWidgets`` is a dictionary mapping from class name to class
-        object for widgets that you've promoted in the Qt Designer interface.
-        Usually, this should be done by calling registerCustomWidget on the
-        QUiLoader, but with PySide 1.1.2 on Ubuntu 12.04 x86_64 this causes a
-        segfault.
-        ``parent`` is the parent object of this loader.
-        """
-
-        QUiLoader.__init__(self, baseinstance)
-        self.baseinstance = baseinstance
-        self.customWidgets = customWidgets
-
-    def createWidget(self, class_name, parent=None, name=''):
-        """
-        Function that is called for each widget defined in ui file,
-        overridden here to populate baseinstance instead.
-        """
-
-        if parent is None and self.baseinstance:
-            # supposed to create the top-level widget, return the base instance
-            # instead
-            return self.baseinstance
-
-        else:
-            if class_name in self.availableWidgets():
-                # create a new widget for child widgets
-                widget = QUiLoader.createWidget(self, class_name, parent, name)
-
-            else:
-                # if not in the list of availableWidgets, must be a custom
-                # widget this will raise KeyError if the user has not supplied
-                # the relevant class_name in the dictionary, or TypeError, if
-                # customWidgets is None
-                try:
-                    widget = self.customWidgets[class_name](parent)
-
-                except (TypeError, KeyError):
-                    raise Exception('No custom widget ' + class_name +
-                                    'found in customWidgets param ' +
-                                    'of UiLoader __init__.')
-
-            if self.baseinstance:
-                # set an attribute for the new child widget on the base
-                # instance, just like PyQt4.uic.loadUi does.
-                setattr(self.baseinstance, name, widget)
-
-                # this outputs the various widget names, e.g.
-                # sampleGraphicsView, dockWidget, samplesTableView etc.
-
-            return widget
-
-
-def loadUi(uifile, baseinstance=None, customWidgets=None,
-           workingDirectory=None):
-    """
-    Dynamically load a user interface from the given ``uifile``.
-    ``uifile`` is a string containing a file name of the UI file to load.
-    If ``baseinstance`` is ``None``, the a new instance of the top-level widget
-    will be created.  Otherwise, the user interface is created within the given
-    ``baseinstance``.  In this case ``baseinstance`` must be an instance of the
-    top-level widget class in the UI file to load, or a subclass thereof.  In
-    other words, if you've created a ``QMainWindow`` interface in the designer,
-    ``baseinstance`` must be a ``QMainWindow`` or a subclass thereof, too.  You
-    cannot load a ``QMainWindow`` UI file with a plain
-    :class:`~PySide.QtGui.QWidget` as ``baseinstance``.
-    ``customWidgets`` is a dictionary mapping from class name to class object
-    for widgets that you've promoted in the Qt Designer interface. Usually,
-    this should be done by calling registerCustomWidget on the QUiLoader, but
-    with PySide 1.1.2 on Ubuntu 12.04 x86_64 this causes a segfault.
-    :method:`~PySide.QtCore.QMetaObject.connectSlotsByName()` is called on the
-    created user interface, so you can implemented your slots according to its
-    conventions in your widget class.
-    Return ``baseinstance``, if ``baseinstance`` is not ``None``.  Otherwise
-    return the newly created instance of the user interface.
-    """
-
-    loader = UiLoader(baseinstance, customWidgets)
-
-    if workingDirectory is not None:
-        loader.setWorkingDirectory(workingDirectory)
-
-    widget = loader.load(uifile)
-    QMetaObject.connectSlotsByName(widget)
-    return widget
+def loadUi(uifile, baseinstance=None):
+    return uic.loadUi(uifile, baseinstance)
 
 
 class SliderWidget(QtGui.QWidget):
-    '''
+    """
     shows a horizontal/vertical slider with a label showing its value
-    '''
+    """
     sigValueChanged = QtCore.Signal(object)  # value
 
     def __init__(self, horizontal=True, parent=None):
-        '''
+        """
         horizontal -> True/False
-        '''
+        """
         QtGui.QWidget.__init__(self, parent)
         self.mn, self.mx = None, None
         self.precission = 0
@@ -278,9 +142,9 @@ class SliderWidget(QtGui.QWidget):
         self._updateLabel(val)
 
     def setRange(self, mn, mx):
-        '''
+        """
         mn, mx -> arbitrary values that are not equal
-        '''
+        """
         if mn == mx:
             raise ValueError('limits must be different values')
         self.mn = float(min(mn, mx))
@@ -321,18 +185,18 @@ class SliderWidget(QtGui.QWidget):
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
-    ''' Enabling Slider widget for Parameter
-    '''
+    """ Enabling Slider widget for Parameter
+    """
     def makeWidget(self):
         opts = self.param.opts
         w = SliderWidget()
         w.sigChanged = w.sigValueChanged
         w.sigChanging = w.sigValueChanged
-        l = opts.get('limits')
-        if l:
-            w.setRange(*l)
+        lim = opts.get('limits')
+        if lim:
+            w.setRange(*lim)
         v = opts.get('value')
-        if l:
+        if lim:
             w.setValue(v)
         w.setSuffix(opts.get('suffix', None))
         self.hideWidget = False
@@ -378,7 +242,7 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
     def columnCount(self, idx):
         return 3
 
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def newRecord(self, record):
         self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
         self.log_records.append(record)
@@ -414,9 +278,9 @@ class SceneLog(QtGui.QDialog):
             else:
                 QtGui.QStyledItemDelegate.paint(self, painter, option, idx)
 
-    class LogFilter(QtGui.QSortFilterProxyModel):
+    class LogFilter(QtCore.QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
-            QtGui.QSortFilterProxyModel.__init__(self, *args, **kwargs)
+            QtCore.QSortFilterProxyModel.__init__(self, *args, **kwargs)
             self.level = 0
 
         def setLevel(self, level):
@@ -435,7 +299,7 @@ class SceneLog(QtGui.QDialog):
                 self.parent().window().rect().center()) -
             self.mapToGlobal(self.rect().center()))
 
-        self.closeButton.setIcon(self.style().standardPixmap(
+        self.closeButton.setIcon(self.style().standardIcon(
                                  QtGui.QStyle.SP_DialogCloseButton))
 
         self.table_filter = self.LogFilter()
@@ -456,7 +320,7 @@ class SceneLog(QtGui.QDialog):
         self.filterBox.setCurrentIndex(0)
 
         def changeFilter():
-            for lvl, lvl_name in self.levels.iteritems():
+            for lvl, lvl_name in self.levels.items():
                 if lvl_name == self.filterBox.currentText():
                     self.table_filter.setLevel(lvl)
                     return
@@ -465,7 +329,7 @@ class SceneLog(QtGui.QDialog):
 
         self.filterBox.currentIndexChanged.connect(changeFilter)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot(QtCore.QModelIndex, int, int)
     def newLogRecord(self, idx, first, last):
         self.tableView.scrollToBottom()
 

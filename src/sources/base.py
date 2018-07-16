@@ -82,7 +82,7 @@ class ProcessorProfile(dict):
 
 class SourceProcessor(object):
     '''Interface definition of the processor '''
-    __implements__ = 'ProcessorName'  # Defines What backend is implemented
+    __implements__ = 'ProcessorName'  # Defines which backend is implemented
 
     def __init__(self, sandbox_scene):
         self._log = sandbox_scene._log.getChild(self.__class__.__name__)

@@ -21,8 +21,17 @@ def safe_cast(val, to_type, default=None):
         return default
 
 
+class AttribDict(dict):
+
+    def __getattr__(self, item):
+        return self[item]
+
+    def __setattr__(self, item, value):
+        self[item] = value
+
+
 class SceneIO(object):
-    """ Prototype class for SARIO objects """
+    """ Prototype class for SARIO objects. """
     def __init__(self, scene=None):
         if scene is not None:
             self._log = scene._log.getChild('IO/%s' % self.__class__.__name__)
@@ -31,31 +40,30 @@ class SceneIO(object):
             self._log = logging.getLogger('SceneIO/%s'
                                           % self.__class__.__name__)
 
-        self.container = {
-            'phi': 0.,    # Look orientation counter-clockwise angle from east
-            'theta': 0.,  # Look elevation angle (up from horizontal in degree)
-                          # 90deg North
-            'displacement': None,  # Displacement towards LOS
-            'frame': {
-                'llLon': None,  # Lower left corner latitude
-                'llLat': None,  # Lower left corner londgitude
-                'dLat': None,   # Pixel delta latitude
-                'dLon': None,   # Pixel delta longitude
-                'dN': None,   # Pixel delta latitude
-                'dE': None,   # Pixel delta longitude
-            },
+        self.container = AttribDict(
+            phi=0.,    # Look orientation counter-clockwise angle from east
+            theta=0.,  # Look elevation angle (up from horizontal in degree)
+                       # 90deg North
+            displacement=None,  # Displacement towards LOS
+            frame=AttribDict(
+                llLon=None,  # Lower left corner latitude
+                llLat=None,  # Lower left corner londgitude
+                dN=None,   # Pixel delta in north, meter or degree
+                dE=None,   # Pixel delta in east, meter or degree
+                spacing='meter',  # Pixel spacing unit
+            ),
             # Meta information
-            'meta': {
-                'title': None,
-                'orbit_direction': None,
-                'satellite_name': None,
-                'wavelength': None,
-                'time_master': None,
-                'time_slave': None
-            },
+            meta=AttribDict(
+                title=None,
+                orbital_node=None,
+                satellite_name=None,
+                wavelength=None,
+                time_master=None,
+                time_slave=None
+            ),
             # All extra information
-            'extra': {}
-        }
+            extra={}
+        )
 
     def read(self, filename, **kwargs):
         """ Read function of the file format
@@ -93,18 +101,22 @@ class Matlab(SceneIO):
     """
     Variable naming conventions for Matlab :file:`.mat` container:
 
-        ================== ==================== ============
-        Property           Matlab ``.mat`` name type
-        ================== ==================== ============
-        Scene.displacement ``ig_``              n x m array
-        Scene.phi          ``phi``              n x m array
-        Scene.theta        ``theta``            n x m array
-        Scene.frame.x      ``xx``               n x 1 vector
-        Scene.frame.y      ``yy``               m x 1 vector
+        ================== ==================== ===================== =====
+        Property           Matlab ``.mat`` name type                  unit
+        ================== ==================== ===================== =====
+        Scene.displacement ``ig_``              n x m array           [m]
+        Scene.phi          ``phi``              float or n x m array  [rad]
+        Scene.theta        ``theta``            float or n x m array  [rad]
+        Scene.frame.x      ``xx``               n x 1 vector          [m]
+        Scene.frame.y      ``yy``               m x 1 vector          [m]
         Scene.utm_zone     ``utm_zone``         str ('33T')
-        ================== ==================== ============
+        ================== ==================== ===================== =====
 
-    Displacement is expected to be in meters.
+    Displacement is expected to be in meters. Note that the displacement maps
+    could also be pixel offset maps rather than unwrapped SAR interferograms.
+    For SAR azimuth pixel offset maps calculate ``phi`` from the heading
+    direction and set ``theta=0.``. For SAR range pixel offsets use the same
+    LOS angles as for InSAR.
 
     """
     def validate(self, filename, **kwargs):
@@ -129,13 +141,15 @@ class Matlab(SceneIO):
         utm_n = None
         utm_zone = None
         utm_zone_letter = None
+        phi0 = None
+        theta0 = None
 
-        for mat_k, v in mat.iteritems():
-            for io_k in c.iterkeys():
+        for mat_k, v in mat.items():
+            for io_k in c.keys():
                 if io_k in mat_k:
                     c[io_k] = num.rot90(mat[mat_k])
                 elif 'ig_' in mat_k:
-                    c['displacement'] = num.rot90(mat[mat_k])
+                    c.displacement = num.rot90(mat[mat_k])
                 elif 'xx' in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif 'yy' in mat_k:
@@ -143,6 +157,16 @@ class Matlab(SceneIO):
                 elif 'utm_zone' in mat_k:
                     utm_zone = int(mat['utm_zone'][0][:-1])
                     utm_zone_letter = str(mat['utm_zone'][0][-1])
+                elif 'phi' in mat_k:
+                    phi0 = mat[mat_k].flatten()
+                elif 'theta' in mat_k:
+                    theta0 = mat[mat_k].flatten()
+
+        if len(theta0) == 1:
+            c.theta = num.ones(num.shape(c.displacement)) * theta0
+
+        if len(theta0) == 1:
+            c.phi = num.ones(num.shape(c.displacement)) * phi0
 
         if utm_zone is None:
             utm_zone = 33
@@ -153,33 +177,26 @@ class Matlab(SceneIO):
 
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning(
-                'Could not find referencing UTM vectors in .mat file')
-            utm_e = num.linspace(100000, 110000, c['displacement'].shape[0])
-            utm_n = num.linspace(1100000, 1110000, c['displacement'].shape[1])
+                'Could not find referencing UTM vectors in .mat file!')
+            utm_e = num.linspace(100000, 110000, c.displacement.shape[0])
+            utm_n = num.linspace(1100000, 1110000, c.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= 1e3
             utm_n *= 1e3
+
+        c.frame.dE = num.abs(utm_e[1] - utm_e[0])
+        c.frame.dN = num.abs(utm_n[1] - utm_n[0])
         try:
-            c['frame']['llLat'], c['frame']['llLon'] =\
+            c.frame.llLat, c.frame.llLon =\
                 utm.to_latlon(utm_e.min(), utm_n.min(),
                               utm_zone, utm_zone_letter)
 
-            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
-                                         utm_zone, utm_zone_letter)
-            c['frame']['dLat'] =\
-                (urlat - c['frame']['llLat']) /\
-                c['displacement'].shape[0]
-
-            c['frame']['dLon'] =\
-                (urlon - c['frame']['llLon']) /\
-                c['displacement'].shape[1]
         except utm.error.OutOfRangeError:
-            c['frame']['llLat'], c['frame']['llLon'] = (0., 0.)
-            c['frame']['dLat'] = (utm_e[1] - utm_e[0]) / 110e3
-            c['frame']['dLon'] = (utm_n[1] - utm_n[0]) / 110e3
-            self._log.warning('Could not interpret spatial vectors, '
-                              'referencing to 0, 0 (lat, lon)')
+            self._log.warning(
+                'Could not interpret spatial vectors,'
+                ' referencing to 0, 0 (lat, lon)')
+            c.frame.llLat, c.frame.llLon = (0., 0.)
         return c
 
 
@@ -189,22 +206,21 @@ class Gamma(SceneIO):
     Reading geocoded displacement maps (unwrapped igs) originating
         from GAMMA software.
 
-    .. warning :: Data has to be georeferenced to latitude/longitude or UTM!
-
-    .. warning :: Look vector files - expected to have a particular name
-
-    Expects four files:
+    .. note :: Expects:
 
         * [:file:`*`] Binary file from Gamma with displacement in radians
-          or meter.
         * [:file:`*.slc.par`] If you want to translate radians to
           meters using the `radar_frequency`.
-        * [:file:`*par`] Parameter file describing `corner_lat, corner_lon,
-          nlines, width, post_lat, post_lon` or `'post_north', 'post_east',
-          'corner_east', 'corner_north', 'nlines', 'width'`
+        * [:file:`*par`] Parameter file, describing ``corner_lat, corner_lon,
+          nlines, width, post_lat, post_lon`` or ``post_north, post_east,
+          corner_east, corner_north, nlines, width``.
         * [:file:`*theta*`, :file:`*phi*`] Two look vector files,
-          generated by GAMMA command ``look_vector``
+          generated by GAMMA command ``look_vector``.
 
+    .. warning ::
+
+        * Data has to be georeferenced to latitude/longitude or UTM!
+        * Look vector files - expected to have a particular name
     """
     @staticmethod
     def _parseParameterFile(filename):
@@ -257,7 +273,8 @@ class Gamma(SceneIO):
                 self._log.info('Found SLC parameter file %s' % file)
                 return params
 
-        raise ImportError('Could not find SLC parameter file *.slc.par')
+        raise ImportError('Could not find SLC parameter file *.slc.par'
+                          ' with parameters %s' % required_params)
 
     def validate(self, filename, **kwargs):
         try:
@@ -301,8 +318,7 @@ class Gamma(SceneIO):
         try:
             params_slc = self._getSLCParameters(par_file)
         except ImportError as e:
-            params_slc = {}
-            self._log.warning(e.message)
+            raise e
 
         fill = None
 
@@ -337,7 +353,7 @@ class Gamma(SceneIO):
 
         phi = self._getLOSAngles(filename, '*phi*')
         theta = self._getLOSAngles(filename, '*theta*')
-        theta = num.cos(theta)
+        theta = theta
 
         if isinstance(phi, num.ndarray):
             phi = phi.reshape(nlines, nrows)
@@ -352,15 +368,15 @@ class Gamma(SceneIO):
 
         c = self.container
 
-        c['displacement'] = displ
-        c['theta'] = theta
-        c['phi'] = phi
+        c.displacement = displ
+        c.theta = theta
+        c.phi = phi
 
-        c['meta']['wavelength'] = wavelength
-        c['meta']['title'] = params.get('title', 'None')
+        c.meta.wavelength = wavelength
+        c.meta.title = params.get('title', 'None')
 
-        c['bin_file'] = filename
-        c['par_file'] = par_file
+        c.bin_file = filename
+        c.par_file = par_file
 
         if params['DEM_projection'] == 'UTM':
             import utm
@@ -388,45 +404,41 @@ class Gamma(SceneIO):
             utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
             utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
 
-            lllat, lllon = utm.to_latlon(utm_e.min(), utm_n.min(),
+            llLat, llLon = utm.to_latlon(utm_e.min(), utm_n.min(),
                                          utm_zone, utm_zone_letter)
 
-            urlat, urlon = utm.to_latlon(utm_e.max(), utm_n.max(),
-                                         utm_zone, utm_zone_letter)
+            c.frame.llLat = llLat
+            c.frame.llLon = llLon
 
-            c['frame']['llLat'] = lllat
-            c['frame']['llLon'] = lllon
-
-            c['frame']['dLat'] = (urlat - lllat) / displ.shape[0]
-            c['frame']['dLon'] = (urlon - lllon) / displ.shape[1]
-
-            c['frame']['dE'] = abs(dE)
-            c['frame']['dN'] = abs(dN)
+            c.frame.dE = abs(dE)
+            c.frame.dN = abs(dN)
 
         else:
             self._log.info('Using Lat/Lon reference')
-            c['frame']['llLat'] = params['corner_lat'] \
+            c.frame.llLat = params['corner_lat'] \
                 + params['post_lat'] * nrows
-            c['frame']['llLon'] = params['corner_lon']
-            c['frame']['dLon'] = abs(params['post_lon'])
-            c['frame']['dLat'] = abs(params['post_lat'])
+            c.frame.llLon = params['corner_lon']
+            c.frame.dLon = abs(params['post_lon'])
+            c.frame.dLat = abs(params['post_lat'])
             print(c)
         return self.container
 
 
 class ROI_PAC(SceneIO):
     """
-    .. warning :: Data has to be georeferenced to latitude/longitude!
-
-    The unwrapped displacement is expected in radians and will be scaled
-    to meters by `WAVELENGTH` parsed from the :file:`*.rsc` file.
-
-    Expects two files:
+    .. note:: Expects:
 
         * Binary file from ROI_PAC (:file:`*`)
-        * Parameter file (:file:`<binary_file>.rsc`)
-          describing ``'WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-          'Y_STEP', 'WAVELENGTH``
+        * Parameter file (:file:`<binary_file>.rsc`),
+          describing ``WIDTH, FILE_LENGTH, X_FIRST, Y_FIRST, X_STEP,
+          Y_STEP, WAVELENGTH``
+
+    .. warning ::
+        Data has to be georeferenced to latitude/longitude!
+
+        The unwrapped displacement is expected in radians and will be scaled
+        to meters by ``WAVELENGTH`` parsed from the :file:`*.rsc` file.
+
     """
 
     def validate(self, filename, **kwargs):
@@ -442,7 +454,7 @@ class ROI_PAC(SceneIO):
         par_file = op.realpath(bin_file) + '.rsc'
         try:
             self._parseParameterFile(par_file)
-            self._log.info('Found parameter file %s' % file)
+            self._log.info('Found parameter file %s' % par_file)
             return par_file
         except (ImportError, IOError):
             raise ImportError('Could not find ROI_PAC parameter file (%s)'
@@ -454,7 +466,7 @@ class ROI_PAC(SceneIO):
 
         params = {}
         required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-                    'Y_STEP', 'WAVELENGTH']
+                    'Y_STEP', 'WAVELENGTH','LAT_REF1', 'LON_REF1']
 
         rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
         with open(par_file, 'r') as par:
@@ -473,6 +485,7 @@ class ROI_PAC(SceneIO):
             'Parameter file %s does not hold required parameters' % par_file)
 
     def read(self, filename, **kwargs):
+        import utm
         """
         :param filename: ROI_PAC binary file
         :type filename: str
@@ -486,15 +499,22 @@ class ROI_PAC(SceneIO):
         par_file = kwargs.pop('par_file', self._getParameterFile(filename))
 
         par = self._parseParameterFile(par_file)
-
+        print(par)
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
+        lat_ref = par['LAT_REF1']
+        lon_ref = par['LON_REF1']
         look_ref1 = par['LOOK_REF1']
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
+
+        utm_zone_letter = utm.latitude_to_zone_letter(
+                    par['LAT_REF1'])
+        utm_zone = utm.latlon_to_zone_number(par['LAT_REF1'], par['LON_REF1'])
+
         look = num.mean(
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
@@ -511,19 +531,20 @@ class ROI_PAC(SceneIO):
         displ *= z_scale
 
         c = self.container
-        c['displacement'] = displ
-        c['theta'] = 90. - look
-        c['phi'] = -heading - 180
 
-        c['meta']['title'] = par.get('TITLE', 'None')
-        c['meta']['wavelength'] = par['WAVELENGTH']
-        c['bin_file'] = filename
-        c['par_file'] = par_file
+        c.displacement = displ
+        c.theta = 90. - look
+        c.phi = -heading - 180
 
-        c['frame']['llLat'] = par['Y_FIRST'] + par['Y_STEP'] * nrows
-        c['frame']['llLon'] = par['X_FIRST']
-        c['frame']['dLon'] = par['X_STEP']
-        c['frame']['dLat'] = par['Y_STEP']
+        c.meta.title = par.get('TITLE', 'None')
+        c.meta.wavelength = par['WAVELENGTH']
+        c.bin_file = filename
+        c.par_file = par_file
+
+        c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
+        c.frame.llLon = par['X_FIRST']
+        c.frame.dLon = par['X_STEP']
+        c.frame.dLat = par['Y_STEP']
         return self.container
 
 
@@ -557,19 +578,19 @@ class ISCEXMLParser(object):
 
 class ISCE(SceneIO):
     """
-    Reading geocoded displacement maps (unwrapped igs) originating
-        from ISCE software.
+    Reading geocoded, unwraped displacement maps
+        processed with ISCE software (https://winsar.unavco.org/isce.html).
 
-    .. note:: reference / link to ISCE site...
-
-    Expects three files in the same folder:
+    .. note :: Expects:
 
         * Unwrapped displacement binary (:file:`*.unw.geo`)
         * Metadata XML (:file:`*.unw.geo.xml`)
         * LOS binary data (:file:`*.rdr.geo`)
 
-     .. warning:: data are in radians but no transformation to
-        meters yet, as 'wavelength' or at least sensor name is not
+    .. warning::
+
+        Data are in radians but no transformation to
+        meters yet, as ``wavelength`` or at least sensor name is not
         provided in the XML file.
     """
     def validate(self, filename, **kwargs):
@@ -616,45 +637,49 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty('coordinate1')
         coord_lat = isce_xml.getProperty('coordinate2')
-        c['frame']['dLat'] = num.abs(coord_lat['delta'])
-        c['frame']['dLon'] = num.abs(coord_lon['delta'])
+        c.frame.dN = num.abs(coord_lat['delta'])
+        c.frame.dE = num.abs(coord_lon['delta'])
+
         nlon = int(coord_lon['size'])
         nlat = int(coord_lat['size'])
 
-        c['frame']['llLat'] = coord_lat['startingvalue'] +\
+        c.frame.spacing = 'degree'
+        c.frame.llLat = coord_lat['startingvalue'] +\
             (nlat * coord_lat['delta'])
-        c['frame']['llLon'] = coord_lon['startingvalue']
+        c.frame.llLon = coord_lon['startingvalue']
 
         displ = num.memmap(self._getDisplacementFile(path),
                            dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
         displ[displ == 0.] = num.nan
-        c['displacement'] = displ
+        c.displacement = displ
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
-        c['phi'] = los_data[:, :nlon]
-        c['theta'] = los_data[:, nlon:] + num.pi/2
+        c.phi = los_data[:, :nlon]
+        c.theta = los_data[:, nlon:] + num.pi/2
 
         return c
 
 
 class GMTSAR(SceneIO):
     """
-    Use GMT5SAR ``SAT_look`` to calculate the corresponding unit look vectors:
+
+    .. note ::
+
+        Expects:
+
+        * Displacement grid (NetCDF, :file:`*los_ll.grd`) in cm
+          (gets transformed to meters)
+        * LOS binary data (see instruction, :file:`*los.enu`)
+
+    Calculate the corresponding unit look vectors with GMT5SAR ``SAT_look``:
 
     .. code-block:: sh
 
         gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
         awk {'print $1, $2, $4'} |
         SAT_look 20050731.PRM -bos > 20050731.los.enu
-
-    Expects two binary files:
-
-        * Displacement grid (NetCDF, :file:`*los_ll.grd`) in cm
-          (get transformed to meters)
-        * LOS binary data (see instruction, :file:`*los.enu`)
-
     """
     def validate(self, filename, **kwargs):
         try:
@@ -694,16 +719,16 @@ class GMTSAR(SceneIO):
                                  mode='r', version=2)
         displ = grd.variables['z'][:].copy()
         displ /= 1e2  # los_ll.grd files come in cm
-        c['displacement'] = displ
-        shape = c['displacement'].shape
+        c.displacement = displ
+        shape = c.displacement.shape
         # LatLon
-        c['frame']['llLat'] = grd.variables['lat'][:].min()
-        c['frame']['llLon'] = grd.variables['lon'][:].min()
+        c.frame.llLat = grd.variables['lat'][:].min()
+        c.frame.llLon = grd.variables['lon'][:].min()
 
-        c['frame']['dLat'] = (grd.variables['lat'][:].max() -
-                              c['frame']['llLat'])/shape[0]
-        c['frame']['dLon'] = (grd.variables['lon'][:].max() -
-                              c['frame']['llLon'])/shape[1]
+        c.frame.dLat = (grd.variables['lat'][:].max() -
+                              c.frame.llLat)/shape[0]
+        c.frame.dLon = (grd.variables['lon'][:].max() -
+                              c.frame.llLon)/shape[1]
 
         # Theta and Phi
         try:
@@ -716,12 +741,12 @@ class GMTSAR(SceneIO):
             phi = num.rad2deg(num.arccos(u))
             theta[n < 0] += 180.
 
-            c['phi'] = phi
-            c['theta'] = theta
+            c.phi = phi
+            c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
             self._log.warning('Defaulting theta and phi to 0./2*pi [rad]')
-            c['theta'] = num.pi/2
-            c['phi'] = 0.
+            c.theta = num.pi/2
+            c.phi = 0.
 
         return c

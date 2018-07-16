@@ -89,26 +89,32 @@ def derampGMatrix(displ):
     return displ - ramp_f
 
 
-def trimMatrix(displ):
+def trimMatrix(displ, data=None):
     """Trim displacement matrix from all NaN rows and columns
     """
     if displ.ndim != 2:
-        raise TypeError('Displacement has to be 2-dim array')
+        raise ValueError('Displacement has to be 2-dim array')
+
+    if num.all(num.isnan(displ)):
+        raise ValueError('Displacement is all NaN.')
+
     r1 = r2 = False
     c1 = c2 = False
-    for r in xrange(displ.shape[0]):
+    for r in range(displ.shape[0]):
         if not num.all(num.isnan(displ[r, :])):
-            if not r1:
-                r1 = r + 1
-            else:
-                r2 = r
-    for c in xrange(displ.shape[1]):
+            if r1 is False:
+                r1 = r
+            r2 = r
+    for c in range(displ.shape[1]):
         if not num.all(num.isnan(displ[:, c])):
-            if not c1:
-                c1 = c + 1
-            else:
-                c2 = c
-    return displ[(r1-1):(r2+1), (c1-1):(c2+1)]
+            if c1 is False:
+                c1 = c
+            c2 = c
+
+    if data is not None:
+        return data[r1:(r2+1), c1:(c2+1)]
+
+    return displ[r1:(r2+1), c1:(c2+1)]
 
 
 def greatCircleDistance(alat, alon, blat, blon):
@@ -212,8 +218,8 @@ class Subject(object):
         """
         try:
             self._listeners.remove(listener)
-        except:
-            raise AttributeError('%s was not subscribed to ')
+        except Exception:
+            raise AttributeError('%s was not subscribed!')
 
     def unsubscribeAll(self):
         for l in self._listeners:

@@ -6,11 +6,11 @@ import os.path as op
 from datetime import datetime as dt
 
 from pyrocko import guts
-from pyrocko.orthodrome import latlon_to_ne  # noqa
+from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
-from kite.util import Subject, property_cached, greatCircleDistance
+from kite.util import Subject, property_cached
 from kite import scene_io
 
 logging.basicConfig(level=20)
@@ -47,51 +47,59 @@ class SceneError(Exception):
 
 
 class FrameConfig(guts.Object):
-    '''Config object holding :class:`kite.scene.Scene` cobfiguration '''
+    """Config object holding :class:`kite.scene.Scene` configuration """
     llLat = guts.Float.T(
         default=0.,
         help='Scene latitude of lower left corner')
     llLon = guts.Float.T(
         default=0.,
         help='Scene longitude of lower left corner')
-    dLat = guts.Float.T(
-        default=1.e-3,
-        help='Scene pixel spacing in latitude [deg]')
-    dLon = guts.Float.T(
-        default=1.e-3,
-        help='Scene pixel spacing in longitude [deg]')
     dN = guts.Float.T(
-        optional=True,
-        help='Scene pixel spacing in north [m]')
+        default=25.,
+        help='Scene pixel spacing in north, give [m] or [deg]')
     dE = guts.Float.T(
-        optional=True,
-        help='Scene pixel spacing in east [m]')
+        default=25.,
+        help='Scene pixel spacing in east, give [m] or [deg]')
+    spacing = guts.StringChoice.T(
+        choices=('degree', 'meter'),
+        default='meter',
+        help='Unit of pixel space')
+
+    def __init__(self, *args, **kwargs):
+        self.old_import = False
+        mapping = {
+            'dE': 'dLon',
+            'dN': 'dLat'
+        }
+
+        for new, old in mapping.items():
+            if old in kwargs:
+                kwargs[new] = kwargs.pop(old)
+                kwargs['spacing'] = 'degree'
+                self.old_import = True
+
+        guts.Object.__init__(self, *args, **kwargs)
 
 
 class Frame(object):
-    ''' UTM frame holding geographical references for :class:`kite.scene.Scene`
-    '''
-    evChanged = Subject()
+    """ Frame holding geographical references for :class:`kite.scene.Scene`
+
+    The pixel spacing is given by ``dE`` and ``dN`` which can meters or degree.
+    """
 
     def __init__(self, scene, config=FrameConfig()):
+        self.evChanged = Subject()
         self._scene = scene
         self._log = scene._log.getChild('Frame')
 
-        self.extentE = 0.
-        self.extentN = 0.
-        self.spherical_distortion = 0.
-        self.urE = 0.
-        self.urN = 0.
-        self.llEutm = None
-        self.llNutm = None
-        self.utm_zone = None
-        self.llN = None
-        self.llE = None
         self.N = None
         self.E = None
 
-        self.offsetE = 0.
-        self.offsetN = 0.
+        self.llEutm = None
+        self.llNutm = None
+        self.utm_zone = None
+        self.utm_zone_letter = None
+        self._meter_grid = None
 
         self._updateConfig(config)
         self._scene.evConfigChanged.subscribe(self._updateConfig)
@@ -105,52 +113,31 @@ class Frame(object):
         else:
             return
 
+        if self.config.old_import:
+            self._log.warning('Importing an old kite format...\n '
+                              'Please check your pixel spacing - dE, dN!')
         self.updateExtent()
-        self.evChanged.notify()
 
     def updateExtent(self):
         if self._scene.cols == 0 or self._scene.rows == 0:
             return
 
-        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
-            utm.from_latlon(self.llLat, self.llLon)
-
         self.cols = self._scene.cols
         self.rows = self._scene.rows
 
-        urlat = self.llLat + self.dLat * self.rows
-        urlon = self.llLon + self.dLon * self.cols
-        self.urEutm, self.urNutm, _, _ = utm.from_latlon(urlat, urlon,
-                                                         self.utm_zone)
+        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
+            utm.from_latlon(self.llLat, self.llLon)
 
-        # Width at the bottom of the scene
-        self.extentE = greatCircleDistance(self.llLat, self.llLon,
-                                           self.llLat, urlon)
-        self.extentN = greatCircleDistance(self.llLat, self.llLon,
-                                           urlat, self.llLon)
-
-        # Width at the N' top of the scene
-        extentE_top = greatCircleDistance(urlat, self.llLon,
-                                          urlat, urlon)
-        self.spherical_distortion = num.abs(self.extentE - extentE_top)
-
-        self.dE = (self.extentE + extentE_top) / (2 * self.cols)
-        self.dN = self.extentN / self.rows
-
-        self.E = num.arange(self.cols) * self.dE + self.offsetE
-        self.N = num.arange(self.rows) * self.dN + self.offsetN
-
-        self.llE = 0
-        self.llN = 0
-        self.urE = self.E.max()
-        self.urN = self.N.max()
+        self.E = None
+        self.N = None
 
         self.gridE = None
         self.gridN = None
+        self._meter_grid = None
         self.coordinates = None
 
         self.config.regularize()
-        return
+        self.evChanged.notify()
 
     @property
     def llLat(self):
@@ -159,7 +146,7 @@ class Frame(object):
     @llLat.setter
     def llLat(self, llLat):
         self.config.llLat = llLat
-        self._llLat = llLat
+        self.updateExtent()
 
     @property
     def llLon(self):
@@ -168,23 +155,7 @@ class Frame(object):
     @llLon.setter
     def llLon(self, llLon):
         self.config.llLon = llLon
-        self._llLon = llLon
-
-    @property
-    def dLat(self):
-        return self.config.dLat
-
-    @dLat.setter
-    def dLat(self, dLat):
-        self.config.dLat = dLat
-
-    @property
-    def dLon(self):
-        return self.config.dLon
-
-    @dLon.setter
-    def dLon(self, dLon):
-        self.config.dLon = dLon
+        self.updateExtent()
 
     @property
     def dN(self):
@@ -193,6 +164,7 @@ class Frame(object):
     @dN.setter
     def dN(self, dN):
         self.config.dN = dN
+        self.updateExtent()
 
     @property
     def dE(self):
@@ -201,14 +173,51 @@ class Frame(object):
     @dE.setter
     def dE(self, dE):
         self.config.dE = dE
+        self.updateExtent()
+
+    @property
+    def dEmeter(self):
+        if self.isMeter():
+            return self.dE
+        else:
+            _, dEmeter = latlon_to_ne(
+                self.llLat, self.llLon,
+                self.llLat, self.llLon + self.dE)
+        return dEmeter
+
+    @property
+    def dNmeter(self):
+        if self.isMeter():
+            return self.dN
+        else:
+            dNmeter, _ = latlon_to_ne(
+                self.llLat, self.llLon,
+                self.llLat + self.dN, self.llLon)
+        return dNmeter
+
+    @property
+    def spacing(self):
+        return self.config.spacing
+
+    @spacing.setter
+    def spacing(self, unit):
+        self.config.spacing = unit
+
+    @property_cached
+    def E(self):
+        return num.arange(self.cols) * self.dE
+
+    @property_cached
+    def N(self):
+        return num.arange(self.rows) * self.dN
 
     @property_cached
     def gridE(self):
-        ''' UTM grid holding eastings of all pixels in ``NxM`` matrix
+        """ Grid holding local east coordinates of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
 
         :type: :class:`numpy.ndarray`, size ``NxM``
-        '''
+        """
         valid_data = num.isnan(self._scene.displacement)
         gridE = num.repeat(self.E[num.newaxis, :],
                            self.rows, axis=0)
@@ -216,18 +225,58 @@ class Frame(object):
 
     @property_cached
     def gridN(self):
-        ''' UTM grid holding northings of all pixels in ``NxM`` matrix
+        """ Grid holding local north coordinates of all pixels in ``NxM`` matrix
             of :attr:`~kite.Scene.displacement`.
 
         :type: :class:`numpy.ndarray`, size ``NxM``
-        '''
+        """
         valid_data = num.isnan(self._scene.displacement)
         gridN = num.repeat(self.N[:, num.newaxis],
                            self.cols, axis=1)
         return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
 
+    def _calculateMeterGrid(self):
+        if self.isMeter():
+            raise ValueError('Frame is defined in meter! '
+                             'Use gridE and gridN for meter grids')
+
+        if self._meter_grid is None:
+            self._log.info('Transforming latlon grid to meters...')
+            gridN, gridE = latlon_to_ne_numpy(
+                self.llLat, self.llLon,
+                self.llLat + self.gridN.data.ravel(),
+                self.llLon + self.gridE.data.ravel())
+
+            valid_data = num.isnan(self._scene.displacement)
+            gridE = num.ma.masked_array(
+                gridE.reshape(self.gridE.shape),
+                valid_data, fill_value=num.nan)
+            gridN = num.ma.masked_array(
+                gridN.reshape(self.gridN.shape),
+                valid_data, fill_value=num.nan)
+            self._meter_grid = (gridE, gridN)
+
+        return self._meter_grid
+
+    @property_cached
+    def gridEmeter(self):
+        if self.isMeter():
+            return self.gridE
+
+        return self._calculateMeterGrid()[0]
+
+    @property_cached
+    def gridNmeter(self):
+        if self.isMeter():
+            return self.gridN
+        return self._calculateMeterGrid()[1]
+
     @property_cached
     def coordinates(self):
+        """Local east and north coordinates [m] of all pixels in ``NxM`` matrix.
+
+        :type: :class:`numpy.ndarray`, size ``NxM``
+        """
         coords = num.empty((self.rows*self.cols, 2))
         coords[:, 0] = num.repeat(self.E[num.newaxis, :],
                                   self.rows, axis=0).flatten()
@@ -235,35 +284,8 @@ class Frame(object):
                                   self.cols, axis=1).flatten()
         return coords
 
-    def setENOffset(self, east, north):
-        '''Set scene offsets in local cartesian coordinates.
-
-        :param east: East offset in [m]
-        :type east: float, :class:`numpy.ndarray` or None
-        :param north: North offset in [m]
-        :type north: float, :class:`numpy.ndarray` or None
-        '''
-        self.offsetE = east
-        self.offsetN = north
-        self.updateExtent()
-
-    def setLatLonReference(self, lat, lon):
-        pass
-
-    def mapMatrixEN(self, row, col):
-        ''' Maps matrix row, column to local easting and northing.
-
-        :param row: Matrix row number
-        :type row: int
-        :param col: Matrix column number
-        :type col: int
-        :returns: Easting and northing in local coordinates
-        :rtype: tuple (float), (easting, northing)
-        '''
-        return row * self.dE, col * self.dN
-
     def mapENMatrix(self, E, N):
-        ''' Maps local coordinates (easting and northing) to matrix
+        """ Local map coordinates in east and north to matrix
             row and column
 
         :param E: Easting in local coordinates
@@ -272,12 +294,21 @@ class Frame(object):
         :type N: float
         :returns: Row and column
         :rtype: tuple (int), (row, column)
-        '''
-        row = int(E/self.dE) if E > 0 else 0
-        col = int(N/self.dN) if N > 0 else 0
-        return row, col
+        """
+        row = round(E/self.dE) if E > 0 else 0
+        col = round(N/self.dN) if N > 0 else 0
+        return int(row), int(col)
 
-    
+    @property
+    def shape(self):
+        return self._scene.shape
+
+    def isMeter(self):
+        return self.config.spacing == 'meter'
+
+    def isDegree(self):
+        return self.config.spacing == 'degree'
+
     def __eq__(self, other):
         return self.llLat == other.llLat and\
             self.llLon == other.llLon and\
@@ -286,40 +317,23 @@ class Frame(object):
             self.rows == other.rows and\
             self.cols == other.cols
 
-    def __str__(self):
-        return (
-            'Lower right latitude:  {frame.llLat:.4f} N\n'
-            'Lower right longitude: {frame.llLon:.4f} E\n'
-            '\n\n'
-            'UTM Zone:              {frame.utm_zone}{frame.utm_zone_letter}\n'
-            'Lower right easting:   {frame.llE:.4f} m\n'
-            'Lower right northing:  {frame.llN:.4f} m'
-            '\n\n'
-            'Pixel spacing east:    {frame.dE:.4f} m\n'
-            'Pixel spacing north:   {frame.dN:.4f} m\n'
-            'Extent east:           {frame.extentE:.4f} m\n'
-            'Extent north:          {frame.extentN:.4f} m\n'
-            'Dimensions:            {frame.cols} x {frame.rows} px\n'
-            'Spherical distortion:  {frame.spherical_distortion:.4f} m\n'
-        ).format(frame=self)
-
 
 class Meta(guts.Object):
-    ''' Meta configuration for ``Scene``.
-    '''
+    """ Meta configuration for ``Scene``.
+    """
     scene_title = guts.String.T(
-        default='Undefined',
+        default='Unnamed Scene',
         help='Scene title')
     scene_id = guts.String.T(
         default='None',
         help='Scene identification')
     satellite_name = guts.String.T(
-        default='Undefined',
+        default='Undefined Mission',
         help='Satellite mission name')
     wavelength = guts.Float.T(
         optional=True,
         help='Wavelength in [m]')
-    orbit_direction = guts.StringChoice.T(
+    orbital_node = guts.StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',
         help='Orbital direction, ascending/descending')
@@ -335,37 +349,51 @@ class Meta(guts.Object):
     filename = guts.String.T(
         optional=True)
 
+    def __init__(self, *args, **kwargs):
+        self.old_import = False
+
+        mapping = {
+            'orbit_direction': 'orbital_node'
+        }
+
+        for old, new in mapping.items():
+            if old in kwargs.keys():
+                kwargs[new] = kwargs.pop(old, None)
+                self.old_import = True
+
+        guts.Object.__init__(self, *args, **kwargs)
+
     @property
     def time_separation(self):
-        '''
+        """
         :getter: Absolute time difference between ``time_master``
                  and ``time_slave``
         :type: timedelta
-        '''
+        """
         return dt.fromtimestamp(self.time_slave) -\
             dt.fromtimestamp(self.time_master)
 
 
 class SceneConfig(guts.Object):
-    ''' Configuration object, gathering ``kite.Scene`` and
+    """ Configuration object, gathering ``kite.Scene`` and
         sub-objects configuration.
-    '''
+    """
     meta = Meta.T(
-        default=Meta(),
+        default=Meta.D(),
         help='Scene metainformation')
     frame = FrameConfig.T(
-        default=FrameConfig(),
+        default=FrameConfig.D(),
         help='Frame/reference configuration')
     quadtree = QuadtreeConfig.T(
-        default=QuadtreeConfig(),
+        default=QuadtreeConfig.D(),
         help='Quadtree parameters')
     covariance = CovarianceConfig.T(
-        default=CovarianceConfig(),
+        default=CovarianceConfig.D(),
         help='Covariance parameters')
 
 
 def dynamicmethod(func):
-    '''Decorator for dynamic classmethod / instancemethod declaration '''
+    """Decorator for dynamic classmethod / instancemethod declaration """
     def dynclassmethod(*args, **kwargs):
         if isinstance(args[0], Scene):
             return func(*args, **kwargs)
@@ -421,12 +449,12 @@ class BaseScene(object):
 
     @property
     def displacement(self):
-        ''' Geodetical displacement in [m].
+        """Surface displacement in meter on a regular grid.
 
         :setter: Set the unwrapped InSAR displacement.
         :getter: Return the displacement matrix.
         :type: :class:`numpy.ndarray`, ``NxM``
-        '''
+        """
         return self._displacement
 
     @displacement.setter
@@ -438,16 +466,20 @@ class BaseScene(object):
 
     @property_cached
     def displacement_mask(self):
-        ''' Displacement :attr:`numpy.nan` mask
+        """ Displacement :attr:`numpy.nan` mask
 
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
-        '''
+        """
         return num.isnan(self.displacement)
 
     @property
+    def shape(self):
+        return self._displacement.shape
+
+    @property
     def phi(self):
-        ''' Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-            in [rad]
+        """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
+            in [rad] counter-clockwise from East
 
         .. important ::
 
@@ -456,11 +488,11 @@ class BaseScene(object):
             * :math:`0` is **East**
             * :math:`\\frac{\\pi}{2}` is **North**!
 
-        :setter: Set the phi matrix for scene's displacement, can be int
+        :setter: Set the phi matrix for scene's displacement, can be ``int``
                  for static look vector.
         :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
-        '''
+        """
         return self._phi
 
     @phi.setter
@@ -469,12 +501,13 @@ class BaseScene(object):
             self._phi = value
         else:
             _setDataNumpy(self, '_phi', value)
+        self.phiDeg = None
         self.los_rotation_factors = None
         self.evChanged.notify()
 
     @property
     def theta(self):
-        ''' Theta is look vector elevation angle towards satellite from horizon
+        """ Theta is look vector elevation angle towards satellite from horizon
             in radians. Matrix of theta towards satellite's
             :abbr:`line of sight (LOS)`.
 
@@ -485,11 +518,11 @@ class BaseScene(object):
             * :math:`-\\frac{\\pi}{2}` is **Down**
             * :math:`\\frac{\\pi}{2}` is **Up**
 
-        :setter: Set the theta matrix for scene's displacement, can be int
+        :setter: Set the theta matrix for scene's displacement, can be ``int``
                  for static look vector.
         :type: :class:`numpy.ndarray`, size same as
                :attr:`~kite.Scene.displacement` or int
-        '''
+        """
         return self._theta
 
     @theta.setter
@@ -498,30 +531,32 @@ class BaseScene(object):
             self._theta = value
         else:
             _setDataNumpy(self, '_theta', value)
+        self.thetaDeg = None
         self.los_rotation_factors = None
         self.evChanged.notify()
 
     @property_cached
     def thetaDeg(self):
-        ''' LOS elevation angle in degree, ``NxM`` matrix like
+        """ LOS elevation angle in degree, ``NxM`` matrix like
             :class:`kite.Scene.theta`
 
         :type: :class:`numpy.ndarray`
-        '''
+        """
         return num.rad2deg(self.theta)
 
     @property_cached
     def phiDeg(self):
-        ''' LOS horizontal orientation angle in degree, ``NxM`` matrix like
-            :class:`kite.Scene.theta`
+        """ LOS horizontal orientation angle in degree,
+         counter-clockwise from East,``NxM`` matrix like
+            :class:`kite.Scene.phi`
 
         :type: :class:`numpy.ndarray`
-        '''
+        """
         return num.rad2deg(self.phi)
 
     @property_cached
     def los_rotation_factors(self):
-        ''' Trigonometric factors to rotate displacement matrices towards LOS
+        """ Trigonometric factors to rotate displacement matrices towards LOS
 
         Rotation is as follows:
 
@@ -534,7 +569,7 @@ class BaseScene(object):
         :returns: Factors for rotation
         :rtype: :class:`numpy.ndarray`, ``NxMx3``
         :raises: AttributeError
-        '''
+        """
         if (self.theta.size != self.phi.size):
             raise AttributeError('LOS angles inconsistent with provided'
                                  ' coordinate shape.')
@@ -571,18 +606,18 @@ class BaseScene(object):
 
 
 class Scene(BaseScene):
-    '''Scene of unwrapped InSAR ground dispacements measurements
+    """Scene of unwrapped InSAR ground displacements measurements
 
     :param config: Configuration object
-    :type config: :class:`SceneConfig`, optional
+    :type config: :class:`~kite.scene.SceneConfig`, optional
 
     Optional parameters
 
     :param displacement: Displacement in [m]
     :type displacement: :class:`numpy.ndarray`, NxM, optional
-    :param theta: Theta look angle, see :attr:`Scene.theta`
+    :param theta: Theta look angle, see :attr:`BaseScene.theta`
     :type theta: :class:`numpy.ndarray`, NxM, optional
-    :param phi: Phi look angle, see :attr:`Scene.phi`
+    :param phi: Phi look angle, see :attr:`BaseScene.phi`
     :type phi: :class:`numpy.ndarray`, NxM, optional
 
     :param llLat: Lower left latitude in [deg]
@@ -593,11 +628,12 @@ class Scene(BaseScene):
     :type dLat: float, optional
     :param dLon: Pixel spacing in longitude [deg]
     :type dLon: float, optional
-    '''
-    evChanged = Subject()
-    evConfigChanged = Subject()
+    """
 
     def __init__(self, config=SceneConfig(), **kwargs):
+        self.evChanged = Subject()
+        self.evConfigChanged = Subject()
+
         self.config = config
         self.meta = self.config.meta
 
@@ -609,41 +645,41 @@ class Scene(BaseScene):
 
     @property_cached
     def quadtree(self):
-        ''' Instanciates the scene's quadtree.
+        """ Instantiates the scene's quadtree.
 
         :type: :class:`kite.quadtree.Quadtree`
-        '''
+        """
         self._log.debug('Creating kite.Quadtree instance')
         from kite.quadtree import Quadtree
         return Quadtree(scene=self, config=self.config.quadtree)
 
     @property_cached
     def covariance(self):
-        ''' Instanciates the scene's covariance attribute.
+        """ Instantiates the scene's covariance attribute.
 
         :type: :class:`kite.covariance.Covariance`
-        '''
+        """
         self._log.debug('Creating kite.Covariance instance')
         from kite.covariance import Covariance
         return Covariance(scene=self, config=self.config.covariance)
 
     @property_cached
     def plot(self):
-        ''' Shows a simple plot of the scene's displacement
-        '''
+        """ Shows a simple plot of the scene's displacement
+        """
         self._log.debug('Creating kite.ScenePlot instance')
         from kite.plot2d import ScenePlot
         return ScenePlot(self)
 
     def spool(self):
-        ''' Start the spool user interface :class:`~kite.spool.Spool` to inspect
+        """ Start the spool user interface :class:`~kite.spool.Spool` to inspect
         the scene.
-        '''
+        """
         if self.displacement is None:
             raise SceneError('Can not display an empty scene.')
-        from kite.spool import Spool
-        spool = Spool(scene=self)
-        return spool.spool_win.buildViews()
+
+        from kite.spool import spool
+        spool(scene=self)
 
     def _testImport(self):
         try:
@@ -657,12 +693,12 @@ class Scene(BaseScene):
             self.theta
             self.phi
         except Exception as e:
-            print e
+            print(e)
             raise ImportError('Something went wrong during import - '
                               'see Exception!')
 
     def save(self, filename=None):
-        ''' Save kite scene to kite file structure
+        """ Save kite scene to kite file structure
 
         Saves the current scene meta information and UTM frame to a YAML
         (``.yml``) file. Numerical data (:attr:`~kite.Scene.displacement`,
@@ -673,7 +709,7 @@ class Scene(BaseScene):
             ' :attr:`~kite.Scene.meta.scene_id` ``_``
             :attr:`~kite.Scene.meta.scene_view`
         :type filename: str, optional
-        '''
+        """
         filename = filename or '%s_%s' % (self.meta.scene_id,
                                           self.meta.scene_view)
         _file, ext = op.splitext(filename)
@@ -696,14 +732,14 @@ class Scene(BaseScene):
 
     @dynamicmethod
     def _load(self, filename):
-        ''' Load a kite scene from file ``filename.[npz,yml]``
+        """ Load a kite scene from file ``filename.[npz,yml]``
         structure.
 
         :param filename: Filenames the scene data is saved under
         :type filename: str
         :returns: Scene object from data resources
         :rtype: :class:`~kite.Scene`
-        '''
+        """
         scene = self
         components = ['displacement', 'theta', 'phi']
 
@@ -736,7 +772,7 @@ class Scene(BaseScene):
 
     @dynamicmethod
     def _import_data(self, path, **kwargs):
-        ''' Import displacement data from foreign file format.
+        """ Import displacement data from foreign file format.
 
         :param path: Filename of resource to import
         :type path: str
@@ -745,7 +781,7 @@ class Scene(BaseScene):
         :returns: Scene from path
         :rtype: :class:`~kite.Scene`
         :raises: TypeError
-        '''
+        """
         scene = self
         if not op.isfile(path) or op.isdir(path):
             raise ImportError('File %s does not exist!' % path)
@@ -777,10 +813,10 @@ class Scene(BaseScene):
         for sk in ['theta', 'phi', 'displacement']:
             setattr(scene, sk, data[sk])
 
-        for fk, fv in data['frame'].iteritems():
+        for fk, fv in data['frame'].items():
             setattr(scene.frame, fk, fv)
 
-        for mk, mv in data['meta'].iteritems():
+        for mk, mv in data['meta'].items():
             if mv is not None:
                 setattr(scene.meta, mk, mv)
         scene.meta.extra.update(data['extra'])
@@ -794,9 +830,9 @@ class Scene(BaseScene):
 
 
 class LOSUnitVectors(object):
-    ''' Decompose line-of-sight (LOS) angles derived from
+    """ Decompose line-of-sight (LOS) angles derived from
     :attr:`~kite.Scene.displacement` to unit vector.
-    '''
+    """
     def __init__(self, scene):
         self._scene = scene
         self._scene.evChanged.subscribe(self._flush_vectors)
@@ -808,31 +844,31 @@ class LOSUnitVectors(object):
 
     @property_cached
     def unitE(self):
-        ''' Unit vector east component, ``NxM`` matrix like
+        """ Unit vector east component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
-        '''
-        return num.cos(self._scene.phi) * num.sin(self._scene.theta)
+        """
+        return self._scene.los_rotation_factors[:, :, 1]
 
     @property_cached
     def unitN(self):
-        ''' Unit vector north component, ``NxM`` matrix like
+        """ Unit vector north component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
-        '''
-        return num.sin(self._scene.phi) * num.sin(self._scene.theta)
+        """
+        return self._scene.los_rotation_factors[:, :, 2]
 
     @property_cached
     def unitU(self):
-        ''' Unit vector vertical (up) component, ``NxM`` matrix like
+        """ Unit vector vertical (up) component, ``NxM`` matrix like
             :attr:`~kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
-        '''
-        return num.cos(self._scene.theta)
+        """
+        return self._scene.los_rotation_factors[:, :, 0]
 
 
 class TestScene(Scene):
-    '''Test scenes for synthetic displacement '''
+    """Test scenes for synthetic displacement """
 
     @classmethod
     def createGauss(cls, nx=512, ny=512, noise=None, **kwargs):

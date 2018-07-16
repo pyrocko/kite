@@ -1,21 +1,26 @@
-#!/bin/python
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
 import numpy as num
 import pyqtgraph as pg
-from pyqtgraph import dockarea
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
-from PySide import QtGui, QtCore
 from collections import OrderedDict
 
+from PyQt5 import QtGui, QtCore
+from pyqtgraph import dockarea
+
 from kite.qt_utils import loadUi
-from kite.covariance import modelCovariance
+from kite.covariance import CovarianceConfig
 
 from .base import (KiteView, KitePlot, KiteParameterGroup,
                    KiteToolColormap, get_resource)
 
+pen_covariance_model = pg.mkPen(
+    (204, 0, 0), width=2, style=QtCore.Qt.DotLine)
+
 pen_covariance = pg.mkPen(
-    (204, 0, 0), width=2.5, style=QtCore.Qt.DotLine)
+    (255, 255, 255, 100), width=1.25)
+
+pen_covariance_active = pg.mkPen(
+    (255, 255, 255), width=1.25)
 
 pen_variance = pg.mkPen(
     (78, 154, 6), width=2.5, style=QtCore.Qt.DashLine)
@@ -40,20 +45,21 @@ class KiteCovariance(KiteView):
         covariance_plot = KiteNoisePlot(model)
         self.main_widget = covariance_plot
         self.tools = {
-            'Covariance.powerspecNoise':
-                KiteNoisePowerspec(covariance_plot),
-            'Covariance.covariance_func':
+            # 'Covariance.powerspecNoise':
+            #     KiteNoisePowerspec(covariance_plot),
+            'Semi-Variogram: Covariance.structure_spatial':
+                KiteStructureFunction(covariance_plot),
+            'Covariogram: Covariance.covariance_spatial':
                 KiteCovariogram(covariance_plot),
-            # 'Covariance.structure_func':
-            #     KiteStructureFunction(covariance_plot),
         }
 
         self.param_covariance = KiteParamCovariance(model)
         self.parameters = [self.param_covariance]
 
         self.dialogInspectNoise = KiteToolNoise(model, spool)
-        self.dialogInspectCovariance = KiteToolWeightMatrix(
-            model, spool)
+        self.dialogInspectCovariance = KiteToolWeightMatrix(model, spool)
+        self.dialogCovarianceInfo = CovarianceCalcResultDialog(model, spool)
+        self.dialogCovarianceWarning = CovarianceNotPosDefWarning(model, spool)
 
         spool.actionInspect_Noise.triggered.connect(
             self.dialogInspectNoise.show)
@@ -68,7 +74,12 @@ class KiteCovariance(KiteView):
         spool.actionInspect_Weights.setEnabled(True)
         spool.actionCalculate_WeightMatrix.setEnabled(True)
 
-        model.sigSceneModelChanged.connect(self.modelChanged)
+        model.sigSceneModelChanged.connect(
+            self.modelChanged)
+        model.sigCalculateWeightMatrixFinished.connect(
+            self.dialogCovarianceInfo.show)
+        model.sigCovarianceChanged.connect(
+            self.dialogCovarianceWarning.test)
 
         KiteView.__init__(self)
 
@@ -80,8 +91,30 @@ class KiteCovariance(KiteView):
         self.main_widget.onConfigChanged()
 
         self.param_covariance.updateValues()
-        for v in self.tools.itervalues():
+        for v in self.tools.values():
             v.update()
+
+
+class CovarianceNotPosDefWarning(QtGui.QMessageBox):
+    def __init__(self, model, *args, **kwargs):
+        QtGui.QMessageBox.__init__(self, *args, **kwargs)
+        self.setIcon(QtGui.QMessageBox.Warning)
+
+        self.setWindowTitle('Covariance Warning')
+        self.setText('<b><span style="font-family: monospace;">'
+                     'Covariance.covariance_matrix_focal</span>'
+                     ' is not positiv definit!</b>')
+        self.setInformativeText(
+            'Change the <span style="font-family: monospace;">'
+            'Covariance.model_function</span> to exponential<br>'
+            'or move the noise patch to fix.')
+        self.model = model
+
+    @QtCore.pyqtSlot()
+    def test(self):
+        covariance = self.model.covariance
+        if not covariance.isMatrixPosDefinite(full=False):
+            self.show()
 
 
 class KiteNoisePlot(KitePlot):
@@ -177,6 +210,7 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.connect(self.update)
         self.update()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
         spec, k, _, _, _, _ = covariance.powerspecNoise1D()
@@ -187,6 +221,14 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
 
 class KiteCovariogram(_KiteSubplotPlot):
 
+    legend_template = {
+        'exponential':
+            'Model: {0:.2g} e^(-d/{1:.1f}) | RMS: {rms:.4e}',
+        'exponential_cosine':
+            'Model: {0:.2g} e^(-d/{1:.1f}) - cos((d-({2:.1f}))/{3:.1f}) '
+            '| RMS: {rms:.4e}'
+    }
+
     class VarianceLine(pg.InfiniteLine):
         def __init__(self, *args, **kwargs):
             pg.InfiniteLine.__init__(self, *args, **kwargs)
@@ -194,12 +236,19 @@ class KiteCovariogram(_KiteSubplotPlot):
 
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
-        self.plot.setLabels(bottom={'Distance', 'm'},
-                            left='Covariance (m<sup>2</sup>)')
+        self.plot.setLabels(
+            bottom=('Distance', 'm'),
+            left='Covariance (m<sup>2</sup>)')
 
-        self.cov = pg.PlotDataItem(antialias=True)
-        self.cov.setZValue(10)
-        self.cov_model = pg.PlotDataItem(antialias=True, pen=pen_covariance)
+        self.cov_spectral = pg.PlotDataItem(antialias=True)
+        self.cov_spectral.setZValue(10)
+
+        self.cov_spatial = pg.PlotDataItem(antialias=True)
+
+        self.cov_model = pg.PlotDataItem(
+            antialias=True,
+            pen=pen_covariance_model)
+
         self.variance = self.VarianceLine(
             pen=pen_variance,
             angle=0, movable=True, hoverPen=pen_variance_highlight,
@@ -208,13 +257,12 @@ class KiteCovariogram(_KiteSubplotPlot):
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
         self.variance.setToolTip('Move to change variance')
-
         self.variance.sigPositionChangeFinished.connect(self.setVariance)
 
-        self.addItem(self.variance)
-
-        self.addItem(self.cov)
+        self.addItem(self.cov_spectral)
+        self.addItem(self.cov_spatial)
         self.addItem(self.cov_model)
+        self.addItem(self.variance)
         # self.cov_lin_pow = pg.PlotDataItem(antialias=True,
         #                                    pen=pen_green_dash)
         # self.addItem(self.cov_lin_pow)
@@ -223,7 +271,6 @@ class KiteCovariogram(_KiteSubplotPlot):
 
         self.legend.setParentItem(self.plot.graphicsItem())
         self.legend.addItem(self.cov_model, '')
-        self.legend.template = 'Model: {0:.5f} e^(-d/{1:.1f}) | RMS: {rms:.4e}'
 
         self.model.sigCovarianceChanged.connect(
             self.update)
@@ -233,37 +280,63 @@ class KiteCovariogram(_KiteSubplotPlot):
     def setVariance(self):
         self.model.covariance.variance = self.variance.value()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
-        cov, dist = covariance.covariance_func
 
-        self.cov.setData(dist, cov)
+        cov_spectral, dist = covariance.covariance_spectral
+        self.cov_spectral.setData(dist, cov_spectral)
+
+        cov_spatial, dist = covariance.covariance_spatial
+        self.cov_spatial.setData(dist, cov_spatial)
+
+        if self.model.covariance.config.sampling_method == 'spatial':
+            self.cov_spatial.setPen(pen_covariance_active)
+            self.cov_spectral.setPen(pen_covariance)
+
+        else:
+            self.cov_spatial.setPen(pen_covariance)
+            self.cov_spectral.setPen(pen_covariance_active)
+
+        model = self.model.covariance.getModelFunction()
+
         self.cov_model.setData(
-            dist, modelCovariance(dist, *covariance.covariance_model))
-        # self.cov_lin_pow.setData(
-        #     dist, covariance.covarianceAnalytical(3)[0])
+            dist,
+            model(dist, *covariance.covariance_model))
+
+        tmpl = self.legend_template[covariance.config.model_function]
 
         self.legend.items[-1][1].setText(
-            self.legend.template.format(
+            tmpl.format(
                 *covariance.covariance_model,
                 rms=covariance.covariance_model_rms))
         self.variance.setValue(covariance.variance)
 
 
 class KiteStructureFunction(_KiteSubplotPlot):
+
+    class VarianceLine(pg.InfiniteLine):
+        def __init__(self, *args, **kwargs):
+            pg.InfiniteLine.__init__(self, *args, **kwargs)
+            self.setCursor(QtCore.Qt.SizeVerCursor)
+
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
+        frame = self.model.frame
 
-        self.structure = pg.PlotDataItem(antialias=True)
-        self.variance = pg.InfiniteLine(
-            pen=pen_covariance,
-            angle=0, movable=True, hoverPen=None,
+        self.structure = pg.PlotDataItem(
+            antialias=True,
+            pen=pen_covariance_active)
+        self.variance = self.VarianceLine(
+            pen=pen_variance,
+            angle=0, movable=True, hoverPen=pen_variance_highlight,
             label='Variance: {value:.5f}',
             labelOpts={'position': .975,
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
-        self.plot.setLabels(bottom={'Distance', 'm'},
-                            left='Covariance (m<sup>2</sup>)')
+        self.plot.setLabels(
+            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
+            left='Covariance (m<sup>2</sup>)')
 
         self.addItem(self.structure)
         self.addItem(self.variance)
@@ -274,10 +347,12 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
         self.update()
 
+    @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
-        struc, dist = covariance.structure_func
-        self.structure.setData(dist, struc)
+        struc, dist = covariance.getStructure()
+        self.structure.setData(dist[num.isfinite(struc)],
+                               struc[num.isfinite(struc)])
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
@@ -306,6 +381,10 @@ class KiteToolNoise(QtGui.QDialog):
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
 
+        @QtCore.pyqtSlot()
+        def update(self):
+            KitePlot.update(self)
+
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
 
@@ -320,7 +399,6 @@ class KiteToolNoise(QtGui.QDialog):
                 sideScalers=True,
                 movable=False,
                 pen=pen_roi)
-            self.patch_size_roi.sigRegionChangeFinished.connect(self.update)
 
             self._anisotropic = False
             self.components_available = {
@@ -331,8 +409,9 @@ class KiteToolNoise(QtGui.QDialog):
                 ]}
 
             self._component = 'synthetic_noise'
-            KitePlot.__init__(self, model=model)
 
+            KitePlot.__init__(self, model=model)
+            self.patch_size_roi.sigRegionChangeFinished.connect(self.update)
             self.addItem(self.patch_size_roi)
 
         @property
@@ -382,6 +461,10 @@ class KiteToolNoise(QtGui.QDialog):
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
 
+        @QtCore.pyqtSlot()
+        def update(self):
+            KitePlot.update(self)
+
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
 
@@ -390,7 +473,7 @@ class KiteToolNoise(QtGui.QDialog):
 
         loadUi(get_resource('noise_dialog.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.noise_patch = self.NoisePlot(model)
@@ -480,6 +563,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
             self.update()
 
+        @QtCore.pyqtSlot()
         def update(self):
             self.image.updateImage(
                 self.model.covariance.weight_matrix_focal.T,
@@ -491,16 +575,16 @@ class KiteToolWeightMatrix(QtGui.QDialog):
                 xRange=(0, self.model.quadtree.nleaves),
                 yRange=(0, self.model.quadtree.nleaves))
 
-        @QtCore.Slot(object)
+        @QtCore.pyqtSlot(object)
         def mouseMoved(self, event=None):
             if event is None:
                 pass
             elif self.image.sceneBoundingRect().contains(event[0]):
                 map_pos = self.plotItem.vb.mapSceneToView(event[0])
                 if not map_pos.isNull():
-                    img_pos = self.image.mapFromScene(event).data
-                    value = self.image.image[int(img_pos().x()),
-                                             int(img_pos().y())]
+                    img_pos = self.image.mapFromScene(*event)
+                    value = self.image.image[int(img_pos.x()),
+                                             int(img_pos.y())]
 
                     self.hint['leaf1'] = int(map_pos.x())
                     self.hint['leaf2'] = int(map_pos.y())
@@ -520,7 +604,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         loadUi(get_resource('covariance_matrix.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardPixmap(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
 
         self.weight_matrix = self.MatrixPlot(model)
         self.dockarea = dockarea.DockArea(self)
@@ -546,16 +630,16 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
 
 class QCalculateWeightMatrix(QtCore.QObject):
-    sigCalculateWeightMatrix = QtCore.Signal()
+    sigCalculateWeightMatrix = QtCore.pyqtSignal()
 
     def __init__(self, model, parent):
         QtCore.QObject.__init__(self)
         self.sigCalculateWeightMatrix.connect(
             model.calculateWeightMatrix)
 
-        ret = QtGui.QMessageBox.information(
+        diag = QtGui.QMessageBox.information(
             parent,
-            'Calculate full weight matrix',
+            'Calculate Full Weight Matrix',
             '''<html><head/><body><p>
 This will calculate the quadtree's full weight matrix
 (<span style='font-family: monospace'>Covariance.weight_matrix</span>)
@@ -563,22 +647,58 @@ for this noise/covariance configuration.</p><p>
 The calculation is expensive and may take several minutes.
 </p></body></html>
 ''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
-        if ret == QtGui.QMessageBox.Ok:
+
+        if diag == QtGui.QMessageBox.Ok:
             self.sigCalculateWeightMatrix.emit()
 
 
+class CovarianceCalcResultDialog(QtGui.QMessageBox):
+
+    text_tmpl = ('<span style="font-family: monospace;">'
+                 'Covariance.covariance_matrix</span>')
+
+    def __init__(self, model, *args, **kwargs):
+        QtGui.QMessageBox.__init__(self, *args, **kwargs)
+
+        self.setIcon(QtGui.QMessageBox.Information)
+        self.model = model
+        self.setWindowTitle('Covariance Calculation')
+        self.setTextFormat(QtCore.Qt.RichText)
+
+    @QtCore.pyqtSlot(object)
+    def show(self, elapsed_time, *args, **kwargs):
+
+        if self.model.covariance.isMatrixPosDefinite(full=True):
+            self.setIcon(QtGui.QMessageBox.Information)
+            self.setText('Finished, %s is positiv definit!' % self.text_tmpl)
+            self.setInformativeText('')
+        else:
+            self.setIcon(QtGui.QMessageBox.Warning)
+            self.setText('<b>%s is not positiv definit!</b>' % self.text_tmpl)
+            self.setInformativeText(
+                'Change the <span style="font-family: monospace;">'
+                'Covariance.model_function</span> to exponential'
+                ' or moving the noise patch.')
+
+        self.setDetailedText('Elapsed time: %s' % elapsed_time)
+        QtGui.QMessageBox.show(self, *args, **kwargs)
+
+
 class KiteParamCovariance(KiteParameterGroup):
+    sigSamplingMethod = QtCore.pyqtSignal(str)
+    sigSpatialBins = QtCore.pyqtSignal(int)
+    sigSpatialPairs = QtCore.pyqtSignal(int)
+
     def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene.covariance'
 
+        self.sp = model
+
         self.parameters = OrderedDict([
-            ('powerspec_model_rms', None),
             ('variance', None),
-            ('covariance_model [a]',
-             lambda c: c.covariance_model[0]),
-            ('covariance_model [b]',
-             lambda c: c.covariance_model[1]),
+            ('covariance_model',
+             lambda c: ', '.join('%g' % p for p in c.covariance_model)),
             ('covariance_model_rms', None),
             ('noise_patch_size_km2', None),
             ('noise_patch_coord',
@@ -591,3 +711,66 @@ class KiteParamCovariance(KiteParameterGroup):
             model=model,
             model_attr='covariance',
             **kwargs)
+
+        def changeSamplingMethod():
+            model.covariance.setSamplingMethod(sampling_method.value())
+
+        p = {'name': 'sampling_method',
+             'values': {
+                'spatial random': 'spatial',
+                'spectral': 'spectral',
+                 },
+             'value': model.covariance.config.sampling_method,
+             'tip': CovarianceConfig.sampling_method.help,
+             }
+        sampling_method = pTypes.ListParameter(**p)
+        sampling_method.sigValueChanged.connect(changeSamplingMethod)
+
+        def changeSpatialBins():
+            model.covariance.setSpatialBins(spatial_bins.value())
+
+        p = {'name': 'spatial_bins',
+             'value': model.covariance.config.spatial_bins,
+             'type': 'int',
+             'limits': (25, 500),
+             'step': 5,
+             'edditable': True,
+             'tip': CovarianceConfig.spatial_bins.help
+             }
+
+        spatial_bins = pTypes.SimpleParameter(**p)
+        spatial_bins.sigValueChanged.connect(changeSpatialBins)
+
+        def changeSpatialPairs():
+            model.covariance.setSpatialPairs(spatial_pairs.value())
+
+        p = {'name': 'spatial_pairs',
+             'value': model.covariance.config.spatial_pairs,
+             'type': 'int',
+             'limits': (0, 1000000),
+             'step': 50000,
+             'edditable': True,
+             'tip': CovarianceConfig.spatial_pairs.help
+             }
+
+        spatial_pairs = pTypes.SimpleParameter(**p)
+        spatial_pairs.sigValueChanged.connect(changeSpatialPairs)
+
+        def changeModelFunction():
+            model.covariance.setModelFunction(model_function.value())
+
+        p = {'name': 'model_function',
+             'values': {
+                'exponential': 'exponential',
+                'exp + cosine': 'exponential_cosine',
+                 },
+             'value': model.covariance.config.model_function,
+             'tip': CovarianceConfig.model_function.help
+             }
+        model_function = pTypes.ListParameter(**p)
+        model_function.sigValueChanged.connect(changeModelFunction)
+
+        self.pushChild(model_function)
+        self.pushChild(spatial_bins)
+        self.pushChild(spatial_pairs)
+        self.pushChild(sampling_method)

@@ -1,7 +1,7 @@
 .. _talpa:
 
-``Talpa`` Static Displacement Modelling (GUI)
-=============================================
+Static Displacement Modelling with ``Talpa``
+============================================
 
 The tool ``talpa`` (`Talpidae; the mole`) enables interactive modelling of static displacement sources.
 
@@ -23,7 +23,7 @@ A basic analytical displacement source is :class:`~kite.sources.OkadaSource`. We
 2. Pyrocko Sources
 ~~~~~~~~~~~~~~~~~~
 
-We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see :mod:`pyrocko.apps.fomosto`)
+We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see https://pyrocko.org/docs/current/apps/fomosto/index.html)
 
 Implemented source types - Point sources and extended.
 
@@ -51,7 +51,8 @@ Adding Sources
 A selection of different displacement sources can be added to the modelling sandbox by right clicking on the source list.
 
 
-.. figure:: ../_images/talpa-src_add.gif
+.. figure:: ../../_images/talpa-src_add.png
+    :class: gif
     :width: 80%
     :align: center
 
@@ -63,7 +64,7 @@ Manipulating Sources
 
 The spatial parameters of the the sandbox's source can be interacted with by click-and-drag. Advanced parameters, in this case dip, rake and slip are accesses through the editing dialog.
 
-.. figure:: ../_images/talpa-src_mod.gif
+.. figure:: ../../_images/talpa-src_mod.gif
     :width: 80%
     :align: center
 
@@ -72,7 +73,7 @@ The spatial parameters of the the sandbox's source can be interacted with by cli
 
 Parametrisation through the source's editing dialog (:menuselection:`<right-click> --> Edit`).
 
-.. figure:: ../_images/talpa-src_dialog.png
+.. figure:: ../../_images/talpa-src_dialog.png
     :align: center
 
     Source parameter dialog for an :class:`~kite.sources.OkadaSource`.

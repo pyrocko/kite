@@ -1,4 +1,4 @@
-from PySide import QtCore, QtGui
+from PyQt5 import QtCore, QtGui
 import numpy as num
 import os
 
@@ -8,20 +8,21 @@ from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
                           PyrockoRingfaultSource)
 
-from ..config import config
+from ..config import getConfig
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
 
 
 class PyrockoSourceDialog(SourceEditDialog):
-    completer = QtGui.QCompleter()
-    completer_model = QtGui.QFileSystemModel(completer)
-    completer.setModel(completer_model)
-    completer.setMaxVisibleItems(8)
 
     def __init__(self, delegate, ui_file, *args, **kwargs):
         SourceEditDialog.__init__(self, delegate, ui_file, *args, **kwargs)
+
+        self.completer = QtGui.QCompleter()
+        self.completer_model = QtGui.QFileSystemModel(self.completer)
+        self.completer.setModel(self.completer_model)
+        self.completer.setMaxVisibleItems(8)
 
         self.chooseStoreDirButton.released.connect(
             self.chooseStoreDir)
@@ -35,7 +36,7 @@ class PyrockoSourceDialog(SourceEditDialog):
 
         self.getSourceParameters()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def chooseStoreDir(self):
         folder = QtGui.QFileDialog.getExistingDirectory(
             self, 'Open Pyrocko GF Store', os.getcwd())
@@ -76,7 +77,7 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
             strike=45.,
             rake=0,
             slip=2,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -129,7 +130,7 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
             PyrockoSourceDialog.__init__(
                 self, ui_file='pyrocko_moment_tensor.ui', *args, **kwargs)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParameters(self):
             params = {}
             scale = float('1e%d' % self.exponent.value())
@@ -139,15 +140,15 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
                     params[param] = params[param] * scale
             self.delegate.updateModelParameters(params)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
             exponent = num.log10(
-                num.max([v for k, v in params.iteritems()
+                num.max([v for k, v in params.items()
                          if k in self.scaling_params]))
             scale = float('1e%d' % int(exponent))
 
-            for param, value in params.iteritems():
+            for param, value in params.items():
                 if param in self.scaling_params:
                     self.__getattribute__(param).setValue(value / scale)
                 else:
@@ -162,7 +163,7 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -221,7 +222,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             self.addRotateHandle([.5, 1.], [0.5, 0.5])
             self.updateROIPosition()
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParametersFromROI(self):
             angle = self.angle()
             strike = float(-angle) % 360
@@ -235,7 +236,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
             self.newSourceParameters.emit(parameters)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def updateROIPosition(self):
             source = self.source
             vec_x, vec_y = self._vectorToCenter(source.strike)
@@ -280,7 +281,7 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 
@@ -336,7 +337,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             self.addScaleRotateHandle([.5, 1.], [.5, .5])
             self.updateROIPosition()
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def setSourceParametersFromROI(self):
             angle = self.angle()
             strike = float(-angle) % 360
@@ -351,7 +352,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
 
             self.newSourceParameters.emit(parameters)
 
-        @QtCore.Slot()
+        @QtCore.pyqtSlot()
         def updateROIPosition(self):
             source = self.source
 
@@ -397,7 +398,7 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
             diameter=10000.,
-            store_dir=config.default_gf_dir or '',
+            store_dir=getConfig().default_gf_dir or '',
             )
         return src
 

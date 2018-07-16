@@ -1,11 +1,9 @@
-#!/usr/bin/python2
-from __future__ import (division, absolute_import, print_function,
-                        unicode_literals)
-
-from PySide import QtCore
-from os import path
+#!/usr/bin/python3
 import time
 import numpy as num
+from os import path
+
+from PyQt5 import QtCore, QtGui
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -37,7 +35,7 @@ class KiteView(dockarea.DockArea):
             widget=KiteToolColormap(self.main_widget))
         dock_colormap.setStretch(1, None)
 
-        for i, (name, tool) in enumerate(self.tools.iteritems()):
+        for i, (name, tool) in enumerate(self.tools.items()):
             self.tool_docks.append(
                 dockarea.Dock(
                     name,
@@ -64,15 +62,21 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             brush=(0, 0, 0, 180),
             pen=(255, 255, 255),
             pxMode=True)
-        self.orientArrow()
 
+        self.label = QtGui.QGraphicsSimpleTextItem(
+            'LOS', parent=self)
+        self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
+        # self.label.setFont(QtGui.QFont(
+        #     "Helvetica", weight=QtGui.QFont.DemiBold))
+
+        self.orientArrow()
         self.model.sigSceneChanged.connect(self.orientArrow)
         self.setFlag(self.ItemIgnoresTransformations)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def orientArrow(self):
-        phi = num.median(self.model.scene.phi)
-        theta = num.median(self.model.scene.theta)
+        phi = num.nanmedian(self.model.scene.phi)
+        theta = num.nanmedian(self.model.scene.theta)
 
         angle = -num.rad2deg(phi)
         theta_f = theta / (num.pi/2)
@@ -81,12 +85,19 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         tailLen = 15 + theta_f * 15.
 
         self.arrow.setStyle(
-            angle=angle,
+            angle=0.,
             tipAngle=tipAngle,
             tailLen=tailLen,
             tailWidth=6,
             headLen=25)
-        self.arrow.setRotation(self.arrow.opts['angle'])
+        self.arrow.setRotation(angle)
+
+        rect_label = self.label.boundingRect()
+        rect_arr = self.arrow.boundingRect()
+
+        self.label.setPos(
+            rect_arr.width()/2 - rect_label.width()/2,
+            rect_label.height()*1.33)
 
     def setParentItem(self, parent):
         pg.GraphicsWidget.setParentItem(self, parent)
@@ -113,9 +124,6 @@ class KitePlot(pg.PlotWidget):
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
-        self.setLabels(
-            bottom=('Easting', 'm'),
-            left=('Northing', 'm'))
 
         self.hint = {
             'east': 0.,
@@ -133,12 +141,26 @@ class KitePlot(pg.PlotWidget):
         self.hint_text.anchor(
             itemPos=(1., 0.),
             parentPos=(1., 0.))
-        self.hint_text.text_template =\
-            '<span style="font-family: monospace; color: #fff;'\
-            'background-color: #000;">'\
-            'East {east:08.2f} m | North {north:08.2f} m | '\
-            '{measure} {value:{length}.{precision}f}</span>'
         self.hint_text.setOpacity(.6)
+
+        if self.model.frame.isMeter():
+            self.hint_text.text_template =\
+                '<span style="font-family: monospace; color: #fff;'\
+                'background-color: #000;">'\
+                'East {east:08.2f} m | North {north:08.2f} m |'\
+                ' {measure} {value:{length}.{precision}f}</span>'
+            self.setLabels(
+                bottom=('Easting', 'm'),
+                left=('Northing', 'm'))
+        elif self.model.frame.isDegree():
+            self.hint_text.text_template =\
+                '<span style="font-family: monospace; color: #fff;'\
+                'background-color: #000;">'\
+                'Lon {east:03.3f}&deg; | Lat {north:02.3f}&deg; |'\
+                ' {measure} {value:{length}.{precision}f}</span>'
+            self.setLabels(
+                bottom='Longitude',
+                left='Latitude')
 
         self.addItem(self.image)
         self.update()
@@ -162,8 +184,10 @@ class KitePlot(pg.PlotWidget):
             offset=(-10., 40.))
 
     def transFromFrame(self):
+        frame = self.model.frame
+
         self.image.resetTransform()
-        self.image.scale(self.model.frame.dE, self.model.frame.dN)
+        self.image.scale(frame.dE, frame.dN)
 
     def scalebar(self):
         ''' Not working '''
@@ -193,8 +217,8 @@ class KitePlot(pg.PlotWidget):
         return self._data
         # return self._data  # num.nan_to_num(_data)
 
-    @QtCore.Slot()
-    def update(self):
+    @QtCore.pyqtSlot(object)
+    def update(self, obj=None):
         self._data = None
         ts = time.time()
 
@@ -204,26 +228,17 @@ class KitePlot(pg.PlotWidget):
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
         self.mouseMoved()
-        # self.addIsocurves()
 
-    def addIsocurve(self, level=0.):
-        iso = pg.IsocurveItem(level=level, pen='g')
-        iso.setZValue(1000)
-        iso.setData(pg.gaussianFilter(self.data, (5, 5)))
-        iso.setParentItem(self.image)
-
-        self.iso = iso
-
-    @QtCore.Slot(object)
+    @QtCore.pyqtSlot(object)
     def mouseMoved(self, event=None):
         if event is None:
             return
         elif self.image.sceneBoundingRect().contains(event[0]):
             map_pos = self.plotItem.vb.mapSceneToView(event[0])
             if not map_pos.isNull():
-                img_pos = self.image.mapFromScene(event).data
-                value = self.image.image[int(img_pos().x()),
-                                         int(img_pos().y())]
+                img_pos = self.image.mapFromScene(*event)
+                value = self.image.image[int(img_pos.x()),
+                                         int(img_pos.y())]
 
                 self.hint['east'] = map_pos.x()
                 self.hint['north'] = map_pos.y()
@@ -275,17 +290,16 @@ class KiteToolColormap(pg.HistogramLUTWidget):
                  [.5, (255, 255, 255)],
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
-        lvl_min = num.nanmin(self._plot.data)
-        lvl_max = num.nanmax(self._plot.data)
-        abs_range = max(abs(lvl_min), abs(lvl_max))
+
+        lvl_max = num.nanmax(num.abs(self._plot.data)) * 1.01
 
         self.gradient.restoreState(cmap)
-        self.setLevels(-abs_range, abs_range)
+        self.setLevels(-lvl_max, lvl_max)
 
     def setQualitativeColormap(self):
-        l = len(_viridis_data) - 1
+        nc = len(_viridis_data) - 1
         cmap = {'mode': 'rgb'}
-        cmap['ticks'] = [[float(i)/l, c] for i, c in enumerate(_viridis_data)]
+        cmap['ticks'] = [[float(i)/nc, c] for i, c in enumerate(_viridis_data)]
         self.gradient.restoreState(cmap)
         self.setLevels(num.nanmin(self._plot.data),
                        num.nanmax(self._plot.data))
@@ -327,7 +341,7 @@ class KiteParameterGroup(pTypes.GroupParameter):
         else:
             model = self.model
 
-        for param, f in self.parameters.iteritems():
+        for param, f in self.parameters.items():
             QtCore.QCoreApplication.processEvents()
             try:
                 if callable(f):

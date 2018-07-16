@@ -1,5 +1,5 @@
-Quadtree Parametrisation
-========================
+Quadtree parametrisation
+===============================
 
 The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for displacement modelling. The tree consists of :class:`~kite.quadtree.QuadNode` s, a state or slice of the tree is denoted as :attr:`~kite.Quadtree.leaves`.
 
@@ -25,7 +25,7 @@ The GUI ``spool`` offers an interactive parametrisation of the quadtree. Start t
 Scripted quadtree parametrisation
 ---------------------------------
 
-The parametrization of the tree can be done through the :doc:`../spool` or the python interface of :class:`~kite.Quadtree`.
+The parametrization of the tree can be done through the :doc:`../tools/spool` or the python interface of :class:`~kite.Quadtree`.
 
 ::
     

@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-VERSION=v`python -c "import kite; print(kite.__version__);"`
+VERSION=v`python3 -c "import kite; print(kite.__version__);"`
 
 if [ ! -f maintenance/deploy-docs.sh ] ; then
     echo "must be run from pyrocko's toplevel directory"
@@ -24,7 +24,7 @@ read -r -p "Do you want to link 'current' to the just uploaded version $VERSION 
 case $resp in
     [yY][eE][sS]|[yY] )
         echo "Linking docs/kite/$VERSION to docs/kite/current";
-        ssh pyrocko@hive "rm -rf /var/www/pyrocko.org/docs/kite/current; ln -s /var/www/pyrocko.org/docs/$VERSION /var/www/pyrocko.org/docs/current";
+        ssh pyrocko@hive "rm -rf /var/www/pyrocko.org/docs/kite/current; ln -s /var/www/pyrocko.org/docs/kite/$VERSION /var/www/pyrocko.org/docs/kite/current";
         ;;
     * ) ;;
 esac

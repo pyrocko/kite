@@ -1,15 +1,31 @@
 Installation
 ============
-Kite has been tested on *Debian based distributions* (eg. Mint and Ubuntu).
+
+Kite has been tested on Anaconda, *Debian based distributions* (eg. Ubuntu and Mint) and MacOSX.
+
+Anaconda3 using ``conda``
+--------------------------
+
+Pre-built packages are available for Linux 64-Bit and MacOS. You can use can use the ``conda`` package manager to install Kite:
+
+.. code-block:: sh
+    :caption: Packages are available on Anaconda Cloud
+
+    conda install -c pyrocko pyrocko-kite
+
 
 Debian / Ubuntu
 ---------------
-.. code-block :: sh
 
-    sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl python-yaml python-scipy python-numpy
-    git clone https://gitext.gfz-potsdam.de/isken/kite.git
+As a mandatory prerequisit you have to install ``pyrocko`` - `Installation Instructions <https://pyrocko.org/docs/current/install/index.html>`_
+
+.. code-block :: sh
+    :caption: Installation through from source and ``apt``
+
+    sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy
+    git clone https://github.com/pyrocko/kite
     cd kite
-    sudo pip install .
+    sudo python3 setup.py install
 
 MacOS (Sierra, MacPorts)
 ------------------------
@@ -19,16 +35,16 @@ Install without root, installing `pyrocko` is a prerequisite. Please visit http:
 .. code-block :: sh
 
 	sudo port install git
-	sudo port install python27
-	sudo port select python python27
-	sudo port install py27-numpy
-	sudo port install py27-scipy
-	sudo port install py27-matplotlib
-	sudo port install py27-yaml
-	sudo port install py27-pyside
-	sudo port install py27-setuptools
-	/opt/local/bin/easy_install-2.7 --user pyavl	
+	sudo port install python35
+	sudo port select python python35
+	sudo port install py35-numpy
+	sudo port install py35-scipy
+	sudo port install py35-matplotlib
+	sudo port install py35-yaml
+	sudo port install py35-pyqt5
+	sudo port install py35-setuptools
+    sudo pip3 install git+https://github.com/pyqtgraph/pyqtgraph
 	 
-    git clone https://gitext.gfz-potsdam.de/isken/kite.git
+    git clone https://github.com/pyrocko/kite
     cd kite
     python setup.py install --user --install-scripts=/usr/local/bin

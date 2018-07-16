@@ -1,4 +1,4 @@
-from PySide import QtCore
+from PyQt5 import QtCore
 
 # Importing available models
 from kite.qt_utils import SceneLogModel
@@ -14,35 +14,36 @@ for module in sources.__sources__:
 
 
 class CursorTracker(QtCore.QObject):
-    sigCursorMoved = QtCore.Signal(object)
-    sigMouseMoved = QtCore.Signal(object)
+    sigCursorMoved = QtCore.pyqtSignal(object)
+    sigMouseMoved = QtCore.pyqtSignal(object)
 
 
 class SandboxModel(QtCore.QObject):
 
-    sigModelUpdated = QtCore.Signal()
-    sigModelChanged = QtCore.Signal()
-    sigLogRecord = QtCore.Signal(object)
+    sigModelUpdated = QtCore.pyqtSignal()
+    sigModelChanged = QtCore.pyqtSignal()
+    sigLogRecord = QtCore.pyqtSignal(object)
 
-    sigProcessingFinished = QtCore.Signal()
-    sigProcessingStarted = QtCore.Signal(str)
+    sigProcessingFinished = QtCore.pyqtSignal()
+    sigProcessingStarted = QtCore.pyqtSignal(str)
 
-    def __init__(self, scene_model, *args, **kwargs):
-        QtCore.QObject.__init__(self, *args, **kwargs)
-        self.worker_thread = QtCore.QThread()
-        self.moveToThread(self.worker_thread)
-        self.worker_thread.start()
+    def __init__(self, sandbox_model=None, *args, **kwargs):
+        QtCore.QObject.__init__(self)
 
-        self.model = None
+        self.model = sandbox_model
         self.log = SceneLogModel(self)
         self.sources = SourceModel(self)
+        self.cursor_tracker = CursorTracker(self)
 
         self._log_handler = logging.Handler()
         self._log_handler.emit = self.sigLogRecord.emit
 
-        self.cursor_tracker = CursorTracker()
+        self.worker_thread = QtCore.QThread()
+        self.moveToThread(self.worker_thread)
+        self.worker_thread.start()
 
-        self.setModel(scene_model)
+        if self.model:
+            self.setModel(self.model)
 
     def setModel(self, model):
         self.disconnectSlots()
@@ -71,7 +72,7 @@ class SandboxModel(QtCore.QObject):
     def removeSource(self, source):
         self.model.removeSource(source)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def optimizeSource(self):
         self.sigProcessingStarted.emit('Optimizing source, stay tuned!')
         self.model.reference.optimizeSource()
@@ -94,14 +95,14 @@ class SandboxModel(QtCore.QObject):
     @classmethod
     def empty(cls):
         from ..sandbox_scene import SandboxScene
-        model = SandboxScene()
-        sandbox = cls(model)
+        sandbox = cls()
+        sandbox.setModel(SandboxScene())
         return sandbox
 
 
 class SourceModel(QtCore.QAbstractTableModel):
 
-    selectionModelChanged = QtCore.Signal()
+    selectionModelChanged = QtCore.pyqtSignal()
 
     def __init__(self, sandbox, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
@@ -165,19 +166,19 @@ class SourceModel(QtCore.QAbstractTableModel):
         return True
 
     def setData(self, idx, value, role):
-        print idx
+        print('Set %s with role %s to value %s' % (idx, value, role))
 
     def removeSource(self, idx):
         src = self._sources[idx.row()]
         self.sandbox.removeSource(src.source)
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def modelUpdated(self, force=False):
         if len(self._sources) != len(self.model_sources) or force:
             self.beginResetModel()
             self._createSources()
             self.endResetModel()
 
-    @QtCore.Slot()
+    @QtCore.pyqtSlot()
     def modelChanged(self):
         self.modelUpdated(force=True)
