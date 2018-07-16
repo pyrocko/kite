@@ -624,7 +624,7 @@ class Covariance(object):
         spec = num.fft.fft2(rfield)
 
         if not dEdN:
-            dE, dN = (self.scene.frame.dEmeter, self.scene.frame.dNmeter)
+            dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
         kE = num.fft.fftfreq(nE, dE)
         kN = num.fft.fftfreq(nN, dN)
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
