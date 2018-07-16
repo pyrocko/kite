@@ -58,12 +58,6 @@ A selection of different displacement sources can be added to the modelling sand
 
     Adding a source to the :class:`kite.SandboxScene` using the GUI.
 
-.. raw :: html
-
-    <script type='text/javascript'>
-        $('img.gif').gifplayer();
-    </script>
-
 
 Manipulating Sources
 ----------------------------------
