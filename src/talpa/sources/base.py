@@ -117,6 +117,11 @@ class PointSourceROI(pg.EllipseROI):
             pen=self.pen_outline)
         self.handlePen = self.pen_handle
         self.aspectLocked = True
+
+        for h in self.handles:
+            hi = h['item']
+            hi.disconnectROI(self)
+
         self.handles = []
         # self.setFlag(self.ItemIgnoresTransformations)
         self.setScale(1.)
