@@ -279,7 +279,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         p = {'name': 'tile_size_min',
              'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
-             'type': 'int',
+             'type': 'float',
              'limits': limits,
              'step': 100,
              'editable': True,
