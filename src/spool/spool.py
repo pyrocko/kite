@@ -127,6 +127,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.setMinimumWidth(400)
         self.progress.setWindowTitle('Processing...')
         self.model.sigProcessingFinished.connect(self.progress.reset)
+        self.progress.reset()
 
     def aboutDialog(self):
         self._about = QtGui.QDialog(self)
