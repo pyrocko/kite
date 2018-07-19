@@ -1,10 +1,12 @@
+import re
+import utm
 import os.path as op
 import glob
 import scipy.io
 import numpy as num
 from kite import util
 
-__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC']
+__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
 
 
 def check_required(required, params):
@@ -19,6 +21,10 @@ def safe_cast(val, to_type, default=None):
         return to_type(val)
     except (ValueError, TypeError):
         return default
+
+
+class HeaderError(Exception):
+    pass
 
 
 class AttribDict(dict):
@@ -133,7 +139,6 @@ class Matlab(SceneIO):
             return False
 
     def read(self, filename, **kwargs):
-        import utm
         c = self.container
 
         mat = scipy.io.loadmat(filename)
@@ -224,8 +229,6 @@ class Gamma(SceneIO):
     """
     @staticmethod
     def _parseParameterFile(filename):
-        import re
-
         params = {}
         rc = re.compile(r'^(\w*):\s*([a-zA-Z0-9+-.*]*\s[a-zA-Z0-9_]*).*')
 
@@ -379,7 +382,6 @@ class Gamma(SceneIO):
         c.par_file = par_file
 
         if params['DEM_projection'] == 'UTM':
-            import utm
             utm_zone = params['projection_zone']
             try:
                 utm_zone_letter = utm.latitude_to_zone_letter(
@@ -420,7 +422,7 @@ class Gamma(SceneIO):
             c.frame.llLon = params['corner_lon']
             c.frame.dLon = abs(params['post_lon'])
             c.frame.dLat = abs(params['post_lat'])
-            print(c)
+
         return self.container
 
 
@@ -462,11 +464,9 @@ class ROI_PAC(SceneIO):
 
     @staticmethod
     def _parseParameterFile(par_file):
-        import re
-
         params = {}
         required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-                    'Y_STEP', 'WAVELENGTH','LAT_REF1', 'LON_REF1']
+                    'Y_STEP', 'WAVELENGTH', 'LAT_REF1', 'LON_REF1']
 
         rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
         with open(par_file, 'r') as par:
@@ -485,7 +485,6 @@ class ROI_PAC(SceneIO):
             'Parameter file %s does not hold required parameters' % par_file)
 
     def read(self, filename, **kwargs):
-        import utm
         """
         :param filename: ROI_PAC binary file
         :type filename: str
@@ -499,7 +498,6 @@ class ROI_PAC(SceneIO):
         par_file = kwargs.pop('par_file', self._getParameterFile(filename))
 
         par = self._parseParameterFile(par_file)
-        print(par)
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
@@ -726,9 +724,9 @@ class GMTSAR(SceneIO):
         c.frame.llLon = grd.variables['lon'][:].min()
 
         c.frame.dLat = (grd.variables['lat'][:].max() -
-                              c.frame.llLat)/shape[0]
+                        c.frame.llLat) / shape[0]
         c.frame.dLon = (grd.variables['lon'][:].max() -
-                              c.frame.llLon)/shape[1]
+                        c.frame.llLon) / shape[1]
 
         # Theta and Phi
         try:
@@ -750,3 +748,120 @@ class GMTSAR(SceneIO):
             c.phi = 0.
 
         return c
+
+
+class SARscape(SceneIO):
+    """
+
+    .. note ::
+
+        Expects:
+
+        * Header file in :file:`*_disp.hdr`
+        * Displacement data in cm in :file:`*_disp`
+        * LOS data in :file:`*disp_ILOS` and :file:`*disp_ALOS` files.
+    """
+    def read(self, filename, **kwargs):
+        header = self.parseHeaderFile(filename)
+
+        def load_data(filename):
+            self._log.debug('Loading %s' % filename)
+            return num.flipud(
+                num.fromfile(filename, dtype=num.float32)
+                .reshape((header.lines, header.samples)))
+
+        displacement = load_data(filename)
+        theta_file, phi_file = self.getLOSFiles(filename)
+
+        if not theta_file:
+            theta = num.full_like(displacement, 0.)
+        else:
+            theta = load_data(theta_file)
+            theta = num.deg2rad(theta)
+
+        if not phi_file:
+            phi = num.full_like(displacement, num.pi/2)
+        else:
+            phi = load_data(phi_file)
+            phi = num.pi/2 - num.rad2deg(phi)
+
+        c = self.container
+        c.displacement = displacement
+        c.phi = phi
+        c.theta = theta
+
+        map_info = header.map_info
+        c.frame.dE = float(map_info[5])
+        c.frame.dN = dN = float(map_info[6])
+        c.frame.spacing = 'meter'
+
+        c.frame.llLat, c.frame.llLon = utm.to_latlon(
+            float(map_info[3]) - header.lines * dN,
+            float(map_info[4]),
+            zone_number=int(map_info[7]),
+            northern=True if map_info[8] == 'Northern' else False)
+
+        return c
+
+    def parseHeaderFile(self, filename):
+        hdr_file = self._getHDRFile(filename)
+        conf = re.compile(r'^(.+)\s+=\s+(.+)\n', re.MULTILINE)
+
+        header = AttribDict()
+        with open(hdr_file) as f:
+            s = f.read()
+
+            linebreaks = re.compile(r'{(.+)\n?(.+)}')
+            s = linebreaks.sub(r'{ \g<1> \g<2> }', s)
+
+            for match in conf.finditer(s):
+                groups = match.groups()
+                key = groups[0].strip().replace(' ', '_')
+                value = groups[1].strip()
+                try:
+                    value = int(value)
+                except ValueError:
+                    pass
+
+                header[key] = value
+
+            header.map_info = header.map_info.strip('{} ').split(', ')
+            if not len(header.map_info) == 11:
+                raise HeaderError('`map info` header is not consistent!')
+            if header.map_info[0] != 'UTM':
+                raise HeaderError('`map info` is not UTM!')
+
+        return header
+
+    def getLOSFiles(self, filename):
+        ilos_file = op.abspath(filename + '_ILOS')
+        if not op.exists(ilos_file):
+            self._log.warning('Could not find ILOS file! (%s)' % ilos_file)
+            ilos_file = False
+
+        alos_file = op.abspath(filename + '_ALOS')
+        if not op.exists(alos_file):
+            self._log.warning('Could not find ALOS file! (%s)' % alos_file)
+            alos_file = False
+        return ilos_file, alos_file
+
+    def _getHDRFile(self, filename):
+        hdr_file = op.abspath(op.splitext(filename)[0] + '.hdr')
+        if not op.exists(hdr_file):
+            raise OSError('SARscape .hdr file not found (%s)' % hdr_file)
+        return hdr_file
+
+    def validate(self, filename, **kwargs):
+        val = re.compile(r'SARscape|ENVI Standard', re.MULTILINE)
+        try:
+            hdr_file = self._getHDRFile(filename)
+        except OSError as e:
+            return False
+
+        with open(hdr_file) as f:
+            res = val.search(f.read())
+            if res is not None:
+                return True
+            return False
+
+        raise NotImplementedError('validate not implemented')
