@@ -78,7 +78,11 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         phi = num.nanmedian(self.model.scene.phi)
         theta = num.nanmedian(self.model.scene.theta)
 
-        angle = 180. + num.rad2deg(phi)
+        if phi >= 0:
+            angle = 180. + num.rad2deg(phi)
+        elif phi < 0:
+            angle = -num.rad2deg(phi)
+
         theta_f = theta / (num.pi/2)
 
         tipAngle = 30. + theta_f * 20.
