@@ -281,7 +281,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'default': QuadtreeConfig.tile_size_min.default(),
              'type': 'float',
              'limits': limits,
-             'step': 100,
+             'step': 250,
              'editable': True,
              'suffix': 'm' if frame.isMeter() else 'deg',
              'tip': QuadtreeConfig.tile_size_min.help
