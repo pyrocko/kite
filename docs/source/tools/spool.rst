@@ -15,10 +15,10 @@ A usage scenario for the scenario could look like this - start the GUI:
     spool --load test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat
 
 .. note :: 
-    The dataset :file:`test/data/20110214_20110401_ml4_sm.unw.geo_ig_dsc_ionnocorr.mat` is part of the `Github repositorium <https://github.com/pyrocko/kite>`_.
+    The dataset is part of the `GitHub repository <https://github.com/pyrocko/kite>`_.
 
 Parametrization of the :class:`~kite.Quadtree` and :class:`~kite.Covariance` through the interface is shown in the latter paragraphs of this page.
-From :command:`spool` one can save the scene and it's quadtree and covariance parametrization through :menuselection:`File --> &Save Scene`. Let's save the scene as :file:`/tmp/myanmar_2011.[npz,yml]`.
+From :command:`spool` we can save the scene and it's quadtree and covariance parametrization through :menuselection:`File --> &Save Scene`. Let's save the scene as :file:`/tmp/myanmar_2011.[npz,yml]`.
 
 Now we can utilize ``kite``\'s python framework to work with the subsampled quadtree and errors/weights.
 

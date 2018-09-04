@@ -5,4 +5,4 @@ from .covariance import Covariance  # noqa
 from .sandbox_scene import SandboxScene, TestSandboxScene  # noqa
 
 
-__version__ = '2018.02.26'
+__version__ = '1.0.1'

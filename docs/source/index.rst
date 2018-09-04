@@ -1,7 +1,7 @@
 Kite Manual
 ===========
 
-Kite is an open source toolbox and library for processing and analyzing InSAR displacement.
+Kite is an open source toolbox for processing and analysing InSAR surface displacement maps.
 
 
 Features
@@ -25,6 +25,7 @@ Overview
     :maxdepth: 2
 
     installation
+    quickstart
     examples/index
     tools/index
     reference/index

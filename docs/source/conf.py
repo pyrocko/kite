@@ -33,7 +33,7 @@ import kite
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
-    'sphinx.ext.imgmath',
+    'sphinx.ext.mathjax',
     'sphinx.ext.githubpages',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
@@ -143,7 +143,7 @@ html_theme_options = {
     'visitedlinkcolor': '#204a87',
     'nosidebar': True,
     # 'sidebarcollapse': False,
-    'googlewebfonturl': 'https://fonts.googleapis.com/css?family=Roboto+Slab',
+    # 'googlewebfonturl': 'https://fonts.googleapis.com/css?family=Roboto+Slab',
 }
 
 pygments_style = 'friendly'
