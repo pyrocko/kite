@@ -892,7 +892,7 @@ class Covariance(object):
 
         self._structure_spatial = (variance[~num.isnan(variance)],
                                    bin_distances[~num.isnan(variance)])
-
+        covariance[0]=num.nan
         return (covariance[~num.isnan(covariance)],
                 bin_distances[~num.isnan(covariance)])
 
