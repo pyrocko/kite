@@ -419,6 +419,20 @@ class Quadtree(object):
         """
         if config is None:
             config = self.scene.config.quadtree
+
+        if self.scene.config.old_import:
+            frame = self.scene.config.frame
+
+            from pyrocko import orthodrome as od
+            self._log.warning('Old format - converting quadtree configuration')
+
+            dLat, dLon = od.ne_to_latlon(
+                frame.llLat, frame.llLon,
+                config.tile_size_max, config.tile_size_min)
+
+            config.tile_size_min = dLon - frame.llLon
+            config.tile_size_max = dLat - frame.llLat
+
         self.config = config
         self.setCorrection(self.config.correction)
 

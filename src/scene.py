@@ -114,8 +114,8 @@ class Frame(object):
             return
 
         if self.config.old_import:
-            self._log.warning('Importing an old kite format...\n '
-                              'Please check your pixel spacing - dE, dN!')
+            self._log.warning('Importing an old kite format...')
+            self._log.warning('Please check your pixel spacing - dE, dN!')
         self.updateExtent()
 
     def updateExtent(self):
@@ -390,6 +390,10 @@ class SceneConfig(guts.Object):
     covariance = CovarianceConfig.T(
         default=CovarianceConfig.D(),
         help='Covariance parameters')
+
+    @property
+    def old_import(self):
+        return self.frame.old_import
 
 
 def dynamicmethod(func):

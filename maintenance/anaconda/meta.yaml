@@ -13,8 +13,8 @@ requirements:
     - python
     - numpy
   run:
-    - pyrocko
     - python
+    - pyrocko
     - numpy
     - scipy
     - pyqt

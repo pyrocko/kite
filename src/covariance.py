@@ -45,7 +45,7 @@ def modelCovarianceExponential(distance, a, b):
 
 
 def modelCovarianceExponentialCosine(distance, a, b, c, d):
-    """Exponential function model to approximate a positive-definite covariance
+    r"""Exponential function model to approximate a positive-definite covariance
 
     We assume the following simple covariance model to describe the empirical
     noise observations:
@@ -193,8 +193,12 @@ class Covariance(object):
         if config is None:
             config = self.scene.config.covariance
 
-        self.config = config
+        if self.scene.config.old_import:
+            self._log.warning('Old format - resetting noise patch coordinates')
+            config.covariance_matrix = None
+            config.noise_coord = None
 
+        self.config = config
         if config.noise_coord is None\
            and (config.model_coefficients is not None or
                 config.variance is not None):
@@ -892,7 +896,7 @@ class Covariance(object):
 
         self._structure_spatial = (variance[~num.isnan(variance)],
                                    bin_distances[~num.isnan(variance)])
-        covariance[0]=num.nan
+        covariance[0] = num.nan
         return (covariance[~num.isnan(covariance)],
                 bin_distances[~num.isnan(covariance)])
 
@@ -931,6 +935,19 @@ class Covariance(object):
             elif self.config.model_function == 'exponential_cosine':
                 coeff = (num.mean(covariance), num.mean(distance),
                          num.mean(distance)*-.1, .1)
+
+                func = self.getModelFunction()
+
+                def model(*args):
+                    distance, a, b, c, d = args
+                    res = func(*args)
+
+                    penalty = 0.
+                    if distance[-1]/b > (distance[-1]+c)/d:
+                        penalty = (b-d) * coeff[0]
+                        self._log.warning('Penalty %f' % penalty)
+
+                    return res + penalty
 
             try:
                 coeff, _ = sp.optimize.curve_fit(
