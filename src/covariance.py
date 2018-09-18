@@ -938,6 +938,7 @@ class Covariance(object):
 
                 func = self.getModelFunction()
 
+                # Testing penalty function
                 def model(*args):
                     distance, a, b, c, d = args
                     res = func(*args)
@@ -948,6 +949,9 @@ class Covariance(object):
                         self._log.warning('Penalty %f' % penalty)
 
                     return res + penalty
+
+                # Overwrite with pure model function
+                model = self.getModelFunction()  # noqa
 
             try:
                 coeff, _ = sp.optimize.curve_fit(
