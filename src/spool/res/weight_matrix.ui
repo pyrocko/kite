@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Covariance.weight_matrix_focal</string>
+   <string>Covariance matrix inspection</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
@@ -59,6 +59,82 @@
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
+     <item alignment="Qt::AlignLeft">
+      <widget class="QGroupBox" name="groupBox">
+       <property name="title">
+        <string>Matrix selection</string>
+       </property>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QRadioButton" name="showWeightFocal">
+          <property name="text">
+           <string>weight_matrix_focal</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+          <property name="autoExclusive">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">matrixButtonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="showWeightFull">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Only available when full covariance matrix is calculated. See Tools &gt; Calculate full covariance/weight matrix.</string>
+          </property>
+          <property name="text">
+           <string>weight_matrix</string>
+          </property>
+          <property name="autoExclusive">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">matrixButtonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="showCovarianceFocal">
+          <property name="text">
+           <string>covariance_matrix_focal</string>
+          </property>
+          <property name="autoExclusive">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">matrixButtonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="showCovarianceFull">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
+          <property name="toolTip">
+           <string>Only available when full covariance matrix is calculated. See Tools &gt; Calculate full covariance/weight matrix.</string>
+          </property>
+          <property name="text">
+           <string>covariance_matrix</string>
+          </property>
+          <property name="autoExclusive">
+           <bool>true</bool>
+          </property>
+          <attribute name="buttonGroup">
+           <string notr="true">matrixButtonGroup</string>
+          </attribute>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
      <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
@@ -105,4 +181,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="matrixButtonGroup"/>
+ </buttongroups>
 </ui>

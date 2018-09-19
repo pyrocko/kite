@@ -528,9 +528,10 @@ class KiteToolNoise(QtGui.QDialog):
 
 class KiteToolWeightMatrix(QtGui.QDialog):
     class MatrixPlot(KitePlot):
-        def __init__(self, model):
+        def __init__(self, model, parent):
             from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
             self._component = 'weight'
+            self.parent = parent
 
             KitePlot.__init__(self, model)
             self.model = model
@@ -565,9 +566,21 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         @QtCore.pyqtSlot()
         def update(self):
+            button = self.parent.matrixButtonGroup.checkedButton()
+            checked_matrix = button.text()
+            if checked_matrix == 'covariance_matrix':
+                matrix = self.model.covariance.covariance_matrix
+            elif checked_matrix == 'covariance_matrix_focal':
+                matrix = self.model.covariance.covariance_matrix_focal
+            elif checked_matrix == 'weight_matrix_focal':
+                matrix = self.model.covariance.weight_matrix_focal
+            elif checked_matrix == 'weight_matrix':
+                matrix = self.model.covariance.weight_matrix
+
             self.image.updateImage(
-                self.model.covariance.weight_matrix_focal.T,
+                matrix.T,
                 autoLevels=True)
+            self.transFromFrame()
 
         def transFromFrame(self):
             # self.resetTransform()
@@ -593,20 +606,23 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
-            self.model.sigQuadtreeChanged.connect(self.transFromFrame)
+            self.model.sigQuadtreeChanged.connect(self.update)
+            self.parent.matrixButtonGroup.buttonClicked.connect(self.update)
 
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
-            self.model.sigQuadtreeChanged.disconnect(self.transFromFrame)
+            self.model.sigQuadtreeChanged.disconnect(self.update)
+            self.parent.matrixButtonGroup.buttonClicked.disconnect(self.update)
 
     def __init__(self, model, parent=None):
         QtGui.QDialog.__init__(self, parent)
+        self.model = model
 
-        loadUi(get_resource('covariance_matrix.ui'), baseinstance=self)
+        loadUi(get_resource('weight_matrix.ui'), baseinstance=self)
         self.closeButton.setIcon(
             self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
 
-        self.weight_matrix = self.MatrixPlot(model)
+        self.weight_matrix = self.MatrixPlot(model, self)
         self.dockarea = dockarea.DockArea(self)
 
         self.dockarea.addDock(
@@ -618,6 +634,17 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             position='left')
 
         self.horizontalLayoutPlot.addWidget(self.dockarea)
+        self.model.sigCovarianceChanged.connect(self.updateMatrixButtons)
+
+    @QtCore.pyqtSlot()
+    def updateMatrixButtons(self):
+        if self.model.covariance.isFullCovarianceCalculated():
+            self.showCovarianceFull.setEnabled(True)
+            self.showWeightFull.setEnabled(True)
+        else:
+            self.showWeightFocal.setChecked(True)
+            self.showCovarianceFull.setEnabled(False)
+            self.showWeightFull.setEnabled(False)
 
     def closeEvent(self, ev):
         self.weight_matrix.proxy_disconnect()

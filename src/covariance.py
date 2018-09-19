@@ -392,6 +392,11 @@ class Covariance(object):
 
         return leaf1, leaf2
 
+    def isFullCovarianceCalculated(self):
+        if self.config.covariance_matrix is None:
+            return False
+        return True
+
     @property_cached
     def covariance_matrix(self):
         """ Covariance matrix calculated from mean of all pixel pairs
@@ -404,13 +409,14 @@ class Covariance(object):
         if not isinstance(self.config.covariance_matrix, num.ndarray):
             self.config.covariance_matrix =\
                 self._calcCovarianceMatrix(method='full')
+            self.evChanged.notify()
         elif self.config.covariance_matrix.ndim == 1:
             try:
                 nl = self.quadtree.nleaves
                 self.config.covariance_matrix =\
                     self.config.covariance_matrix.reshape(nl, nl)
             except ValueError:
-                self.config.covariance = None
+                self.config.covariance_matrix = None
                 return self.covariance_matrix
         return self.config.covariance_matrix
 

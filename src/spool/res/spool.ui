@@ -356,7 +356,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Inspect weight matrix</string>
+    <string>Inspect covariance/weight matrix</string>
    </property>
    <property name="toolTip">
     <string>Inspect focal weight matrix</string>
