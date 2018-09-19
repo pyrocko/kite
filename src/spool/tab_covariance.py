@@ -634,6 +634,8 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             position='left')
 
         self.horizontalLayoutPlot.addWidget(self.dockarea)
+
+        self.updateMatrixButtons()
         self.model.sigCovarianceChanged.connect(self.updateMatrixButtons)
 
     @QtCore.pyqtSlot()
