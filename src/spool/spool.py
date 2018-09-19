@@ -168,6 +168,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         if not validateFilename(filename):
             return
         self.model.scene.saveConfig(filename)
+        QtWidgets.QMessageBox.information(
+            self, 'Scene config saved', 'Scene config successfuly saved!')
 
     def onSaveScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -176,6 +178,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         if not validateFilename(filename):
             return
         self.model.scene.save(filename)
+        QtWidgets.QMessageBox.information(
+            self, 'Scene saved', 'Scene successfuly saved!')
 
     def onLoadConfig(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
