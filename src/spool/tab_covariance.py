@@ -644,9 +644,11 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             self.showCovarianceFull.setEnabled(True)
             self.showWeightFull.setEnabled(True)
         else:
-            self.showWeightFocal.setChecked(True)
             self.showCovarianceFull.setEnabled(False)
             self.showWeightFull.setEnabled(False)
+            if self.showWeightFull.isChecked() or \
+                    self.showCovarianceFull.isChecked():
+                self.showWeightFocal.setChecked(True)
 
     def closeEvent(self, ev):
         self.weight_matrix.proxy_disconnect()
