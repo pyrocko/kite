@@ -560,7 +560,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
                 '<span style="font-family: monospace; color: #fff;'\
                 'background-color: #000;">'\
                 'Leaf #1: {leaf1:d} | Leaf #2: {leaf2:d} | '\
-                'Weight {weight:e}</span>'
+                '{weight:e}</span>'
 
             self.update()
 
