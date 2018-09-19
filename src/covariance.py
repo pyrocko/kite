@@ -498,7 +498,11 @@ class Covariance(object):
                 (coords[:, 0] - coords[:, 0, num.newaxis])**2
                 + (coords[:, 1] - coords[:, 1, num.newaxis])**2)
             cov_matrix = model(dist_matrix, *self.covariance_model)
-            num.fill_diagonal(cov_matrix, self.variance)
+            if self.variance < cov_matrix.max():
+                variance = cov_matrix.max()
+            else:
+                variance = self.variance
+            num.fill_diagonal(cov_matrix, variance)
 
             for nx, ny in num.nditer(num.triu_indices_from(dist_matrix)):
                 self._mapLeaves(nx, ny)
