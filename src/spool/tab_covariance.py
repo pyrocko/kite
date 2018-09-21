@@ -577,9 +577,7 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             elif checked_matrix == 'weight_matrix':
                 matrix = self.model.covariance.weight_matrix
 
-            self.image.updateImage(
-                matrix.T,
-                autoLevels=True)
+            self.image.updateImage(matrix.T, autoLevels=True)
             self.transFromFrame()
 
         def transFromFrame(self):
@@ -634,9 +632,8 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             position='left')
 
         self.horizontalLayoutPlot.addWidget(self.dockarea)
-
-        self.updateMatrixButtons()
         self.model.sigCovarianceChanged.connect(self.updateMatrixButtons)
+        self.model.sigCovarianceConfigChanged.connect(self.updateMatrixButtons)
 
     @QtCore.pyqtSlot()
     def updateMatrixButtons(self):
@@ -655,8 +652,9 @@ class KiteToolWeightMatrix(QtGui.QDialog):
         ev.accept()
 
     def showEvent(self, ev):
-        self.weight_matrix.update()
         self.weight_matrix.proxy_connect()
+        self.weight_matrix.update()
+        self.updateMatrixButtons()
         ev.accept()
 
 

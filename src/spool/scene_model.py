@@ -90,7 +90,7 @@ class SceneModel(QtCore.QObject):
         self.scene.evChanged.subscribe(
             self.sigSceneChanged.emit)
         self.scene.evConfigChanged.subscribe(
-            self.sigConfigChanged.emit)
+            self.sigCovarianceConfigChanged.emit)
 
         self.scene.frame.evChanged.subscribe(
             self.sigFrameChanged.emit)

@@ -174,7 +174,10 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             return
         self.model.scene.saveConfig(filename)
         QtWidgets.QMessageBox.information(
-            self, 'Scene config saved', 'Scene config successfuly saved!')
+            self, 'Scene config saved',
+            'Scene config successfuly saved!'
+            '<p style="font-family: monospace;">%s'
+            '</p>' % filename)
 
     def onSaveScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
@@ -184,7 +187,10 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             return
         self.model.scene.save(filename)
         QtWidgets.QMessageBox.information(
-            self, 'Scene saved', 'Scene successfuly saved!')
+            self, 'Scene saved',
+            'Scene successfuly saved!'
+            '<p style="font-family: monospace;">%s'
+            '</p>' % filename)
 
     def onLoadConfig(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(

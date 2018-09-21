@@ -299,7 +299,10 @@ class Covariance(object):
                 *self.config.noise_coord[2:])
             slice_E = slice(llE, llE + sE)
             slice_N = slice(llN, llN + sN)
+
+            covariance_matrix = self.config.covariance_matrix
             self.noise_data = self.scene.displacement[slice_N, slice_E]
+            self.config.covariance_matrix = covariance_matrix
         else:
             self._log.debug('Selecting noise_data from Quadtree...')
             node = self.selectNoiseNode()
