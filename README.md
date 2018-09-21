@@ -14,7 +14,7 @@ Kite features simple and efficient handling of displacement data:
 * **Interactive GUI**
 
 # Documentation
-Find the documentation at https://pyrocko.org/docs/kite.
+Find the documentation at https://pyrocko.org/kite/docs/.
 
 ## Short Example
 ```python
