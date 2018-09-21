@@ -91,6 +91,7 @@ else:
     omp_arg = []
     omp_lib = []
 
+
 setup(
     name='kite',
     version=version,
@@ -98,6 +99,8 @@ setup(
     author='Marius P. Isken, Henriette Sudhaus;'
            'BriDGes Emmily Noether-Programm (DFG)',
     author_email='misken@geophysik.uni-kiel.de',
+    long_description=open('README.md', 'r').read(),
+    long_description_content_type='text/markdown',
     license='GPLv3',
     classifiers=[
         'Development Status :: 4 - Beta',
