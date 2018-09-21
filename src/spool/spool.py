@@ -30,7 +30,8 @@ class Spool(QtWidgets.QApplication):
         self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
-        self.aboutToQuit.connect(self.spool_win.model.worker_thread.quit)
+        self.aboutToQuit.connect(self.spool_win.model.worker_thread.quit,
+                                 type=QtCore.Qt.QueuedConnection)
         self.aboutToQuit.connect(self.spool_win.model.deleteLater)
         self.aboutToQuit.connect(self.splash.deleteLater)
         self.aboutToQuit.connect(self.deleteLater)
@@ -75,11 +76,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
         self.ptree = KiteParameterTree(showHeader=False)
         self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
-        self.ptree_dock.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable |
-                                    QtWidgets.QDockWidget.DockWidgetMovable)
+        self.ptree_dock.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFloatable |
+            QtWidgets.QDockWidget.DockWidgetMovable)
         self.ptree_dock.setWidget(self.ptree)
-        self.addDockWidget(
-            QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
 
         self.model = SceneModel()
         self.model.sigSceneModelChanged.connect(
@@ -126,7 +127,9 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
         self.progress.setWindowTitle('Processing...')
-        self.model.sigProcessingFinished.connect(self.progress.reset)
+        self.model.sigProcessingFinished.connect(
+            self.progress.reset,
+            type=QtCore.Qt.QueuedConnection)
         self.progress.reset()
 
     def aboutDialog(self):
@@ -145,7 +148,9 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             return
         for v in self.views:
             self.addView(v)
-        self.model.sigProcessingStarted.connect(self.processingStarted)
+        self.model.sigProcessingStarted.connect(
+            self.processingStarted,
+            type=QtCore.Qt.QueuedConnection)
 
     def addView(self, view):
         self.sigLoadingModule.emit(view.title)

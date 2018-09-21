@@ -680,7 +680,10 @@ The calculation is expensive and may take several minutes.
 ''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
 
         if diag == QtGui.QMessageBox.Ok:
-            self.sigCalculateWeightMatrix.emit()
+            meta = model.metaObject()
+            meta.invokeMethod(
+                model, 'calculateWeightMatrix',
+                QtCore.Qt.QueuedConnection)
 
 
 class CovarianceCalcResultDialog(QtGui.QMessageBox):
