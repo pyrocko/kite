@@ -417,6 +417,7 @@ class BaseScene(object):
         self._displacement = None
         self._phi = None
         self._theta = None
+        self._los_factors = None
         self.cols = 0
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
