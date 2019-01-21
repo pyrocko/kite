@@ -15,7 +15,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '2018.02.26'
+version = 'v1.0.1'
 
 
 def _check_for_openmp():
@@ -56,7 +56,7 @@ int main() {
         shutil.rmtree(tmpdir)
 
     if exit_code == 0:
-        print ('Continuing your build using OpenMP...\n')
+        print('Continuing your build using OpenMP...\n')
         return True
 
     import multiprocessing
