@@ -8,6 +8,8 @@ from kite import util
 
 __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
 
+d2r = num.pi/180.
+
 
 def check_required(required, params):
     for r in required:
@@ -76,8 +78,8 @@ class SceneIO(object):
 
         :param filename: file to read
         :type filename: string
-        :param **kwargs: Keyword arguments
-        :type **kwargs: {dict}
+        :param kwargs: Keyword arguments
+        :type kwargs: {dict}
         """
         raise NotImplementedError('read not implemented')
 
@@ -123,7 +125,6 @@ class Matlab(SceneIO):
     For SAR azimuth pixel offset maps calculate ``phi`` from the heading
     direction and set ``theta=0.``. For SAR range pixel offsets use the same
     LOS angles as for InSAR.
-
     """
     def validate(self, filename, **kwargs):
         if filename[-4:] == '.mat':
@@ -599,18 +600,19 @@ class ISCE(SceneIO):
         except ImportError:
             return False
 
-    @staticmethod
-    def _getLOSFile(path):
+    def _getLOSFile(self, path):
         if not op.isdir(path):
             path = op.dirname(path)
         rdr_files = glob.glob(op.join(path, '*.rdr.geo'))
 
         if len(rdr_files) == 0:
             raise ImportError('Could not find LOS file (*.rdr.geo)')
-        return rdr_files[0]
 
-    @staticmethod
-    def _getDisplacementFile(path):
+        rdr_file = rdr_files[0]
+        self._log.info('Found LOS file: %s', rdr_file)
+        return rdr_file
+
+    def _getDisplacementFile(self, path):
         if op.isfile(path):
             disp_file = path
         else:
@@ -623,6 +625,7 @@ class ISCE(SceneIO):
         if not op.isfile('%s.xml' % disp_file):
             raise ImportError('Could not find displacement XML file '
                               '(%s.unw.geo.xml)' % op.basename(disp_file))
+        self._log.info('Found Displacement file: %s', disp_file)
         return disp_file
 
     def read(self, path, **kwargs):
@@ -654,8 +657,18 @@ class ISCE(SceneIO):
 
         los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
             .reshape(nlat, nlon*2)
-        c.phi = los_data[:, :nlon]
-        c.theta = los_data[:, nlon:] + num.pi/2
+
+        phi = los_data[:, :nlon]
+        theta = los_data[:, nlon:]
+
+        if num.abs(phi.max()) > num.pi or num.abs(theta.max()) > num.pi:
+            phi *= d2r
+            theta *= d2r
+            theta += num.pi/2
+
+
+        c.phi = phi
+        c.theta = theta + num.pi/2
 
         return c
 
@@ -694,10 +707,11 @@ class GMTSAR(SceneIO):
         if len(los_files) == 0:
             self._log.warning(GMTSAR.__doc__)
             raise ImportError('Could not find LOS file (*.los.*)')
-        return los_files[0]
+        los_file = los_files[0]
+        self._log.debug('Found LOS file: %s', los_file)
+        return los_file
 
-    @staticmethod
-    def _getDisplacementFile(path):
+    def _getDisplacementFile(self, path):
         if op.isfile(path):
             return path
         else:
@@ -706,6 +720,7 @@ class GMTSAR(SceneIO):
                 raise ImportError('Could not find displacement file '
                                   '(*.grd) at %s', path)
             disp_file = files[0]
+        self._log.debug('Found Displacement file: %s', disp_file)
         return disp_file
 
     def read(self, path, **kwargs):
