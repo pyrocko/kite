@@ -664,8 +664,9 @@ class ISCE(SceneIO):
         if num.abs(phi.max()) > num.pi or num.abs(theta.max()) > num.pi:
             phi *= d2r
             theta *= d2r
-            theta += num.pi/2
 
+            phi += num.pi
+            theta += num.pi/2
 
         c.phi = phi
         c.theta = theta + num.pi/2
