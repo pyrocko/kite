@@ -13,7 +13,9 @@ CovarianceConfig
 Model Assumptions
 -----------------
 
-.. autofunction:: kite.covariance.modelCovariance
+.. autofunction:: kite.covariance.modelCovarianceExponential
+
+.. autofunction:: kite.covariance.modelCovarianceExponentialCosine
 
 .. autofunction:: kite.covariance.modelPowerspec
 

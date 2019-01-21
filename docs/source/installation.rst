@@ -17,6 +17,17 @@ As a mandatory prerequisit you have to install Pyrocko, visit `Pyrocko installat
     sudo python3 setup.py install
 
 
+PIP
+---
+
+An installation through ``pip`` requires the same prerequisites as above:
+
+.. code-block :: sh
+    :caption: Installation through pip
+
+    sudo pip3 install git+https://github.com/pyrocko/kite
+
+
 MacOS (Sierra, MacPorts)
 ------------------------
 
