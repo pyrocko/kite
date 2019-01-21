@@ -13,8 +13,6 @@ from kite.covariance import CovarianceConfig
 from kite.util import Subject, property_cached
 from kite import scene_io
 
-logging.basicConfig(level=20)
-
 
 def read(filename):
     scene = Scene()
@@ -273,7 +271,8 @@ class Frame(object):
 
     @property_cached
     def coordinates(self):
-        """Local east and north coordinates [m] of all pixels in ``NxM`` matrix.
+        """ Local east and north coordinates [m] of all pixels in
+           ``NxM`` matrix.
 
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
@@ -436,10 +435,7 @@ class BaseScene(object):
                 self.__setattr__(attr, data)
 
     def _initLogging(self):
-        logging.basicConfig(level=logging.DEBUG)
-
         self._log = logging.getLogger(self.__class__.__name__)
-        self._log.setLevel(logging.DEBUG)
 
         self._log_stream = None
         for l in self._log.parent.handlers:
@@ -448,9 +444,6 @@ class BaseScene(object):
         if self._log_stream is None:
             self._log_stream = logging.StreamHandler()
             self._log.addHandler(self._log_stream)
-        self._log_stream.setLevel(logging.INFO)
-
-        self.setLogLevel = self._log_stream.setLevel
 
     @property
     def displacement(self):
@@ -552,7 +545,7 @@ class BaseScene(object):
     @property_cached
     def phiDeg(self):
         """ LOS horizontal orientation angle in degree,
-         counter-clockwise from East,``NxM`` matrix like
+            counter-clockwise from East,``NxM`` matrix like
             :class:`kite.Scene.phi`
 
         :type: :class:`numpy.ndarray`

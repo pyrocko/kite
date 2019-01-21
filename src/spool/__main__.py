@@ -1,4 +1,5 @@
 #!/bin/python
+import logging
 import sys
 import argparse as ap
 from kite.spool import spool
@@ -49,7 +50,16 @@ Available Synthetic Displacement:
  * gauss
 ''')
 
+    parser.add_argument(
+        '--verbose', '-v', action='count',
+        default=1,
+        help='Verbosity, add mutliple to increase verbosity.')
+
     ns = parser.parse_args(args)
+
+    log_level = logging.WARNING - ns.verbose * 10
+    logging.basicConfig(level=log_level if log_level > 0 else 0)
+
     if ns.load is None and ns.synthetic is None and ns.file is None:
         parser.print_help()
         sys.exit(0)

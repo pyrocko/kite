@@ -693,9 +693,9 @@ class Covariance(object):
 
         Use :meth:`~kite.covariance.Covariance.getSyntheticNoise` to create
         data-driven noise on each quadtree leaf, summarized by
-        :param gather:.
+
         :param gather: Function gathering leaf's noise realisation,
-            defaults to num.median.
+                       defaults to num.median.
         :type normalisation: callable, optional
         :returns: Array of noise level at each quadtree leaf.
         :rtype: :class:`numpy.ndarray`
