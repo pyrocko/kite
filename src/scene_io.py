@@ -655,21 +655,26 @@ class ISCE(SceneIO):
         displ[displ == 0.] = num.nan
         c.displacement = displ
 
-        los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
+        los_file = self._getLOSFile(path)
+        los_data = num.fromfile(los_file, dtype='<f4')\
             .reshape(nlat, nlon*2)
 
-        phi = los_data[:, :nlon]
-        theta = los_data[:, nlon:]
+        theta = los_data[:, :nlon]
+        phi = los_data[:, nlon:]
 
-        if num.abs(phi.max()) > num.pi or num.abs(theta.max()) > num.pi:
+        def los_is_degree():
+            return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
+
+        if los_is_degree():
             phi *= d2r
             theta *= d2r
-
+        else:
             phi += num.pi
-            theta += num.pi/2
+
+        phi = num.pi/2 - phi
 
         c.phi = phi
-        c.theta = theta + num.pi/2
+        c.theta = theta
 
         return c
 
