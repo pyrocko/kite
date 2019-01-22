@@ -665,11 +665,13 @@ class ISCE(SceneIO):
         def los_is_degree():
             return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
 
-        if los_is_degree():
-            phi *= d2r
-            theta *= d2r
-        else:
-            phi += num.pi
+        if not los_is_degree():
+            raise ImportError(
+                'The LOS file (%s) seems to be in radians! '
+                'Change it to degree!' % op.basename(los_file))
+
+        phi *= d2r
+        theta *= d2r
 
         phi = num.pi/2 - phi
 
