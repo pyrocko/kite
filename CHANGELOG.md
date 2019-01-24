@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Spool: added log control
 
 ### Fixed
-- Log control
+- Improved log control
 - Documentation fixes and internal references.
 - Fixed Gamma import from Lat/Lon
+- docs: Removed Anaconda pre-build installation

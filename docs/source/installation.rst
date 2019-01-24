@@ -54,12 +54,14 @@ Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alt
     python3 setup.py install --user --install-scripts=/usr/local/bin
 
 
-Anaconda3 using ``conda``
+Anaconda3 using ``pip``
 --------------------------
 
-Pre-built Anaconda packages are available for Linux 64-Bit and MacOS. You can use can use the ``conda`` package manager to install Kite:
+Use ``pip`` on Anaconda to install the software:
 
 .. code-block:: sh
-    :caption: Packages are available on Anaconda Cloud
+    :caption: Install the prerequisites through ``conda``
 
-    conda install -c pyrocko pyrocko-kite
+    pip install git+https://github.com/pyrocko/kite
+
+    
