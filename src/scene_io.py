@@ -9,6 +9,7 @@ from kite import util
 __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
 
 d2r = num.pi/180.
+km = 1e3
 
 
 def check_required(required, params):
@@ -188,8 +189,8 @@ class Matlab(SceneIO):
             utm_n = num.linspace(1100000, 1110000, c.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
-            utm_e *= 1e3
-            utm_n *= 1e3
+            utm_e *= km
+            utm_n *= km
 
         c.frame.dE = num.abs(utm_e[1] - utm_e[0])
         c.frame.dN = num.abs(utm_n[1] - utm_n[0])
@@ -418,13 +419,14 @@ class Gamma(SceneIO):
 
         else:
             self._log.info('Using Lat/Lon reference')
+            c.frame.spacing = 'degree'
             c.frame.llLat = params['corner_lat'] \
                 + params['post_lat'] * nrows
             c.frame.llLon = params['corner_lon']
-            c.frame.dLon = abs(params['post_lon'])
-            c.frame.dLat = abs(params['post_lat'])
+            c.frame.dE = abs(params['post_lon'])
+            c.frame.dN = abs(params['post_lat'])
 
-        return self.container
+        return c
 
 
 class ROI_PAC(SceneIO):
@@ -542,8 +544,8 @@ class ROI_PAC(SceneIO):
 
         c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
         c.frame.llLon = par['X_FIRST']
-        c.frame.dLon = par['X_STEP']
-        c.frame.dLat = par['Y_STEP']
+        c.frame.dE = par['X_STEP']
+        c.frame.dN = par['Y_STEP']
         return self.container
 
 
@@ -746,10 +748,10 @@ class GMTSAR(SceneIO):
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
 
-        c.frame.dLat = (grd.variables['lat'][:].max() -
-                        c.frame.llLat) / shape[0]
-        c.frame.dLon = (grd.variables['lon'][:].max() -
-                        c.frame.llLon) / shape[1]
+        c.frame.dN = (grd.variables['lat'][:].max() -
+                      c.frame.llLat) / shape[0]
+        c.frame.dE = (grd.variables['lon'][:].max() -
+                      c.frame.llLon) / shape[1]
 
         # Theta and Phi
         try:
