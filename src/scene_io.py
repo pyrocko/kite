@@ -678,7 +678,7 @@ class ISCE(SceneIO):
         phi = num.pi/2 - phi
 
         c.phi = phi
-        c.theta = theta
+        c.theta = num.pi/2 - theta
 
         return c
 
@@ -759,19 +759,20 @@ class GMTSAR(SceneIO):
             e = los[3::6].copy().reshape(shape)
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
-
-            theta = num.rad2deg(num.arctan(n/e))
-            phi = num.rad2deg(num.arccos(u))
-            theta[n < 0] += 180.
+            print(num.mean(e))
+            print('n:', num.mean(n))
+            print('u:', num.mean(u))
+            phi = num.arctan(n/e)
+            theta = num.arcsin(u)
+            #phi[n < 0] += num.pi
 
             c.phi = phi
             c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
-            self._log.warning('Defaulting theta and phi to 0./2*pi [rad]')
+            self._log.warning('Defaulting theta to pi/2 and phi to 0. [rad]')
             c.theta = num.pi/2
             c.phi = 0.
-
         return c
 
 
