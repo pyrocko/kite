@@ -437,13 +437,24 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+        """ Weight matrix from full covariance :math:`cov^{-1}`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
         return num.linalg.inv(self.covariance_matrix)
+    
+    @property_cached
+    def weight_matrix_L2(self):
+        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        """
+        incov = num.linalg.inv(self.covariance_matrix)
+        return sc.linalg.sqrtm(incov)
 
     @property_cached
     def weight_matrix_focal(self):
