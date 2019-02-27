@@ -706,8 +706,8 @@ class ISCE(SceneIO):
         los_data = num.fromfile(los_file, dtype='<f4')\
             .reshape(nlat*2, nlon)
         
-        theta = los_data[0::2, :]
-        phi = los_data[1::2, :]
+        theta = num.flipud(los_data[0::2, :])
+        phi = num.flipud(los_data[1::2, :])
         
         def los_is_degree():
             return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
@@ -719,6 +719,7 @@ class ISCE(SceneIO):
         
         phi[phi == 0.] = num.nan
         theta[theta == 0.] = num.nan
+
         phi *= d2r
         theta *= d2r
             
