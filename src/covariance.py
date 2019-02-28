@@ -437,7 +437,7 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+        """ Weight matrix from full covariance :math:`cov^{-1}`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
@@ -448,7 +448,7 @@ class Covariance(object):
     @property_cached
     def weight_matrix_focal(self):
         """ Approximated weight matrix from fast focal method
-            :math:`\\sqrt{cov_{focal}^{-1}}`.
+            :math:`cov_{focal}^{-1}`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
@@ -458,7 +458,7 @@ class Covariance(object):
 
     @property_cached
     def weight_vector(self):
-        """ Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
+        """ Weight vector from full covariance :math:`cov^{-1}`.
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves`)
         """
