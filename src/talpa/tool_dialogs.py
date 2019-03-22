@@ -33,18 +33,21 @@ class ExtentDialog(QtWidgets.QDialog):
 
         self.setValues()
 
-    def setValues(self):
+    def setValues(self, east=None, north=None):
         model = self.sandbox.model
 
-        self.spinEastPx.setValue(
-            model.config.extent_east)
-        self.spinNorthPx.setValue(
-            model.config.extent_north)
+        east = model.config.extent_east if east is None else east
+        north = model.config.extent_north if north is None else north
+
+        self.spinEastPx.setValue(east)
+        self.spinNorthPx.setValue(north)
 
     @QtCore.pyqtSlot()
     def updateValues(self):
-        print('update extent!')
         self.sandbox.model.setExtent(
             self.spinEastPx.value(),
             self.spinNorthPx.value())
-        self.setValues()
+
+        self.setValues(
+            self.spinEastPx.value(),
+            self.spinEastPx.value())
