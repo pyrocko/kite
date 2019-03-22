@@ -12,6 +12,11 @@ As a mandatory prerequisit you have to install Pyrocko, visit `Pyrocko installat
     :caption: Installation from source and ``apt-get``
 
     sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy python3-pyqtgraph
+
+    git clone https://github.com/Turbo87/utm
+    cd utm
+    sudo python3 setup.py install
+
     git clone https://github.com/pyrocko/kite
     cd kite
     sudo python3 setup.py install
@@ -25,6 +30,7 @@ An installation through ``pip`` requires the same prerequisites as above:
 .. code-block :: sh
     :caption: Installation through pip
 
+    sudo pip3 install utm
     sudo pip3 install git+https://github.com/pyrocko/kite
 
 
@@ -47,6 +53,7 @@ Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alt
     sudo port install py35-yaml
     sudo port install py35-pyqt5
     sudo port install py35-setuptools
+    sudo pip3 install git+https://github.com/Turbo87/utm
     sudo pip3 install git+https://github.com/pyqtgraph/pyqtgraph
 	 
     git clone https://github.com/pyrocko/kite
@@ -62,6 +69,7 @@ Use ``pip`` on Anaconda to install the software:
 .. code-block:: sh
     :caption: Install the prerequisites through ``conda``
 
+    pip install git+https://github.com/Turbo87/utm
     pip install git+https://github.com/pyrocko/kite
 
     

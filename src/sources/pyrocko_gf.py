@@ -7,6 +7,7 @@ from .base import SandboxSourceRectangular, SandboxSource, SourceProcessor
 d2r = num.pi / 180.
 r2d = 180. / num.pi
 km = 1e3
+km3 = 1e9
 
 
 class PyrockoSource(object):
@@ -207,6 +208,52 @@ class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
             'dip': self.dip,
             'magnitude': self.magnitude,
             'npointsources': self.npointsources,
+        }
+
+
+class PyrockoCLVDVolume(SandboxSource, PyrockoSource):
+    '''A ring fault with vertical doublecouples.
+
+    See :class:`pyrocko.gf.seismosizer.CLVDVolumeSource`.
+    '''
+    __implements__ = 'pyrocko'
+
+    store_dir = String.T(
+        help='Pyrocko GF Store path')
+    volume_change = Float.T(
+        default=.25,
+        help='Volume change in [km^3]')
+    azimuth = Float.T(
+        default=0.0,
+        help='azimuth direction of CLVD, clockwise from north,'
+             ' in [deg]')
+    dip = Float.T(
+        default=90.0,
+        help='dip angle of the CLVD from horizontal in [deg]')
+    clvd_magnitude = Float.T(
+        default=6.0,
+        help='moment magnitude Mw as in [Hanks and Kanamori, 1979]'
+             'of the CLVD part')
+
+    parametersUpdated = PyrockoSource.parametersUpdated
+
+    def __init__(self, *args, **kwargs):
+        SandboxSource.__init__(self, *args, **kwargs)
+        PyrockoSource.__init__(self)
+        self.pyrocko_source = gf.CLVDVolumeSource(**self._src_args)
+
+    @property
+    def _src_args(self):
+        return {
+            'lat': 0.,
+            'lon': 0.,
+            'north_shift': self.northing,
+            'east_shift': self.easting,
+            'depth': self.depth,
+            'volume_change': self.volume_change * km3,
+            'azimuth': self.azimuth,
+            'dip': self.dip,
+            'clvd_magnitude': self.clvd_magnitude
         }
 
 
