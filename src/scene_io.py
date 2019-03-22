@@ -437,9 +437,9 @@ class ROI_PAC(SceneIO):
         * Parameter file (:file:`<binary_file>.rsc`),
           describing ``WIDTH, FILE_LENGTH, X_FIRST, Y_FIRST, X_STEP,
           Y_STEP, WAVELENGTH``
-
-    .. warning ::
-        Data has to be georeferenced to latitude/longitude!
+        * If the georeferencing is in UTM coordinates, further needed
+          entries in parameter file are 'X_UNIT' and 'Y_UNIT' that give
+          'meters' and 'LAT_REF3' as well as 'LON_REF3'.
 
         The unwrapped displacement is expected in radians and will be scaled
         to meters by ``WAVELENGTH`` parsed from the :file:`*.rsc` file.
@@ -468,8 +468,9 @@ class ROI_PAC(SceneIO):
     @staticmethod
     def _parseParameterFile(par_file):
         params = {}
-        required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-                    'Y_STEP', 'WAVELENGTH', 'LAT_REF1', 'LON_REF1']
+        required_L0 = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
+                    'Y_STEP', 'WAVELENGTH']
+        required_utm = ['X_UNIT', 'LAT_REF1', 'LON_REF1']
 
         rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
         with open(par_file, 'r') as par:
@@ -481,11 +482,17 @@ class ROI_PAC(SceneIO):
                 params[groups[0]] = safe_cast(groups[1], float,
                                               default=groups[1].strip())
 
-        if check_required(required, params):
-            return params
+        if check_required(required_L0, params):
+            if check_required(required_utm, params):
+                geo_ref = 'all'
+                return params, geo_ref
+            else:
+                geo_ref = 'latlon'
+                return params, geo_ref
 
         raise ImportError(
-            'Parameter file %s does not hold required parameters' % par_file)
+            'Parameter file %s does not hold the basic \
+             required parameters' % par_file)
 
     def read(self, filename, **kwargs):
         """
@@ -500,21 +507,26 @@ class ROI_PAC(SceneIO):
         """
         par_file = kwargs.pop('par_file', self._getParameterFile(filename))
 
-        par = self._parseParameterFile(par_file)
+        par, geo_ref = self._parseParameterFile(par_file)
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
-        lat_ref = par['LAT_REF1']
-        lon_ref = par['LON_REF1']
+        if geo_ref=='latlon':
+            lat_ref = par['Y_FIRST']
+            lon_ref = par['X_FIRST']
+        elif geo_ref=='all': 
+            lat_ref = par['LAT_REF3']
+            lon_ref = par['LON_REF3']
+            
+
         look_ref1 = par['LOOK_REF1']
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
 
-        utm_zone_letter = utm.latitude_to_zone_letter(
-                    par['LAT_REF1'])
-        utm_zone = utm.latlon_to_zone_number(par['LAT_REF1'], par['LON_REF1'])
+        utm_zone_letter = utm.latitude_to_zone_letter(lat_ref)
+        utm_zone = utm.latlon_to_zone_number(lat_ref, lon_ref)
 
         look = num.mean(
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
@@ -523,6 +535,7 @@ class ROI_PAC(SceneIO):
         data = data.reshape(nlines, nrows*2)
 
         displ = data[:, nrows:]
+        displ = num.flipud(displ)
         displ[displ == -0.] = num.nan
         displ = displ / (4.*num.pi) * wavelength
 
@@ -534,18 +547,48 @@ class ROI_PAC(SceneIO):
         c = self.container
 
         c.displacement = displ
-        c.theta = 90. - look
-        c.phi = -heading - 180
+        c.theta = num.deg2rad(90. - look)
+        c.phi = num.deg2rad(-heading +180)
 
         c.meta.title = par.get('TITLE', 'None')
         c.meta.wavelength = par['WAVELENGTH']
         c.bin_file = filename
         c.par_file = par_file
-
-        c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
-        c.frame.llLon = par['X_FIRST']
-        c.frame.dE = par['X_STEP']
-        c.frame.dN = par['Y_STEP']
+        if geo_ref=='all':
+            if par['X_UNIT']=='meters':
+                c.frame.spacing = 'meter'
+                c.frame.dE = par['X_STEP']
+                c.frame.dN = -par['Y_STEP']
+                geo_ref = 'utm'                               
+            elif par['X_UNIT']=='degree':
+                c.frame.spacing = 'degree'
+                geo_ref = 'latlon'
+                     
+        if geo_ref == 'latlon':
+            self._log.info('Georeferencing is in Lat-Lon [degrees].')
+            c.frame.spacing = 'degree'
+            c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            c.frame.llLon = par['X_FIRST']
+            
+            c_utm_0 = utm.from_latlon(lat_ref, lon_ref)
+            c_utm_1 = utm.from_latlon(lat_ref + par['Y_STEP'], 
+                                      lon_ref + par['X_STEP'])
+            
+            #c.frame.dE = c_utm_1[0] - c_utm_0[0]
+            #c.frame.dN = abs(c_utm_1[1] - c_utm_0[1])
+            c.frame.dE = par['X_STEP']
+            c.frame.dN = -par['Y_STEP']
+   
+        elif geo_ref == 'utm':
+            self._log.info('Georeferencing is in UTM (zone %s)' 
+                % (str(utm_zone)+ utm_zone_letter))
+            y_ll = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            c.frame.llLat, c.frame.llLon = \
+                    utm.to_latlon(par['X_FIRST'], 
+                                  y_ll, 
+                                  utm_zone,
+                                  zone_letter = utm_zone_letter)
+      
         return self.container
 
 
@@ -654,16 +697,18 @@ class ISCE(SceneIO):
         displ = num.memmap(self._getDisplacementFile(path),
                            dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
+        
+        displ = num.flipud(displ)
         displ[displ == 0.] = num.nan
         c.displacement = displ
-
+        
         los_file = self._getLOSFile(path)
         los_data = num.fromfile(los_file, dtype='<f4')\
-            .reshape(nlat, nlon*2)
-
-        theta = los_data[:, :nlon]
-        phi = los_data[:, nlon:]
-
+            .reshape(nlat*2, nlon)
+        
+        theta = num.flipud(los_data[0::2, :])
+        phi = num.flipud(los_data[1::2, :])
+        
         def los_is_degree():
             return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
 
@@ -671,14 +716,18 @@ class ISCE(SceneIO):
             raise ImportError(
                 'The LOS file (%s) seems to be in radians! '
                 'Change it to degree!' % op.basename(los_file))
+        
+        phi[phi == 0.] = num.nan
+        theta[theta == 0.] = num.nan
 
         phi *= d2r
         theta *= d2r
-
-        phi = num.pi/2 - phi
+            
+        phi = num.pi/2 + phi
+        theta = num.pi/2 - theta
 
         c.phi = phi
-        c.theta = num.pi/2 - theta
+        c.theta = theta
 
         return c
 
@@ -759,9 +808,7 @@ class GMTSAR(SceneIO):
             e = los[3::6].copy().reshape(shape)
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
-            print(num.mean(e))
-            print('n:', num.mean(n))
-            print('u:', num.mean(u))
+          
             phi = num.arctan(n/e)
             theta = num.arcsin(u)
             #phi[n < 0] += num.pi
