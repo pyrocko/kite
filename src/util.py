@@ -219,7 +219,7 @@ class Subject(object):
         try:
             self._listeners.remove(listener)
         except Exception:
-            raise AttributeError('%s was not subscribed!')
+            raise AttributeError('%s was not subscribed!', listener.__name__)
 
     def unsubscribeAll(self):
         for l in self._listeners:

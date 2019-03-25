@@ -62,9 +62,13 @@ class SandboxModel(QtCore.QObject):
     def disconnectSlots(self):
         if self.model is None:
             return
-        self.model._log.removeHandler(self._log_handler)
-        self.model.evModelUpdated.unsubscribe(self.sigModelUpdated.emit)
-        self.model = None
+        try:
+            self.model._log.removeHandler(self._log_handler)
+            self.model.evModelUpdated.unsubscribe(self.sigModelUpdated.emit)
+        except AttributeError:
+            pass
+        finally:
+            self.model = None
 
     def addSource(self, source):
         self.model.addSource(source)
