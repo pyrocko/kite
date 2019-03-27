@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>517</width>
-    <height>202</height>
+    <height>236</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -35,7 +35,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>PyrockoDoubleCouple Parameters</string>
+   <string>PyrockoCLVDVolume Parameters</string>
   </property>
   <property name="modal">
    <bool>false</bool>
@@ -281,8 +281,8 @@ Pyrocko Green's function (GF) store directory.</string>
         <item row="0" column="0">
          <widget class="QLabel" name="volume_changeLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.rake&lt;/span&gt;&lt;br&gt;
-Clockwise from right-lateral (0 deg; horizontal).</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.volume_change&lt;/span&gt;&lt;br&gt;
+in km^3.</string>
           </property>
           <property name="text">
            <string>Volume Change</string>
@@ -332,7 +332,7 @@ Clockwise from right-lateral (0 deg; horizontal).</string>
         <item row="1" column="0">
          <widget class="QLabel" name="azimuthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.strike&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.strike&lt;/span&gt;&lt;br&gt;
 Clockwise from north.</string>
           </property>
           <property name="text">
@@ -371,7 +371,7 @@ Clockwise from north.</string>
         <item row="2" column="0">
          <widget class="QLabel" name="dipLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.dip&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.dip&lt;/span&gt;&lt;br&gt;
 Positive from horizontal.</string>
           </property>
           <property name="text">
@@ -408,26 +408,29 @@ Positive from horizontal.</string>
          </widget>
         </item>
         <item row="3" column="0">
-         <widget class="QLabel" name="clvd_magnitudeLabel">
+         <widget class="QLabel" name="clvd_momentLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.magnitude&lt;/span&gt;
-Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.clvd_moment&lt;/span&gt;
+Moment in Nm, scale only.</string>
           </property>
           <property name="text">
-           <string>CLVD M&lt;sub&gt;W&lt;/sub&gt;</string>
+           <string>CLVD M&lt;sub&gt;0&lt;/sub&gt; Scale</string>
           </property>
           <property name="buddy">
-           <cstring>clvd_magnitude</cstring>
+           <cstring>clvd_moment</cstring>
           </property>
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QDoubleSpinBox" name="clvd_magnitude">
+         <widget class="QDoubleSpinBox" name="clvd_moment">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhFormattedNumbersOnly</set>
           </property>
           <property name="wrapping">
            <bool>true</bool>
@@ -442,13 +445,49 @@ Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
            <string/>
           </property>
           <property name="minimum">
-           <double>-2.000000000000000</double>
+           <double>-12.000000000000000</double>
           </property>
           <property name="maximum">
            <double>12.000000000000000</double>
           </property>
           <property name="singleStep">
            <double>0.100000000000000</double>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="1">
+         <widget class="QSpinBox" name="clvd_moment_exponent">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhPreferNumbers</set>
+          </property>
+          <property name="wrapping">
+           <bool>true</bool>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+          </property>
+          <property name="buttonSymbols">
+           <enum>QAbstractSpinBox::PlusMinus</enum>
+          </property>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="clvd_moment_exponentLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.clvd_moment&lt;/span&gt;
+Moment magnitude scale, the exponent. E.g. 5.1e&lt;b&gt;18&lt;/b&gt;.</string>
+          </property>
+          <property name="text">
+           <string>CLVD M&lt;sub&gt;0&lt;/sub&gt; Exponent</string>
+          </property>
+          <property name="buddy">
+           <cstring>clvd_moment</cstring>
           </property>
          </widget>
         </item>
@@ -502,13 +541,15 @@ Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
   <tabstop>northing</tabstop>
   <tabstop>depth</tabstop>
   <tabstop>store_dir</tabstop>
+  <tabstop>chooseStoreDirButton</tabstop>
+  <tabstop>volume_change</tabstop>
   <tabstop>azimuth</tabstop>
   <tabstop>dip</tabstop>
-  <tabstop>clvd_magnitude</tabstop>
+  <tabstop>clvd_moment</tabstop>
+  <tabstop>clvd_moment_exponent</tabstop>
   <tabstop>okButton</tabstop>
   <tabstop>applyButton</tabstop>
   <tabstop>cancelButton</tabstop>
-  <tabstop>chooseStoreDirButton</tabstop>
  </tabstops>
  <resources/>
  <connections>

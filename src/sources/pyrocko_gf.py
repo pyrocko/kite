@@ -230,10 +230,9 @@ class PyrockoCLVDVolume(SandboxSource, PyrockoSource):
     dip = Float.T(
         default=90.0,
         help='dip angle of the CLVD from horizontal in [deg]')
-    clvd_magnitude = Float.T(
-        default=6.0,
-        help='moment magnitude Mw as in [Hanks and Kanamori, 1979]'
-             'of the CLVD part')
+    clvd_moment = Float.T(
+        default=3e18,
+        help='Moment in [Nm] of the CLVD contribution')
 
     parametersUpdated = PyrockoSource.parametersUpdated
 
@@ -253,7 +252,7 @@ class PyrockoCLVDVolume(SandboxSource, PyrockoSource):
             'volume_change': self.volume_change * km3,
             'azimuth': self.azimuth,
             'dip': self.dip,
-            'clvd_magnitude': self.clvd_magnitude
+            'clvd_moment': self.clvd_moment
         }
 
 

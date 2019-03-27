@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>517</width>
-    <height>234</height>
+    <height>236</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -35,7 +35,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>PyrockoDoubleCouple Parameters</string>
+   <string>PyrockoRingfault Parameters</string>
   </property>
   <property name="modal">
    <bool>false</bool>

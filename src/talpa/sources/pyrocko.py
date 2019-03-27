@@ -437,14 +437,41 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
     display_name = 'CLVDVolume'
 
     parameters = ['easting', 'northing', 'depth', 'store_dir',
-                  'volume_change', 'azimuth', 'dip', 'clvd_magnitude']
+                  'volume_change', 'azimuth', 'dip', 'clvd_moment']
     ro_parameters = []
 
     class CLVDVolumeDialog(PyrockoSourceDialog):
 
+        scaling_params = ['clvd_moment']
+
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
                 self, ui_file='pyrocko_clvd_volume.ui', *args, **kwargs)
+
+        @QtCore.pyqtSlot()
+        def setSourceParameters(self):
+            params = {}
+            scale = float('1e%d' % self.clvd_moment_exponent.value())
+            for param in self.delegate.parameters:
+                params[param] = self.__getattribute__(param).value()
+                if param in self.scaling_params:
+                    params[param] = params[param] * scale
+            self.delegate.updateModelParameters(params)
+
+        @QtCore.pyqtSlot()
+        def getSourceParameters(self):
+            params = self.delegate.getSourceParameters()
+            exponent = num.log10(
+                num.max([abs(v) for k, v in params.items()
+                         if k in self.scaling_params]))
+            scale = float('1e%d' % int(exponent))
+            self.clvd_moment_exponent.setValue(int(exponent))
+
+            for param, value in params.items():
+                if param in self.scaling_params:
+                    self.__getattribute__(param).setValue(value / scale)
+                else:
+                    self.__getattribute__(param).setValue(value)
 
     class CLVDVolumeROI(PointSourceROI):
 
@@ -513,8 +540,7 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
             northing=num.mean(sandbox.frame.N),
             depth=4000.,
             volume_change=.25,
-            store_dir=getConfig().default_gf_dir or '',
-            )
+            store_dir=getConfig().default_gf_dir or '')
         return src
 
     def formatListItem(self):
@@ -535,7 +561,7 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
 </tr><tr>
     <td>CLVD Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr style="font-weight: bold;">
-    <td>CLVD M<sub>W</sub>:</td><td>{source.clvd_magnitude:.2f}</td>
+    <td>CLVD M<sub>W</sub>:</td><td>{source.clvd_moment:.2e}</td>
 </tr>
 </table>
 '''

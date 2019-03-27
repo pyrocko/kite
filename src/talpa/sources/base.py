@@ -251,6 +251,7 @@ class SourceDelegate(QtCore.QObject):
         self.source.parametersUpdated()
         self.sourceParametersChanged.emit()
 
+    @QtCore.pyqtSlot()
     def getSourceParameters(self):
         params = {}
         for param in self.parameters + self.ro_parameters:
