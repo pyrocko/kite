@@ -391,12 +391,12 @@ class CovariancePlot(object):
 
         self.ax_noi = self.fig.add_subplot(221)
         self.ax_cov = self.fig.add_subplot(222)
-        #self.ax_stc = self.fig.add_subplot(324)
+        self.ax_svar = self.fig.add_subplot(224)
         self.ax_pow = self.fig.add_subplot(223)
         #self.ax_qud = self.fig.add_subplot(325)
 
         self.plotCovariance(self.ax_cov)
-        #self.plotStructure(self.ax_stc)
+        self.plotSemivariogram(self.ax_svar)
         self.plotPowerspec(self.ax_pow)
         self.plotNoise(self.ax_noi)
         #self.plotQuadtreeWeight(self.ax_qud)
@@ -417,6 +417,8 @@ class CovariancePlot(object):
 
     def plotCovariance(self, ax):
         cov, d = self._covariance.getCovariance()#covariance_func
+        var = num.empty_like(d)
+        var.fill(self._covariance.variance)
         ax.plot(d, cov)
 
         #d_interp = num.linspace(d.min(), d.max()+10000., num=50)
@@ -424,24 +426,25 @@ class CovariancePlot(object):
         #        label='Interpolated', ls='--')
         a, b = self._covariance.covariance_model
         model=a * num.exp(-d/b)
-        ax.plot(d, model,label='Interpolated', ls='--')
+        ax.plot(d, model,label='interpolated', ls='--')
+        ax.plot(d, var, label='variance', ls='--')
 
-        ax.legend(loc=1)
+        ax.legend(loc='best')
         ax.grid(alpha=.4)
         ax.set_title('Covariogram')
-        ax.set_xlabel('Distance [$m$]')
-        ax.set_ylabel('Covariance [$m^2$]')
+        ax.set_xlabel('distance [$m$]')
+        ax.set_ylabel('covariance [$m^2$]')
 
     def plotNoise(self, ax):
         noise_data = self._covariance.noise_data
         dn=self._covariance.noise_data_gridN.data[:,0] # schöner wäre das als extra property zuberechnen
         dn_m=[]
-        for i in range(len(dn)-1):                   
+        for i in range(len(dn)-1):
             dn_m.append(dn[i+1]-dn[i])
         dn_m=num.mean(dn_m)
         de=self._covariance.noise_data_gridE.data[0,:]
         de_m=[]
-        for i in range(len(de)-1):                   
+        for i in range(len(de)-1):
             de_m.append(de[i+1]-de[i])
         de_m=num.mean(de_m)
         ax.imshow(noise_data, aspect='equal',
@@ -452,15 +455,18 @@ class CovariancePlot(object):
         ax.set_xlabel('X [$m$]')
         ax.set_ylabel('Y [$m$]')
 
-    #def plotStructure(self, ax):
-        #struc_func, d = self._covariance.structure_func
-        #ax.plot(d, struc_func)
+    def plotSemivariogram(self, ax):
+        svar, d = self._covariance.structure_spatial
+        var = num.empty_like(d)
+        var.fill(self._covariance.variance)
+        ax.plot(d, svar)
+        ax.plot(d, var, label='variance', ls='--')
 
-        #ax.legend(loc=4)
-        #ax.grid(alpha=.4)
-        #ax.set_title('Structure Function')
-        #ax.set_xlabel('Distance [$m$]')
-        #ax.set_ylabel('Variance [$m^2$]')
+        ax.legend(loc=4)
+        ax.grid(alpha=.4)
+        ax.set_title('Semi-Variogram')
+        ax.set_xlabel('distance [$m$]')
+        ax.set_ylabel('semi-variance [$m^2$]')
 
     def plotPowerspec(self, ax):
         power_spec, k, dk, f_spec, k_x, k_y = self._covariance.powerspecNoise1D()#noiseSpectrum()
@@ -472,12 +478,12 @@ class CovariancePlot(object):
         #ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
         ax.plot(k, power_spec, label='$k_{total}$')
 
-        ax.legend(loc=1)
+        #ax.legend(loc=1)
         ax.grid(alpha=.4, which='both')
         ax.set_title('Power Spectrum')
-        ax.set_xlabel('Wavenumber [$cycles/m$]')
+        ax.set_xlabel('wavenumber [$cycles/m$]')
         ax.set_xscale('log')
-        ax.set_ylabel('Power [$m^2$]')
+        ax.set_ylabel('power [$m^2$]')
         ax.set_yscale('log')
 
     def plotQuadtreeWeight(self, ax):
