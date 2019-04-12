@@ -385,21 +385,21 @@ class QuadtreePlot(Plot2D):
 class CovariancePlot(object):
     def __init__(self, covariance, *args, **kwargs):
         self._covariance = covariance
-        self._quadtree = covariance._quadtree
-        self._scene = covariance._quadtree._scene
+        self.quadtree = covariance.quadtree
+        self.scene = covariance.quadtree.scene
         self.fig = plt.figure(figsize=(11.692, 8.267))
 
-        self.ax_noi = self.fig.add_subplot(321)
-        self.ax_cov = self.fig.add_subplot(322)
-        self.ax_stc = self.fig.add_subplot(324)
-        self.ax_pow = self.fig.add_subplot(323)
-        self.ax_qud = self.fig.add_subplot(325)
+        self.ax_noi = self.fig.add_subplot(221)
+        self.ax_cov = self.fig.add_subplot(222)
+        #self.ax_stc = self.fig.add_subplot(324)
+        self.ax_pow = self.fig.add_subplot(223)
+        #self.ax_qud = self.fig.add_subplot(325)
 
         self.plotCovariance(self.ax_cov)
-        self.plotStructure(self.ax_stc)
+        #self.plotStructure(self.ax_stc)
         self.plotPowerspec(self.ax_pow)
         self.plotNoise(self.ax_noi)
-        self.plotQuadtreeWeight(self.ax_qud)
+        #self.plotQuadtreeWeight(self.ax_qud)
 
         # self.plotPowerfit()
 
@@ -416,12 +416,15 @@ class CovariancePlot(object):
         fig.show()
 
     def plotCovariance(self, ax):
-        cov, d = self._covariance.covariance_func
+        cov, d = self._covariance.getCovariance()#covariance_func
         ax.plot(d, cov)
 
-        d_interp = num.linspace(d.min(), d.max()+10000., num=50)
-        ax.plot(d_interp, self._covariance.covariance(d_interp),
-                label='Interpolated', ls='--')
+        #d_interp = num.linspace(d.min(), d.max()+10000., num=50)
+        #ax.plot(d_interp, self._covariance.covariance(d_interp),
+        #        label='Interpolated', ls='--')
+        a, b = self._covariance.covariance_model
+        model=a * num.exp(-d/b)
+        ax.plot(d, model,label='Interpolated', ls='--')
 
         ax.legend(loc=1)
         ax.grid(alpha=.4)
@@ -431,32 +434,42 @@ class CovariancePlot(object):
 
     def plotNoise(self, ax):
         noise_data = self._covariance.noise_data
+        dn=self._covariance.noise_data_gridN.data[:,0] # schöner wäre das als extra property zuberechnen
+        dn_m=[]
+        for i in range(len(dn)-1):                   
+            dn_m.append(dn[i+1]-dn[i])
+        dn_m=num.mean(dn_m)
+        de=self._covariance.noise_data_gridE.data[0,:]
+        de_m=[]
+        for i in range(len(de)-1):                   
+            de_m.append(de[i+1]-de[i])
+        de_m=num.mean(de_m)
         ax.imshow(noise_data, aspect='equal',
-                  extent=(0, noise_data.shape[0]*self._scene.frame.dE,
-                          0, noise_data.shape[1]*self._scene.frame.dN))
+                  extent=(0, noise_data.shape[0]*de_m, # scheinbar doch de_m == scene.frame.dE
+                          0, noise_data.shape[1]*dn_m))
 
         ax.set_title('Noise Data')
         ax.set_xlabel('X [$m$]')
         ax.set_ylabel('Y [$m$]')
 
-    def plotStructure(self, ax):
-        struc_func, d = self._covariance.structure_func
-        ax.plot(d, struc_func)
+    #def plotStructure(self, ax):
+        #struc_func, d = self._covariance.structure_func
+        #ax.plot(d, struc_func)
 
-        ax.legend(loc=4)
-        ax.grid(alpha=.4)
-        ax.set_title('Structure Function')
-        ax.set_xlabel('Distance [$m$]')
-        ax.set_ylabel('Variance [$m^2$]')
+        #ax.legend(loc=4)
+        #ax.grid(alpha=.4)
+        #ax.set_title('Structure Function')
+        #ax.set_xlabel('Distance [$m$]')
+        #ax.set_ylabel('Variance [$m^2$]')
 
     def plotPowerspec(self, ax):
-        power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
+        power_spec, k, dk, f_spec, k_x, k_y = self._covariance.powerspecNoise1D()#noiseSpectrum()
 
         power_spec_x = num.mean(f_spec, axis=1)
         power_spec_y = num.mean(f_spec, axis=0)
 
-        ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
-        ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
+        #ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
+        #ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
         ax.plot(k, power_spec, label='$k_{total}$')
 
         ax.legend(loc=1)
@@ -496,7 +509,7 @@ class CovariancePlot(object):
         def covar_analyt(p, k):
             ps = behaviour(k[k > 0], *p)
             cov = sp.fftpack.dct(ps, type=2, n=None, axis=-1, norm='ortho')
-            d = num.arange(1, k[k > 0].size+1) * self._scene.frame.dE
+            d = num.arange(1, k[k > 0].size+1) * self.scene.frame.dE
             return cov, d
 
         power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
