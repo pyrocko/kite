@@ -385,6 +385,7 @@ class QuadtreePlot(Plot2D):
 class CovariancePlot(object):
     def __init__(self, covariance, *args, **kwargs):
         self._covariance = covariance
+        self.variance = covariance.variance
         self.quadtree = covariance.quadtree
         self.scene = covariance.quadtree.scene
         self.fig = plt.figure(figsize=(11.692, 8.267))
@@ -418,7 +419,7 @@ class CovariancePlot(object):
     def plotCovariance(self, ax):
         cov, d = self._covariance.getCovariance()#covariance_func
         var = num.empty_like(d)
-        var.fill(self._covariance.variance)
+        var.fill(self.variance)
         ax.plot(d, cov)
 
         #d_interp = num.linspace(d.min(), d.max()+10000., num=50)
@@ -426,8 +427,8 @@ class CovariancePlot(object):
         #        label='Interpolated', ls='--')
         a, b = self._covariance.covariance_model
         model=a * num.exp(-d/b)
-        ax.plot(d, model,label='interpolated', ls='--')
         ax.plot(d, var, label='variance', ls='--')
+        ax.plot(d, model,label='interpolated', ls='--')
 
         ax.legend(loc='best')
         ax.grid(alpha=.4)
@@ -437,19 +438,11 @@ class CovariancePlot(object):
 
     def plotNoise(self, ax):
         noise_data = self._covariance.noise_data
-        dn=self._covariance.noise_data_gridN.data[:,0] # schöner wäre das als extra property zuberechnen
-        dn_m=[]
-        for i in range(len(dn)-1):
-            dn_m.append(dn[i+1]-dn[i])
-        dn_m=num.mean(dn_m)
-        de=self._covariance.noise_data_gridE.data[0,:]
-        de_m=[]
-        for i in range(len(de)-1):
-            de_m.append(de[i+1]-de[i])
-        de_m=num.mean(de_m)
-        ax.imshow(noise_data, aspect='equal',
-                  extent=(0, noise_data.shape[0]*de_m, # scheinbar doch de_m == scene.frame.dE
-                          0, noise_data.shape[1]*dn_m))
+        noise_coord = self._covariance.noise_coord
+
+        ax.imshow(num.flipud(noise_data), aspect='equal',
+                  extent=(0, noise_coord[2],
+                          0, noise_coord[3]))
 
         ax.set_title('Noise Data')
         ax.set_xlabel('X [$m$]')
@@ -458,7 +451,7 @@ class CovariancePlot(object):
     def plotSemivariogram(self, ax):
         svar, d = self._covariance.structure_spatial
         var = num.empty_like(d)
-        var.fill(self._covariance.variance)
+        var.fill(self.variance)
         ax.plot(d, svar)
         ax.plot(d, var, label='variance', ls='--')
 
@@ -537,6 +530,67 @@ class CovariancePlot(object):
 
         self.ax_cov.legend(loc=1)
         self.ax_pow.legend(loc=1)
+
+class SyntheticNoisePlot(object):
+    def __init__(self, covariance, *args, **kwargs):
+        self._covariance = covariance
+        self.noise_data = self._covariance.noise_data
+        clim_max = num.nanmax(self.noise_data)
+        clim_min = num.nanmin(self.noise_data)
+        self.clim = min(abs(clim_max), abs(clim_min))
+        self.fig = plt.figure(figsize=(6.692, 3.149))
+
+        self.ax_noi = self.fig.add_subplot(121)
+        self.ax_snoi = self.fig.add_subplot(122)
+
+        self.plotSynthNoise(self.ax_snoi)
+        self.plotNoise(self.ax_noi)
+        #self.plotQuadtreeWeight(self.ax_qud)
+
+        # self.plotPowerfit()
+
+        self.fig.subplots_adjust(
+                left=.125, bottom=.1, right=.9, top=.9,
+                wspace=.5, hspace=.25)
+
+    def __call__(self):
+        self.fig.show()
+
+    def show(self):
+        from matplotlib.pyplot import figure
+        fig = figure(FigureClass=self)
+        fig.show()
+
+    def plotNoise(self, ax):
+        noise_coord = self._covariance.noise_coord
+
+        im = ax.imshow(num.flipud(self.noise_data), aspect='equal',
+                  extent=(0, noise_coord[2],
+                          0, noise_coord[3]))
+
+        ax.set_title('Noise Data')
+        ax.set_xlabel('X [$m$]')
+        ax.set_ylabel('Y [$m$]')
+        cbar=plt.colorbar(im, ax=ax)
+        cbar.set_label('LOS displacement [$m$]')
+        im.set_clim(-self.clim, self.clim)
+
+    def plotSynthNoise(self, ax):
+        noise_shape = num.shape(self.noise_data)
+        noise_data = self._covariance.syntheticNoise(noise_shape)
+        noise_coord = self._covariance.noise_coord
+
+        im = ax.imshow(num.flipud(noise_data), aspect='equal',
+                  extent=(0, noise_coord[2],
+                          0, noise_coord[3]))
+
+        ax.set_title('Synthetic Noise')
+        ax.set_xlabel('X [$m$]')
+        ax.set_ylabel('Y [$m$]')
+        cbar=plt.colorbar(im, ax=ax)
+        cbar.set_label('LOS displacement [$m$]')
+        im.set_clim(-self.clim, self.clim)
+
 
 
 if __name__ == '__main__':
