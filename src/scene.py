@@ -799,11 +799,11 @@ class Scene(BaseScene):
         return scene._import_from_dict(scene, data)
 
     _import_data.__doc__ += \
-        '\nSupported import modules are **%s**.\n'\
-        % (', ').join(scene_io.__all__)
+        '\nSupported import modules are **{}**.\n'\
+        .format((', ').join(scene_io.__all__))
     for mod in scene_io.__all__:
-        _import_data.__doc__ += '\n**%s**\n\n' % mod
-        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
+        _import_data.__doc__ += '\n**{name}**\n\n{doc}'\
+            .format(name=mod, doc=mod.__class__.__doc__)
     import_data = staticmethod(_import_data)
 
     @staticmethod

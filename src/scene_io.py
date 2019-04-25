@@ -1,12 +1,21 @@
 import re
-import utm
-import os.path as op
 import glob
+import os.path as op
+
+import utm
 import scipy.io
 import numpy as num
+
 from kite import util
 
 __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
+
+try:
+    from osgeo import gdal
+    __all__.append('LiCSAR')
+except ImportError:
+    pass
+
 
 d2r = num.pi/180.
 km = 1e3
@@ -622,7 +631,7 @@ class ISCEXMLParser(object):
 class ISCE(SceneIO):
     """
     Reading geocoded, unwraped displacement maps
-        processed with ISCE software (https://winsar.unavco.org/isce.html).
+    processed with ISCE software (https://winsar.unavco.org/isce.html).
 
     .. note :: Expects:
 
@@ -733,6 +742,7 @@ class ISCE(SceneIO):
 
 class GMTSAR(SceneIO):
     """
+    Reading GMTSAR grid files.
 
     .. note ::
 
@@ -824,6 +834,7 @@ class GMTSAR(SceneIO):
 
 class SARscape(SceneIO):
     """
+    Reading SARscape `*_disp` files.
 
     .. note ::
 
@@ -936,4 +947,63 @@ class SARscape(SceneIO):
                 return True
             return False
 
-        raise NotImplementedError('validate not implemented')
+
+class LiCSAR(SceneIO):
+
+    def _getTheta(self, filename):
+        path = op.dirname(filename)
+        fn = glob.glob(op.join(path, '*psi.tif'))
+        if len(fn) != 1:
+            raise ImportError('Cannot find *.psi.tif file!')
+
+        dataset = gdal.Open(fn[0], gdal.GA_ReadOnly)
+        return self._readBandData(dataset)
+
+    def _getPhi(self, filename):
+        path = op.dirname(filename)
+        fn = glob.glob(op.join(path, '*inc.tif'))
+        if len(fn) != 1:
+            raise ImportError('Cannot find *.inc.tif file!')
+
+        dataset = gdal.Open(fn[0], gdal.GA_ReadOnly)
+        return self._readBandData(dataset)
+
+    @staticmethod
+    def _readBandData(dataset, band=1):
+        array = dataset.GetRasterBand(band).ReadAsArray()
+        array[array == 0.] = num.nan
+
+        return num.flipud(array).astype(num.float64)
+
+    def read(self, filename, **kwargs):
+        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        georef = dataset.GetGeoTransform()
+
+        llLat = georef[3]
+        llLon = georef[0] - dataset.RasterYSize * georef[5]
+
+        displ = self._readBandData(dataset)
+
+        c = self.container
+
+        c.frame.spacing = 'degree'
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+        c.frame.dE = georef[1]
+        c.frame.dN = abs(georef[5])
+
+        c.displacement = displ.astype(num.float64)
+        c.phi = self._getTheta(filename)
+        c.theta = self._getPhi(filename)
+
+        c.meta.title = dataset.GetDescription()
+
+        return c
+
+    def validate(self, filename, **kwargs):
+        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        meta = dataset.GetMetadata()
+        if 'TIFFTAG_DATETIME' in meta.keys():
+            return True
+        else:
+            return False
