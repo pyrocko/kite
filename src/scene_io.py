@@ -950,20 +950,11 @@ class SARscape(SceneIO):
 
 class LiCSAR(SceneIO):
 
-    def _getTheta(self, filename):
+    def _getLOS(self, filename, component):
         path = op.dirname(filename)
-        fn = glob.glob(op.join(path, '*psi.tif'))
+        fn = glob.glob(op.join(path, component))
         if len(fn) != 1:
-            raise ImportError('Cannot find *.psi.tif file!')
-
-        dataset = gdal.Open(fn[0], gdal.GA_ReadOnly)
-        return self._readBandData(dataset)
-
-    def _getPhi(self, filename):
-        path = op.dirname(filename)
-        fn = glob.glob(op.join(path, '*inc.tif'))
-        if len(fn) != 1:
-            raise ImportError('Cannot find *.inc.tif file!')
+            raise ImportError('Cannot find LOS vector file %s!' % component)
 
         dataset = gdal.Open(fn[0], gdal.GA_ReadOnly)
         return self._readBandData(dataset)
@@ -973,16 +964,14 @@ class LiCSAR(SceneIO):
         array = dataset.GetRasterBand(band).ReadAsArray()
         array[array == 0.] = num.nan
 
-        return num.flipud(array).astype(num.float64)
+        return num.flipud(array)
 
     def read(self, filename, **kwargs):
         dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         georef = dataset.GetGeoTransform()
 
-        llLat = georef[3]
-        llLon = georef[0] - dataset.RasterYSize * georef[5]
-
-        displ = self._readBandData(dataset)
+        llLat = georef[0]
+        llLon = georef[3] + dataset.RasterYSize * georef[5]
 
         c = self.container
 
@@ -992,9 +981,14 @@ class LiCSAR(SceneIO):
         c.frame.dE = georef[1]
         c.frame.dN = abs(georef[5])
 
-        c.displacement = displ.astype(num.float64)
-        c.phi = self._getTheta(filename)
-        c.theta = self._getPhi(filename)
+        c.displacement = self._readBandData(dataset) / 1e2  # data is in cm
+
+        los_n = self._getLOS(filename, '*.geo.N.tif')
+        los_e = self._getLOS(filename, '*.geo.E.tif')
+        los_u = self._getLOS(filename, '*.geo.U.tif')
+
+        c.phi = num.arctan(los_n/los_e)
+        c.theta = num.arccos(los_u)
 
         c.meta.title = dataset.GetDescription()
 
