@@ -956,7 +956,7 @@ class LiCSAR(SceneIO):
     .. note ::
 
         Requires the python package
-        `gdal/osgeo <https://pypi.org/project/GDAL/>`_!
+        `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
 
         Expects:
 
@@ -1003,7 +1003,7 @@ class LiCSAR(SceneIO):
         los_e = self._getLOS(filename, '*.geo.E.tif')
         los_u = self._getLOS(filename, '*.geo.U.tif')
 
-        c.phi = num.arctan(los_n/los_e)
+        c.phi = num.arctan2(los_n, los_e)
         c.theta = num.arccos(los_u)
 
         c.meta.title = dataset.GetDescription()

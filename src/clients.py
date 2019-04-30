@@ -37,14 +37,14 @@ def download_licsar(unw_url, destination='.'):
     meta_url = op.normpath(op.join(url_dir, '../../metadata'))
 
     for unit in ('E', 'N', 'U'):
-        fn = op.normpath(
-            op.join(destination, '%s.geo.%s.tif' % (scene_id, unit)))
+        fn = '%s.geo.%s.tif' % (scene_id, unit)
         los_url = op.join(meta_url, fn)
         los_url = re.sub(r'^(http:/)\b', r'\1/', los_url, 0)
+        outfn = op.normpath(op.join(destination, fn))
 
-        _download_file(los_url, fn)
+        _download_file(los_url, outfn)
 
-    logger.info('\nDownloaded complete!\nOpen with `spool --load=%s`',
+    logger.info('\nDownloaded complete! Open with\n\n\tspool --load=%s',
                 unw_file)
 
 

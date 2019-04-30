@@ -113,7 +113,7 @@ class KiteToolTransect(QtGui.QDialog):
 
         self.plt_wdgt = pg.PlotWidget()
         self.plt_wdgt.setLabels(
-            bottom={'Distance', 'm'},
+            bottom={'Distance', ' m'},
             left='Displacement [m]')
 
         self.plt_wdgt.showGrid(True, True, alpha=.5)
