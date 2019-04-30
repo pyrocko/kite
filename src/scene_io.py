@@ -834,7 +834,7 @@ class GMTSAR(SceneIO):
 
 class SARscape(SceneIO):
     """
-    Reading SARscape `*_disp` files.
+    Reading SARscape :file:`*_disp` files.
 
     .. note ::
 
@@ -949,6 +949,22 @@ class SARscape(SceneIO):
 
 
 class LiCSAR(SceneIO):
+    '''
+    Import unwrapped Geotiffs from the
+    `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_.
+
+    .. note ::
+
+        Requires the python package
+        `gdal/osgeo <https://pypi.org/project/GDAL/>`_!
+
+        Expects:
+
+        * Unwrapped geotiff in :file:`*.unw.tif`
+        * LOS data in :file:`*.geo.[NEU].tif` files
+
+    See also the download script in :mod:`kite.clients`.
+    '''
 
     def _getLOS(self, filename, component):
         path = op.dirname(filename)

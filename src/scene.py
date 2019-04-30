@@ -785,11 +785,14 @@ class Scene(BaseScene):
             raise ImportError('File %s does not exist!' % path)
         data = None
 
-        for mod in scene_io.__all__:
-            module = eval('scene_io.%s(scene)' % mod)
+        for mod_name in scene_io.__all__:
+            cls = getattr(
+                __import__('kite.scene_io', fromlist=mod_name),
+                mod_name)
+            module = cls()
             if module.validate(path, **kwargs):
                 scene._log.debug('Importing %s using %s module' %
-                                 (path, mod))
+                                 (path, mod_name))
                 data = module.read(path, **kwargs)
                 break
         if data is None:
@@ -798,12 +801,17 @@ class Scene(BaseScene):
         scene.meta.filename = op.basename(path)
         return scene._import_from_dict(scene, data)
 
+    _class_list = map('* :class:`~kite.scene_io.{}`'.format, scene_io.__all__)
     _import_data.__doc__ += \
-        '\nSupported import modules are **{}**.\n'\
-        .format((', ').join(scene_io.__all__))
-    for mod in scene_io.__all__:
+        '\nSupported import for unwrapped InSAR data are:\n\n{}\n'\
+        .format('\n'.join(_class_list))
+    for mod_name in scene_io.__all__:
+        cls = getattr(
+            __import__('kite.scene_io', fromlist=mod_name),
+            mod_name)
+
         _import_data.__doc__ += '\n**{name}**\n\n{doc}'\
-            .format(name=mod, doc=mod.__class__.__doc__)
+            .format(name=mod_name, doc=cls.__doc__)
     import_data = staticmethod(_import_data)
 
     @staticmethod

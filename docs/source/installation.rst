@@ -37,7 +37,7 @@ An installation through ``pip`` requires the same prerequisites as above:
 MacOS (Sierra, MacPorts)
 ------------------------
 
-Installing Pyrocko is a prerequisite, visit `Pyrocko installation instructions <http://pyrocko.org/docs/current/install_mac.html>`_ for details.
+Installing Pyrocko is a prerequisite, visit `Pyrocko Mac installation instructions <http://pyrocko.org/docs/current/install_mac.html>`_ for details.
 
 Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alternatively check out the Anaconda3 instructions:
 

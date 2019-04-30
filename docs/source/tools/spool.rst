@@ -59,7 +59,7 @@ Quadtree manipulation
 
 The :class:`~kite.Quadtree` subsamples the InSAR displacement in order to have a reduced and thus more manageable dataset for modelling. 
 
-The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`../examples/03-quadtree`)
+The four parameters characterizing the quadtree can be controlled through the gui (see also :doc:`../examples/quadtree`)
 
 * epsilon/std threshold (:attr:`~kite.Quadtree.epsilon`)
 * Fraction of NaN values within (:attr:`~kite.Quadtree.nan_allowed`)

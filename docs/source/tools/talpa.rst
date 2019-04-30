@@ -7,7 +7,7 @@ The tool ``talpa`` (`Talpidae; the mole`) enables interactive modelling of stati
 
 It acts as a frontend for :mod:`kite.SandboxScene`, a modelling sandbox for InSAR scenes.
 
-Examples for a programmatic interaction with the sandbox can be found :doc:`/examples/05-sandbox`.
+Examples for a programmatic interaction with the sandbox can be found :doc:`/examples/sandbox`.
 
 
 Available Static Displacement Sources

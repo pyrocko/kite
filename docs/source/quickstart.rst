@@ -8,6 +8,7 @@ Kite supports importing unwrapped displacement scenes from different InSAR proce
 * `ROI_PAC <http://www.geo.cornell.edu/eas/PeoplePlaces/Faculty/matt/roi_pac.html/>`_
 * `ISCE <https://winsar.unavco.org/software/isce>`_
 * `SARscape <http://www.sarmap.ch/page.php?page=sarscape>`_
+* `LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_
 
 
 Each processor delivers different file formats and metadata. In order to import the data into Kite, data has to be prepared. Details for each format are described in :mod:`kite.scene_io`.
@@ -29,6 +30,26 @@ We will start with importing a scene from GMT5SAR.
 
     sc = Scene.import_data('unwrap_ll.grd')
     sc.spool()
+
+
+Download and Load Data from COMET LiCSAR
+----------------------------------------
+
+A slim downloader for COMET LiCSAR products is included in `kite.clients`. The script will download the passed unwrapped LiCSAR data and necessary LOS geotiffs into the current directory.
+
+This example will download data from the 2017 Iran–Iraq earthquake (M 7.3) from the `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_:
+
+
+.. code-block :: sh
+
+    python3 -m kite.clients http://gws-access.ceda.ac.uk/public/nceo_geohazards/LiCSAR_products/6/006D_05509_131313/products/20171107_20171201/20171107_20171201.geo.unw.tif .
+
+
+To open the scene in spool, run:
+
+.. code-block :: sh
+
+    spool --load=./20171107_20171201.geo.unw.tif
 
 
 Manual scene setup
