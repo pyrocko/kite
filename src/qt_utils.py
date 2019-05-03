@@ -1,10 +1,10 @@
 import os
 import logging
-import numpy as num
 from os import path as op
 
 from PyQt5 import QtGui, QtCore, uic
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
 SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
@@ -101,23 +101,21 @@ class SliderWidget(QtGui.QWidget):
     """
     sigValueChanged = QtCore.Signal(object)  # value
 
-    def __init__(self, horizontal=True, parent=None, precission=3, step=.005):
-        """
-        horizontal -> True/False
-        """
+    def __init__(self, horizontal=True, parent=None, decimals=3, step=.005):
         QtGui.QWidget.__init__(self, parent)
         self.mn = None
         self.mx = None
-        self.precission = precission
+        self.decimals = decimals
         self.step = 100
         self.valueLen = 2
         self.suffix = None
         self._value = None
 
         self.spin = QtGui.QDoubleSpinBox()
-        self.spin.setDecimals(precission)
+        self.spin.setDecimals(decimals)
         self.spin.setSingleStep(step)
         self.spin.valueChanged.connect(self._update_spin)
+        self.spin.setFrame(False)
 
         self.slider = QtGui.QSlider(
             QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1, horiz
@@ -171,7 +169,7 @@ class SliderWidget(QtGui.QWidget):
             val /= 99.  # val->0...1
             val = val * (self.mx-self.mn) + self.mn
 
-        self._value = round(val, self.precission)
+        self._value = round(val, self.decimals)
         self.setValue(self._value)
         self.sigValueChanged.emit(self._value)
 
@@ -187,7 +185,10 @@ class SliderWidgetParameterItem(WidgetParameterItem):
     """
     def makeWidget(self):
         opts = self.param.opts
-        w = SliderWidget()
+        decimals = opts.get('decimals', 2)
+        step = opts.get('step', .1)
+
+        w = SliderWidget(decimals=decimals, step=step)
         w.sigChanged = w.sigValueChanged
         w.sigChanging = w.sigValueChanged
         lim = opts.get('limits')
