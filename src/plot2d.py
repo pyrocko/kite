@@ -113,8 +113,7 @@ class Plot2D(object):
             self.ax = None
         try:
             self.fig.canvas.mpl_connect('close_event', close_figure)
-        # specify!
-        except:
+        except Exception:
             pass
 
     def plot(self, **kwargs):
@@ -128,7 +127,7 @@ class Plot2D(object):
         :type **kwargs: dict
         :raises: NotImplemented
         """
-        raise NotImplemented
+        raise NotImplementedError()
         self._initImagePlot(**kwargs)
         if self._show_plt:
             plt.show()
@@ -336,16 +335,16 @@ class QuadtreePlot(Plot2D):
                      transform=self.ax.transAxes, ha='right', va='top')
 
     def _update(self):
-            t0 = time.time()
+        t0 = time.time()
 
-            self.ax.texts = []
-            self._addInfoText()
-            self.data = self._quadtree.leaf_matrix_means
-            self.colormapAdjust()
-            self.ax.draw_artist(self.image)
+        self.ax.texts = []
+        self._addInfoText()
+        self.data = self._quadtree.leaf_matrix_means
+        self.colormapAdjust()
+        self.ax.draw_artist(self.image)
 
-            self._log.info('Redrew %d leaves [%0.8f s]' %
-                           (len(self._quadtree.leaves), time.time()-t0))
+        self._log.info('Redrew %d leaves [%0.8f s]' %
+                       (len(self._quadtree.leaves), time.time()-t0))
 
     def interactive(self):
         """Simple interactive quadtree plot with matplot
@@ -394,13 +393,13 @@ class CovariancePlot(object):
         self.ax_cov = self.fig.add_subplot(222)
         self.ax_svar = self.fig.add_subplot(224)
         self.ax_pow = self.fig.add_subplot(223)
-        #self.ax_qud = self.fig.add_subplot(325)
+        # self.ax_qud = self.fig.add_subplot(325)
 
         self.plotCovariance(self.ax_cov)
         self.plotSemivariogram(self.ax_svar)
         self.plotPowerspec(self.ax_pow)
         self.plotNoise(self.ax_noi)
-        #self.plotQuadtreeWeight(self.ax_qud)
+        # self.plotQuadtreeWeight(self.ax_qud)
 
         # self.plotPowerfit()
 
@@ -417,18 +416,18 @@ class CovariancePlot(object):
         fig.show()
 
     def plotCovariance(self, ax):
-        cov, d = self._covariance.getCovariance()#covariance_func
+        cov, d = self._covariance.getCovariance()
         var = num.empty_like(d)
         var.fill(self.variance)
         ax.plot(d, cov)
 
-        #d_interp = num.linspace(d.min(), d.max()+10000., num=50)
-        #ax.plot(d_interp, self._covariance.covariance(d_interp),
+        # d_interp = num.linspace(d.min(), d.max()+10000., num=50)
+        # ax.plot(d_interp, self._covariance.covariance(d_interp),
         #        label='Interpolated', ls='--')
-        a, b = self._covariance.covariance_model
-        model=a * num.exp(-d/b)
+        model = self._covariance.getModelFunction(
+            d, *self._covariance.covariance_model)
         ax.plot(d, var, label='variance', ls='--')
-        ax.plot(d, model,label='interpolated', ls='--')
+        ax.plot(d, model, label='interpolated', ls='--')
 
         ax.legend(loc='best')
         ax.grid(alpha=.4)
@@ -462,16 +461,17 @@ class CovariancePlot(object):
         ax.set_ylabel('semi-variance [$m^2$]')
 
     def plotPowerspec(self, ax):
-        power_spec, k, dk, f_spec, k_x, k_y = self._covariance.powerspecNoise1D()#noiseSpectrum()
+        power_spec, k, dk, f_spec, k_x, k_y = \
+            self._covariance.powerspecNoise1D()  # noiseSpectrum()
 
-        power_spec_x = num.mean(f_spec, axis=1)
-        power_spec_y = num.mean(f_spec, axis=0)
+        # power_spec_x = num.mean(f_spec, axis=1)
+        # power_spec_y = num.mean(f_spec, axis=0)
 
-        #ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
-        #ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
+        # ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
+        # ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
         ax.plot(k, power_spec, label='$k_{total}$')
 
-        #ax.legend(loc=1)
+        # ax.legend(loc=1)
         ax.grid(alpha=.4, which='both')
         ax.set_title('Power Spectrum')
         ax.set_xlabel('wavenumber [$cycles/m$]')
@@ -531,6 +531,7 @@ class CovariancePlot(object):
         self.ax_cov.legend(loc=1)
         self.ax_pow.legend(loc=1)
 
+
 class SyntheticNoisePlot(object):
     def __init__(self, covariance, *args, **kwargs):
         self._covariance = covariance
@@ -545,7 +546,7 @@ class SyntheticNoisePlot(object):
 
         self.plotSynthNoise(self.ax_snoi)
         self.plotNoise(self.ax_noi)
-        #self.plotQuadtreeWeight(self.ax_qud)
+        # self.plotQuadtreeWeight(self.ax_qud)
 
         # self.plotPowerfit()
 
@@ -564,14 +565,14 @@ class SyntheticNoisePlot(object):
     def plotNoise(self, ax):
         noise_coord = self._covariance.noise_coord
 
-        im = ax.imshow(num.flipud(self.noise_data), aspect='equal',
-                  extent=(0, noise_coord[2],
-                          0, noise_coord[3]))
+        im = ax.imshow(
+            num.flipud(self.noise_data), aspect='equal',
+            extent=(0, noise_coord[2], 0, noise_coord[3]))
 
         ax.set_title('Noise Data')
         ax.set_xlabel('X [$m$]')
         ax.set_ylabel('Y [$m$]')
-        cbar=plt.colorbar(im, ax=ax)
+        cbar = plt.colorbar(im, ax=ax)
         cbar.set_label('LOS displacement [$m$]')
         im.set_clim(-self.clim, self.clim)
 
@@ -580,17 +581,16 @@ class SyntheticNoisePlot(object):
         noise_data = self._covariance.syntheticNoise(noise_shape)
         noise_coord = self._covariance.noise_coord
 
-        im = ax.imshow(num.flipud(noise_data), aspect='equal',
-                  extent=(0, noise_coord[2],
-                          0, noise_coord[3]))
+        im = ax.imshow(
+            num.flipud(noise_data), aspect='equal',
+            extent=(0, noise_coord[2], 0, noise_coord[3]))
 
         ax.set_title('Synthetic Noise')
         ax.set_xlabel('X [$m$]')
         ax.set_ylabel('Y [$m$]')
-        cbar=plt.colorbar(im, ax=ax)
+        cbar = plt.colorbar(im, ax=ax)
         cbar.set_label('LOS displacement [$m$]')
         im.set_clim(-self.clim, self.clim)
-
 
 
 if __name__ == '__main__':
