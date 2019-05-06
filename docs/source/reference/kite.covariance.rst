@@ -10,7 +10,7 @@ CovarianceConfig
 .. autoclass:: kite.covariance.CovarianceConfig
     :members:
 
-Model Assumptions
+Model assumptions
 -----------------
 
 .. autofunction:: kite.covariance.modelCovarianceExponential

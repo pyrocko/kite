@@ -14,26 +14,18 @@ Kite supports importing unwrapped displacement scenes from different InSAR proce
 Each processor delivers different file formats and metadata. In order to import the data into Kite, data has to be prepared. Details for each format are described in :mod:`kite.scene_io`.
 
 
-Import InSAR displacement
--------------------------
+Importing Data through ``spool`` GUI
+------------------------------------
 
-We will start with importing a scene from GMT5SAR.
+When you have prepared you data according to an supported format (:mod:`kite.scene_io`), you can use spool to directly import the data:
 
-.. code-block :: python
-    :caption: GMT5SAR is an open-source processor based on GMT. We will import a binary ``.grd`` file.
+.. code-block :: sh
 
-    from kite import Scene
-
-    # We import a unwrapped interferrogram scene.
-    # The format shall be detected automatically
-    # in this case processed a GMTSAR5
-
-    sc = Scene.import_data('unwrap_ll.grd')
-    sc.spool()
+    spool --load=data/my_scene-asc.grd
 
 
-Download and Load Data from COMET LiCSAR
-----------------------------------------
+Download and import data from COMET LiCSAR
+------------------------------------------
 
 A slim downloader for COMET LiCSAR products is included in `kite.clients`. The script will download the passed unwrapped LiCSAR data and necessary LOS geotiffs into the current directory.
 
@@ -52,8 +44,28 @@ To open the scene in spool, run:
     spool --load=./20171107_20171201.geo.unw.tif
 
 
-Manual scene setup
-------------------
+Programmatic data import
+------------------------
+
+We will start with importing a scene from GMT5SAR.
+
+.. code-block :: python
+    :caption: GMT5SAR is an open-source processor based on GMT. We will import a binary ``.grd`` file.
+
+    from kite import Scene
+
+    # We import a unwrapped interferrogram scene.
+    # The format shall be detected automatically
+    # in this case processed a GMTSAR5
+
+    sc = Scene.import_data('unwrap_ll.grd')
+
+    # Open spool
+    sc.spool()
+
+
+Programmatic scene setup
+------------------------
 
 Initialisation of a custom scene from python is also possible. Here we will import arbitrary data and define the reference frame manually.
 
@@ -78,8 +90,8 @@ Initialisation of a custom scene from python is also possible. Here we will impo
 
 
 
-Inspect an InSAR scene with ``spool`` GUI
-------------------------------------------
+Inspecting an InSAR scene with ``spool`` GUI
+--------------------------------------------
 
 You can use start :doc:`../tools/spool` to inspect the scene and manipulate it's properties.
 
@@ -101,8 +113,8 @@ Alternatively ``spool`` can be started from command line
     spool my_scene.yml
 
 
-Save scene and properties
--------------------------
+Save scene, covariance and quadtree
+-----------------------------------
 
 The native file structure of ``Kite`` is based on NumPy binary files together with `YAML <https://en.wikipedia.org/wiki/YAML>`_ configuration files which hold the all information to and configurable parameters:
 

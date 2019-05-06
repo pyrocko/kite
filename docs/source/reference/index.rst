@@ -1,4 +1,4 @@
-Module Reference
+Module reference
 ================
 
 The framework's API documentation can be found here.
