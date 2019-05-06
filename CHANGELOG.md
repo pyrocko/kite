@@ -4,7 +4,7 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [1.1.0]
+## [1.1.0] 6. May 2019
 
 ## Added
 - Added LiCSAR import
@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - talpa various improvements and bugfixes
 - updated documentation
 - fixed import for ROIPAC and ISCE
+- matplotlib plotting functions
 
 ## Changed
 - Spool: Changes 'LOS' to 'Towards Satellite'
