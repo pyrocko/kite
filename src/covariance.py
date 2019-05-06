@@ -1112,3 +1112,10 @@ class Covariance(object):
         """
         from kite.plot2d import CovariancePlot
         return CovariancePlot(self)
+
+    @property_cached
+    def plot_syntheticNoise(self):
+        """ Simple overview plot to summarize the covariance estimations.
+        """
+        from kite.plot2d import SyntheticNoisePlot
+        return SyntheticNoisePlot(self)
