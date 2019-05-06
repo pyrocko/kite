@@ -1,14 +1,13 @@
 # KITE
 
-[![Build Status](https://travis-ci.org/pyrocko/kite.svg?branch=master)](https://travis-ci.org/pyrocko/kite)
-[![Coverage Status](https://coveralls.io/repos/github/pyrocko/kite/badge.svg?branch=master)](https://coveralls.io/github/pyrocko/kite?branch=master)
+![Python3](https://img.shields.io/badge/python-3.x-brightgreen.svg)
 
 ## Introduction
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](https://www.pyrocko.org) and Grond.
 
 Kite features simple and efficient handling of displacement data:
 
-* Import InSAR displacement data from GAMMA, ISCE, GMTSAR, ROI_PAC and Matlab
+* Import InSAR displacement data from GAMMA, ISCE, GMTSAR, ROI_PAC, SARScape, [COMET LiCSAR](https://comet.nerc.ac.uk/COMET-LiCS-portal/) and Matlab
 * Efficient **quadtree** implementation
 * **Covariance** estimation from noise
 * **Interactive GUI**
@@ -44,6 +43,13 @@ sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
   python-yaml python-scipy python-numpy
 ```
 
+### Installation through pip
+
+```sh
+sudo pip install git+https://github.com/pyqtgraph/pyqtgraph.git
+sudo pip install git+https://github.com/pyrocko/kite.git
+```
+
 ### Native installation
 
 ```sh
@@ -51,13 +57,6 @@ git clone https://github.com/pyqtgraph/pyqtgraph.git
 cd pyqtgraph; sudo python setup.py install
 git clone https://github.com/pyrocko/kite.git
 cd kite; sudo python setup.py install
-```
-
-### Installation through pip
-
-```sh
-sudo pip install git+https://github.com/pyqtgraph/pyqtgraph.git
-sudo pip install git+https://github.com/pyrocko/kite.git
 ```
 
 ## Citation
