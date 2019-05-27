@@ -608,27 +608,26 @@ class BaseScene(object):
         '''
         msk = ~self.displacement_mask
         displacement = self.displacement[msk]
-        coords = self.frame.coordinates[msk]
+        coords = self.frame.coordinates[msk.flatten()]
 
         coeffs, res, _, _ = num.linalg.lstsq(
-            displacement, coords)
+            coords, displacement, rcond=None)
+
         return displacement.mean(), coeffs
 
-    def displacement_deramp(self, demean=True, inplace=True):
+    def displacement_deramp(self, inplace=True):
         '''Fit a plane onto the displacement data and substract it
 
-        :param demean: Demean the scene (default: True)
-        :type demean: bool
         :param inplace: Replace data of the scene (default: True)
         :type inplace: bool
         '''
         mean, coeffs = self.get_ramp_coefficients()
-        msk = ~self.displacement_mask
-        coords = self.frame.coordinates[msk]
+        msk = self.displacement_mask
+        coords = self.frame.coordinates
 
         ramp = coeffs * coords
-        if demean:
-            ramp += mean
+        ramp = ramp.sum(axis=1).reshape(self.shape)
+        ramp[msk] = num.nan
 
         if inplace:
             self.displacement -= ramp
@@ -662,9 +661,9 @@ class Scene(BaseScene):
     :type llLat: float, optional
     :param llLon: Lower left longitude in [deg]
     :type llLon: float, optional
-    :param dLat: Pixel spacing in latitude [deg]
+    :param dLat: Pixel spacing in latitude [deg or m]
     :type dLat: float, optional
-    :param dLon: Pixel spacing in longitude [deg]
+    :param dLon: Pixel spacing in longitude [deg or m]
     :type dLon: float, optional
     """
 
