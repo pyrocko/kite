@@ -4,6 +4,9 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Added
+- Deramping of displacement maps `Scene.displacement_deramp()`
+
 ## [1.1.0] 6. May 2019
 
 ## Added

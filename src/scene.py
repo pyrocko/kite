@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 import logging
 import numpy as num
 import utm
@@ -599,8 +599,48 @@ class BaseScene(object):
         self.meta.time_slave = tmax
         return self
 
-    def __iadd__(self, other):
-        return self.__add__(other)
+    def get_ramp_coefficients(self):
+        '''Fit plane on the displacement data
+
+        :returns: Mean of the displacement and easting / northing coefficients
+            of the fitted plane.
+        :rtype: tuple
+        '''
+        msk = ~self.displacement_mask
+        displacement = self.displacement[msk]
+        coords = self.frame.coordinates[msk]
+
+        coeffs, res, _, _ = num.linalg.lstsq(
+            displacement, coords)
+        return displacement.mean(), coeffs
+
+    def displacement_deramp(self, demean=True, inplace=True):
+        '''Fit a plane onto the displacement data and substract it
+
+        :param demean: Demean the scene (default: True)
+        :type demean: bool
+        :param inplace: Replace data of the scene (default: True)
+        :type inplace: bool
+        '''
+        mean, coeffs = self.get_ramp_coefficients()
+        msk = ~self.displacement_mask
+        coords = self.frame.coordinates[msk]
+
+        ramp = coeffs * coords
+        if demean:
+            ramp += mean
+
+        if inplace:
+            self.displacement -= ramp
+        else:
+            return self.__class__(
+                config=self.config,
+                theta=self.theta,
+                phi=self.phi,
+                displacement=self.displacement - ramp)
+
+    def __iadd__(self, scene):
+        return self.__add__(scene)
 
 
 class Scene(BaseScene):
