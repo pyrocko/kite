@@ -600,32 +600,47 @@ class BaseScene(object):
         return self
 
     def get_ramp_coefficients(self):
-        '''Fit plane on the displacement data
+        '''Fit plane through the displacement data.
 
-        :returns: Mean of the displacement and easting / northing coefficients
-            of the fitted plane.
-        :rtype: tuple
+        :returns: Mean of the displacement and slopes in easting coefficients
+            of the fitted plane. The array hold
+            ``[offset_e, offset_n, slope_e, slope_n]``.
+        :rtype: :class:`numpy.ndarray`
         '''
         msk = ~self.displacement_mask
         displacement = self.displacement[msk]
+
         coords = self.frame.coordinates[msk.flatten()]
+
+        # Add ones for the offset
+        coords = num.hstack((
+            num.ones_like(coords),
+            coords))
 
         coeffs, res, _, _ = num.linalg.lstsq(
             coords, displacement, rcond=None)
 
-        return displacement.mean(), coeffs
+        return coeffs
 
-    def displacement_deramp(self, inplace=True):
+    def displacement_deramp(self, demean=True, inplace=True):
         '''Fit a plane onto the displacement data and substract it
 
+        :param demean: Demean the displacement
+        :type demean: bool
         :param inplace: Replace data of the scene (default: True)
         :type inplace: bool
+
+        :return: ``None`` if ``inplace=True`` else a new Scene
+        :rtype: ``None`` or :class:`~kite.Scene`
         '''
-        mean, coeffs = self.get_ramp_coefficients()
+        coeffs = self.get_ramp_coefficients()
         msk = self.displacement_mask
         coords = self.frame.coordinates
 
-        ramp = coeffs * coords
+        ramp = coeffs[2:] * coords
+        if demean:
+            ramp += coeffs[:2]
+
         ramp = ramp.sum(axis=1).reshape(self.shape)
         ramp[msk] = num.nan
 
