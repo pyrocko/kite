@@ -211,10 +211,10 @@ class PyrockoRingfaultSource(SandboxSource, PyrockoSource):
         }
 
 
-class PyrockoCLVDVolume(SandboxSource, PyrockoSource):
+class PyrockoVLVDSource(SandboxSource, PyrockoSource):
     '''A ring fault with vertical doublecouples.
 
-    See :class:`pyrocko.gf.seismosizer.CLVDVolumeSource`.
+    See :class:`pyrocko.gf.seismosizer.VLVDSource`.
     '''
     __implements__ = 'pyrocko'
 
@@ -239,7 +239,7 @@ class PyrockoCLVDVolume(SandboxSource, PyrockoSource):
     def __init__(self, *args, **kwargs):
         SandboxSource.__init__(self, *args, **kwargs)
         PyrockoSource.__init__(self)
-        self.pyrocko_source = gf.CLVDVolumeSource(**self._src_args)
+        self.pyrocko_source = gf.VLVDSource(**self._src_args)
 
     @property
     def _src_args(self):

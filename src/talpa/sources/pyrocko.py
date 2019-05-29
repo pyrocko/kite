@@ -6,7 +6,7 @@ from .base import (RectangularSourceROI, PointSourceROI, SourceDelegate,
                    SourceEditDialog)
 from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
-                          PyrockoRingfaultSource, PyrockoCLVDVolume)
+                          PyrockoRingfaultSource, PyrockoVLVDSource)
 
 from ..config import getConfig
 
@@ -429,24 +429,24 @@ class PyrockoRingfaultDelegate(SourceDelegate):
                            source=self.source)
 
 
-class PyrockoCLVDVolumeDelegate(SourceDelegate):
+class PyrockoVLVDSourceDelegate(SourceDelegate):
 
-    __represents__ = 'PyrockoCLVDVolume'
+    __represents__ = 'PyrockoVLVDSource'
 
     display_backend = 'pyrocko'
-    display_name = 'CLVDVolume'
+    display_name = 'VLVDSource'
 
     parameters = ['easting', 'northing', 'depth', 'store_dir',
                   'volume_change', 'azimuth', 'dip', 'clvd_moment']
     ro_parameters = []
 
-    class CLVDVolumeDialog(PyrockoSourceDialog):
+    class VLVDSourceDialog(PyrockoSourceDialog):
 
         scaling_params = ['clvd_moment']
 
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_clvd_volume.ui', *args, **kwargs)
+                self, ui_file='pyrocko_vlvd_source.ui', *args, **kwargs)
 
         @QtCore.pyqtSlot()
         def setSourceParameters(self):
@@ -473,7 +473,7 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
                 else:
                     self.__getattribute__(param).setValue(value)
 
-    class CLVDVolumeROI(PointSourceROI):
+    class VLVDSourceROI(PointSourceROI):
 
         def __init__(self, *args, **kwargs):
             PointSourceROI.__init__(self, *args, **kwargs)
@@ -516,8 +516,8 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
             return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
                     sdx*num.cos(rangle) - sdy*num.sin(rangle))
 
-    ROIWidget = CLVDVolumeROI
-    EditDialog = CLVDVolumeDialog
+    ROIWidget = VLVDSourceROI
+    EditDialog = VLVDSourceDialog
 
     def __init__(self, model, source, index):
         QtCore.QObject.__init__(self)
@@ -535,7 +535,7 @@ class PyrockoCLVDVolumeDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PyrockoCLVDVolume(
+        src = PyrockoVLVDSource(
             easting=num.mean(sandbox.frame.E),
             northing=num.mean(sandbox.frame.N),
             depth=4000.,

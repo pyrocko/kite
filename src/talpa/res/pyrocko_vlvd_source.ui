@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PyrockoCLVDVolumeDialog</class>
- <widget class="QDialog" name="PyrockoCLVDVolumeDialog">
+ <class>PyrockoVLVDSourceDialog</class>
+ <widget class="QDialog" name="PyrockoVLVDSourceDialog">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -35,7 +35,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>PyrockoCLVDVolume Parameters</string>
+   <string>PyrockoVLVDSource Parameters</string>
   </property>
   <property name="modal">
    <bool>false</bool>
@@ -556,7 +556,7 @@ Moment magnitude scale, the exponent. E.g. 5.1e&lt;b&gt;18&lt;/b&gt;.</string>
   <connection>
    <sender>cancelButton</sender>
    <signal>released()</signal>
-   <receiver>PyrockoCLVDVolumeDialog</receiver>
+   <receiver>PyrockoVLVDSourceDialog</receiver>
    <slot>close()</slot>
    <hints>
     <hint type="sourcelabel">
