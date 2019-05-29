@@ -286,7 +286,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'step': 250,
              'editable': True,
              'suffix': ' m' if frame.isMeter() else ' deg',
-             'decimals': 0 if frame.isMeter() else 2,
+             'decimals': 0 if frame.isMeter() else 3,
              'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)
