@@ -439,7 +439,7 @@ class BaseScene(object):
 
         self._log_stream = None
         for l in self._log.parent.handlers:
-            if isinstance(l, logging.StreamHandler):
+            if isinstance(l, logging.Handler):
                 self._log_stream = l
         if self._log_stream is None:
             self._log_stream = logging.StreamHandler()
