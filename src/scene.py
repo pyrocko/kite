@@ -437,14 +437,6 @@ class BaseScene(object):
     def _initLogging(self):
         self._log = logging.getLogger(self.__class__.__name__)
 
-        self._log_stream = None
-        for l in self._log.parent.handlers:
-            if isinstance(l, logging.StreamHandler):
-                self._log_stream = l
-        if self._log_stream is None:
-            self._log_stream = logging.StreamHandler()
-            self._log.addHandler(self._log_stream)
-
     @property
     def displacement(self):
         """Surface displacement in meter on a regular grid.

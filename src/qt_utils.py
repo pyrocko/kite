@@ -235,15 +235,19 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
             elif idx.column() == 2:
                 return 'Line %d' % rec.lineno
 
-    def rowCount(self, idx):
+    @property
+    def nlogs(self):
         return len(self.log_records)
+
+    def rowCount(self, idx):
+        return self.nlogs
 
     def columnCount(self, idx):
         return 3
 
     @QtCore.pyqtSlot(object)
     def newRecord(self, record):
-        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
+        self.beginInsertRows(QtCore.QModelIndex(), self.nlogs, self.nlogs)
         self.log_records.append(record)
         self.endInsertRows()
 
@@ -256,6 +260,7 @@ class SceneLog(QtGui.QDialog):
         30: 'Warning',
         20: 'Info',
         10: 'Debug',
+        0: 'All'
     }
 
     class LogEntryDelegate(QtGui.QStyledItemDelegate):
@@ -280,11 +285,12 @@ class SceneLog(QtGui.QDialog):
     class LogFilter(QtCore.QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
             QtCore.QSortFilterProxyModel.__init__(self, *args, **kwargs)
-            self.level = 0
+            self.setLevel(30)
 
         def setLevel(self, level):
             self.level = level
-            self.setFilterRegExp('%s' % self.level)
+            self.setFilterRegExp(str(level))
+            self.invalidate()
 
     def __init__(self, app, model):
         QtGui.QDialog.__init__(self, app)
@@ -298,15 +304,15 @@ class SceneLog(QtGui.QDialog):
                 self.parent().window().rect().center()) -
             self.mapToGlobal(self.rect().center()))
 
-        self.closeButton.setIcon(self.style().standardIcon(
-                                 QtGui.QStyle.SP_DialogCloseButton))
+        self.closeButton.setIcon(
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
 
         self.table_filter = self.LogFilter()
         self.table_filter.setFilterKeyColumn(0)
         self.table_filter.setDynamicSortFilter(True)
         self.table_filter.setSourceModel(model.log)
 
-        self.table_filter.rowsInserted.connect(self.newLogRecord)
+        model.log.rowsInserted.connect(self.newLogRecord)
 
         self.tableView.setModel(self.table_filter)
         self.tableView.setItemDelegate(self.LogEntryDelegate())
@@ -315,23 +321,23 @@ class SceneLog(QtGui.QDialog):
         self.tableView.setColumnWidth(1, 200)
 
         self.filterBox.addItems(
-            [lvl_name for lvl_name in self.levels.values()] + ['All'])
-        self.filterBox.setCurrentIndex(0)
+            [lvl_name for lvl_name in self.levels.values()])
 
         def changeFilter():
             for lvl, lvl_name in self.levels.items():
                 if lvl_name == self.filterBox.currentText():
                     self.table_filter.setLevel(lvl)
-                    return
+                    break
 
-            self.table_filter.setLevel(0)
+            self.tableView.update()
 
         self.filterBox.currentIndexChanged.connect(changeFilter)
+        self.filterBox.setCurrentText('Warning')
 
     @QtCore.pyqtSlot(QtCore.QModelIndex, int, int)
     def newLogRecord(self, idx, first, last):
         self.tableView.scrollToBottom()
 
-        record = self.table_filter.sourceModel().log_records[-1]
+        record = self.table_filter.sourceModel().log_records[idx.row()]
         if record.levelno >= 30 and self.autoBox.isChecked():
             self.show()

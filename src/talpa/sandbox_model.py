@@ -36,7 +36,11 @@ class SandboxModel(QtCore.QObject):
         self.cursor_tracker = CursorTracker(self)
 
         self._log_handler = logging.Handler()
+        self._log_handler.setLevel(logging.DEBUG)
         self._log_handler.emit = self.sigLogRecord.emit
+
+        logging.root.setLevel(logging.DEBUG)
+        logging.root.addHandler(self._log_handler)
 
         self.worker_thread = QtCore.QThread()
         self.moveToThread(self.worker_thread)

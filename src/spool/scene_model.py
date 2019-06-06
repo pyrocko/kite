@@ -43,7 +43,10 @@ class SceneModel(QtCore.QObject):
             slot=lambda: self.sigQuadtreeChanged.emit(object))
 
         self._log_handler = logging.Handler()
+        self._log_handler.setLevel(logging.DEBUG)
         self._log_handler.emit = self.sigLogRecord.emit
+
+        logging.root.addHandler(self._log_handler)
 
         self.qtproxy = QSceneQuadtreeProxy(self)
 
@@ -84,8 +87,6 @@ class SceneModel(QtCore.QObject):
         self.covariance.evConfigChanged.unsubscribe(
             self.sigCovarianceConfigChanged.emit)
 
-        self.scene._log.removeHandler(self._log_handler)
-
     def connectSlots(self):
         self.scene.evChanged.subscribe(
             self.sigSceneChanged.emit)
@@ -104,8 +105,6 @@ class SceneModel(QtCore.QObject):
             self.sigCovarianceChanged.emit)
         self.covariance.evConfigChanged.subscribe(
             self.sigCovarianceConfigChanged.emit)
-
-        self.scene._log.addHandler(self._log_handler)
 
     @QtCore.pyqtSlot(str)
     def exportWeightMatrix(self, filename):
