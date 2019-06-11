@@ -120,6 +120,7 @@ setup(
     python_requires='>=3.5',
     packages=[
         'kite',
+        'kite.util',
         'kite.sources',
         'kite.spool',
         'kite.talpa',
