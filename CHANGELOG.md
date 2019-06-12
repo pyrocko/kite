@@ -4,6 +4,11 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Fixed
+- ISCE import: XML tag cases
+
 ## [1.1.1] 6. June 2019
 
 ### Added
