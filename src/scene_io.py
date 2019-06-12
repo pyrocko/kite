@@ -615,8 +615,13 @@ class ISCEXMLParser(object):
         raise ValueError('Could not convert value')
 
     def getProperty(self, name):
+        name = name.lower()
+
         for child in self.root.iter():
-            if child.get('name') == name:
+            child_name = child.get('name')
+            if isinstance(child_name, str):
+                child_name = child_name.lower()
+            if child_name == name.lower():
                 if child.tag == 'property':
                     return self.type_convert(child.find('value').text)
                 elif child.tag == 'component':
@@ -639,7 +644,12 @@ class ISCE(SceneIO):
         * Metadata XML (:file:`*.unw.geo.xml`)
         * LOS binary data (:file:`*.rdr.geo`)
 
-    .. warning::
+    .. note ::
+
+        When using ``gdal_translate`` to crop the scene, use the argument
+        ``-co SCHEME=BIL`` to make the output
+
+    .. note ::
 
         Data are in radians but no transformation to
         meters yet, as ``wavelength`` or at least sensor name is not
