@@ -133,7 +133,8 @@ setup(
     entry_points={
         'console_scripts':
             ['spool = kite.spool.__main__:main',
-             'talpa = kite.talpa.__main__:main']},
+             'talpa = kite.talpa.__main__:main',
+             'stamps2kite = kite.util.stamps2kite:main']},
     ext_package='kite',
     ext_modules=[
         Extension(

@@ -6,8 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+- `stamps2kite` conversion tool.
+TODO: write docs!
+
 ### Fixed
-- ISCE import: XML tag cases
+- ISCE import: XML tag cases.
 
 ## [1.1.1] 6. June 2019
 
