@@ -239,7 +239,7 @@ class Frame(object):
                              'Use gridE and gridN for meter grids')
 
         if self._meter_grid is None:
-            self._log.info('Transforming latlon grid to meters...')
+            self._log.debug('Transforming latlon grid to meters...')
             gridN, gridE = latlon_to_ne_numpy(
                 self.llLat, self.llLon,
                 self.llLat + self.gridN.data.ravel(),
