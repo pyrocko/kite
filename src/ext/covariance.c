@@ -115,7 +115,6 @@ static state_covariance calc_covariance_matrix(
 
     nrows = (npy_intp) shape_coord[0];
     ncols = (npy_intp) shape_coord[1];
-
     if (model_ncoeff == EXPONENTIAL)
         cov_model = &covariance_model_exp;
     else if (model_ncoeff == EXPONENTIAL_COSINE)
