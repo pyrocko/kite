@@ -55,12 +55,12 @@ def read_mat_data(fn_locations='ps2.mat', fn_psvel='ps_plot_v-d.mat',
 
 
 def bin_ps_data(data, bins=(800, 800)):
-    log.debug('binning/gridding PS velocity data')
+    log.debug('Binning StaMPS velocity data...')
     bin_look_angles, edg_lat, edg_lon, binnumber = stats.binned_statistic_2d(
         data.lats, data.lons, data.look_angles,
         statistic='mean', bins=bins)
 
-    log.debug('binning/gridding look angle data')
+    log.debug('Binning look angle data...')
     bin_vels, edg_lat, edg_lon, binnumber = stats.binned_statistic_2d(
         data.lats, data.lons, data.ps_velocities,
         statistic='mean', bins=bins)
@@ -76,9 +76,10 @@ def bin_ps_data(data, bins=(800, 800)):
 def _get_file(dirname, fname):
     fns = glob.glob(op.join(dirname, fname))
     if len(fns) == 0:
-        raise OSError('Cannot find a %s file in %s', fname, dirname)
+        raise ImportError('Cannot find %s file in %s' % (fname, dirname))
     if len(fns) > 1:
-        raise OSError('Found multiple files for %s: %s', fname, ', '.join(fns))
+        raise ImportError('Found multiple files for %s: %s' %
+                          (fname, ', '.join(fns)))
     fn = fns[0]
 
     log.debug('Got file %s', fn)
@@ -88,12 +89,12 @@ def _get_file(dirname, fname):
 def stamps2kite(
         dirname='.',
         fn_ps=None, fn_ps_plot=None, fn_parms=None, fn_la2=None,
-        bins_east=800, bins_north=800):
+        bins=(800, 800)):
     '''Convert StaMPS velocity data to a Kite Scene
 
-    Loads a StaMPS project, bins the PS velocities from ``ps_plot(..., -1)`` to
-    a regular grid and converts the surface displacement data to a
-    :class:`~kite.Scene`.
+    Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
+    StaMPS project, and grids the data into mean velocity bins. The LOS
+    velocities will be converted to a Kite Scene (:class:`~kite.Scene`).
 
     If explicit filenames `fn_ps` or `fn_ps_plot` are not passed an
     auto-discovery of :file:`ps?.mat` and :file:`ps_plot*.mat` in
@@ -115,14 +116,13 @@ def stamps2kite(
     :type fn_ps_plot: str
     :param fn_parms: :file:`parms.mat` from StaMPS, holding essential meta-
         information.
-    :type fn_parms: str
+    :type fn_ln2: str
     :param fn_ln2: The :file:`la2.mat` file from StaMPS containing the look
         angle data.
 
-    :param bins_east: Number of pixels/bins in East dimension. Default 500.
-    :type bins_east: int
-    :param bins_north: Number of pixels/bins in North dimension. Default 500.
-    :type bins_north: int
+    :param bins: Number of pixels/bins in East and North dimension.
+        Default (800, 800).
+    :type bins: tuple
 
     :returns: Kite Scene from the StaMPS data
     :rtype: :class:`kite.Scene`
@@ -144,7 +144,7 @@ def stamps2kite(
 
     data = read_mat_data(fn_locations, fn_psvel, fn_la2, fn_parms)
 
-    data = bin_ps_data(data, bins=(bins_east, bins_north))
+    data = bin_ps_data(data, bins=bins)
 
     log.debug('Processing of LOS angles')
     data.bin_theta = (num.pi/2) - data.bin_look_angles
@@ -182,45 +182,64 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='''Convert a StaMPS project to a Kite scene.
+        description='''Convert StaMPS data into a Kite scene.
 
-Running the stamps2kite script on your StaMPS project does
-the trick in most cases.''')
+Loads the PS velocities from a StaMPS project (i.e. from ps_plot(..., -1);),
+and grids the data into mean velocity bins. The LOS velocities will be
+converted into a Kite Scene.
+
+The data has to be fully processed through StaMPS and may stem from the master
+project or the processed small baseline pairs. Required files are:
+
+ - ps2.mat       Meta information and geographical coordinates.
+ - parms.mat     Meta information about the scene (heading, etc.).
+ - la2.mat       Look angle data for each pixel.
+ - ps_plot*.mat  Processed and corrected LOS velocities.
+
+''',
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+
     parser.add_argument(
         'folder', nargs='?', type=str,
         default='.',
         help='StaMPS project folder. Default is current directory.')
     parser.add_argument(
-        '--out', default=None, type=str,
-        help='Filename to save the Kite scene to.')
+        '--resolution', '-r', nargs=2, metavar=('pxE', 'pxN'),
+        dest='resolution', type=int, default=(800, 800),
+        help='resolution of the output grid in East and North (pixels). '
+             'Default is 800 800 px.')
     parser.add_argument(
-        '--force', default=False, action='store_true',
-        help='Force overwrite of an existing scene.')
+        '--save', '-s', default=None, type=str, dest='save',
+        help='filename to save the Kite scene to. If not defined, the scene'
+             ' will be opened in spool GUI.')
+    parser.add_argument(
+        '--force', '-f', default=False, action='store_true', dest='force',
+        help='force overwrite of an existing scene.')
     parser.add_argument(
         '-v', action='count',
         default=0,
-        help='Verbosity, add mutliple to increase verbosity.')
+        help='verbosity, add mutliple to increase verbosity.')
 
     args = parser.parse_args()
 
     log_level = logging.INFO - args.v * 10
     logging.basicConfig(level=log_level if log_level > 0 else 0)
 
-    fn_save = args.out
-    if args.out:
+    fn_save = args.save
+    if args.save:
         for fn in (fn_save, fn_save + '.yml', fn_save + '.npz'):
             if op.exists(fn) and not args.force:
-                raise UserWarning('File %s exists! Use --force to overwrite.' %
-                                  fn_save)
+                raise UserWarning(
+                    'File %s exists! Use --force to overwrite.' % fn_save)
 
-    scene = stamps2kite(dirname=args.folder)
+    scene = stamps2kite(dirname=args.folder, bins=args.resolution)
 
     if fn_save:
         fn_save.rstrip('.yml')
         fn_save.rstrip('.npz')
 
         log.info('Saving StaMPS scene to file %s[.yml/.npz]...', fn_save)
-        scene.save(args.out)
+        scene.save(args.save)
 
     else:
         scene.spool()
