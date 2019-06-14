@@ -468,12 +468,12 @@ class BaseScene(object):
 
     @property
     def phi(self):
-        """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-            in [rad] counter-clockwise from East
+        """ Horizontal angle towards satellite :abbr:`line of sight (LOS)`
+            in radians counter-clockwise from East.
 
         .. important ::
 
-            Kite convention is:
+            Kite's convention is:
 
             * :math:`0` is **East**
             * :math:`\\frac{\\pi}{2}` is **North**!
@@ -497,8 +497,8 @@ class BaseScene(object):
 
     @property
     def theta(self):
-        """ Theta is look vector elevation angle towards satellite from horizon
-            in radians. Matrix of theta towards satellite's
+        """ Theta is the look vector elevation angle towards satellite from
+            the horizon in radians. Matrix of theta towards satellite's
             :abbr:`line of sight (LOS)`.
 
         .. important ::
