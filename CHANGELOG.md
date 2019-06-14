@@ -4,14 +4,14 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [1.2.0] 14. June 2019
 
 ### Added
 - `stamps2kite` conversion tool.
-TODO: write docs!
 
 ### Fixed
 - ISCE import: XML tag cases.
+- Version numbering in `setup.py`
 
 ## [1.1.1] 6. June 2019
 
