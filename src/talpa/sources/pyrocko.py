@@ -6,7 +6,7 @@ from .base import (RectangularSourceROI, PointSourceROI, SourceDelegate,
                    SourceEditDialog)
 from kite.sources import (PyrockoRectangularSource,
                           PyrockoMomentTensor, PyrockoDoubleCouple,
-                          PyrockoRingfaultSource)
+                          PyrockoRingfaultSource, PyrockoVLVDSource)
 
 from ..config import getConfig
 
@@ -421,6 +421,147 @@ class PyrockoRingfaultDelegate(SourceDelegate):
     <td>Dip:</td><td>{source.dip:.2f}&deg;</td>
 </tr><tr style="font-weight: bold;">
     <td>M<sub>W</sub>:</td><td>{source.magnitude:.2f}</td>
+</tr>
+</table>
+'''
+        return item.format(idx=self.index.row()+1,
+                           delegate=self,
+                           source=self.source)
+
+
+class PyrockoVLVDSourceDelegate(SourceDelegate):
+
+    __represents__ = 'PyrockoVLVDSource'
+
+    display_backend = 'pyrocko'
+    display_name = 'VLVDSource'
+
+    parameters = ['easting', 'northing', 'depth', 'store_dir',
+                  'volume_change', 'azimuth', 'dip', 'clvd_moment']
+    ro_parameters = []
+
+    class VLVDSourceDialog(PyrockoSourceDialog):
+
+        scaling_params = ['clvd_moment']
+
+        def __init__(self, *args, **kwargs):
+            PyrockoSourceDialog.__init__(
+                self, ui_file='pyrocko_vlvd_source.ui', *args, **kwargs)
+
+        @QtCore.pyqtSlot()
+        def setSourceParameters(self):
+            params = {}
+            scale = float('1e%d' % self.clvd_moment_exponent.value())
+            for param in self.delegate.parameters:
+                params[param] = self.__getattribute__(param).value()
+                if param in self.scaling_params:
+                    params[param] = params[param] * scale
+            self.delegate.updateModelParameters(params)
+
+        @QtCore.pyqtSlot()
+        def getSourceParameters(self):
+            params = self.delegate.getSourceParameters()
+            exponent = num.log10(
+                num.max([abs(v) for k, v in params.items()
+                         if k in self.scaling_params]))
+            scale = float('1e%d' % int(exponent))
+            self.clvd_moment_exponent.setValue(int(exponent))
+
+            for param, value in params.items():
+                if param in self.scaling_params:
+                    self.__getattribute__(param).setValue(value / scale)
+                else:
+                    self.__getattribute__(param).setValue(value)
+
+    class VLVDSourceROI(PointSourceROI):
+
+        def __init__(self, *args, **kwargs):
+            PointSourceROI.__init__(self, *args, **kwargs)
+            self.addRotateHandle([.5, 1.], [0.5, 0.5])
+            self.updateROIPosition()
+
+        @QtCore.pyqtSlot()
+        def setSourceParametersFromROI(self):
+            angle = self.angle()
+            azimuth = float(-angle) % 360
+            vec_x, vec_y = self._vectorToCenter(azimuth)
+
+            parameters = {
+                'easting': float(self.pos().x() + vec_x),
+                'northing': float(self.pos().y() + vec_y),
+                'azimuth': azimuth
+                }
+
+            self.newSourceParameters.emit(parameters)
+
+        @QtCore.pyqtSlot()
+        def updateROIPosition(self):
+            source = self.source
+            vec_x, vec_y = self._vectorToCenter(source.azimuth)
+
+            self.setAngle(-source.azimuth, finish=False)
+            self.setPos(
+                QtCore.QPointF(source.easting - vec_x,
+                               source.northing - vec_y),
+                finish=False)
+            # self.setPos(QtCore.QPointF(source.easting, source.northing),
+            #             finish=False)
+
+        def _vectorToCenter(self, angle):
+            rangle = angle * d2r
+
+            sdx = self.size().x()/2
+            sdy = self.size().y()/2
+
+            return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
+                    sdx*num.cos(rangle) - sdy*num.sin(rangle))
+
+    ROIWidget = VLVDSourceROI
+    EditDialog = VLVDSourceDialog
+
+    def __init__(self, model, source, index):
+        QtCore.QObject.__init__(self)
+        self.source = source
+        self.model = model
+        self.index = index
+        self.rois = []
+
+        self.editing_dialog = None
+
+        if model.selection_model is not None:
+            self.setSelectionModel()
+
+        self.model.selectionModelChanged.connect(self.setSelectionModel)
+
+    @staticmethod
+    def getRepresentedSource(sandbox):
+        src = PyrockoVLVDSource(
+            easting=num.mean(sandbox.frame.E),
+            northing=num.mean(sandbox.frame.N),
+            depth=4000.,
+            volume_change=.25,
+            store_dir=getConfig().default_gf_dir or '')
+        return src
+
+    def formatListItem(self):
+        item = '''
+<span style="font-weight: bold; font-style: oblique">
+    {idx}. {delegate.display_name}
+    <span style="color: #616161;">
+        ({delegate.display_backend})
+    </span>
+</span>
+<table style="color: #616161; font-size: small;">
+<tr>
+    <td>Depth:</td><td>{source.depth:.2f} m</td>
+</tr><tr>
+    <td>Volume Change:</td><td>{source.volume_change:.2f} km<sup>3</sup></td>
+</tr><tr>
+    <td>CLVD Azimuth:</td><td>{source.azimuth:.2f}&deg;</td>
+</tr><tr>
+    <td>CLVD Dip:</td><td>{source.dip:.2f}&deg;</td>
+</tr><tr style="font-weight: bold;">
+    <td>CLVD M<sub>W</sub>:</td><td>{source.clvd_moment:.2e}</td>
 </tr>
 </table>
 '''

@@ -93,8 +93,13 @@ class SandboxScene(BaseScene):
         self.theta.fill(num.pi/2)
         self.phi.fill(0.)
 
+        self.config.extent_east = east
+        self.config.extent_north = north
+
         self.frame.updateExtent()
         self._clearModel()
+        self.processSources()
+
         self.evChanged.notify()
 
     def setlos(self, phi, theta):

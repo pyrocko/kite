@@ -437,18 +437,29 @@ class Covariance(object):
 
     @property_cached
     def weight_matrix(self):
-        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+        """ Weight matrix from full covariance :math:`cov^{-1}`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
         return num.linalg.inv(self.covariance_matrix)
+    
+    @property_cached
+    def weight_matrix_L2(self):
+        """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
+
+        :type: :class:`numpy.ndarray`,
+            size (:class:`~kite.Quadtree.nleaves` x
+            :class:`~kite.Quadtree.nleaves`)
+        """
+        incov = num.linalg.inv(self.covariance_matrix)
+        return sc.linalg.sqrtm(incov)
 
     @property_cached
     def weight_matrix_focal(self):
         """ Approximated weight matrix from fast focal method
-            :math:`\\sqrt{cov_{focal}^{-1}}`.
+            :math:`cov_{focal}^{-1}`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
@@ -458,7 +469,7 @@ class Covariance(object):
 
     @property_cached
     def weight_vector(self):
-        """ Weight vector from full covariance :math:`\\sqrt{cov^{-1}}`.
+        """ Weight vector from full covariance :math:`cov^{-1}`.
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves`)
         """
@@ -693,9 +704,9 @@ class Covariance(object):
 
         Use :meth:`~kite.covariance.Covariance.getSyntheticNoise` to create
         data-driven noise on each quadtree leaf, summarized by
-        :param gather:.
+
         :param gather: Function gathering leaf's noise realisation,
-            defaults to num.median.
+                       defaults to num.median.
         :type normalisation: callable, optional
         :returns: Array of noise level at each quadtree leaf.
         :rtype: :class:`numpy.ndarray`
@@ -1101,3 +1112,10 @@ class Covariance(object):
         """
         from kite.plot2d import CovariancePlot
         return CovariancePlot(self)
+
+    @property_cached
+    def plot_syntheticNoise(self):
+        """ Simple overview plot to summarize the covariance estimations.
+        """
+        from kite.plot2d import SyntheticNoisePlot
+        return SyntheticNoisePlot(self)

@@ -1,12 +1,24 @@
 import re
-import utm
-import os.path as op
 import glob
+import os.path as op
+
+import utm
 import scipy.io
 import numpy as num
+
 from kite import util
 
 __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
+
+try:
+    from osgeo import gdal
+    __all__.append('LiCSAR')
+except ImportError:
+    pass
+
+
+d2r = num.pi/180.
+km = 1e3
 
 
 def check_required(required, params):
@@ -76,8 +88,8 @@ class SceneIO(object):
 
         :param filename: file to read
         :type filename: string
-        :param **kwargs: Keyword arguments
-        :type **kwargs: {dict}
+        :param kwargs: Keyword arguments
+        :type kwargs: {dict}
         """
         raise NotImplementedError('read not implemented')
 
@@ -123,7 +135,6 @@ class Matlab(SceneIO):
     For SAR azimuth pixel offset maps calculate ``phi`` from the heading
     direction and set ``theta=0.``. For SAR range pixel offsets use the same
     LOS angles as for InSAR.
-
     """
     def validate(self, filename, **kwargs):
         if filename[-4:] == '.mat':
@@ -187,8 +198,8 @@ class Matlab(SceneIO):
             utm_n = num.linspace(1100000, 1110000, c.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
-            utm_e *= 1e3
-            utm_n *= 1e3
+            utm_e *= km
+            utm_n *= km
 
         c.frame.dE = num.abs(utm_e[1] - utm_e[0])
         c.frame.dN = num.abs(utm_n[1] - utm_n[0])
@@ -417,13 +428,14 @@ class Gamma(SceneIO):
 
         else:
             self._log.info('Using Lat/Lon reference')
+            c.frame.spacing = 'degree'
             c.frame.llLat = params['corner_lat'] \
                 + params['post_lat'] * nrows
             c.frame.llLon = params['corner_lon']
-            c.frame.dLon = abs(params['post_lon'])
-            c.frame.dLat = abs(params['post_lat'])
+            c.frame.dE = abs(params['post_lon'])
+            c.frame.dN = abs(params['post_lat'])
 
-        return self.container
+        return c
 
 
 class ROI_PAC(SceneIO):
@@ -434,9 +446,9 @@ class ROI_PAC(SceneIO):
         * Parameter file (:file:`<binary_file>.rsc`),
           describing ``WIDTH, FILE_LENGTH, X_FIRST, Y_FIRST, X_STEP,
           Y_STEP, WAVELENGTH``
-
-    .. warning ::
-        Data has to be georeferenced to latitude/longitude!
+        * If the georeferencing is in UTM coordinates, further needed
+          entries in parameter file are 'X_UNIT' and 'Y_UNIT' that give
+          'meters' and 'LAT_REF3' as well as 'LON_REF3'.
 
         The unwrapped displacement is expected in radians and will be scaled
         to meters by ``WAVELENGTH`` parsed from the :file:`*.rsc` file.
@@ -465,8 +477,9 @@ class ROI_PAC(SceneIO):
     @staticmethod
     def _parseParameterFile(par_file):
         params = {}
-        required = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
-                    'Y_STEP', 'WAVELENGTH', 'LAT_REF1', 'LON_REF1']
+        required_L0 = ['WIDTH', 'FILE_LENGTH', 'X_FIRST', 'Y_FIRST', 'X_STEP',
+                       'Y_STEP', 'WAVELENGTH']
+        required_utm = ['X_UNIT', 'LAT_REF1', 'LON_REF1']
 
         rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
         with open(par_file, 'r') as par:
@@ -478,11 +491,17 @@ class ROI_PAC(SceneIO):
                 params[groups[0]] = safe_cast(groups[1], float,
                                               default=groups[1].strip())
 
-        if check_required(required, params):
-            return params
+        if check_required(required_L0, params):
+            if check_required(required_utm, params):
+                geo_ref = 'all'
+                return params, geo_ref
+            else:
+                geo_ref = 'latlon'
+                return params, geo_ref
 
         raise ImportError(
-            'Parameter file %s does not hold required parameters' % par_file)
+            'Parameter file %s does not hold the basic \
+             required parameters' % par_file)
 
     def read(self, filename, **kwargs):
         """
@@ -497,21 +516,25 @@ class ROI_PAC(SceneIO):
         """
         par_file = kwargs.pop('par_file', self._getParameterFile(filename))
 
-        par = self._parseParameterFile(par_file)
+        par, geo_ref = self._parseParameterFile(par_file)
         nlines = int(par['FILE_LENGTH'])
         nrows = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
-        lat_ref = par['LAT_REF1']
-        lon_ref = par['LON_REF1']
+        if geo_ref == 'latlon':
+            lat_ref = par['Y_FIRST']
+            lon_ref = par['X_FIRST']
+        elif geo_ref == 'all':
+            lat_ref = par['LAT_REF3']
+            lon_ref = par['LON_REF3']
+
         look_ref1 = par['LOOK_REF1']
         look_ref2 = par['LOOK_REF2']
         look_ref3 = par['LOOK_REF3']
         look_ref4 = par['LOOK_REF4']
 
-        utm_zone_letter = utm.latitude_to_zone_letter(
-                    par['LAT_REF1'])
-        utm_zone = utm.latlon_to_zone_number(par['LAT_REF1'], par['LON_REF1'])
+        utm_zone_letter = utm.latitude_to_zone_letter(lat_ref)
+        utm_zone = utm.latlon_to_zone_number(lat_ref, lon_ref)
 
         look = num.mean(
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
@@ -520,6 +543,7 @@ class ROI_PAC(SceneIO):
         data = data.reshape(nlines, nrows*2)
 
         displ = data[:, nrows:]
+        displ = num.flipud(displ)
         displ[displ == -0.] = num.nan
         displ = displ / (4.*num.pi) * wavelength
 
@@ -531,18 +555,48 @@ class ROI_PAC(SceneIO):
         c = self.container
 
         c.displacement = displ
-        c.theta = 90. - look
-        c.phi = -heading - 180
+        c.theta = num.deg2rad(90. - look)
+        c.phi = num.deg2rad(-heading + 180.)
 
         c.meta.title = par.get('TITLE', 'None')
         c.meta.wavelength = par['WAVELENGTH']
         c.bin_file = filename
         c.par_file = par_file
 
-        c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
-        c.frame.llLon = par['X_FIRST']
-        c.frame.dLon = par['X_STEP']
-        c.frame.dLat = par['Y_STEP']
+        if geo_ref == 'all':
+            if par['X_UNIT'] == 'meters':
+                c.frame.spacing = 'meter'
+                c.frame.dE = par['X_STEP']
+                c.frame.dN = -par['Y_STEP']
+                geo_ref = 'utm'
+
+            elif par['X_UNIT'] == 'degree':
+                c.frame.spacing = 'degree'
+                geo_ref = 'latlon'
+
+        elif geo_ref == 'latlon':
+            self._log.info('Georeferencing is in Lat-Lon [degrees].')
+            c.frame.spacing = 'degree'
+            c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            c.frame.llLon = par['X_FIRST']
+
+            # c_utm_0 = utm.from_latlon(lat_ref, lon_ref)
+            # c_utm_1 = utm.from_latlon(lat_ref + par['Y_STEP'],
+            #                           lon_ref + par['X_STEP'])
+
+            # c.frame.dE = c_utm_1[0] - c_utm_0[0]
+            # c.frame.dN = abs(c_utm_1[1] - c_utm_0[1])
+            c.frame.dE = par['X_STEP']
+            c.frame.dN = -par['Y_STEP']
+
+        elif geo_ref == 'utm':
+            self._log.info('Georeferencing is in UTM (zone %d%s)',
+                           utm_zone, utm_zone_letter)
+            y_ll = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            c.frame.llLat, c.frame.llLon = utm.to_latlon(
+                par['X_FIRST'], y_ll, utm_zone,
+                zone_letter=utm_zone_letter)
+
         return self.container
 
 
@@ -561,8 +615,13 @@ class ISCEXMLParser(object):
         raise ValueError('Could not convert value')
 
     def getProperty(self, name):
+        name = name.lower()
+
         for child in self.root.iter():
-            if child.get('name') == name:
+            child_name = child.get('name')
+            if isinstance(child_name, str):
+                child_name = child_name.lower()
+            if child_name == name.lower():
                 if child.tag == 'property':
                     return self.type_convert(child.find('value').text)
                 elif child.tag == 'component':
@@ -577,7 +636,7 @@ class ISCEXMLParser(object):
 class ISCE(SceneIO):
     """
     Reading geocoded, unwraped displacement maps
-        processed with ISCE software (https://winsar.unavco.org/isce.html).
+    processed with ISCE software (https://winsar.unavco.org/isce.html).
 
     .. note :: Expects:
 
@@ -585,7 +644,12 @@ class ISCE(SceneIO):
         * Metadata XML (:file:`*.unw.geo.xml`)
         * LOS binary data (:file:`*.rdr.geo`)
 
-    .. warning::
+    .. note ::
+
+        When using ``gdal_translate`` to crop the scene, use the argument
+        ``-co SCHEME=BIL`` to make the output
+
+    .. note ::
 
         Data are in radians but no transformation to
         meters yet, as ``wavelength`` or at least sensor name is not
@@ -599,18 +663,19 @@ class ISCE(SceneIO):
         except ImportError:
             return False
 
-    @staticmethod
-    def _getLOSFile(path):
+    def _getLOSFile(self, path):
         if not op.isdir(path):
             path = op.dirname(path)
         rdr_files = glob.glob(op.join(path, '*.rdr.geo'))
 
         if len(rdr_files) == 0:
             raise ImportError('Could not find LOS file (*.rdr.geo)')
-        return rdr_files[0]
 
-    @staticmethod
-    def _getDisplacementFile(path):
+        rdr_file = rdr_files[0]
+        self._log.info('Found LOS file: %s', rdr_file)
+        return rdr_file
+
+    def _getDisplacementFile(self, path):
         if op.isfile(path):
             disp_file = path
         else:
@@ -623,6 +688,7 @@ class ISCE(SceneIO):
         if not op.isfile('%s.xml' % disp_file):
             raise ImportError('Could not find displacement XML file '
                               '(%s.unw.geo.xml)' % op.basename(disp_file))
+        self._log.info('Found Displacement file: %s', disp_file)
         return disp_file
 
     def read(self, path, **kwargs):
@@ -649,19 +715,44 @@ class ISCE(SceneIO):
         displ = num.memmap(self._getDisplacementFile(path),
                            dtype='<f4')\
             .reshape(nlat, nlon*2)[:, nlon:]
+
+        displ = num.flipud(displ)
         displ[displ == 0.] = num.nan
         c.displacement = displ
 
-        los_data = num.fromfile(self._getLOSFile(path), dtype='<f4')\
-            .reshape(nlat, nlon*2)
-        c.phi = los_data[:, :nlon]
-        c.theta = los_data[:, nlon:] + num.pi/2
+        los_file = self._getLOSFile(path)
+        los_data = num.fromfile(los_file, dtype='<f4')\
+            .reshape(nlat*2, nlon)
+
+        theta = num.flipud(los_data[0::2, :])
+        phi = num.flipud(los_data[1::2, :])
+
+        def los_is_degree():
+            return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
+
+        if not los_is_degree():
+            raise ImportError(
+                'The LOS file (%s) seems to be in radians! '
+                'Change it to degree!' % op.basename(los_file))
+
+        phi[phi == 0.] = num.nan
+        theta[theta == 0.] = num.nan
+
+        phi *= d2r
+        theta *= d2r
+
+        phi = num.pi/2 + phi
+        theta = num.pi/2 - theta
+
+        c.phi = phi
+        c.theta = theta
 
         return c
 
 
 class GMTSAR(SceneIO):
     """
+    Reading GMTSAR grid files.
 
     .. note ::
 
@@ -694,10 +785,11 @@ class GMTSAR(SceneIO):
         if len(los_files) == 0:
             self._log.warning(GMTSAR.__doc__)
             raise ImportError('Could not find LOS file (*.los.*)')
-        return los_files[0]
+        los_file = los_files[0]
+        self._log.debug('Found LOS file: %s', los_file)
+        return los_file
 
-    @staticmethod
-    def _getDisplacementFile(path):
+    def _getDisplacementFile(self, path):
         if op.isfile(path):
             return path
         else:
@@ -706,6 +798,7 @@ class GMTSAR(SceneIO):
                 raise ImportError('Could not find displacement file '
                                   '(*.grd) at %s', path)
             disp_file = files[0]
+        self._log.debug('Found Displacement file: %s', disp_file)
         return disp_file
 
     def read(self, path, **kwargs):
@@ -723,10 +816,10 @@ class GMTSAR(SceneIO):
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
 
-        c.frame.dLat = (grd.variables['lat'][:].max() -
-                        c.frame.llLat) / shape[0]
-        c.frame.dLon = (grd.variables['lon'][:].max() -
-                        c.frame.llLon) / shape[1]
+        c.frame.dN = (grd.variables['lat'][:].max() -
+                      c.frame.llLat) / shape[0]
+        c.frame.dE = (grd.variables['lon'][:].max() -
+                      c.frame.llLon) / shape[1]
 
         # Theta and Phi
         try:
@@ -735,23 +828,23 @@ class GMTSAR(SceneIO):
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
 
-            theta = num.rad2deg(num.arctan(n/e))
-            phi = num.rad2deg(num.arccos(u))
-            theta[n < 0] += 180.
+            phi = num.arctan(n/e)
+            theta = num.arcsin(u)
+            # phi[n < 0] += num.pi
 
             c.phi = phi
             c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
-            self._log.warning('Defaulting theta and phi to 0./2*pi [rad]')
+            self._log.warning('Defaulting theta to pi/2 and phi to 0. [rad]')
             c.theta = num.pi/2
             c.phi = 0.
-
         return c
 
 
 class SARscape(SceneIO):
     """
+    Reading SARscape :file:`*_disp` files.
 
     .. note ::
 
@@ -855,7 +948,7 @@ class SARscape(SceneIO):
         val = re.compile(r'SARscape|ENVI Standard', re.MULTILINE)
         try:
             hdr_file = self._getHDRFile(filename)
-        except OSError as e:
+        except OSError:
             return False
 
         with open(hdr_file) as f:
@@ -864,4 +957,73 @@ class SARscape(SceneIO):
                 return True
             return False
 
-        raise NotImplementedError('validate not implemented')
+
+class LiCSAR(SceneIO):
+    '''
+    Import unwrapped Geotiffs from the
+    `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_.
+
+    .. note ::
+
+        Requires the python package
+        `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
+
+        Expects:
+
+        * Unwrapped geotiff in :file:`*.unw.tif`
+        * LOS data in :file:`*.geo.[NEU].tif` files
+
+    See also the download script in :mod:`kite.clients`.
+    '''
+
+    def _getLOS(self, filename, component):
+        path = op.dirname(filename)
+        fn = glob.glob(op.join(path, component))
+        if len(fn) != 1:
+            raise ImportError('Cannot find LOS vector file %s!' % component)
+
+        dataset = gdal.Open(fn[0], gdal.GA_ReadOnly)
+        return self._readBandData(dataset)
+
+    @staticmethod
+    def _readBandData(dataset, band=1):
+        array = dataset.GetRasterBand(band).ReadAsArray()
+        array[array == 0.] = num.nan
+
+        return num.flipud(array)
+
+    def read(self, filename, **kwargs):
+        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        georef = dataset.GetGeoTransform()
+
+        llLat = georef[0]
+        llLon = georef[3] + dataset.RasterYSize * georef[5]
+
+        c = self.container
+
+        c.frame.spacing = 'degree'
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+        c.frame.dE = georef[1]
+        c.frame.dN = abs(georef[5])
+
+        c.displacement = self._readBandData(dataset) / 1e2  # data is in cm
+
+        los_n = self._getLOS(filename, '*.geo.N.tif')
+        los_e = self._getLOS(filename, '*.geo.E.tif')
+        los_u = self._getLOS(filename, '*.geo.U.tif')
+
+        c.phi = num.arctan2(los_n, los_e)
+        c.theta = num.arccos(los_u)
+
+        c.meta.title = dataset.GetDescription()
+
+        return c
+
+    def validate(self, filename, **kwargs):
+        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+        meta = dataset.GetMetadata()
+        if 'TIFFTAG_DATETIME' in meta.keys():
+            return True
+        else:
+            return False

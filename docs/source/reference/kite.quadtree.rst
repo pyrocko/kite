@@ -8,7 +8,7 @@ The quadtree reduces the amount of displacement information contained in a full 
 * Maximum and minium dimension of the tile
   (:attr:`~kite.Quadtree.tile_size_max` and :attr:`~kite.Quadtree.tile_size_min`)
 
-Programming example of the quadtree can be found here :doc:`../examples/03-quadtree` and here :doc:`../tools/spool`.
+Programming example of the quadtree can be found here :doc:`../examples/quadtree` and here :doc:`../tools/spool`.
 
 .. autoclass::
     kite.Quadtree

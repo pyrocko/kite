@@ -1,10 +1,10 @@
 import os
 import logging
-import numpy as num
 from os import path as op
 
 from PyQt5 import QtGui, QtCore, uic
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 
 SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
@@ -101,45 +101,48 @@ class SliderWidget(QtGui.QWidget):
     """
     sigValueChanged = QtCore.Signal(object)  # value
 
-    def __init__(self, horizontal=True, parent=None):
-        """
-        horizontal -> True/False
-        """
+    def __init__(self, horizontal=True, parent=None, decimals=3, step=.005):
         QtGui.QWidget.__init__(self, parent)
-        self.mn, self.mx = None, None
-        self.precission = 0
+        self.mn = None
+        self.mx = None
+        self.decimals = decimals
         self.step = 100
         self.valueLen = 2
         self.suffix = None
+        self._value = None
 
-        self.label = QtGui.QLabel()
-        self.label.setFont(QtGui.QFont('Courier'))
-        self.slider = QtGui.QSlider(QtCore.Qt.Orientation(
-                        1 if horizontal else 0), self)  # 1...horizontal
+        self.spin = QtGui.QDoubleSpinBox()
+        self.spin.setDecimals(decimals)
+        self.spin.setSingleStep(step)
+        self.spin.valueChanged.connect(self._update_spin)
+        self.spin.setFrame(False)
+
+        self.slider = QtGui.QSlider(
+            QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1, horiz
         self.slider.setTickPosition(
             QtGui.QSlider.TicksAbove if horizontal
             else QtGui.QSlider.TicksLeft)
         # self.slider.setRange (0, 100)
-        self.slider.sliderMoved.connect(self._updateLabel)
-        self._updateLabel(self.slider.value())
+        self.slider.sliderMoved.connect(self._update_slider)
 
         layout = QtGui.QHBoxLayout() if horizontal else QtGui.QVBoxLayout()
         self.setLayout(layout)
         layout.addWidget(self.slider)
-        layout.addWidget(self.label)
+        layout.addWidget(self.spin)
 
     def value(self):
         return self._value
 
     def setValue(self, val):
+        self.spin.setValue(val)
+
         if val is None:
             val = self.mn
         if self.mn is not None:
             val = (val-self.mn) / (self.mx-self.mn)
-            val *= 99.0
+            val *= 99.
             val = int(round(val))
         self.slider.setValue(val)
-        self._updateLabel(val)
 
     def setRange(self, mn, mx):
         """
@@ -149,18 +152,8 @@ class SliderWidget(QtGui.QWidget):
             raise ValueError('limits must be different values')
         self.mn = float(min(mn, mx))
         self.mx = float(max(mn, mx))
-        self._calcPrecission()
-        self._updateLabel(self.slider.value())
 
-    def _calcPrecission(self):
-        # number of floating points:
-        self.precission = int(round(num.log10(
-                (self.step / (self.mx-self.mn)))))
-        if self.precission < 0:
-            self.precission = 0
-        # length of the number in the label:
-        self.valueLen = max(len(str(int(self.mn))), len(str(int(self.mx))))\
-            + self.precission
+        self.spin.setRange(self.mn, self.mx)
 
     def setOpts(self, bounds=None):
         if bounds is not None:
@@ -168,20 +161,23 @@ class SliderWidget(QtGui.QWidget):
 
     def setSuffix(self, suffix=None):
         self.suffix = suffix
+        self.spin.setSuffix(suffix)
 
-    def _updateLabel(self, val):
+    @QtCore.pyqtSlot(int)
+    def _update_slider(self, val):
         if self.mn is not None:
-            val /= 99.0  # val->0...1
+            val /= 99.  # val->0...1
             val = val * (self.mx-self.mn) + self.mn
 
-        self._value = round(val, self.precission)
+        self._value = round(val, self.decimals)
+        self.setValue(self._value)
         self.sigValueChanged.emit(self._value)
 
-        text = format(self._value, '%s.%sf'
-                      % (self.valueLen, self.precission))
-        if self.suffix is not None:
-            text += ' %s' % self.suffix
-        self.label.setText(text)
+    @QtCore.pyqtSlot(float)
+    def _update_spin(self, val):
+        self._value = val
+        self.setValue(val)
+        self.sigValueChanged.emit(self._value)
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
@@ -189,7 +185,10 @@ class SliderWidgetParameterItem(WidgetParameterItem):
     """
     def makeWidget(self):
         opts = self.param.opts
-        w = SliderWidget()
+        decimals = opts.get('decimals', 2)
+        step = opts.get('step', .1)
+
+        w = SliderWidget(decimals=decimals, step=step)
         w.sigChanged = w.sigValueChanged
         w.sigChanging = w.sigValueChanged
         lim = opts.get('limits')
@@ -236,15 +235,19 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
             elif idx.column() == 2:
                 return 'Line %d' % rec.lineno
 
-    def rowCount(self, idx):
+    @property
+    def nlogs(self):
         return len(self.log_records)
+
+    def rowCount(self, idx):
+        return self.nlogs
 
     def columnCount(self, idx):
         return 3
 
     @QtCore.pyqtSlot(object)
     def newRecord(self, record):
-        self.beginInsertRows(QtCore.QModelIndex(), 0, 0)
+        self.beginInsertRows(QtCore.QModelIndex(), self.nlogs, self.nlogs)
         self.log_records.append(record)
         self.endInsertRows()
 
@@ -257,6 +260,7 @@ class SceneLog(QtGui.QDialog):
         30: 'Warning',
         20: 'Info',
         10: 'Debug',
+        0: 'All'
     }
 
     class LogEntryDelegate(QtGui.QStyledItemDelegate):
@@ -281,11 +285,12 @@ class SceneLog(QtGui.QDialog):
     class LogFilter(QtCore.QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
             QtCore.QSortFilterProxyModel.__init__(self, *args, **kwargs)
-            self.level = 0
+            self.setLevel(30)
 
         def setLevel(self, level):
             self.level = level
-            self.setFilterRegExp('%s' % self.level)
+            self.setFilterRegExp(str(level))
+            self.invalidate()
 
     def __init__(self, app, model):
         QtGui.QDialog.__init__(self, app)
@@ -299,15 +304,15 @@ class SceneLog(QtGui.QDialog):
                 self.parent().window().rect().center()) -
             self.mapToGlobal(self.rect().center()))
 
-        self.closeButton.setIcon(self.style().standardIcon(
-                                 QtGui.QStyle.SP_DialogCloseButton))
+        self.closeButton.setIcon(
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
 
         self.table_filter = self.LogFilter()
         self.table_filter.setFilterKeyColumn(0)
         self.table_filter.setDynamicSortFilter(True)
         self.table_filter.setSourceModel(model.log)
 
-        self.table_filter.rowsInserted.connect(self.newLogRecord)
+        model.log.rowsInserted.connect(self.newLogRecord)
 
         self.tableView.setModel(self.table_filter)
         self.tableView.setItemDelegate(self.LogEntryDelegate())
@@ -316,23 +321,23 @@ class SceneLog(QtGui.QDialog):
         self.tableView.setColumnWidth(1, 200)
 
         self.filterBox.addItems(
-            [lvl_name for lvl_name in self.levels.values()] + ['All'])
-        self.filterBox.setCurrentIndex(0)
+            [lvl_name for lvl_name in self.levels.values()])
 
         def changeFilter():
             for lvl, lvl_name in self.levels.items():
                 if lvl_name == self.filterBox.currentText():
                     self.table_filter.setLevel(lvl)
-                    return
+                    break
 
-            self.table_filter.setLevel(0)
+            self.tableView.update()
 
         self.filterBox.currentIndexChanged.connect(changeFilter)
+        self.filterBox.setCurrentText('Warning')
 
     @QtCore.pyqtSlot(QtCore.QModelIndex, int, int)
     def newLogRecord(self, idx, first, last):
         self.tableView.scrollToBottom()
 
-        record = self.table_filter.sourceModel().log_records[-1]
+        record = self.table_filter.sourceModel().log_records[idx.row()]
         if record.levelno >= 30 and self.autoBox.isChecked():
             self.show()

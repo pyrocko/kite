@@ -27,7 +27,7 @@ class SandboxSource(Object):
         self.evParametersChanged.notify()
 
     def getParametersArray(self):
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class SandboxSourceRectangular(SandboxSource):

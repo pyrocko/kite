@@ -15,7 +15,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '2018.02.26'
+version = '1.2.0'
 
 
 def _check_for_openmp():
@@ -56,7 +56,7 @@ int main() {
         shutil.rmtree(tmpdir)
 
     if exit_code == 0:
-        print ('Continuing your build using OpenMP...\n')
+        print('Continuing your build using OpenMP...\n')
         return True
 
     import multiprocessing
@@ -120,6 +120,7 @@ setup(
     python_requires='>=3.5',
     packages=[
         'kite',
+        'kite.util',
         'kite.sources',
         'kite.spool',
         'kite.talpa',
@@ -132,7 +133,8 @@ setup(
     entry_points={
         'console_scripts':
             ['spool = kite.spool.__main__:main',
-             'talpa = kite.talpa.__main__:main']},
+             'talpa = kite.talpa.__main__:main',
+             'stamps2kite = kite.util.stamps2kite:main']},
     ext_package='kite',
     ext_modules=[
         Extension(

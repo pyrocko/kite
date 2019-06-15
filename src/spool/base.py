@@ -64,7 +64,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             pxMode=True)
 
         self.label = QtGui.QGraphicsSimpleTextItem(
-            'LOS', parent=self)
+            'Towards Sat', parent=self)
         self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
         # self.label.setFont(QtGui.QFont(
         #     "Helvetica", weight=QtGui.QFont.DemiBold))

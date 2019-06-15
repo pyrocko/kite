@@ -12,15 +12,32 @@ As a mandatory prerequisit you have to install Pyrocko, visit `Pyrocko installat
     :caption: Installation from source and ``apt-get``
 
     sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy python3-pyqtgraph
+
+    git clone https://github.com/Turbo87/utm
+    cd utm
+    sudo python3 setup.py install
+
     git clone https://github.com/pyrocko/kite
     cd kite
     sudo python3 setup.py install
 
 
+PIP
+---
+
+An installation through ``pip`` requires the same prerequisites as above:
+
+.. code-block :: sh
+    :caption: Installation through pip
+
+    sudo pip3 install utm
+    sudo pip3 install git+https://github.com/pyrocko/kite
+
+
 MacOS (Sierra, MacPorts)
 ------------------------
 
-Installing Pyrocko is a prerequisite, visit `Pyrocko installation instructions <http://pyrocko.org/docs/current/install_mac.html>`_ for details.
+Installing Pyrocko is a prerequisite, visit `Pyrocko Mac installation instructions <http://pyrocko.org/docs/current/install_mac.html>`_ for details.
 
 Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alternatively check out the Anaconda3 instructions:
 
@@ -36,6 +53,7 @@ Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alt
     sudo port install py35-yaml
     sudo port install py35-pyqt5
     sudo port install py35-setuptools
+    sudo pip3 install git+https://github.com/Turbo87/utm
     sudo pip3 install git+https://github.com/pyqtgraph/pyqtgraph
 	 
     git clone https://github.com/pyrocko/kite
@@ -43,12 +61,15 @@ Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alt
     python3 setup.py install --user --install-scripts=/usr/local/bin
 
 
-Anaconda3 using ``conda``
+Anaconda3 using ``pip``
 --------------------------
 
-Pre-built Anaconda packages are available for Linux 64-Bit and MacOS. You can use can use the ``conda`` package manager to install Kite:
+Use ``pip`` on Anaconda to install the software:
 
 .. code-block:: sh
-    :caption: Packages are available on Anaconda Cloud
+    :caption: Install the prerequisites through ``conda``
 
-    conda install -c pyrocko pyrocko-kite
+    pip install git+https://github.com/Turbo87/utm
+    pip install git+https://github.com/pyrocko/kite
+
+    

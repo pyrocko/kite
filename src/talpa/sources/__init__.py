@@ -1,12 +1,12 @@
 from .okada import OkadaSourceDelegate
 from .pyrocko import (PyrockoRectangularSourceDelegate,
                       PyrockoMomentTensorDelegate, PyrockoDoubleCoupleDelegate,
-                      PyrockoRingfaultDelegate)
+                      PyrockoRingfaultDelegate, PyrockoVLVDSourceDelegate)
 from .compound_models import (EllipsoidSourceDelegate,
                               PointCompoundSourceDelegate)
 
 
 __sources__ = [OkadaSourceDelegate, PyrockoRectangularSourceDelegate,
                PyrockoMomentTensorDelegate, PyrockoDoubleCoupleDelegate,
-               PyrockoRingfaultDelegate, EllipsoidSourceDelegate,
-               PointCompoundSourceDelegate]
+               PyrockoRingfaultDelegate, PyrockoVLVDSourceDelegate,
+               EllipsoidSourceDelegate, PointCompoundSourceDelegate]

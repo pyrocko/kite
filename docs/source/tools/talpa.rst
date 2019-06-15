@@ -5,9 +5,9 @@ Static Displacement Modelling with ``Talpa``
 
 The tool ``talpa`` (`Talpidae; the mole`) enables interactive modelling of static displacement sources.
 
-It acts as a frontend for :mod:`kite.SandboxScene`, a modelling sandbox for InSAR scenes.
+It acts as a front end for :mod:`kite.SandboxScene`, a modelling sandbox for InSAR scenes.
 
-Examples for a programmatic interaction with the sandbox can be found :doc:`/examples/05-sandbox`.
+Examples for a programmatic interaction with the sandbox can be found :doc:`/examples/sandbox`.
 
 
 Available Static Displacement Sources
@@ -23,7 +23,7 @@ A basic analytical displacement source is :class:`~kite.sources.OkadaSource`. We
 2. Pyrocko Sources
 ~~~~~~~~~~~~~~~~~~
 
-We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see https://pyrocko.org/docs/current/apps/fomosto/index.html)
+We leverage different sources from Pyrocko. These sources need a pre-build Green's function store, which enable layered half-space models. (see https://pyrocko.org/current/apps/fomosto/index.html)
 
 Implemented source types - Point sources and extended.
 

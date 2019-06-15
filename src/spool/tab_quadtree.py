@@ -243,6 +243,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'limits': (model.quadtree.epsilon_min,
                         3*model.quadtree._epsilon_init),
              'editable': True,
+             'decimals': 3,
              'tip': QuadtreeConfig.epsilon.help
              }
         self.epsilon = pTypes.SimpleParameter(**p)
@@ -261,6 +262,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'step': 0.05,
              'limits': (0., 1.),
              'editable': True,
+             'decimals': 2,
              'tip': QuadtreeConfig.nan_allowed.help
              }
         self.nan_allowed = pTypes.SimpleParameter(**p)
@@ -283,7 +285,8 @@ class KiteParamQuadtree(KiteParameterGroup):
              'limits': limits,
              'step': 250,
              'editable': True,
-             'suffix': 'm' if frame.isMeter() else 'deg',
+             'suffix': ' m' if frame.isMeter() else ' deg',
+             'decimals': 0 if frame.isMeter() else 3,
              'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)

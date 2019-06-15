@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>PyrockoRingfaultDialog</class>
- <widget class="QDialog" name="PyrockoRingfaultDialog">
+ <class>PyrockoVLVDSourceDialog</class>
+ <widget class="QDialog" name="PyrockoVLVDSourceDialog">
   <property name="windowModality">
    <enum>Qt::NonModal</enum>
   </property>
@@ -35,7 +35,7 @@
    <enum>Qt::StrongFocus</enum>
   </property>
   <property name="windowTitle">
-   <string>PyrockoRingfault Parameters</string>
+   <string>PyrockoVLVDSource Parameters</string>
   </property>
   <property name="modal">
    <bool>false</bool>
@@ -70,7 +70,7 @@
         <item row="0" column="0">
          <widget class="QLabel" name="eastingLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.easting&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.easting&lt;/span&gt;&lt;br&gt;
 Coordinate of the point source.</string>
           </property>
           <property name="text">
@@ -118,7 +118,7 @@ Coordinate of the point source.</string>
         <item row="1" column="0">
          <widget class="QLabel" name="northingLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.northing&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.northing&lt;/span&gt;&lt;br&gt;
 Coordinate of the point source.</string>
           </property>
           <property name="text">
@@ -166,7 +166,7 @@ Coordinate of the point source.</string>
         <item row="2" column="0">
          <widget class="QLabel" name="depthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.depth&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.depth&lt;/span&gt;&lt;br&gt;
 Depth of the point source.</string>
           </property>
           <property name="text">
@@ -214,7 +214,7 @@ Depth of the point source.</string>
         <item row="3" column="0">
          <widget class="QLabel" name="store_dirLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.store_dir&lt;/span&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoDoubleCouple.store_dir&lt;/span&gt;
 Pyrocko Green's function (GF) store directory.</string>
           </property>
           <property name="text">
@@ -279,21 +279,21 @@ Pyrocko Green's function (GF) store directory.</string>
          <enum>QFormLayout::ExpandingFieldsGrow</enum>
         </property>
         <item row="0" column="0">
-         <widget class="QLabel" name="diameterLabel">
+         <widget class="QLabel" name="volume_changeLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.depth&lt;/span&gt;&lt;br&gt;
-Depth of the point source.</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.volume_change&lt;/span&gt;&lt;br&gt;
+in km^3.</string>
           </property>
           <property name="text">
-           <string>Diameter</string>
+           <string>Volume Change</string>
           </property>
           <property name="buddy">
-           <cstring>depth</cstring>
+           <cstring>volume_change</cstring>
           </property>
          </widget>
         </item>
         <item row="0" column="1">
-         <widget class="QSpinBox" name="diameter">
+         <widget class="QDoubleSpinBox" name="volume_change">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -309,39 +309,42 @@ Depth of the point source.</string>
           <property name="buttonSymbols">
            <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
-          <property name="accelerated">
-           <bool>false</bool>
-          </property>
           <property name="suffix">
-           <string> m</string>
+           <string> km³</string>
+          </property>
+          <property name="decimals">
+           <number>3</number>
           </property>
           <property name="minimum">
-           <number>0</number>
+           <double>-5.000000000000000</double>
           </property>
           <property name="maximum">
-           <number>10000000</number>
+           <double>5.000000000000000</double>
           </property>
           <property name="singleStep">
-           <number>100</number>
+           <double>0.050000000000000</double>
+          </property>
+          <property name="value">
+           <double>0.200000000000000</double>
           </property>
          </widget>
         </item>
         <item row="1" column="0">
-         <widget class="QLabel" name="strikeLabel">
+         <widget class="QLabel" name="azimuthLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.strike&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.strike&lt;/span&gt;&lt;br&gt;
 Clockwise from north.</string>
           </property>
           <property name="text">
-           <string>Strike</string>
+           <string>CLVD Azimuth</string>
           </property>
           <property name="buddy">
-           <cstring>strike</cstring>
+           <cstring>azimuth</cstring>
           </property>
          </widget>
         </item>
         <item row="1" column="1">
-         <widget class="QDoubleSpinBox" name="strike">
+         <widget class="QDoubleSpinBox" name="azimuth">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -368,11 +371,11 @@ Clockwise from north.</string>
         <item row="2" column="0">
          <widget class="QLabel" name="dipLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.dip&lt;/span&gt;&lt;br&gt;
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.dip&lt;/span&gt;&lt;br&gt;
 Positive from horizontal.</string>
           </property>
           <property name="text">
-           <string>Dip</string>
+           <string>CLVD Dip</string>
           </property>
           <property name="buddy">
            <cstring>dip</cstring>
@@ -405,26 +408,29 @@ Positive from horizontal.</string>
          </widget>
         </item>
         <item row="3" column="0">
-         <widget class="QLabel" name="magnitudeLabel">
+         <widget class="QLabel" name="clvd_momentLabel">
           <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.magnitude&lt;/span&gt;
-Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.clvd_moment&lt;/span&gt;
+Moment in Nm, scale only.</string>
           </property>
           <property name="text">
-           <string>M&lt;sub&gt;W&lt;/sub&gt;</string>
+           <string>CLVD M&lt;sub&gt;0&lt;/sub&gt; Scale</string>
           </property>
           <property name="buddy">
-           <cstring>magnitude</cstring>
+           <cstring>clvd_moment</cstring>
           </property>
          </widget>
         </item>
         <item row="3" column="1">
-         <widget class="QDoubleSpinBox" name="magnitude">
+         <widget class="QDoubleSpinBox" name="clvd_moment">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhFormattedNumbersOnly</set>
           </property>
           <property name="wrapping">
            <bool>true</bool>
@@ -439,7 +445,7 @@ Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
            <string/>
           </property>
           <property name="minimum">
-           <double>-2.000000000000000</double>
+           <double>-12.000000000000000</double>
           </property>
           <property name="maximum">
            <double>12.000000000000000</double>
@@ -449,27 +455,16 @@ Moment magnitude Mw as in [Hanks and Kanamori, 1979]</string>
           </property>
          </widget>
         </item>
-        <item row="4" column="0">
-         <widget class="QLabel" name="npointsourcesLabel">
-          <property name="toolTip">
-           <string>&lt;span style='font-family: monospace'&gt;PyrockoRingfaultSource.npointsources&lt;/span&gt;
-Number of point sources along the ring.</string>
-          </property>
-          <property name="text">
-           <string>N Sources</string>
-          </property>
-          <property name="buddy">
-           <cstring>magnitude</cstring>
-          </property>
-         </widget>
-        </item>
         <item row="4" column="1">
-         <widget class="QSpinBox" name="npointsources">
+         <widget class="QSpinBox" name="clvd_moment_exponent">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
+          </property>
+          <property name="inputMethodHints">
+           <set>Qt::ImhPreferNumbers</set>
           </property>
           <property name="wrapping">
            <bool>true</bool>
@@ -480,20 +475,19 @@ Number of point sources along the ring.</string>
           <property name="buttonSymbols">
            <enum>QAbstractSpinBox::PlusMinus</enum>
           </property>
-          <property name="accelerated">
-           <bool>false</bool>
+         </widget>
+        </item>
+        <item row="4" column="0">
+         <widget class="QLabel" name="clvd_moment_exponentLabel">
+          <property name="toolTip">
+           <string>&lt;span style='font-family: monospace'&gt;PyrockoCLVDVolume.clvd_moment&lt;/span&gt;
+Moment magnitude scale, the exponent. E.g. 5.1e&lt;b&gt;18&lt;/b&gt;.</string>
           </property>
-          <property name="suffix">
-           <string/>
+          <property name="text">
+           <string>CLVD M&lt;sub&gt;0&lt;/sub&gt; Exponent</string>
           </property>
-          <property name="minimum">
-           <number>0</number>
-          </property>
-          <property name="maximum">
-           <number>360</number>
-          </property>
-          <property name="singleStep">
-           <number>4</number>
+          <property name="buddy">
+           <cstring>clvd_moment</cstring>
           </property>
          </widget>
         </item>
@@ -547,14 +541,33 @@ Number of point sources along the ring.</string>
   <tabstop>northing</tabstop>
   <tabstop>depth</tabstop>
   <tabstop>store_dir</tabstop>
-  <tabstop>strike</tabstop>
+  <tabstop>chooseStoreDirButton</tabstop>
+  <tabstop>volume_change</tabstop>
+  <tabstop>azimuth</tabstop>
   <tabstop>dip</tabstop>
-  <tabstop>magnitude</tabstop>
+  <tabstop>clvd_moment</tabstop>
+  <tabstop>clvd_moment_exponent</tabstop>
   <tabstop>okButton</tabstop>
   <tabstop>applyButton</tabstop>
   <tabstop>cancelButton</tabstop>
-  <tabstop>chooseStoreDirButton</tabstop>
  </tabstops>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>cancelButton</sender>
+   <signal>released()</signal>
+   <receiver>PyrockoVLVDSourceDialog</receiver>
+   <slot>close()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>506</x>
+     <y>179</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>292</x>
+     <y>133</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

@@ -8,57 +8,25 @@ Kite supports importing unwrapped displacement scenes from different InSAR proce
 * `ROI_PAC <http://www.geo.cornell.edu/eas/PeoplePlaces/Faculty/matt/roi_pac.html/>`_
 * `ISCE <https://winsar.unavco.org/software/isce>`_
 * `SARscape <http://www.sarmap.ch/page.php?page=sarscape>`_
+* `LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_
 
 
 Each processor delivers different file formats and metadata. In order to import the data into Kite, data has to be prepared. Details for each format are described in :mod:`kite.scene_io`.
 
 
-Import InSAR displacement
--------------------------
+Importing data through ``spool``
+--------------------------------
 
-We will start with importing a scene from GMT5SAR.
+When you have processed your InSAR data and aligned with the expected import conversions (:mod:`kite.scene_io`), you can use spool to import the data:
 
-.. code-block :: python
-    :caption: GMT5SAR is an open-source processor based on GMT. We will import a binary ``.grd`` file.
+.. code-block :: sh
+    :caption: Importing and visualising unwrapped InSAR data with ``spool``.
 
-    from kite import Scene
-
-    # We import a unwrapped interferrogram scene.
-    # The format shall be detected automatically
-    # in this case processed a GMTSAR5
-
-    sc = Scene.import_data('unwrap_ll.grd')
-    sc.spool()
+    spool --load data/my_scene-asc.grd
 
 
-Manual scene setup
-------------------
-
-Initialisation of a custom scene from python is also possible. Here we will import arbitrary data and define the reference frame manually.
-
-.. code-block :: python
-    :caption: Any 2D displacement data can be loaded into Kite, also pixel offsets!
-
-    from kite import Scene
-
-    sc = Scene()
-    sc.displacement = num.empty((2048, 2048))
-    
-    # dummy line-of-sight vectors in radians
-    sc.theta = num.full((2048, 2048), fill=num.pi/2)
-    sc.phi = num.full((2048, 2048), fill=num.pi/4)
-
-
-    # Reference the scene's frame
-    sc.frame.llLat = 38.2095  # Lower-left corner latitude
-    sc.frame.llLon = 19.1256  # Lower-left corner longitude
-    sc.frame.dLat = .00005  # Latitudal pixel spacing in degree
-    sc.frame.dLon = .00012  # Longitudal pixel spacing in degree
-
-
-
-Inspect an InSAR scene with ``spool`` GUI
-------------------------------------------
+Inspecting a scene with ``spool``
+---------------------------------
 
 You can use start :doc:`../tools/spool` to inspect the scene and manipulate it's properties.
 
@@ -67,11 +35,12 @@ You can use start :doc:`../tools/spool` to inspect the scene and manipulate it's
 
     from kite import Scene
     sc = Scene.import_file('unwrap_ll.grd')
+
+    # Start the GUI
     sc.spool()
 
-Alternatively ``spool`` can be started from command line
-
 .. code-block :: sh
+    :caption: Alternatively ``spool`` can be started from command line.
 
     # Start spool and import a displacement scene data
     spool --load unwrap_ll.grd
@@ -80,21 +49,74 @@ Alternatively ``spool`` can be started from command line
     spool my_scene.yml
 
 
-Save scene and properties
--------------------------
+Scripted data import
+--------------------
 
-The native file structure of ``Kite`` is based on NumPy binary files together with `YAML <https://en.wikipedia.org/wiki/YAML>`_ configuration files which hold the all information to and configurable parameters:
+We will start with importing a scene from GMT5SAR using a Python script:
+
+.. code-block :: python
+    :caption: GMT5SAR is an open-source processor based on GMT. We will import a binary ``.grd`` file.
+
+    from kite import Scene
+
+    # We import a unwrapped interferogram scene.
+    # The format shall be detected automatically
+    # in this case processed a GMTSAR5
+
+    sc = Scene.import_data('unwrap_ll.grd')
+
+    # Open spool
+    sc.spool()
+
+
+Scripted scene setup
+--------------------
+
+Initialisation of a custom scene through a Python script. Here we will import arbitrary data and define the geographical reference frame manually.
+
+.. code-block :: python
+    :caption: Setting up scene from 2D displacement data.
+
+    from kite import Scene
+
+    sc = Scene()
+    sc.displacement = num.empty((2048, 2048))
+    
+    # Dummy line-of-sight vectors in radians
+    # Theta is the elevation angle towards satellite from horizon in radians.
+    sc.theta = num.full((2048, 2048), fill=num.pi/2)
+    # Phi, the horizontal angle towards satellite in radians, counter-clockwise from East.
+    sc.phi = num.full((2048, 2048), fill=num.pi/4)
+
+
+    # Reference the scene's frame lower left corner, always in geographical coordinates
+    sc.frame.llLat = 38.2095
+    sc.frame.llLon = 19.1256
+
+    # The pixel spacing can be either 'meter' or 'degree'
+    sc.frame.spacing = 'degree'
+    sc.frame.dN = .00005  # Latitudal pixel spacing
+    sc.frame.dE = .00012  # Longitudal pixel spacing
+
+    # Saving the scene
+    sc.save('my_scene')
+
+
+Saving the scene and quadtree/covariance
+----------------------------------------
+
+The native file structure of ``Kite`` is based on NumPy binary files together with `YAML <https://en.wikipedia.org/wiki/YAML>`_ configuration files, holding all meta information and configurable parameters, such as:
 
 * :class:`~kite.Quadtree`,
 * :class:`~kite.Covariance`,
 * and :class:`~kite.scene.Meta`.
 
-Also the expensive calculation of :attr:`kite.Covariance.covariance_matrix` is saved and preserved in the YAML file!
+This structure also holds the :attr:`kite.Covariance.covariance_matrix`, which requires a computational intensive task!
 
-This code snippet shows how to import data from a foreign file format and transferring it to kite's native format.
+This code snippet shows how to import data from a foreign file format and saving it to kite's native format.
 
 .. code-block :: python
-    :caption: Import data and save it in Kite format.
+    :caption: Importing data and saving it in Kite format.
 
     from kite import Scene
 
@@ -105,9 +127,53 @@ This code snippet shows how to import data from a foreign file format and transf
     sc.save('kite_scene')
 
 
-Kite's file structure consists of only two files:
 
 .. code-block :: sh
+    :caption: Kite's file structure consists of only two files:
 
-    kite_scene.yml
     kite_scene.npz
+    kite_scene.yml
+
+
+
+Converting StaMPS velocities to a Kite scene
+--------------------------------------------
+
+The CLI tool :file:`stamps2kite` loads PS velocities from a `StaMPS <https://homepages.see.leeds.ac.uk/~earahoo/stamps/>`_ project (i.e. processed mean velocity data through ``ps_plot(..., -1);``), and grids the data into mean velocity bins. The LOS velocities will be converted into a Kite scene.
+
+StaMPS' data has to be fully processed through and may stem from the master
+project or from one of the processed small baseline pairs. The required files are:
+
+- :file:`ps2.mat`       Meta information and geographical coordinates.
+- :file:`parms.mat`     Meta information about the scene (heading, etc.).
+- :file:`la2.mat`       Look angle data for each pixel.
+- :file:`ps_plot*.mat`  Processed and corrected LOS velocities.
+
+
+.. code-block :: sh
+    :caption: Importing StaMPS mean velocities into a gridded Kite scene.
+
+    stamps2kite stamps_project/ --resolution 800 800 --save my_kite_scene
+
+
+For more information on the util, see the ``--help``.
+
+
+Download and import data from COMET LiCSAR
+------------------------------------------
+
+A slim client for downloading `COMET LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_ products is included in :mod:`kite.clients`. The script will download the passed unwrapped LiCSAR data and necessary LOS GeoTIFFs into the current directory.
+
+This example will download data from the 2017 Iran–Iraq earthquake (M 7.3) from the `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_:
+
+
+.. code-block :: sh
+    :caption: Download data from COMET LiCSAR Portal.
+
+    python3 -m kite.clients http://gws-access.ceda.ac.uk/public/nceo_geohazards/LiCSAR_products/6/006D_05509_131313/products/20171107_20171201/20171107_20171201.geo.unw.tif .
+
+
+.. code-block :: sh
+    :caption: Importing the scene in spool.
+
+    spool --load=./20171107_20171201.geo.unw.tif

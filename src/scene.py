@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 import logging
 import numpy as num
 import utm
@@ -12,8 +12,6 @@ from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
 from kite.util import Subject, property_cached
 from kite import scene_io
-
-logging.basicConfig(level=20)
 
 
 def read(filename):
@@ -241,7 +239,7 @@ class Frame(object):
                              'Use gridE and gridN for meter grids')
 
         if self._meter_grid is None:
-            self._log.info('Transforming latlon grid to meters...')
+            self._log.debug('Transforming latlon grid to meters...')
             gridN, gridE = latlon_to_ne_numpy(
                 self.llLat, self.llLon,
                 self.llLat + self.gridN.data.ravel(),
@@ -273,7 +271,8 @@ class Frame(object):
 
     @property_cached
     def coordinates(self):
-        """Local east and north coordinates [m] of all pixels in ``NxM`` matrix.
+        """ Local east and north coordinates [m] of all pixels in
+           ``NxM`` matrix.
 
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
@@ -436,21 +435,7 @@ class BaseScene(object):
                 self.__setattr__(attr, data)
 
     def _initLogging(self):
-        logging.basicConfig(level=logging.DEBUG)
-
         self._log = logging.getLogger(self.__class__.__name__)
-        self._log.setLevel(logging.DEBUG)
-
-        self._log_stream = None
-        for l in self._log.parent.handlers:
-            if isinstance(l, logging.StreamHandler):
-                self._log_stream = l
-        if self._log_stream is None:
-            self._log_stream = logging.StreamHandler()
-            self._log.addHandler(self._log_stream)
-        self._log_stream.setLevel(logging.INFO)
-
-        self.setLogLevel = self._log_stream.setLevel
 
     @property
     def displacement(self):
@@ -483,12 +468,12 @@ class BaseScene(object):
 
     @property
     def phi(self):
-        """ Horizontal angle towards satellite' :abbr:`line of sight (LOS)`
-            in [rad] counter-clockwise from East
+        """ Horizontal angle towards satellite :abbr:`line of sight (LOS)`
+            in radians counter-clockwise from East.
 
         .. important ::
 
-            Kite convention is:
+            Kite's convention is:
 
             * :math:`0` is **East**
             * :math:`\\frac{\\pi}{2}` is **North**!
@@ -512,8 +497,8 @@ class BaseScene(object):
 
     @property
     def theta(self):
-        """ Theta is look vector elevation angle towards satellite from horizon
-            in radians. Matrix of theta towards satellite's
+        """ Theta is the look vector elevation angle towards satellite from
+            the horizon in radians. Matrix of theta towards satellite's
             :abbr:`line of sight (LOS)`.
 
         .. important ::
@@ -552,7 +537,7 @@ class BaseScene(object):
     @property_cached
     def phiDeg(self):
         """ LOS horizontal orientation angle in degree,
-         counter-clockwise from East,``NxM`` matrix like
+            counter-clockwise from East,``NxM`` matrix like
             :class:`kite.Scene.phi`
 
         :type: :class:`numpy.ndarray`
@@ -606,8 +591,62 @@ class BaseScene(object):
         self.meta.time_slave = tmax
         return self
 
-    def __iadd__(self, other):
-        return self.__add__(other)
+    def get_ramp_coefficients(self):
+        '''Fit plane through the displacement data.
+
+        :returns: Mean of the displacement and slopes in easting coefficients
+            of the fitted plane. The array hold
+            ``[offset_e, offset_n, slope_e, slope_n]``.
+        :rtype: :class:`numpy.ndarray`
+        '''
+        msk = ~self.displacement_mask
+        displacement = self.displacement[msk]
+
+        coords = self.frame.coordinates[msk.flatten()]
+
+        # Add ones for the offset
+        coords = num.hstack((
+            num.ones_like(coords),
+            coords))
+
+        coeffs, res, _, _ = num.linalg.lstsq(
+            coords, displacement, rcond=None)
+
+        return coeffs
+
+    def displacement_deramp(self, demean=True, inplace=True):
+        '''Fit a plane onto the displacement data and substract it
+
+        :param demean: Demean the displacement
+        :type demean: bool
+        :param inplace: Replace data of the scene (default: True)
+        :type inplace: bool
+
+        :return: ``None`` if ``inplace=True`` else a new Scene
+        :rtype: ``None`` or :class:`~kite.Scene`
+        '''
+        coeffs = self.get_ramp_coefficients()
+        msk = self.displacement_mask
+        coords = self.frame.coordinates
+
+        ramp = coeffs[2:] * coords
+        if demean:
+            ramp += coeffs[:2]
+
+        ramp = ramp.sum(axis=1).reshape(self.shape)
+        ramp[msk] = num.nan
+
+        if inplace:
+            self.displacement -= ramp
+        else:
+            return self.__class__(
+                config=self.config,
+                theta=self.theta,
+                phi=self.phi,
+                displacement=self.displacement - ramp)
+
+    def __iadd__(self, scene):
+        return self.__add__(scene)
 
 
 class Scene(BaseScene):
@@ -629,9 +668,9 @@ class Scene(BaseScene):
     :type llLat: float, optional
     :param llLon: Lower left longitude in [deg]
     :type llLon: float, optional
-    :param dLat: Pixel spacing in latitude [deg]
+    :param dLat: Pixel spacing in latitude [deg or m]
     :type dLat: float, optional
-    :param dLon: Pixel spacing in longitude [deg]
+    :param dLon: Pixel spacing in longitude [deg or m]
     :type dLon: float, optional
     """
 
@@ -792,11 +831,14 @@ class Scene(BaseScene):
             raise ImportError('File %s does not exist!' % path)
         data = None
 
-        for mod in scene_io.__all__:
-            module = eval('scene_io.%s(scene)' % mod)
+        for mod_name in scene_io.__all__:
+            cls = getattr(
+                __import__('kite.scene_io', fromlist=mod_name),
+                mod_name)
+            module = cls()
             if module.validate(path, **kwargs):
                 scene._log.debug('Importing %s using %s module' %
-                                 (path, mod))
+                                 (path, mod_name))
                 data = module.read(path, **kwargs)
                 break
         if data is None:
@@ -805,12 +847,17 @@ class Scene(BaseScene):
         scene.meta.filename = op.basename(path)
         return scene._import_from_dict(scene, data)
 
+    _class_list = map('* :class:`~kite.scene_io.{}`'.format, scene_io.__all__)
     _import_data.__doc__ += \
-        '\nSupported import modules are **%s**.\n'\
-        % (', ').join(scene_io.__all__)
-    for mod in scene_io.__all__:
-        _import_data.__doc__ += '\n**%s**\n\n' % mod
-        _import_data.__doc__ += eval('scene_io.%s.__doc__' % mod)
+        '\nSupported import for unwrapped InSAR data are:\n\n{}\n'\
+        .format('\n'.join(_class_list))
+    for mod_name in scene_io.__all__:
+        cls = getattr(
+            __import__('kite.scene_io', fromlist=mod_name),
+            mod_name)
+
+        _import_data.__doc__ += '\n**{name}**\n\n{doc}'\
+            .format(name=mod_name, doc=cls.__doc__)
     import_data = staticmethod(_import_data)
 
     @staticmethod

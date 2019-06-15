@@ -287,8 +287,9 @@ class DisplacementPlot(pg.PlotItem):
     @QtCore.pyqtSlot(object)
     def updateHintText(self, pos):
         pos, value = pos
-        self.hint_text.setText(
-            self.hint_text.text_template.format(pos.x(), pos.y(), value))
+        if self.hint_text is not None:
+            self.hint_text.setText(
+                self.hint_text.text_template.format(pos.x(), pos.y(), value))
 
 
 class DisplacementVectorPlot(DisplacementPlot):

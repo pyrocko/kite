@@ -1,5 +1,6 @@
 #!/usr/bin/python2
-import sys  # noqa
+import sys
+import logging
 import argparse as ap
 from kite.talpa import Talpa
 
@@ -36,7 +37,18 @@ BriDGes DFG Project, University of Kiel
                         help='Load SandboxScene from file (.yml)',
                         default=None, nargs='?')
 
+    parser.add_argument(
+        '--verbose', '-v', action='count',
+        default=1,
+        help='Verbosity, add mutliple to increase verbosity.')
+
     ns = parser.parse_args(args)
+
+    log_level = logging.WARNING - ns.verbose * 10
+
+    logging.basicConfig()
+    stream_handler = logging.root.handlers[0]
+    stream_handler.setLevel(level=log_level if log_level > 0 else 0)
 
     Talpa(filename=ns.file)
 

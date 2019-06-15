@@ -36,7 +36,11 @@ class SandboxModel(QtCore.QObject):
         self.cursor_tracker = CursorTracker(self)
 
         self._log_handler = logging.Handler()
+        self._log_handler.setLevel(logging.DEBUG)
         self._log_handler.emit = self.sigLogRecord.emit
+
+        logging.root.setLevel(logging.DEBUG)
+        logging.root.addHandler(self._log_handler)
 
         self.worker_thread = QtCore.QThread()
         self.moveToThread(self.worker_thread)
@@ -62,9 +66,13 @@ class SandboxModel(QtCore.QObject):
     def disconnectSlots(self):
         if self.model is None:
             return
-        self.model._log.removeHandler(self._log_handler)
-        self.model.evModelUpdated.unsubscribe(self.sigModelUpdated.emit)
-        self.model = None
+        try:
+            self.model._log.removeHandler(self._log_handler)
+            self.model.evModelUpdated.unsubscribe(self.sigModelUpdated.emit)
+        except AttributeError:
+            pass
+        finally:
+            self.model = None
 
     def addSource(self, source):
         self.model.addSource(source)
