@@ -5,7 +5,7 @@ from .util import get_resource
 
 from .multiplot import SandboxSceneDockarea, ModelReferenceDockarea
 from .sources_dock import SourcesListDock
-from .tool_dialogs import ExtentDialog
+from .tool_dialogs import ExtentDialog, LosDialog
 from .config import ConfigDialog
 from .sandbox_model import SandboxModel
 
@@ -65,6 +65,8 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
             self.onExportScene)
         self.actionChangeExtent.triggered.connect(
             self.extentDialog)
+        self.actionChangeLos.triggered.connect(
+            self.losDialog)
         self.actionLoadReferenceScene.triggered.connect(
             self.onLoadReferenceScene)
 
@@ -99,6 +101,10 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def extentDialog(self):
         ExtentDialog(self.sandbox, self).show()
+
+    @QtCore.pyqtSlot()
+    def losDialog(self):
+        LosDialog(self.sandbox, self).show()
 
     @QtCore.pyqtSlot()
     def configDialog(self):

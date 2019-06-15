@@ -97,6 +97,29 @@ class SandboxScene(BaseScene):
         self._clearModel()
         self.evChanged.notify()
 
+    def setlos(self, phi, theta):
+        """Set the sandbox's extent in pixels
+
+        :param phi: phi in degree
+        :type phi: int
+        :param theta: theta in degree
+        :type theta: int
+        """
+        if self.reference is not None:
+            self._log.warning('Cannot change a referenced model!')
+            return
+
+        self._log.debug('Changing model LOS to %d px by %d px'
+                        % (phi, theta))
+        phi = num.deg2rad(phi)
+        theta = num.deg2rad(theta)
+        self.theta = (self.theta*1.)*theta
+        self.phi = (self.phi*1.)*phi
+        self.frame.updateExtent()
+
+        self._clearModel()
+        self.evChanged.notify()
+
     @property
     def north(self):
         if not self._initialised:

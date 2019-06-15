@@ -2,7 +2,7 @@ from PyQt5 import QtWidgets, QtCore
 
 from kite.qt_utils import loadUi
 from .util import get_resource
-
+import numpy as num
 
 class ExtentDialog(QtWidgets.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
@@ -47,4 +47,37 @@ class ExtentDialog(QtWidgets.QDialog):
         self.sandbox.model.setExtent(
             self.spinEastPx.value(),
             self.spinNorthPx.value())
+        self.setValues()
+
+
+class LosDialog(QtWidgets.QDialog):
+    def __init__(self, sandbox, *args, **kwargs):
+        QtWidgets.QDialog.__init__(self, *args, **kwargs)
+        loadUi(get_resource('dialog_los.ui'), self)
+        self.setSizeGripEnabled(False)
+
+        self.move(
+            self.parent().window().mapToGlobal(
+                self.parent().window().rect().center()) -
+            self.mapToGlobal(self.rect().center()))
+
+        self.sandbox = sandbox
+        model = self.sandbox.model
+        self.applyButton.released.connect(self.updateValues)
+        self.okButton.released.connect(self.updateValues)
+        self.okButton.released.connect(self.close)
+
+        self.setValues()
+
+    def setValues(self):
+        model = self.sandbox.model
+        phi = num.deg2rad(self.spinlos_phi.value())
+        theta = num.deg2rad(self.spinlos_theta.value())
+
+    @QtCore.pyqtSlot()
+    def updateValues(self):
+        print('update los!')
+        self.sandbox.model.setlos(
+            self.spinlos_phi.value(),
+            self.spinlos_theta.value())
         self.setValues()
