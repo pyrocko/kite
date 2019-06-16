@@ -118,8 +118,8 @@ class SandboxScene(BaseScene):
                         % (phi, theta))
         phi = num.deg2rad(phi)
         theta = num.deg2rad(theta)
-        self.theta = (self.theta*1.)*theta
-        self.phi = (self.phi*1.)*phi
+        self.theta = num.ones(num.shape(self.theta))*theta
+        self.phi = num.ones(num.shape(self.phi))*phi
         self.frame.updateExtent()
 
         self._clearModel()
