@@ -3,7 +3,7 @@ import glob
 from os import path as op
 
 import numpy as num
-from scipy import stats
+from scipy import stats, interpolate
 
 try:
     import h5py
@@ -29,50 +29,6 @@ class ADict(dict):
         self[attr] = value
 
 
-def read_mat_data(fn_locations='ps2.mat', fn_psvel='ps_plot_v-d.mat',
-                  fn_look_angle='la2.mat', fn_parms='parms.mat'):
-    log.debug('Reading in StaMPS project...')
-    data = ADict()
-
-    loc_mat = h5py.File(fn_locations, 'r')
-    vel_mat = h5py.File(fn_psvel, 'r')
-
-    look_angle_mat = h5py.File(fn_look_angle, 'r')
-    params_mat = h5py.File(fn_parms, 'r')
-
-    data.ll_coords = num.asarray(loc_mat['ll0'])
-
-    geo_coords = num.asarray(loc_mat['lonlat'])
-    data.lats = geo_coords[0, :]
-    data.lons = geo_coords[1, :]
-
-    data.ps_velocities = num.asarray(vel_mat['ph_disp']).ravel()
-
-    data.look_angles = num.asarray(look_angle_mat['la'])
-    data.heading = float(num.asarray(params_mat['heading']))
-
-    return data
-
-
-def bin_ps_data(data, bins=(800, 800)):
-    log.debug('Binning StaMPS velocity data...')
-    bin_look_angles, edg_lat, edg_lon, binnumber = stats.binned_statistic_2d(
-        data.lats, data.lons, data.look_angles,
-        statistic='mean', bins=bins)
-
-    log.debug('Binning look angle data...')
-    bin_vels, edg_lat, edg_lon, binnumber = stats.binned_statistic_2d(
-        data.lats, data.lons, data.ps_velocities,
-        statistic='mean', bins=bins)
-
-    data.bin_ps_velocities = bin_vels.reshape(*bins)
-    data.bin_look_angles = bin_look_angles.reshape(*bins)
-    data.bin_edg_lat = edg_lat
-    data.bin_edg_lon = edg_lon
-
-    return data
-
-
 def _get_file(dirname, fname):
     fns = glob.glob(op.join(dirname, fname))
     if len(fns) == 0:
@@ -86,10 +42,89 @@ def _get_file(dirname, fname):
     return fn
 
 
-def stamps2kite(
-        dirname='.',
-        fn_ps=None, fn_ps_plot=None, fn_parms=None, fn_la2=None,
-        bins=(800, 800)):
+def read_mat_data(dirname, **kwargs):
+    data = ADict()
+    log.debug('Reading in StaMPS project...')
+
+    fn_ps2 = kwargs.get(
+        'fn_ps2', _get_file(dirname, 'ps?.mat'))
+    fn_ps_plot = kwargs.get(
+        'fn_ps_plot', _get_file(dirname, 'ps_plot*.mat'))
+    fn_parms = kwargs.get(
+        'fn_parms', _get_file(dirname, 'parms.mat'))
+    fn_width = kwargs.get(
+        'fn_width', _get_file(dirname, 'width.txt'))
+    fn_len = kwargs.get(
+        'fn_len', _get_file(dirname, 'len.txt'))
+    fn_look_angle = kwargs.get(
+        'fn_look_angle', _get_file(dirname, 'look_angle.1.in'))
+
+    loc_mat = h5py.File(fn_ps2, 'r')
+    vel_mat = h5py.File(fn_ps_plot, 'r')
+
+    params_mat = h5py.File(fn_parms, 'r')
+
+    data.ll_coords = num.asarray(loc_mat['ll0'])
+    data.radar_coords = num.asarray(loc_mat['ij'])
+    data.ps_velocities = num.asarray(vel_mat['ph_disp']).ravel()
+
+    geo_coords = num.asarray(loc_mat['lonlat'])
+    data.lats = geo_coords[0, :]
+    data.lons = geo_coords[1, :]
+
+    with open(fn_len) as rl, open(fn_width) as rw:
+        data.px_length = int(rl.readline())
+        data.px_width = int(rw.readline())
+
+    data.look_angles = num.loadtxt(fn_look_angle)[::2]
+    data.heading = float(num.asarray(params_mat['heading']))
+
+    return data
+
+
+def bin_ps_data(data, bins=(800, 800)):
+
+    log.debug('Binning StaMPS velocity data...')
+    bin_vels, edg_lat, edg_lon, _ = stats.binned_statistic_2d(
+        data.lats, data.lons, data.ps_velocities,
+        statistic='mean', bins=bins)
+
+    log.debug('Binning radar coordinates...')
+    bin_radar_x, _, _, _ = stats.binned_statistic_2d(
+        data.lats, data.lons, data.radar_coords[1],
+        statistic='mean', bins=bins)
+    bin_radar_y, _, _, _ = stats.binned_statistic_2d(
+        data.lats, data.lons, data.radar_coords[2],
+        statistic='mean', bins=bins)
+
+    data.bin_ps_velocities = bin_vels
+
+    data.bin_radar_x = bin_radar_x
+    data.bin_radar_y = bin_radar_y
+
+    data.bin_edg_lat = edg_lat
+    data.bin_edg_lon = edg_lon
+
+    return data
+
+
+def interpolate_look_angles(data):
+    log.info('Interpolating look angles from radar coordinates...')
+    width_coords = num.linspace(0, data.px_width, 50)
+    len_coords = num.linspace(0, data.px_length, 50)
+    coords = num.asarray(num.meshgrid(width_coords, len_coords))\
+        .reshape(2, 2500)
+
+    radar_coords = num.vstack(
+        [data.bin_radar_y.ravel(), data.bin_radar_x.ravel()])
+
+    interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles*d2r)
+    data.bin_look_angles = interp(radar_coords.T).reshape(
+        *data.bin_ps_velocities.shape)
+    return interp
+
+
+def stamps2kite(dirname='.', bins=(800, 800), **kwargs):
     '''Convert StaMPS velocity data to a Kite Scene
 
     Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
@@ -106,19 +141,26 @@ def stamps2kite(
         the trick in most cases.
 
     :param dirname: Folder containing data from the StaMPS project.
-        Defaults to ``None``.
+        Defaults to ``.``.
     :type dirname: str
-    :param fn_ps: :file:`ps2.mat` file with lat/lon information about the PS.
-        Defaults to ``None``.
+    :param fn_ps2: :file:`ps2.mat` file with lat/lon information about the PS
+        scene. Defaults to ``ps2.mat``.
     :type fn_ps: str
     :param fn_ps_plot: Processed output from StaMPS ``ps_plot`` function, e.g.
-        :file:`ps_plot*.mat`. Defaults to ``None``.
+        :file:`ps_plot*.mat`. Defaults to ``ps_plot*.mat``.
     :type fn_ps_plot: str
     :param fn_parms: :file:`parms.mat` from StaMPS, holding essential meta-
-        information.
-    :type fn_ln2: str
-    :param fn_ln2: The :file:`la2.mat` file from StaMPS containing the look
-        angle data.
+        information. Defaults to ``parms.mat``.
+    :type fn_parms: str
+    :param fn_look_angle: The :file:`look_angle.1.in` holds the a 50x50 grid
+        with look angle information. Defaults to ``look_angle.1.in``.
+    :type fn_look_angle: str
+    :param fn_width: The :file:`width.txt` containing number of radar columns.
+        Defaults to ``width.txt``.
+    :type fn_width: str
+    :param fn_len: The :file:`len.txt` containing number of rows in the
+        interferogram. Defaults to ``len.txt``.
+    :type fn_len: str
 
     :param bins: Number of pixels/bins in East and North dimension.
         Default (800, 800).
@@ -127,29 +169,18 @@ def stamps2kite(
     :returns: Kite Scene from the StaMPS data
     :rtype: :class:`kite.Scene`
     '''
-
-    if fn_ps_plot is None:
-        fn_locations = _get_file(dirname, 'ps?.mat')
-
-    if fn_ps is None:
-        fn_psvel = _get_file(dirname, 'ps_plot*.mat')
-
-    if fn_parms is None:
-        fn_parms = _get_file(dirname, 'parms.mat')
-
-    if fn_la2 is None:
-        fn_la2 = _get_file(dirname, 'la2.mat')
-
+    data = read_mat_data(dirname, **kwargs)
     log.info('Found a StaMPS project at %s', op.abspath(dirname))
 
-    data = read_mat_data(fn_locations, fn_psvel, fn_la2, fn_parms)
-
-    data = bin_ps_data(data, bins=bins)
+    bin_ps_data(data, bins=bins)
+    interpolate_look_angles(data)
 
     log.debug('Processing of LOS angles')
-    data.bin_theta = (num.pi/2) - data.bin_look_angles
+    data.bin_theta = data.bin_look_angles
 
-    phi_angle = -data.heading * d2r
+    phi_angle = -data.heading * d2r + num.pi
+    if phi_angle > num.pi:
+        phi_angle -= 2*num.pi
     data.bin_phi = num.full_like(data.bin_theta, phi_angle)
     data.bin_phi[num.isnan(data.bin_theta)] = num.nan
 
@@ -191,12 +222,14 @@ converted into a Kite Scene.
 The data has to be fully processed through StaMPS and may stem from the master
 project or the processed small baseline pairs. Required files are:
 
- - ps2.mat       Meta information and geographical coordinates.
- - parms.mat     Meta information about the scene (heading, etc.).
- - la2.mat       Look angle data for each pixel.
- - ps_plot*.mat  Processed and corrected LOS velocities.
+ - ps2.mat          Meta information and geographical coordinates.
+ - parms.mat        Meta information about the scene (heading, etc.).
+ - ps_plot*.mat     Processed and corrected LOS velocities.
 
-''',
+ - look_angle.1.in  Look angles for the scene.
+ - width.txt        Width dimensions of the interferogram and
+ - len.txt          length.
+ ''',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
