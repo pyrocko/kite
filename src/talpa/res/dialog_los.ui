@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>dialogModelExtent</class>
+ <class>dialogModelLos</class>
  <widget class="QDialog" name="dialogModelLos">
   <property name="windowModality">
    <enum>Qt::WindowModal</enum>
@@ -32,13 +32,13 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>Extent SandboxScene</string>
+   <string>LOS Configuration SandboxScene</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Change the LOS vectors for the scene (refrence scene not active)</string>
+      <string>Change the LOS vectors for the scene (if refrence scene not active)</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -46,9 +46,9 @@
     </widget>
    </item>
    <item>
-    <layout class="QGridLayout" name="gridLayout" columnstretch="0,2,1" columnminimumwidth="0,0,0">
+    <layout class="QGridLayout" name="gridLayout" columnstretch="0,2" columnminimumwidth="0,0">
      <item row="0" column="0">
-      <widget class="QLabel" name="east_label">
+      <widget class="QLabel" name="phi_label">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -56,7 +56,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.config.extent_east&lt;/span&gt;</string>
+        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.theta&lt;/span&gt;</string>
        </property>
        <property name="text">
         <string>Phi (deg)</string>
@@ -64,7 +64,7 @@
       </widget>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="north_label">
+      <widget class="QLabel" name="theta_label">
        <property name="sizePolicy">
         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
          <horstretch>0</horstretch>
@@ -72,54 +72,24 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.config.extent_east&lt;/span&gt;</string>
+        <string> &lt;span style='font-family: monospace'&gt;SandboxScene.theta&lt;/span&gt;</string>
        </property>
        <property name="text">
         <string>Theta (deg)</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
-      <widget class="QSpinBox" name="spinlos_phi">
+     <item row="0" column="1">
+      <widget class="QDoubleSpinBox" name="spinlos_theta">
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="suffix">
-        <string></string>
-       </property>
-       <property name="minimum">
-        <number>-180</number>
-       </property>
-       <property name="maximum">
-        <number>180</number>
-       </property>
-       <property name="singleStep">
-        <number>1</number>
-       </property>
-       <property name="value">
-        <number>0</number>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
-      <widget class="QSpinBox" name="spinlos_theta">
+     <item row="1" column="1">
+      <widget class="QDoubleSpinBox" name="spinlos_phi">
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-       <property name="suffix">
-        <string></string>
-       </property>
-       <property name="minimum">
-        <number>-180</number>
-       </property>
-       <property name="maximum">
-        <number>180</number>
-       </property>
-       <property name="singleStep">
-        <number>1</number>
-       </property>
-       <property name="value">
-        <number>0</number>
        </property>
       </widget>
      </item>
@@ -173,22 +143,5 @@
   <tabstop>cancelButton</tabstop>
  </tabstops>
  <resources/>
- <connections>
-  <connection>
-   <sender>cancelButton</sender>
-   <signal>released()</signal>
-   <receiver>dialogModelExtent</receiver>
-   <slot>close()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>271</x>
-     <y>139</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>161</x>
-     <y>84</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
 </ui>

@@ -103,7 +103,7 @@ class SandboxScene(BaseScene):
         self.evChanged.notify()
 
     def setlos(self, phi, theta):
-        """Set the sandbox's extent in pixels
+        """Set the sandbox's LOS vector
 
         :param phi: phi in degree
         :type phi: int
@@ -114,7 +114,7 @@ class SandboxScene(BaseScene):
             self._log.warning('Cannot change a referenced model!')
             return
 
-        self._log.debug('Changing model LOS to %d px by %d px'
+        self._log.debug('Changing model LOS to %d phi and %d theta'
                         % (phi, theta))
         phi = num.deg2rad(phi)
         theta = num.deg2rad(theta)

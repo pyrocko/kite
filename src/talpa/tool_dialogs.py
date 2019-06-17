@@ -79,7 +79,7 @@ class LosDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot()
     def updateValues(self):
-        print('update los!')
+        print('updated los!')
         self.sandbox.model.setlos(
             self.spinlos_phi.value(),
             self.spinlos_theta.value())
