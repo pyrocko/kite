@@ -144,10 +144,14 @@ The CLI tool :file:`stamps2kite` loads PS velocities from a `StaMPS <https://hom
 StaMPS' data has to be fully processed through and may stem from the master
 project or from one of the processed small baseline pairs. The required files are:
 
-- :file:`ps2.mat`       Meta information and geographical coordinates.
-- :file:`parms.mat`     Meta information about the scene (heading, etc.).
-- :file:`la2.mat`       Look angle data for each pixel.
-- :file:`ps_plot*.mat`  Processed and corrected LOS velocities.
+- :file:`ps2.mat`          Meta information and geographical coordinates.
+- :file:`parms.mat`        Meta information about the scene (heading, etc.).
+- :file:`ps_plot*.mat`     Processed and corrected LOS velocities.
+- :file:`mv2.mat`          Mean velocity's standard deviation.
+
+- :file:`look_angle.1.in`  Look angles for the scene.
+- :file:`width.txt`        Width dimensions of the interferogram and
+- :file:`len.txt`          length.
 
 
 .. code-block :: sh
