@@ -76,6 +76,12 @@ class KiteScenePlot(KitePlot):
             'unitU':
                 ['Scene.los.unitU', lambda sp: sp.scene.los.unitU],
         }
+
+        if model.scene.displacement_px_var is not None:
+            self.components_available['displacement_px_var'] = \
+                ['Scene.displacement_px_var',
+                 lambda sp: sp.scene.displacement_px_var]
+
         self._component = 'displacement'
 
         KitePlot.__init__(self, model=model, los_arrow=True)
@@ -211,6 +217,10 @@ class KiteParamScene(KiteParameterGroup):
              'value': 'displacement',
              'tip': 'Change the displayed component of the displacement field.'
              }
+
+        if model.scene.displacement_px_var is not None:
+            p['values']['displacement_px_var'] = 'displacement_px_var'
+
         component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
         self.pushChild(component)
