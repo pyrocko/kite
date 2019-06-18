@@ -4,6 +4,14 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unrelease
+
+## Added
+- scene displacement pixel variance attribute`displacement_px_var`.
+- quadtree and covariance propagation of `displacement_px_var` towards diagonal.
+- spool to display `displacement_px_var`.
+- More meta information for `stamps2kite`.
+
 ## [1.2.1] 17. June 2019
 
 ### Fixed
