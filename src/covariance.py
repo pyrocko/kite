@@ -444,7 +444,7 @@ class Covariance(object):
             :class:`~kite.Quadtree.nleaves`)
         """
         return num.linalg.inv(self.covariance_matrix)
-    
+
     @property_cached
     def weight_matrix_L2(self):
         """ Weight matrix from full covariance :math:`\\sqrt{cov^{-1}}`.
@@ -454,7 +454,7 @@ class Covariance(object):
             :class:`~kite.Quadtree.nleaves`)
         """
         incov = num.linalg.inv(self.covariance_matrix)
-        return sc.linalg.sqrtm(incov)
+        return sp.linalg.sqrtm(incov)
 
     @property_cached
     def weight_matrix_focal(self):
@@ -512,10 +512,16 @@ class Covariance(object):
                 (coords[:, 0] - coords[:, 0, num.newaxis])**2
                 + (coords[:, 1] - coords[:, 1, num.newaxis])**2)
             cov_matrix = model(dist_matrix, *self.covariance_model)
+
+            # adding variance
             if self.variance < cov_matrix.max():
                 variance = cov_matrix.max()
             else:
                 variance = self.variance
+            if self.quadtree.leaf_mean_px_var is not None:
+                self._log.debug(
+                    'Adding variance from scene.displacement_px_var')
+                variance += self.quadtree.leaf_mean_px_var
             num.fill_diagonal(cov_matrix, variance)
 
             for nx, ny in num.nditer(num.triu_indices_from(dist_matrix)):
@@ -539,6 +545,13 @@ class Covariance(object):
                             self.covariance_model, self.variance,
                             nthreads, self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
+
+            if self.quadtree.leaf_mean_px_var is not None:
+                self._log.debug(
+                    'Adding variance from scene.displacement_px_var')
+                cov_matrix[num.diag_indices_from(cov_matrix)] +=\
+                    self.quadtree.leaf_mean_px_var
+
         else:
             raise TypeError('Covariance calculation %s method not defined!'
                             % method)

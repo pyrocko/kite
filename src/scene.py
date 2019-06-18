@@ -414,6 +414,7 @@ class BaseScene(object):
         self._initLogging()
 
         self._displacement = None
+        self._displacement_px_var = None
         self._phi = None
         self._theta = None
         self._los_factors = None
@@ -423,13 +424,13 @@ class BaseScene(object):
 
         frame_config = kwargs.pop('frame_config', FrameConfig())
 
-        for fattr in ['llLat', 'llLon', 'dLat', 'dLon']:
+        for fattr in ('llLat', 'llLon', 'dLat', 'dLon'):
             coord = kwargs.pop(fattr, None)
             if coord is not None:
                 frame_config.__setattr__(fattr, coord)
         self.frame = Frame(scene=self, config=frame_config)
 
-        for attr in ['displacement', 'theta', 'phi']:
+        for attr in ('displacement', 'displacement_px_var', 'theta', 'phi'):
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.__setattr__(attr, data)
@@ -453,6 +454,21 @@ class BaseScene(object):
         self.rows, self.cols = self._displacement.shape
         self.displacement_mask = None
         self.evChanged.notify()
+
+    @property
+    def displacement_px_var(self):
+        """ Variance of the surface displacement per pixel.
+            Same dimension as displacement.
+
+        :setter: Set standard deviation of of the displacement.
+        :getter: Return the standard deviation matrix.
+        :type: :class:`numpy.ndarray`, ``NxM``
+        """
+        return self._displacement_px_var
+
+    @displacement_px_var.setter
+    def displacement_px_var(self, value):
+        self._displacement_px_var = value
 
     @property_cached
     def displacement_mask(self):

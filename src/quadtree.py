@@ -78,6 +78,15 @@ class QuadNode(object):
         return float(num.nanvar(self.displacement))
 
     @property_cached
+    def mean_px_var(self):
+        """ Variance of displacement
+        :type: float
+        """
+        if self.displacement_px_var is not None:
+            return float(num.nanmean(self.displacement_px_var))
+        return None
+
+    @property_cached
     def corr_median(self):
         """ Standard deviation of node's displacement corrected for median
         :type: float
@@ -154,6 +163,16 @@ class QuadNode(object):
             Faster to slice Scene.displacement_mask?
         """
         return num.isnan(self.displacement)
+
+    @property_cached
+    def displacement_px_var(self):
+        """ Displacement array, slice from :attr:`kite.Scene.displacement`
+        :type: :class:`numpy.ndarray`
+        """
+        if self.scene.displacement_px_var is not None:
+            return self.scene.displacement_px_var[
+                self._slice_rows, self._slice_cols]
+        return None
 
     @property_cached
     def phi(self):
@@ -675,6 +694,17 @@ class Quadtree(object):
         :type: int
         """
         return len(self.leaves)
+
+    @property
+    def leaf_mean_px_var(self):
+        """
+        :getter: Mean pixel variance in each quadtree,
+            if :attr:`kite.Scene.displacement_px_var` is set.
+        :type: :class:`numpy.ndarray`, size ``N``.
+        """
+        if self.scene.displacement_px_var is not None:
+            return num.array([lf.mean_px_var for lf in self.leaves])
+        return None
 
     @property_cached
     def leaf_means(self):
