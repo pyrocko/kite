@@ -266,7 +266,7 @@ project or the processed small baseline pairs. Required files are:
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument(
-        'folder', nargs='?', type=str,
+        'folder', type=str,
         default='.',
         help='StaMPS project folder. Default is current directory.')
     parser.add_argument(
