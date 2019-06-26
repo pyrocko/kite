@@ -39,19 +39,16 @@ def _get_file(dirname, fname):
                           (fname, ', '.join(fns)))
     fn = fns[0]
 
-    log.debug('Got file %s', fn)
+    log.debug('Found file %s', fn)
     return fn
 
 
-def read_mat_data(dirname, **kwargs):
+def read_mat_data(dirname, import_mv2=False, **kwargs):
     # TODO: Add old matlab import
-    data = ADict()
     log.debug('Reading in StaMPS project...')
 
     fn_ps2 = kwargs.get(
         'fn_ps2', _get_file(dirname, 'ps2.mat'))
-    fn_mv2 = kwargs.get(
-        'fn_mv2', _get_file(dirname, 'mv2.mat'))
     fn_ps_plot = kwargs.get(
         'fn_ps_plot', _get_file(dirname, 'ps_plot*.mat'))
     fn_parms = kwargs.get(
@@ -64,23 +61,27 @@ def read_mat_data(dirname, **kwargs):
         'fn_look_angle', _get_file(dirname, 'look_angle.1.in'))
 
     ps2_mat = h5py.File(fn_ps2, 'r')
-    mv2_mat = h5py.File(fn_mv2, 'r')
     ps_plot_mat = h5py.File(fn_ps_plot, 'r')
-
     params_mat = h5py.File(fn_parms, 'r')
 
+    data = ADict()
     data.ll_coords = num.asarray(ps2_mat['ll0'])
     data.radar_coords = num.asarray(ps2_mat['ij'])
     data.ps_mean_v = num.asarray(ps_plot_mat['ph_disp']).ravel()
-    data.ps_mean_std = num.asarray(mv2_mat['mean_v_std']).ravel()
 
     geo_coords = num.asarray(ps2_mat['lonlat'])
-    data.lats = geo_coords[0, :]
-    data.lons = geo_coords[1, :]
+    data.lons = geo_coords[0, :]
+    data.lats = geo_coords[1, :]
 
     days = num.asarray(ps2_mat['day'])
-    data.tmin = timedelta(days=days.min() - 366) + datetime(1, 1, 1)
-    data.tmax = timedelta(days=days.max() - 366) + datetime(1, 1, 1)
+    data.tmin = timedelta(days=days.min() - 366.25) + datetime(1, 1, 1)
+    data.tmax = timedelta(days=days.max() - 366.25) + datetime(1, 1, 1)
+
+    if import_mv2:
+        fn_mv2 = kwargs.get(
+            'fn_mv2', _get_file(dirname, 'mv2.mat'))
+        mv2_mat = h5py.File(fn_mv2, 'r')
+        data.ps_mean_std = num.asarray(mv2_mat['mean_v_std']).ravel()
 
     with open(fn_len) as rl, open(fn_width) as rw:
         data.px_length = int(rl.readline())
@@ -99,23 +100,24 @@ def bin_ps_data(data, bins=(800, 800)):
         statistic='mean', bins=bins)
 
     log.debug('Binning radar coordinates...')
-    bin_radar_x, _, _, _ = stats.binned_statistic_2d(
+    bin_radar_i, _, _, _ = stats.binned_statistic_2d(
         data.lats, data.lons, data.radar_coords[1],
         statistic='mean', bins=bins)
-    bin_radar_y, _, _, _ = stats.binned_statistic_2d(
+    bin_radar_j, _, _, _ = stats.binned_statistic_2d(
         data.lats, data.lons, data.radar_coords[2],
         statistic='mean', bins=bins)
 
-    log.debug('Binning mean velocity variance...')
-    bin_mean_std, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.ps_mean_std,
-        statistic='mean', bins=bins)
+    if 'ps_mean_std' in data.keys():
+        log.debug('Binning mean velocity variance...')
+        bin_mean_std, _, _, _ = stats.binned_statistic_2d(
+            data.lats, data.lons, data.ps_mean_std,
+            statistic='mean', bins=bins)
+        data.bin_mean_var = bin_mean_std**2  # We want variance
 
     data.bin_ps_mean_v = bin_vels
-    data.bin_mean_var = bin_mean_std**2  # We want variance
 
-    data.bin_radar_x = bin_radar_x
-    data.bin_radar_y = bin_radar_y
+    data.bin_radar_i = bin_radar_i
+    data.bin_radar_j = bin_radar_j
 
     data.bin_edg_lat = edg_lat
     data.bin_edg_lon = edg_lon
@@ -125,15 +127,25 @@ def bin_ps_data(data, bins=(800, 800)):
 
 def interpolate_look_angles(data):
     log.info('Interpolating look angles from radar coordinates...')
+    log.debug('Radar coordinates extent width %d; length %d',
+              data.px_width, data.px_length)
+    log.debug('Radar coordinates data: length %d - %d; width %d - %d',
+              data.radar_coords[1].min(), data.radar_coords[1].max(),
+              data.radar_coords[0].min(), data.radar_coords[0].max())
+    log.debug('Binned radar coordinate ranges: length %d - %d; width %d - %d',
+              num.nanmin(data.bin_radar_i), num.nanmax(data.bin_radar_i),
+              num.nanmin(data.bin_radar_j), num.nanmax(data.bin_radar_j))
+
     width_coords = num.linspace(0, data.px_width, 50)
     len_coords = num.linspace(0, data.px_length, 50)
     coords = num.asarray(num.meshgrid(width_coords, len_coords))\
         .reshape(2, 2500)
 
     radar_coords = num.vstack(
-        [data.bin_radar_y.ravel(), data.bin_radar_x.ravel()])
+        [data.bin_radar_j.ravel() - data.radar_coords[0].min(),
+         data.bin_radar_i.ravel() - data.radar_coords[1].min()])
 
-    interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles*d2r)
+    interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles)
     data.bin_look_angles = interp(radar_coords.T).reshape(
         *data.bin_ps_mean_v.shape)
     return interp
@@ -163,7 +175,7 @@ def stamps2kite(dirname='.', bins=(800, 800), convert_m=True, import_var=False,
         scene. Defaults to ``ps2.mat``.
     :type fn_ps2: str
     :param fn_mv2: :file:`mv2.mat` file with mean velocity standard deviations
-        of every PS point. Defaults to ``mv2.mat``.
+        of every PS point, created by `ps_plot(...)`. Defaults to ``mv2.mat``.
     :type fn_mv2: str
     :param fn_ps_plot: Processed output from StaMPS ``ps_plot`` function, e.g.
         :file:`ps_plot*.mat`. Defaults to ``ps_plot*.mat``.
@@ -188,18 +200,20 @@ def stamps2kite(dirname='.', bins=(800, 800), convert_m=True, import_var=False,
     :returns: Kite Scene from the StaMPS data
     :rtype: :class:`kite.Scene`
     '''
-    data = read_mat_data(dirname, **kwargs)
+    data = read_mat_data(dirname, import_mv2=import_var, **kwargs)
     log.info('Found a StaMPS project at %s', op.abspath(dirname))
 
     if convert_m:
         data.ps_mean_v /= 1e3
+
+    if convert_m and import_var:
         data.ps_mean_std /= 1e3
 
     bin_ps_data(data, bins=bins)
     interpolate_look_angles(data)
 
     log.debug('Processing of LOS angles')
-    data.bin_theta = data.bin_look_angles
+    data.bin_theta = data.bin_look_angles * d2r
 
     phi_angle = -data.heading * d2r + num.pi
     if phi_angle > num.pi:
@@ -222,13 +236,13 @@ def stamps2kite(dirname='.', bins=(800, 800), convert_m=True, import_var=False,
     config.meta.time_slave = data.tmax.timestamp()
 
     scene = Scene(
-        theta=data.bin_theta.T,
-        phi=data.bin_phi.T,
-        displacement=data.bin_ps_mean_v.T,
+        theta=data.bin_theta,
+        phi=data.bin_phi,
+        displacement=data.bin_ps_mean_v,
         config=config)
 
     if import_var:
-        scene.displacement_px_var = data.bin_mean_var.T
+        scene.displacement_px_var = data.bin_mean_var
 
     return scene
 
@@ -256,8 +270,8 @@ project or the processed small baseline pairs. Required files are:
 
  - ps2.mat          Meta information and geographical coordinates.
  - parms.mat        Meta information about the scene (heading, etc.).
- - ps_plot*.mat     Processed and corrected LOS velocities.
- - mv2.mat          Mean velocity's standard deviation.
+ - ps_plot*.mat     Processed mean LOS velocities from ps_plot(..., -1).
+ - mv2.mat          Mean velocity's standard deviation from ps_plot(..., -1).
 
  - look_angle.1.in  Look angles for the scene.
  - width.txt        Width dimensions of the interferogram and
@@ -268,23 +282,19 @@ project or the processed small baseline pairs. Required files are:
     parser.add_argument(
         'folder', type=str,
         default='.',
-        help='StaMPS project folder. Default is current directory.')
+        help='StaMPS project folder.')
     parser.add_argument(
-        '--resolution', '-r', nargs=2, metavar=('pxE', 'pxN'),
+        '--resolution', '-r', nargs=2, metavar=('pxN', 'pxE'),
         dest='resolution', type=int, default=(800, 800),
-        help='resolution of the output grid in East and North (pixels). '
+        help='resolution of the output grid in North and East (pixels). '
              'Default is 800 by 800 px.')
     parser.add_argument(
         '--save', '-s', default=None, type=str, dest='save',
-        help='filename to save the Kite scene to. If not defined, the scene'
+        help='filename to save the Kite scene to. If not given, the scene'
              ' will be opened in spool GUI.')
     parser.add_argument(
         '--force', '-f', default=False, action='store_true', dest='force',
         help='force overwrite of an existing scene.')
-    parser.add_argument(
-        '-v', action='count',
-        default=0,
-        help='verbosity, add mutliple to increase verbosity.')
     parser.add_argument(
         '--keep-mm', action='store_true',
         default=False,
@@ -294,6 +304,10 @@ project or the processed small baseline pairs. Required files are:
         default=False,
         help='import the variance from mv2.mat, which is added to Kite\'s'
              ' scene covariance matrix.')
+    parser.add_argument(
+        '-v', action='count',
+        default=0,
+        help='verbosity, add mutliple to increase verbosity.')
 
     args = parser.parse_args()
 
