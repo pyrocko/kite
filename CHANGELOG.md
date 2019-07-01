@@ -4,6 +4,11 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Fixed
+- `stamps2kite` Backward compat MATLAB import
+
 ## [1.2.2] 26. June 2019
 
 ### Added

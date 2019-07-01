@@ -4,7 +4,7 @@ from os import path as op
 from datetime import datetime, timedelta
 
 import numpy as num
-from scipy import stats, interpolate
+from scipy import stats, interpolate, io
 
 try:
     import h5py
@@ -43,6 +43,15 @@ def _get_file(dirname, fname):
     return fn
 
 
+def _read_mat(filename):
+    try:
+        mat = h5py.File(filename, 'r')
+    except OSError:
+        log.debug('using old scipy import for %s', filename)
+        mat = io.loadmat(filename)
+    return mat
+
+
 def read_mat_data(dirname, import_mv2=False, **kwargs):
     # TODO: Add old matlab import
     log.debug('Reading in StaMPS project...')
@@ -60,9 +69,9 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
     fn_look_angle = kwargs.get(
         'fn_look_angle', _get_file(dirname, 'look_angle.1.in'))
 
-    ps2_mat = h5py.File(fn_ps2, 'r')
-    ps_plot_mat = h5py.File(fn_ps_plot, 'r')
-    params_mat = h5py.File(fn_parms, 'r')
+    ps2_mat = _read_mat(fn_ps2)
+    ps_plot_mat = _read_mat(fn_ps_plot)
+    params_mat = _read_mat(fn_parms)
 
     data = ADict()
     data.ll_coords = num.asarray(ps2_mat['ll0'])
