@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+- `Scene` added `__i/add__`, `__i/sub__` and `__neg__` standard operators.
+
 ### Fixed
 - `stamps2kite` Backward compat MATLAB import
 

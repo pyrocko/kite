@@ -3,6 +3,7 @@ import logging
 import numpy as num
 import utm
 import os.path as op
+import copy
 from datetime import datetime as dt
 
 from pyrocko import guts
@@ -590,23 +591,6 @@ class BaseScene(object):
                 * num.sin(self.phi)
         return self._los_factors
 
-    def __add__(self, other):
-        if not self.frame == other.frame:
-            raise AttributeError('Scene frames do not align!')
-        self.displacement += other.displacement
-
-        tmin = self.meta.time_master \
-            if self.meta.time_master < other.meta.time_master \
-            else other.meta.time_master
-
-        tmax = self.meta.time_slave \
-            if self.meta.time_slave > other.meta.time_slave \
-            else other.meta.time_slave
-
-        self.meta.time_master = tmin
-        self.meta.time_slave = tmax
-        return self
-
     def get_ramp_coefficients(self):
         '''Fit plane through the displacement data.
 
@@ -661,8 +645,41 @@ class BaseScene(object):
                 phi=self.phi,
                 displacement=self.displacement - ramp)
 
+    def __neg__(self):
+        ret = copy.deepcopy(self)
+        ret.displacement *= -1
+        return ret
+
+    def __add__(self, other, copy_obj=True):
+        if copy_obj:
+            ret = copy.deepcopy(self)
+        else:
+            ret = self
+
+        if not ret.frame == other.frame:
+            raise ValueError('Scene frames do not align!')
+        ret.displacement += other.displacement
+
+        tmin = ret.meta.time_master \
+            if ret.meta.time_master < other.meta.time_master \
+            else other.meta.time_master
+
+        tmax = ret.meta.time_slave \
+            if ret.meta.time_slave > other.meta.time_slave \
+            else other.meta.time_slave
+
+        ret.meta.time_master = tmin
+        ret.meta.time_slave = tmax
+        return ret
+
+    def __sub__(self, other):
+        return self.__add__(-other)
+
+    def __isub__(self, scene):
+        return self.__add__(-scene, copy_obj=False)
+
     def __iadd__(self, scene):
-        return self.__add__(scene)
+        return self.__add__(scene, copy_obj=False)
 
 
 class Scene(BaseScene):
