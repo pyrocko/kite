@@ -764,7 +764,7 @@ class KiteParamCovariance(KiteParameterGroup):
         p = {'name': 'spatial_bins',
              'value': model.covariance.config.spatial_bins,
              'type': 'int',
-             'limits': (25, 500),
+             'limits': (1, 500),
              'step': 5,
              'edditable': True,
              'tip': CovarianceConfig.spatial_bins.help
@@ -779,7 +779,7 @@ class KiteParamCovariance(KiteParameterGroup):
         p = {'name': 'spatial_pairs',
              'value': model.covariance.config.spatial_pairs,
              'type': 'int',
-             'limits': (0, 1000000),
+             'limits': (1, 1000000),
              'step': 50000,
              'edditable': True,
              'tip': CovarianceConfig.spatial_pairs.help

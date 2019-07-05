@@ -455,7 +455,6 @@ class Quadtree(object):
         self.config = config
         self.setCorrection(self.config.correction)
 
-
         self.evConfigChanged.notify()
 
     def setCorrection(self, correction='mean'):
@@ -493,6 +492,8 @@ class Quadtree(object):
 
         self._initTree()
         if self.nleaves == 0:
+            self._log.warning('No leaves in default quadtree,'
+                              ' setting allowed_nan=1.')
             self.nan_allowed = 1.
 
         self.evChanged.notify()
