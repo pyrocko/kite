@@ -455,6 +455,7 @@ class Quadtree(object):
         self.config = config
         self.setCorrection(self.config.correction)
 
+
         self.evConfigChanged.notify()
 
     def setCorrection(self, correction='mean'):
@@ -475,10 +476,9 @@ class Quadtree(object):
         :raises: AttributeError
         """
         if correction not in self._displacement_corrections.keys():
-            raise AttributeError('Method %s not in %s'
-                                 % (correction,
-                                    self._displacement_corrections))
-        self._log.debug('Changing to split method \'%s\'' % correction)
+            raise AttributeError('Method %s not in %s', correction,
+                                 self._displacement_corrections)
+        self._log.debug('Changing to split method \'%s\'', correction)
 
         self.config.correction = correction
         self._corr_func = self._displacement_corrections[correction][1]
@@ -492,6 +492,9 @@ class Quadtree(object):
         self.epsilon = self.config.epsilon or self._epsilon_init
 
         self._initTree()
+        if self.nleaves == 0:
+            self.nan_allowed = 1.
+
         self.evChanged.notify()
 
     def clearLeaves(self):
@@ -507,9 +510,8 @@ class Quadtree(object):
         for b in self._base_nodes:
             b.createTree()
 
-        self._log.debug(
-            'Tree created, %d nodes [%0.4f s]' %
-            (self.nnodes, time.time() - t0))
+        self._log.debug('Tree created, %d nodes [%0.4f s]',
+                        self.nnodes, time.time() - t0)
 
     @property
     def epsilon(self):
@@ -532,8 +534,8 @@ class Quadtree(object):
             return
         if value < self.epsilon_min:
             self._log.warning(
-                'Epsilon is out of bounds [%0.6f], epsilon_min %0.6f' %
-                (value, self.epsilon_min))
+                'Epsilon is out of bounds [%0.6f], epsilon_min %0.6f',
+                value, self.epsilon_min)
             return
         self.clearLeaves()
         self.clearLeafBlacklist()
@@ -857,7 +859,8 @@ class Quadtree(object):
         :getter: Quadtree efficiency as :math:`N_{full} / N_{leaves}`
         :type: float
         """
-        return (self.scene.rows * self.scene.cols) / self.nleaves
+        return (self.scene.rows * self.scene.cols) / \
+            (self.nleaves if self.nleaves else 1)
 
     @property
     def reduction_rms(self):
@@ -868,6 +871,8 @@ class Quadtree(object):
         :getter: The reduction RMS error
         :type: float
         """
+        if num.all(num.isnan(self.leaf_matrix_means)):
+            return num.inf
         return num.sqrt(num.nanmean((self.scene.displacement -
                                      self.leaf_matrix_means)**2))
 
@@ -878,7 +883,7 @@ class Quadtree(object):
             2, num.ceil(num.log(num.min(self.displacement.shape))
                         / num.log(2)))
         nx, ny = num.ceil(num.array(self.displacement.shape) / init_length)
-        self._log.debug('Creating %d base nodes' % (nx * ny))
+        self._log.debug('Creating %d base nodes', nx * ny)
 
         for ir in range(int(nx)):
             for ic in range(int(ny)):
@@ -930,7 +935,7 @@ class Quadtree(object):
         :param filename: export to path
         :type filename: string
         """
-        self._log.debug('Exporting Quadtree.leaves to %s' % filename)
+        self._log.debug('Exporting Quadtree.leaves to %s', filename)
         with open(filename, mode='w') as f:
             f.write(
                 '# node_id, focal_point_E, focal_point_N, theta, phi, '

@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - `stamps2kite` Backward compat MATLAB import
+- `covariance`/`quadtree` more defensive against sparsely correlated scenes.
 
 ## [1.2.2] 26. June 2019
 

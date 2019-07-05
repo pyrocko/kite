@@ -359,6 +359,8 @@ class Covariance(object):
         node_selection = [n for n in self.quadtree.nodes
                           if n.npixel > NOISE_PATCH_MIN_PX
                           and n.nan_fraction < NOISE_PATCH_MAX_NAN]
+        if not node_selection:
+            node_selection = self.quadtree.leaves
 
         stdmax = max([n.std for n in node_selection])
         lmax = max([n.std for n in node_selection])
