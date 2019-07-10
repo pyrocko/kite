@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import os
+import sys
 import tempfile
 
 from setuptools import setup, Extension
@@ -18,7 +19,7 @@ except ImportError:
 version = '1.2.2'
 
 
-def _check_for_openmp():
+def _have_openmp():
     """Check  whether the default compiler supports OpenMP.
     This routine is adapted from pynbody // yt.
     Thanks to Nathan Goldbaum and Andrew Pontzen.
@@ -80,13 +81,15 @@ export CC='/usr/local/bin/gcc'
 python setup.py clean
 python setup.py build
 ''')
-    print ('Continuing your build without OpenMP...\n')
+    print('Continuing your build without OpenMP...\n')
     return False
 
 
-if _check_for_openmp():
+if _have_openmp():
     omp_arg = ['-fopenmp']
     omp_lib = ['-lgomp']
+    if sys.platform.startswith('darwin'):
+        omp_lib.append('-Wl,-rpath,/usr/local/opt/gcc/lib/gcc/8/')
 else:
     omp_arg = []
     omp_lib = []
