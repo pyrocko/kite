@@ -86,10 +86,11 @@ python setup.py build
 
 
 if _have_openmp():
+    path2gomp = os.environ.get('GOMPLIB')
     omp_arg = ['-fopenmp']
-    omp_lib = ['-lgomp']
+    omp_lib = ['-L{}'.format(path2gomp), '-lgomp']
     if sys.platform.startswith('darwin'):
-        omp_lib.append('-Wl,-rpath,/usr/local/opt/gcc/lib/gcc/8/')
+        omp_lib.append('-Wl,-rpath,{}'.format(path2gomp))
 else:
     omp_arg = []
     omp_lib = []
