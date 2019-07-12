@@ -86,11 +86,24 @@ python setup.py build
 
 
 if _have_openmp():
-    path2gomp = os.environ.get('GOMPLIB')
+    
     omp_arg = ['-fopenmp']
-    omp_lib = ['-L{}'.format(path2gomp), '-lgomp']
-    if sys.platform.startswith('darwin'):
-        omp_lib.append('-Wl,-rpath,{}'.format(path2gomp))
+    omp_lib = ['-lgomp']
+
+    if platform.uname()[0] == 'Darwin':
+        gomp_lib = os.environ.get('GOMPLIB', None)
+        if gomp_lib:
+            omp_lib.insert(0, '-L{}'.format(gomp_lib))
+            omp_lib.append('-Wl,-rpath,{}'.format(gomp_lib))
+
+        else:
+            print('''Found the gcc compiler on MacOS but cannot find the
+OpenMP libraries path at environment variable GOMPLIB.
+''')
+            print('Continuing your build without OpenMP...\n')
+            omp_arg = []
+            omp_lib = []
+        
 else:
     omp_arg = []
     omp_lib = []
