@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - `Scene` added `__i/add__`, `__i/sub__` and `__neg__` standard operators.
+- Talpa dialog to change LOS vectors (phi and theta) of forward modelled scene (if reference scene is not active)
 
 ### Fixed
 - `stamps2kite` Backward compat MATLAB import.
