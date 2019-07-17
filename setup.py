@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-import sys
+import platform
 import tempfile
 
 from setuptools import setup, Extension
@@ -61,7 +61,6 @@ int main() {
         return True
 
     import multiprocessing
-    import platform
     if multiprocessing.cpu_count() > 1:
         print('''WARNING
 OpenMP support is not available in your default C compiler, even though
@@ -86,7 +85,7 @@ python setup.py build
 
 
 if _have_openmp():
-    
+
     omp_arg = ['-fopenmp']
     omp_lib = ['-lgomp']
 
@@ -103,7 +102,7 @@ OpenMP libraries path at environment variable GOMPLIB.
             print('Continuing your build without OpenMP...\n')
             omp_arg = []
             omp_lib = []
-        
+
 else:
     omp_arg = []
     omp_lib = []
