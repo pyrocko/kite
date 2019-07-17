@@ -4,13 +4,14 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [1.2.3] 17. July 2019
 
 ### Added
 - `Scene` added `__i/add__`, `__i/sub__` and `__neg__` standard operators.
-- Talpa dialog to change LOS vectors (phi and theta) of forward modelled scene (if reference scene is not active)
+- Talpa dialog to change LOS vectors (phi and theta) of forward modelled scene.
 
 ### Fixed
+- MacOS gcc install with OpenMP.
 - `stamps2kite` Backward compat MATLAB import.
 - `covariance`/`quadtree` more defensive against sparsely correlated scenes.
 - LiCSAR import more defensive data handling.
