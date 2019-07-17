@@ -47,6 +47,7 @@
      <string>Tools</string>
     </property>
     <addaction name="actionChangeExtent"/>
+    <addaction name="actionChangeLos"/>
     <addaction name="actionLoadReferenceScene"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
@@ -126,6 +127,11 @@
   <action name="actionChangeExtent">
    <property name="text">
     <string>Change SandboxScene extent</string>
+   </property>
+  </action>
+  <action name="actionChangeLos">
+   <property name="text">
+    <string>Change SandboxScene LOS</string>
    </property>
   </action>
   <action name="actionMisfitScene">

@@ -102,6 +102,29 @@ class SandboxScene(BaseScene):
 
         self.evChanged.notify()
 
+    def setlos(self, phi, theta):
+        """Set the sandbox's LOS vector
+
+        :param phi: phi in degree
+        :type phi: int
+        :param theta: theta in degree
+        :type theta: int
+        """
+        if self.reference is not None:
+            self._log.warning('Cannot change a referenced model!')
+            return
+
+        self._log.debug('Changing model LOS to %d phi and %d theta'
+                        % (phi, theta))
+        phi = num.deg2rad(phi)
+        theta = num.deg2rad(theta)
+        self.theta = num.ones(num.shape(self.theta))*theta
+        self.phi = num.ones(num.shape(self.phi))*phi
+        self.frame.updateExtent()
+
+        self._clearModel()
+        self.evChanged.notify()
+
     @property
     def north(self):
         if not self._initialised:
