@@ -996,8 +996,8 @@ class LiCSAR(SceneIO):
         dataset = gdal.Open(filename, gdal.GA_ReadOnly)
         georef = dataset.GetGeoTransform()
 
-        llLat = georef[0]
-        llLon = georef[3] + dataset.RasterYSize * georef[5]
+        llLon = georef[0]
+        llLat = georef[3] + dataset.RasterYSize * georef[5]
 
         c = self.container
 
@@ -1007,11 +1007,29 @@ class LiCSAR(SceneIO):
         c.frame.dE = georef[1]
         c.frame.dN = abs(georef[5])
 
-        c.displacement = self._readBandData(dataset) / 1e2  # data is in cm
+        displacement = self._readBandData(dataset)
+        displacement[displacement == -9999.] = num.nan
+        c.displacement = displacement / 1e2  # data is in cm
 
-        los_n = self._getLOS(filename, '*.geo.N.tif')
-        los_e = self._getLOS(filename, '*.geo.E.tif')
-        los_u = self._getLOS(filename, '*.geo.U.tif')
+        try:
+            los_n = self._getLOS(filename, '*.geo.N.tif')
+            los_e = self._getLOS(filename, '*.geo.E.tif')
+            los_u = self._getLOS(filename, '*.geo.U.tif')
+        except ImportError:
+            self._log.warning(
+                'Cannot find LOS angle files *.geo.[NEU].tif,'
+                ' using static Sentinel-1 descending angles.')
+
+            heading = 83.
+            incident = 50.
+
+            un = num.sin(d2r*incident) * num.cos(d2r*heading)
+            ue = num.sin(d2r*incident) * num.sin(d2r*heading)
+            uz = num.cos(d2r*incident)
+
+            los_n = num.full_like(c.displacement, un)
+            los_e = num.full_like(c.displacement, ue)
+            los_u = num.full_like(c.displacement, uz)
 
         c.phi = num.arctan2(los_n, los_e)
         c.theta = num.arccos(los_u)
@@ -1021,8 +1039,11 @@ class LiCSAR(SceneIO):
         return c
 
     def validate(self, filename, **kwargs):
-        dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-        meta = dataset.GetMetadata()
+        try:
+            dataset = gdal.Open(filename, gdal.GA_ReadOnly)
+            meta = dataset.GetMetadata()
+        except Exception:
+            return False
         if 'TIFFTAG_DATETIME' in meta.keys():
             return True
         else:
