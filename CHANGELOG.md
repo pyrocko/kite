@@ -10,8 +10,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - `Scene` added `__i/add__`, `__i/sub__` and `__neg__` standard operators.
 
 ### Fixed
-- `stamps2kite` Backward compat MATLAB import
+- `stamps2kite` Backward compat MATLAB import.
 - `covariance`/`quadtree` more defensive against sparsely correlated scenes.
+- LiCSAR import more defensive data handling.
 
 ## [1.2.2] 26. June 2019
 
