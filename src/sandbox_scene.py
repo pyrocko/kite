@@ -255,6 +255,7 @@ class SandboxScene(BaseScene):
         :type filename: str
         """
         from .scene import Scene
+        print(filename)
         self._log.debug('Loading reference scene from %s', filename)
         scene = Scene.load(filename)
         self.setReferenceScene(scene)
@@ -270,11 +271,12 @@ class SandboxScene(BaseScene):
         """
         self.config.frame = scene.config.frame
 
+        self.setExtent(scene.cols, scene.rows)
         self.frame._updateConfig()
-        self.setExtent(self.frame.cols, self.frame.rows)
 
         self.phi = scene.phi
         self.theta = scene.theta
+        self._los_factors = None
         self.reference = Reference(self, scene)
         self._log.debug(
             'Reference scene set to scene.id:%s', scene.meta.scene_id)
