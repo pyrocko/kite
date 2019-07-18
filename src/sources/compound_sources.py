@@ -1,8 +1,11 @@
 import numpy as num
 
+from pyrocko.guts import Float
+import pyrocko.orthodrome as od
+
 from . import compound_engine as ce
 from .base import SandboxSource, SourceProcessor
-from pyrocko.guts import Float
+
 
 d2r = num.pi / 180.
 r2d = 180. / num.pi
@@ -50,9 +53,17 @@ class EllipsoidSource(SandboxSource):
         return V
 
     def ECMParameters(self):
+        if self._sandbox:
+            east_shift, north_shift = od.latlon_to_ne_numpy(
+                self._sandbox.frame.llLat, self._sandbox.frame.llLon,
+                self.lat, self.lon)
+        else:
+            east_shift = 0.
+            north_shift = 0.
+
         params = {
-            'x0': self.easting,
-            'y0': self.northing,
+            'x0': self.easting + east_shift,
+            'y0': self.northing + north_shift,
             'z0': self.depth,
             'rotx': self.rotation_x,
             'roty': self.rotation_y,
@@ -99,9 +110,17 @@ class PointCompoundSource(SandboxSource):
         return (self.dVx + self.dVy + self.dVz) / 1.8
 
     def pointCDMParameters(self):
+        if self._sandbox:
+            east_shift, north_shift = od.latlon_to_ne_numpy(
+                self._sandbox.frame.llLat, self._sandbox.frame.llLon,
+                self.lat, self.lon)
+        else:
+            east_shift = 0.
+            north_shift = 0.
+
         params = {
-            'x0': self.easting,
-            'y0': self.northing,
+            'x0': self.easting + east_shift,
+            'y0': self.northing + north_shift,
             'z0': self.depth,
             'rotx': self.rotation_x,
             'roty': self.rotation_y,
@@ -118,13 +137,15 @@ class CompoundModelProcessor(SourceProcessor):
 
     __implements__ = 'CompoundModel'
 
-    def process(self, sources, coords, nthreads=0):
+    def process(self, sources, sandbox, nthreads=0):
         result = {
             'processor_profile': dict(),
-            'displacement.e': num.zeros((coords.shape[0])),
-            'displacement.n': num.zeros((coords.shape[0])),
-            'displacement.d': num.zeros((coords.shape[0])),
+            'displacement.e': num.zeros(sandbox.frame.npixel),
+            'displacement.n': num.zeros(sandbox.frame.npixel),
+            'displacement.d': num.zeros(sandbox.frame.npixel),
         }
+
+        coords = sandbox.frame.coordinatesMeter
 
         for src in sources:
             if isinstance(src, EllipsoidSource):

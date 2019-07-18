@@ -210,8 +210,8 @@ class DisplacementPlot(pg.PlotItem):
     def transFromFrame(self):
         self.image.resetTransform()
         self.image.scale(
-            self.sandbox.frame.dE,
-            self.sandbox.frame.dN)
+            self.sandbox.frame.dEmeter,
+            self.sandbox.frame.dNmeter)
 
     @QtCore.pyqtSlot()
     def addSourceROIS(self):

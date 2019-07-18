@@ -1,6 +1,7 @@
 import numpy as num
 
 from kite.util import Subject
+from pyrocko import orthodrome as od
 from pyrocko.guts import Object, Float
 
 d2r = num.pi / 180.
@@ -10,6 +11,12 @@ km = 1e3
 
 class SandboxSource(Object):
 
+    lat = Float.T(
+        default=0.,
+        help='Latitude in [deg]')
+    lon = Float.T(
+        default=0.,
+        help='Longitude in [deg]')
     easting = Float.T(
         default=0.,
         help='Easting in [m]')
@@ -24,10 +31,18 @@ class SandboxSource(Object):
         Object.__init__(self, *args, **kwargs)
         self._cached_result = None
         self.evParametersChanged = Subject()
+        self._sandbox = None
 
     def parametersUpdated(self):
         self._cached_result = None
         self.evParametersChanged.notify()
+
+    def getSandboxOffset(self):
+        if not self._sandbox or (self.lat == 0. and self.lon == 0.):
+            return 0., 0.
+        return od.latlon_to_ne_numpy(
+                self._sandbox.frame.llLat, self._sandbox.frame.llLon,
+                self.lat, self.lon)
 
     def getParametersArray(self):
         raise NotImplementedError
@@ -72,8 +87,11 @@ class SandboxSourceRectangular(SandboxSource):
         coords[3, 0] = coords[0, 0] - c_strike * c_dip * self.width
         coords[3, 1] = coords[0, 1] + s_strike * c_dip * self.width
 
-        coords[:, 0] += self.easting
-        coords[:, 1] += self.northing
+        east_shift, north_shift = self.getSandboxOffset()
+
+        coords[:, 0] += self.easting + east_shift
+        coords[:, 1] += self.northing + north_shift
+
         return coords
 
     @property
@@ -81,8 +99,10 @@ class SandboxSourceRectangular(SandboxSource):
         yield self
 
     @classmethod
-    def from_pyrocko_source(cls, source, store_dir=None, **kwargs):
+    def fromPyrockoSource(cls, source, store_dir=None, **kwargs):
         d = dict(
+            lat=source.lat,
+            lon=source.lon,
             northing=source.north_shift,
             easting=source.east_shift,
             depth=source.depth,

@@ -15,6 +15,8 @@ from kite.sources import (DislocProcessor, PyrockoProcessor,
 
 __processors__ = [DislocProcessor, PyrockoProcessor, CompoundModelProcessor]
 km = 1e3
+d2r = num.pi / 180.
+r2d = 180. / num.pi
 
 
 class SandboxSceneConfig(Object):
@@ -43,7 +45,7 @@ class SandboxScene(BaseScene):
         self._initialised = False
 
         self.config = config if config else SandboxSceneConfig()
-        BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
+        super().__init__(frame_config=self.config.frame, **kwargs)
 
         self.reference = None
         self._los_factors = None
@@ -102,7 +104,7 @@ class SandboxScene(BaseScene):
 
         self.evChanged.notify()
 
-    def setlos(self, phi, theta):
+    def setLOS(self, phi, theta):
         """Set the sandbox's LOS vector
 
         :param phi: phi in degree
@@ -114,12 +116,11 @@ class SandboxScene(BaseScene):
             self._log.warning('Cannot change a referenced model!')
             return
 
-        self._log.debug('Changing model LOS to %d phi and %d theta'
-                        % (phi, theta))
-        phi = num.deg2rad(phi)
-        theta = num.deg2rad(theta)
-        self.theta = num.ones(num.shape(self.theta))*theta
-        self.phi = num.ones(num.shape(self.phi))*phi
+        self._log.debug(
+            'Changing model LOS to %d phi and %d theta', phi, theta)
+
+        self.theta = num.full_like(self.theta, theta*r2d)
+        self.phi = num.full_like(self.phi, phi*r2d)
         self.frame.updateExtent()
 
         self._clearModel()
@@ -168,6 +169,8 @@ class SandboxScene(BaseScene):
         """
         if source not in self.sources:
             self.sources.append(source)
+        source._sandbox = self
+
         source.evParametersChanged.subscribe(self._clearModel)
         self._clearModel()
 
@@ -188,9 +191,7 @@ class SandboxScene(BaseScene):
 
     def processSources(self):
         """ Process displacement sources and update displacements """
-        result = self._process(
-            self.frame.coordinates,
-            self.sources)
+        result = self._process(self.sources)
 
         self._north += result['north'].reshape(self.rows, self.cols)
         self._east += result['east'].reshape(self.rows, self.cols)
@@ -198,12 +199,12 @@ class SandboxScene(BaseScene):
         self._initialised = True
 
     def processCustom(self, coordinates, sources, result_dict=None):
-        return self._process(coordinates, sources, result_dict)
+        return self._process(sources, result_dict)
 
-    def _process(self, coordinates, sources, result=None):
+    def _process(self, sources, result=None):
         if result is None:
             result = num.zeros(
-                coordinates.shape[0],
+                self.frame.npixel,
                 dtype=[('north', num.float64),
                        ('east', num.float64),
                        ('down', num.float64)])
@@ -224,20 +225,20 @@ class SandboxScene(BaseScene):
 
             if processor is None:
                 self._log.warning(
-                    'Could not find source processor for %s' % impl)
+                    'Could not find source processor for %s', impl)
                 continue
 
             t0 = time.time()
 
             proc_result = processor(self).process(
                 proc_sources,
-                coordinates,
+                sandbox=self,
                 nthreads=0)
 
-            src_type = proc_sources[0].__class__.__name__
-            self._log.debug('Processed %s (nsources:%d) using %s [%.4f s]'
-                            % (src_type, len(proc_sources),
-                               processor.__name__, time.time() - t0))
+            src_name = proc_sources[0].__class__.__name__
+            self._log.debug('Processed %s (nsources:%d) using %s [%.4f s]',
+                            src_name, len(proc_sources),
+                            processor.__name__, time.time() - t0)
 
             result['north'] += proc_result['displacement.n']
             result['east'] += proc_result['displacement.e']
@@ -254,7 +255,7 @@ class SandboxScene(BaseScene):
         :type filename: str
         """
         from .scene import Scene
-        self._log.debug('Loading reference scene from %s' % filename)
+        self._log.debug('Loading reference scene from %s', filename)
         scene = Scene.load(filename)
         self.setReferenceScene(scene)
         self.config.reference_scene = filename
@@ -267,14 +268,17 @@ class SandboxScene(BaseScene):
         :param scene: Kite scene
         :type scene: :class:`kite.Scene`
         """
-        self.frame._updateConfig(scene.frame.config)
-        self.setExtent(scene.cols, scene.rows)
+        self.config.frame = scene.config.frame
+
+        self.frame._updateConfig()
+        self.setExtent(self.frame.cols, self.frame.rows)
 
         self.phi = scene.phi
         self.theta = scene.theta
         self.reference = Reference(self, scene)
-        self._log.debug('Reference scene set to scene.id:%s'
-                        % scene.meta.scene_id)
+        self._log.debug(
+            'Reference scene set to scene.id:%s', scene.meta.scene_id)
+        self.config.reference_scene = scene.meta.filename
 
         self._clearModel()
 
@@ -300,6 +304,7 @@ class SandboxScene(BaseScene):
     def _clearModel(self):
         for arr in [self._north, self._east, self._down]:
             arr.fill(0.)
+
         self.displacement = None
         self._los_factors = None
         self._initialised = False
@@ -340,6 +345,7 @@ class SandboxScene(BaseScene):
 
 
 class Reference(object):
+
     def __init__(self, model, scene):
         self.model = model
         self.scene = scene

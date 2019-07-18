@@ -4,9 +4,12 @@ from kite.qt_utils import loadUi
 from .util import get_resource
 import numpy as num
 
+km = 1e3
+
+
 class ExtentDialog(QtWidgets.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
-        QtWidgets.QDialog.__init__(self, *args, **kwargs)
+        super().__init__(*args, **kwargs)
         loadUi(get_resource('dialog_extent.ui'), self)
         self.setSizeGripEnabled(False)
 
@@ -17,10 +20,10 @@ class ExtentDialog(QtWidgets.QDialog):
 
         self.sandbox = sandbox
         model = self.sandbox.model
-        dE, dN = model.frame.dE, model.frame.dN
+        dE, dN = model.frame.dEmeter, model.frame.dNmeter
 
         def getKm(px, dp):
-            return '%.2f km ' % (dp * px * 1e-3)
+            return '%.2f km ' % (dp * px * km)
 
         self.spinEastPx.valueChanged.connect(
             lambda px: self.eastKm.setText(getKm(px, dE)))

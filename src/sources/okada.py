@@ -1,4 +1,5 @@
 import numpy as num
+from pyrocko import orthodrome as od
 from pyrocko.guts import List, Bool, Float
 
 from kite.sources import disloc_ext
@@ -238,20 +239,33 @@ class DislocProcessor(SourceProcessor):
     __implements__ = 'disloc'
 
     @staticmethod
-    def process(sources, coords, nthreads=0):
+    def process(sources, sandbox, nthreads=0):
         result = {
             'processor_profile': dict(),
-            'displacement.n': num.zeros((coords.shape[0])),
-            'displacement.e': num.zeros((coords.shape[0])),
-            'displacement.d': num.zeros((coords.shape[0])),
+            'displacement.n': num.zeros(sandbox.frame.npixel),
+            'displacement.e': num.zeros(sandbox.frame.npixel),
+            'displacement.d': num.zeros(sandbox.frame.npixel),
         }
 
         src_nu = set(src.nu for src in sources)
 
         for nu in src_nu:
-            src_arr = num.vstack([src.dislocSource() for src in sources
-                                  if src.nu == nu])
-            res = disloc_ext.disloc(src_arr, coords, nu, nthreads)
+            nu_sources = [src for src in sources if src.nu == nu]
+            nsources = len(nu_sources)
+            src_arr = num.vstack([src.dislocSource() for src in nu_sources])
+
+            east_shifts, north_shifts = od.latlon_to_ne_numpy(
+                num.repeat(sandbox.frame.llLat, nsources),
+                num.repeat(sandbox.frame.llLon, nsources),
+                num.array([src.lat for src in nu_sources]),
+                num.array([src.lon for src in nu_sources]))
+
+            src_arr[:, 5] += east_shifts
+            src_arr[:, 6] += north_shifts
+
+            res = disloc_ext.disloc(
+                src_arr, sandbox.frame.coordinatesMeter,
+                nu, nthreads)
 
             result['displacement.e'] += res[:, 0]
             result['displacement.n'] += res[:, 1]
