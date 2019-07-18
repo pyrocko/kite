@@ -11,10 +11,13 @@ km = 1e3
 class SandboxSource(Object):
 
     easting = Float.T(
+        default=0.,
         help='Easting in [m]')
     northing = Float.T(
+        default=0.,
         help='Northing in [m]')
     depth = Float.T(
+        default=1.*km,
         help='Depth in [m]')
 
     def __init__(self, *args, **kwargs):
@@ -33,9 +36,11 @@ class SandboxSource(Object):
 class SandboxSourceRectangular(SandboxSource):
 
     width = Float.T(
-        help='Width, downdip in [m]')
+        help='Width, downdip in [m]',
+        default=10000.,)
     length = Float.T(
-        help='Length in [m]')
+        help='Length in [m]',
+        default=10000.,)
     strike = Float.T(
         default=45.,
         help='Strike, clockwise from North in [deg]; -180-180')
@@ -74,6 +79,27 @@ class SandboxSourceRectangular(SandboxSource):
     @property
     def segments(self):
         yield self
+
+    @classmethod
+    def from_pyrocko_source(cls, source, store_dir=None, **kwargs):
+        d = dict(
+            northing=source.north_shift,
+            easting=source.east_shift,
+            depth=source.depth,
+            width=source.width,
+            length=source.length,
+            strike=source.strike,
+            dip=source.dip,
+            rake=source.rake,
+            slip=source.slip)
+
+        if hasattr(cls, 'decimation_factor'):
+            d['decimation_factor'] = source.decimation_factor
+
+        if hasattr(cls, 'store_dir'):
+            d['store_dir'] = store_dir
+
+        return cls(**d)
 
 
 class ProcessorProfile(dict):

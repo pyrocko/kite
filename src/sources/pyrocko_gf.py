@@ -286,7 +286,7 @@ class PyrockoProcessor(SourceProcessor):
 
             pyr_sources = [src.pyrocko_source for src in talpa_sources]
 
-            for src in pyr_sources:
+            for src in sources:
                 src.regularize()
 
             try:
