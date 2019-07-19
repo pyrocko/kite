@@ -193,9 +193,7 @@ class KitePlot(pg.PlotWidget):
     def scalebar(self):
         ''' Not working '''
         self.scale_bar = pg.ScaleBar(
-            10,
-            width=5,
-            suffix='m')
+            10, width=5, suffix='m')
         self.scale_bar.setParentItem(self.plotItem)
         self.scale_bar.anchor((1, 1), (1, 1), offset=(-20, -20))
 

@@ -503,7 +503,7 @@ class BaseScene(object):
 
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
-        return num.isnan(self.displacement)
+        return ~num.isfinite(self.displacement)
 
     @property
     def shape(self):

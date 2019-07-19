@@ -50,7 +50,7 @@ class SandboxScene(BaseScene):
         self.reference = None
         self._los_factors = None
 
-        for attr in ['theta', 'phi']:
+        for attr in ('theta', 'phi'):
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.__setattr__(attr, data)
@@ -255,7 +255,6 @@ class SandboxScene(BaseScene):
         :type filename: str
         """
         from .scene import Scene
-        print(filename)
         self._log.debug('Loading reference scene from %s', filename)
         scene = Scene.load(filename)
         self.setReferenceScene(scene)
@@ -304,8 +303,10 @@ class SandboxScene(BaseScene):
             config=config)
 
     def _clearModel(self):
-        for arr in [self._north, self._east, self._down]:
+        for arr in (self._north, self._east, self._down):
             arr.fill(0.)
+            if self.reference:
+                arr[self.reference.scene.displacement_mask] = num.nan
 
         self.displacement = None
         self._los_factors = None

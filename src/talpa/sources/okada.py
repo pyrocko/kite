@@ -21,9 +21,8 @@ class OkadaSourceDelegate(SourceDelegate):
     class OkadaDialog(SourceEditDialog):
 
         def __init__(self, delegate, *args, **kwargs):
-            SourceEditDialog.__init__(self, delegate,
-                                      ui_file='okada_source.ui',
-                                      *args, **kwargs)
+            super().__init__(delegate, ui_file='okada_source.ui',
+                             *args, **kwargs)
 
             def setLabel(method, fmt, value, suffix=''):
                 method(fmt.format(value) + suffix)

@@ -2,8 +2,6 @@ from PyQt5 import QtCore, QtWidgets
 import pyqtgraph as pg
 import numpy as num
 
-import pyrocko.orthodrome as od
-
 from ..util import get_resource
 from kite.qt_utils import loadUi
 
@@ -51,12 +49,17 @@ class RectangularSourceROI(pg.ROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
+
         strike = float((-self.angle()) % 360)
         width = float(self.size().x())
         length = float(self.size().y())
 
         northing = float(self.pos().y() + num.cos(strike*d2r) * length/2)
         easting = float(self.pos().x() + num.sin(strike*d2r) * length/2)
+
+        east_shift, north_shift = self.source.getSandboxOffset()
+        easting -= east_shift
+        northing -= north_shift
 
         self.newSourceParameters.emit(dict(
             strike=strike,
@@ -136,9 +139,10 @@ class PointSourceROI(pg.EllipseROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
+        east_shift, north_shift = self.source.getSandboxOffset()
         self.newSourceParameters.emit(dict(
-            easting=float(self.pos().x() + self.size().x()/2),
-            northing=float(self.pos().y() + self.size().y()/2)
+            easting=float(self.pos().x() + self.size().x()/2 - east_shift),
+            northing=float(self.pos().y() + self.size().y()/2 - north_shift)
         ))
 
     @QtCore.pyqtSlot()
@@ -245,13 +249,6 @@ class SourceDelegate(QtCore.QObject):
         self.model.setItemData(self.index, parameters)
 
     def setSourceParameters(self, parameters):
-        east_shift, north_shift = self.source.getSandboxOffset()
-
-        if 'easting' in parameters.keys():
-            parameters['easting'] -= east_shift
-        if 'northing' in parameters.keys():
-            parameters['northing'] -= north_shift
-
         for param, value in parameters.items():
             self.source.__setattr__(param, value)
         self.source.parametersUpdated()

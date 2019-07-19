@@ -295,8 +295,8 @@ class SceneLog(QtGui.QDialog):
     def __init__(self, app, model):
         QtGui.QDialog.__init__(self, app)
         logging_ui = op.join(
-            op.dirname(op.realpath(__file__)),
-            'spool', 'res', 'logging.ui')
+            op.dirname(
+                op.realpath(__file__)), 'spool', 'res', 'logging.ui')
         loadUi(logging_ui, baseinstance=self)
 
         self.move(
