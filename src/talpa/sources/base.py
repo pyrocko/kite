@@ -57,7 +57,7 @@ class RectangularSourceROI(pg.ROI):
         northing = float(self.pos().y() + num.cos(strike*d2r) * length/2)
         easting = float(self.pos().x() + num.sin(strike*d2r) * length/2)
 
-        east_shift, north_shift = self.source.getSandboxOffset()
+        north_shift, east_shift = self.source.getSandboxOffset()
         easting -= east_shift
         northing -= north_shift
 
@@ -139,7 +139,7 @@ class PointSourceROI(pg.EllipseROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
-        east_shift, north_shift = self.source.getSandboxOffset()
+        north_shift, east_shift = self.source.getSandboxOffset()
         self.newSourceParameters.emit(dict(
             easting=float(self.pos().x() + self.size().x()/2 - east_shift),
             northing=float(self.pos().y() + self.size().y()/2 - north_shift)

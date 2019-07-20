@@ -254,7 +254,7 @@ class DislocProcessor(SourceProcessor):
             nsources = len(nu_sources)
             src_arr = num.vstack([src.dislocSource() for src in nu_sources])
 
-            east_shifts, north_shifts = od.latlon_to_ne_numpy(
+            north_shifts, east_shifts = od.latlon_to_ne_numpy(
                 num.repeat(sandbox.frame.llLat, nsources),
                 num.repeat(sandbox.frame.llLon, nsources),
                 num.array([src.lat for src in nu_sources]),
