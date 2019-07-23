@@ -84,12 +84,24 @@
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
+       <property name="minimum">
+        <double>-999.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>999.990000000000009</double>
+       </property>
       </widget>
      </item>
      <item row="1" column="1">
       <widget class="QDoubleSpinBox" name="spinlos_phi">
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+       </property>
+       <property name="minimum">
+        <double>-999.000000000000000</double>
+       </property>
+       <property name="maximum">
+        <double>999.990000000000009</double>
        </property>
       </widget>
      </item>
