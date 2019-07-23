@@ -760,15 +760,15 @@ class GMTSAR(SceneIO):
 
         Expects:
 
-        * Displacement grid (NetCDF, :file:`*los_ll.grd`) in cm
-          (gets transformed to meters)
-        * LOS binary data (see instruction, :file:`*los.enu`)
+        * Displacement grid (NetCDF, :file:`*los_ll.grd`) in meter
+          (in case use "gmt grdmath los_cm_ll.grd 0.01 MUL = los_m_ll.grd')
+        * LOS binary data (see instruction, :file:`*.los.enu`)
 
     Calculate the corresponding unit look vectors with GMT5SAR ``SAT_look``:
 
     .. code-block:: sh
 
-        gmt grd2xyz unwrap_ll.grd | gmt grdtrack -Gdem.grd |
+        gmt grd2xyz los_ll.grd | gmt grdtrack -Gdem.grd |
         awk {'print $1, $2, $4'} |
         SAT_look 20050731.PRM -bos > 20050731.los.enu
     """
@@ -811,13 +811,13 @@ class GMTSAR(SceneIO):
         grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
         displ = grd.variables['z'][:].copy()
-        displ /= 1e2  # los_ll.grd files come in cm
         c.displacement = displ
         shape = c.displacement.shape
         # LatLon
+        c.frame.spacing = 'degree'
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
-
+       
         c.frame.dN = (grd.variables['lat'][:].max() -
                       c.frame.llLat) / shape[0]
         c.frame.dE = (grd.variables['lon'][:].max() -
