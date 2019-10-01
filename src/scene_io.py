@@ -1032,7 +1032,7 @@ class LiCSAR(SceneIO):
             los_u = num.full_like(c.displacement, uz)
 
         c.phi = num.arctan2(los_n, los_e)
-        c.theta = num.arccos(los_u)
+        c.theta = num.arcsin(los_u)
 
         c.meta.title = dataset.GetDescription()
 
