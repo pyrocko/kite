@@ -87,7 +87,7 @@ class SandboxSourceRectangular(SandboxSource):
         coords[3, 0] = coords[0, 0] - c_strike * c_dip * self.width
         coords[3, 1] = coords[0, 1] + s_strike * c_dip * self.width
 
-        east_shift, north_shift = self.getSandboxOffset()
+        north_shift, east_shift = self.getSandboxOffset()
 
         coords[:, 0] += self.easting + east_shift
         coords[:, 1] += self.northing + north_shift

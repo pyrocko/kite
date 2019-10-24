@@ -23,7 +23,7 @@ class ExtentDialog(QtWidgets.QDialog):
         dE, dN = model.frame.dEmeter, model.frame.dNmeter
 
         def getKm(px, dp):
-            return '%.2f km ' % (dp * px * km)
+            return '%.2f km ' % (dp * px / km)
 
         self.spinEastPx.valueChanged.connect(
             lambda px: self.eastKm.setText(getKm(px, dE)))
