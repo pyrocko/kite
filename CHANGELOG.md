@@ -4,6 +4,15 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Added
+- Added ARIA import
+
+### Fixed
+- `spool` added absolute degree to cursor position
+- improved LiCSAR import
+
 ## [1.2.3] 17. July 2019
 
 ### Added
