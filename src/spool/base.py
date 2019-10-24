@@ -230,6 +230,7 @@ class KitePlot(pg.PlotWidget):
 
     @QtCore.pyqtSlot(object)
     def mouseMoved(self, event=None):
+        frame = self.model.frame
         if event is None:
             return
         elif self.image.sceneBoundingRect().contains(event[0]):
@@ -242,6 +243,11 @@ class KitePlot(pg.PlotWidget):
                 self.hint['east'] = map_pos.x()
                 self.hint['north'] = map_pos.y()
                 self.hint['value'] = value
+
+                if frame.isDegree():
+                    self.hint['east'] += frame.llLat
+                    self.hint['north'] += frame.llLon
+
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']
         self.hint_text.setText(
