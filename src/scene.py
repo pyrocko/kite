@@ -886,8 +886,9 @@ class Scene(BaseScene):
         :raises: TypeError
         """
         scene = self
-        if not op.isfile(path) or op.isdir(path):
+        if not op.isfile(path) and not op.isdir(path):
             raise ImportError('File %s does not exist!' % path)
+
         data = None
 
         for mod_name in scene_io.__all__:

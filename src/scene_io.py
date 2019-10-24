@@ -1,6 +1,6 @@
 import re
 import glob
-import os.path as op
+import os
 
 import utm
 import scipy.io
@@ -13,12 +13,14 @@ __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
 try:
     from osgeo import gdal
     __all__.append('LiCSAR')
+    __all__.append('ARIA')
 except ImportError:
     pass
 
 
 d2r = num.pi/180.
 km = 1e3
+op = os.path
 
 
 def check_required(required, params):
@@ -61,7 +63,7 @@ class SceneIO(object):
         self.container = AttribDict(
             phi=0.,    # Look orientation counter-clockwise angle from east
             theta=0.,  # Look elevation angle (up from horizontal in degree)
-                       # 90deg North
+                       # 90 deg North
             displacement=None,  # Displacement towards LOS
             frame=AttribDict(
                 llLon=None,  # Lower left corner latitude
@@ -965,7 +967,7 @@ class LiCSAR(SceneIO):
 
     .. note ::
 
-        Requires the python package
+        Requires the Python package
         `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
 
         Expects:
@@ -987,8 +989,9 @@ class LiCSAR(SceneIO):
 
     @staticmethod
     def _readBandData(dataset, band=1):
-        array = dataset.GetRasterBand(band).ReadAsArray()
-        array[array == 0.] = num.nan
+        band = dataset.GetRasterBand(band)
+        array = band.ReadAsArray()
+        array[array == band.GetNoDataValue()] = num.nan
 
         return num.flipud(array)
 
@@ -1039,12 +1042,88 @@ class LiCSAR(SceneIO):
         return c
 
     def validate(self, filename, **kwargs):
-        try:
-            dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-            meta = dataset.GetMetadata()
-        except Exception:
+        if gdal.IdentifyDriver(filename) is None:
             return False
-        if 'TIFFTAG_DATETIME' in meta.keys():
-            return True
+        return True
+
+
+class ARIA(SceneIO):
+    '''
+    Import unwrapped InSAR scenes from the
+    `NASA/JPL ARIA <https://aria.jpl.nasa.gov/>`_ GUNW data products.
+
+    .. note ::
+
+        Requires the Python package
+        `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
+
+        Expects:
+
+        * Extracted unwrappedPhase, lookAngle, incidenceAngle
+
+
+    .. code-block:: sh
+
+        ariaExtract.py -w ascending -f aria-data.nc -d download \
+            -l unwrappedPhase,incidenceAngle,lookAngle
+
+    '''
+
+    @staticmethod
+    def _readBandData(dataset, band=1):
+        band = dataset.GetRasterBand(band)
+        array = band.ReadAsArray()
+        array[array == band.GetNoDataValue()] = num.nan
+
+        return num.flipud(array)
+
+    @staticmethod
+    def _dataset_from_dir(folder):
+        files = set(f for f in os.scandir(folder) if f.is_file())
+        for f in files:
+            if op.splitext(f.name)[-1] == '':
+                break
         else:
+            raise ImportError('could not load dataset from %s' % folder)
+
+        return gdal.Open(f.path, gdal.GA_ReadOnly)
+
+    def read(self, folder, **kwargs):
+        unw_phase = self._dataset_from_dir(op.join(folder, 'unwrappedPhase'))
+        georef = unw_phase.GetGeoTransform()
+
+        llLon = georef[0]
+        llLat = georef[3] + unw_phase.RasterYSize * georef[5]
+
+        c = self.container
+
+        c.frame.spacing = 'degree'
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+        c.frame.dE = georef[1]
+        c.frame.dN = abs(georef[5])
+
+        displacement = self._readBandData(unw_phase)
+        displacement[displacement == -9999.] = num.nan
+        c.displacement = displacement / 1e2  # data is in cm
+
+        inc_angle = self._dataset_from_dir(op.join(folder, 'incidenceAngle'))
+        azi_angle = self._dataset_from_dir(op.join(folder, 'azimuthAngle'))
+
+        c.theta = self._readBandData(inc_angle) * d2r
+        c.phi = self._readBandData(azi_angle) * d2r
+
+        c.meta.title = unw_phase.GetDescription()
+
+        return c
+
+    def validate(self, folder, **kwargs):
+        expected_dirs = set(['unwrappedPhase', 'incidenceAngle', 'lookAngle'])
+        if not op.isdir(folder):
             return False
+
+        dirs = set(d.name for d in os.scandir(folder) if d.is_dir())
+        if not expected_dirs - dirs:
+            return True
+
+        return False
