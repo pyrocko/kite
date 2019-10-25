@@ -1,6 +1,7 @@
 import numpy as num
 import time
 from pyrocko import guts
+from pyrocko import orthodrome as od
 
 from .util import Subject, property_cached, derampMatrix
 
@@ -240,6 +241,14 @@ class QuadNode(object):
         """
         return self.scene.frame.N[self.llr]
 
+    @property
+    def urN(self):
+        return self.llN + self.sizeN
+
+    @property
+    def urE(self):
+        return self.llE + self.sizeE
+
     @property_cached
     def sizeE(self):
         """
@@ -384,7 +393,8 @@ class Quadtree(object):
 
     :attr:`~kite.Quadtree.leaves` hold the current tree's
     :class:`~kite.quadtree.QuadNode` 's. The leaves can also be exported in a
-    *CSV* format through :func:`~kite.Quadtree.export`.
+        *CSV* format by :func:`~kite.Quadtree.export_csv`,
+        or *GeoJSON* by :func:`~kite.Quadtree.export_geojson`.
     """
 
     _displacement_corrections = {
@@ -924,7 +934,7 @@ class Quadtree(object):
             rectangles.append(r)
         return rectangles
 
-    def export(self, filename):
+    def export_csv(self, filename):
         """ Exports the current quadtree leaves to ``filename`` in a
         *CSV* format
 
@@ -933,10 +943,10 @@ class Quadtree(object):
             # node_id, focal_point_E, focal_point_N, theta, phi, \
             mean_displacement, median_displacement, absolute_weight
 
-        :param filename: export to path
+        :param filename: export_csv to path
         :type filename: string
         """
-        self._log.debug('Exporting Quadtree.leaves to %s', filename)
+        self._log.debug('Exporting Quadtree as to %s', filename)
         with open(filename, mode='w') as f:
             f.write(
                 '# node_id, focal_point_E, focal_point_N, theta, phi, '
@@ -946,6 +956,52 @@ class Quadtree(object):
                     '{lf.id}, {lf.focal_point[0]}, {lf.focal_point[1]}, '
                     '{lf.theta}, {lf.phi}, '
                     '{lf.mean}, {lf.median}, {lf.weight}\n'.format(lf=lf))
+
+    def export_geojson(self, filename):
+        import geojson
+        self._log.debug('Exporting GeoJSON Quadtree to %s', filename)
+        features = []
+
+        for lf in self.leaves:
+            llN, llE, urN, urE = (lf.llN, lf.llE, lf.urN, lf.urE)
+
+            if self.frame.isDegree():
+                llN += self.frame.llLat
+                llE += self.frame.llLon
+                urN += self.frame.llLat
+                urE += self.frame.llLon
+
+            coords = [
+                (llE, llN),
+                (urE, llN),
+                (urE, urN),
+                (llE, urN),
+                (llE, llN)]
+
+            if self.frame.isMeter():
+                coords_deg = []
+                for c in coords:
+                    c_deg = od.ne_to_latlon_alternative_method(
+                        self.frame.llLon, self.frame.llLat, *c)
+                    coords_deg.append(c_deg)
+
+                coords = coords_deg
+
+            feature = geojson.Feature(
+                geometry=geojson.Polygon(coordinates=[coords]),
+                id=lf.id,
+                properties={
+                    'mean': lf.mean,
+                    'median': lf.median,
+                    'std': lf.std,
+                    'var': lf.var
+                })
+            features.append(feature)
+
+        collection = geojson.FeatureCollection(
+            features)
+        with open(filename, 'w') as f:
+            geojson.dump(collection, f)
 
 
 __all__ = ['Quadtree', 'QuadtreeConfig']

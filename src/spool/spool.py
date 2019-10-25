@@ -221,11 +221,18 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.sigImportFile.emit(filename)
 
     def onExportQuadtree(self):
-        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            filter='CSV File *.csv (*.csv)', caption='Export Quadtree CSV')
+        filename, flt = QtWidgets.QFileDialog.getSaveFileName(
+            filter='GeoJSON (*.json *.geojson);;CSV File *.csv (*.csv)',
+            caption='Export Quadtree')
+
         if not validateFilename(filename):
             return
-        self.model.quadtree.export(filename)
+        if flt == 'GeoJSON (*.json *.geojson)':
+            self.model.quadtree.export_geojson(filename)
+        elif flt == 'CSV File *.csv (*.csv)':
+            self.model.quadtree.export_csv(filename)
+        else:
+            raise ValueError('unknown filter')
 
     def onExportWeightMatrix(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
