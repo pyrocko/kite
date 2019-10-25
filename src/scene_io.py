@@ -1061,7 +1061,7 @@ class ARIA(SceneIO):
 
         Expects:
 
-        * Extracted unwrappedPhase, lookAngle, incidenceAngle
+        * Extracted unwrappedPhase, lookAngle, incidenceAngle layers
 
 
     .. code-block:: sh
@@ -1112,7 +1112,7 @@ class ARIA(SceneIO):
         inc_angle = self._dataset_from_dir(op.join(folder, 'incidenceAngle'))
         azi_angle = self._dataset_from_dir(op.join(folder, 'azimuthAngle'))
 
-        c.theta = self._readBandData(inc_angle) * d2r
+        c.theta = num.pi/2 - self._readBandData(inc_angle) * d2r
         c.phi = self._readBandData(azi_angle) * d2r
 
         c.meta.scene_id = op.basename(unw_phase.GetDescription())
