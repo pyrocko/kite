@@ -124,7 +124,7 @@ static state_covariance calc_covariance_matrix(
     for (il1=0; il1<nleaves; il1++) {
         if (adaptive_subsampling) {
             l_length = map[il1*4+1] - map[il1*4+0];
-            subsampling[il1] = ceil(LOG2(l_length));
+            subsampling[il1] = ceil(LOG2(l_length)) * 2;
         } else {
            subsampling[il1] = 1;
         }
@@ -167,7 +167,7 @@ static state_covariance calc_covariance_matrix(
             cov = 0.;
             npx = 0;
             while(! (l1hit && l2hit)) {
-                // printf("tid %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), subsampling[il2]);
+                // printf("thread %d :: l(%lu-%lu) :: %lu:%lu (ss %d) %lu:%lu (ss %d)\n", tid, il1, il2, (l1row_end-l1row_beg), (l1col_end-l1col_beg), subsampling[il1], (l2row_end-l2row_beg), (l2col_end-l2col_beg), subsampling[il2]);
                 for (il1row=l1row_beg; il1row<l1row_end; il1row++) {
                     if (il1row > nrows)
                         continue;

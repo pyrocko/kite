@@ -1,6 +1,8 @@
 import re
 import glob
 import os
+import time
+from datetime import datetime
 
 import utm
 import scipy.io
@@ -1113,7 +1115,16 @@ class ARIA(SceneIO):
         c.theta = self._readBandData(inc_angle) * d2r
         c.phi = self._readBandData(azi_angle) * d2r
 
-        c.meta.title = unw_phase.GetDescription()
+        c.meta.scene_id = op.basename(unw_phase.GetDescription())
+        c.meta.scene_title = c.meta.scene_id
+
+        t_slave, t_master = c.meta.scene_id.split('_')
+        c.meta.time_master = datetime(*time.strptime(t_master, '%Y%m%d')[:6]) \
+            .timestamp()
+        c.meta.time_slave = datetime(*time.strptime(t_slave, '%Y%m%d')[:6]) \
+            .timestamp()
+
+        c.meta.satellite_name = 'undefined (ARIA)'
 
         return c
 
