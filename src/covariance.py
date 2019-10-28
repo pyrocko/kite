@@ -248,6 +248,10 @@ class Covariance(object):
         self._nthreads = int(value)
 
     @property
+    def finished_combinations(self):
+        return covariance_ext.get_finished_combinations()
+
+    @property
     def noise_coord(self):
         """ Coordinates of the noise patch in local coordinates.
 

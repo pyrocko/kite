@@ -18,6 +18,8 @@ struct module_state {
     PyObject *error;
 };
 
+uint32_t finished_combinations = 0;
+
 #define GETSTATE(m) ((struct module_state*)PyModule_GetState(m))
 #define EXPONENTIAL 2
 #define EXPONENTIAL_COSINE 4
@@ -111,6 +113,7 @@ static state_covariance calc_covariance_matrix(
     // Silence warnings
     (void) tid;
     (void) nthreads;
+    finished_combinations = 0;
     cov_model = &covariance_model_exp;
 
     nrows = (npy_intp) shape_coord[0];
@@ -140,7 +143,7 @@ static state_covariance calc_covariance_matrix(
     #endif
     #if defined(_OPENMP)
         #pragma omp parallel \
-            shared (E, N, map, model_coeff, cov_model, cov_arr, nrows, ncols, nleaves, subsampling) \
+            shared (E, N, map, model_coeff, cov_model, cov_arr, nrows, ncols, nleaves, subsampling, finished_combinations) \
             private (il1row, il1col, icl1, l1row_beg, l1row_end, l1col_beg, l1col_end, \
                      l2row_beg, l2row_end, l2col_beg, l2col_end, il2row, il2col, icl2, il2, \
                      npx, cov, l1hit, l2hit, tid, dist) \
@@ -213,6 +216,10 @@ static state_covariance calc_covariance_matrix(
                     }
                 #endif
             }
+            #if defined(_OPENMP)
+                #pragma omp atomic
+            #endif
+            finished_combinations++;
             cov_arr[il1*(nleaves)+il2] = cov/npx;
             cov_arr[il2*(nleaves)+il1] = cov_arr[il1*(nleaves)+il2];
         }
@@ -284,9 +291,17 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     return (PyObject*) cov_arr;
 }
 
+
+static PyObject* w_get_finished_combinations(PyObject *m) {
+    (void) m;
+    return PyLong_FromSize_t(finished_combinations);
+}
+
 static PyMethodDef CovarianceExtMethods[] = {
     {"covariance_matrix", (PyCFunction)w_calc_covariance_matrix, METH_VARARGS,
      "Calculates the covariance matrix for full resolution." },
+    {"get_finished_combinations", (PyCFunction)w_get_finished_combinations, METH_NOARGS,
+     "Get the number of finished combinations. Total combinations are nleaves*(nleaves+1)/2." },
     {NULL, NULL}         /* Sentinel */
 };
 

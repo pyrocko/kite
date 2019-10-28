@@ -127,10 +127,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
         self.progress.setWindowTitle('Processing...')
-        self.model.sigProcessingFinished.connect(
-            self.progress.reset,
-            type=QtCore.Qt.QueuedConnection)
         self.progress.reset()
+        self.progress_timer = None
 
     def aboutDialog(self):
         self._about = QtGui.QDialog(self)
@@ -151,6 +149,9 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.model.sigProcessingStarted.connect(
             self.processingStarted,
             type=QtCore.Qt.QueuedConnection)
+        self.model.sigProcessingFinished.connect(
+            self.processingFinished,
+            type=QtCore.Qt.QueuedConnection)
 
     def addView(self, view):
         self.sigLoadingModule.emit(view.title)
@@ -164,8 +165,31 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(str)
     def processingStarted(self, text):
+        quadtree = self.model.quadtree
+        covariance = self.model.covariance
+
+        ncombinations = quadtree.nleaves*(quadtree.nleaves+1)/2
+
         self.progress.setLabelText(text)
+        self.progress.setMaximum(ncombinations)
+        self.progress.setValue(0)
+
+        @QtCore.pyqtSlot()
+        def updateProgress():
+            self.progress.setValue(covariance.finished_combinations)
+
+        self.progress_timer = QtCore.QTimer()
+        self.progress_timer.timeout.connect(updateProgress)
+        self.progress_timer.start(250)
+
         self.progress.show()
+
+    @QtCore.pyqtSlot()
+    def processingFinished(self):
+        self.progress.reset()
+        if self.progress_timer is not None:
+            self.progress_timer.stop()
+            self.progress_timer = None
 
     def onSaveConfig(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
