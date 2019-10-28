@@ -24,6 +24,8 @@ d2r = num.pi/180.
 km = 1e3
 op = os.path
 
+LAMBDA_SENTINEL = 0.055465763
+
 
 def check_required(required, params):
     for r in required:
@@ -1013,8 +1015,7 @@ class LiCSAR(SceneIO):
         c.frame.dN = abs(georef[5])
 
         displacement = self._readBandData(dataset)
-        displacement[displacement == -9999.] = num.nan
-        c.displacement = displacement / 1e2  # data is in cm
+        c.displacement = displacement / (4*num.pi) * LAMBDA_SENTINEL  # rad TWT
 
         try:
             los_n = self._getLOS(filename, '*.geo.N.tif')
@@ -1061,7 +1062,8 @@ class ARIA(SceneIO):
 
         Expects:
 
-        * Extracted unwrappedPhase, lookAngle, incidenceAngle layers
+        * Extracted layers: unwrappedPhase, lookAngle, incidenceAngle,
+            connectedComponents
 
 
     .. code-block:: sh
@@ -1075,7 +1077,8 @@ class ARIA(SceneIO):
     def _readBandData(dataset, band=1):
         band = dataset.GetRasterBand(band)
         array = band.ReadAsArray()
-        array[array == band.GetNoDataValue()] = num.nan
+        if array.dtype != num.int16 and array.dtype != num.int:
+            array[array == band.GetNoDataValue()] = num.nan
 
         return num.flipud(array)
 
@@ -1105,9 +1108,14 @@ class ARIA(SceneIO):
         c.frame.dE = georef[1]
         c.frame.dN = abs(georef[5])
 
+        conn_comp = self._dataset_from_dir(op.join(
+            folder, 'connectedComponents'))
+
         displacement = self._readBandData(unw_phase)
-        displacement[displacement == -9999.] = num.nan
-        c.displacement = displacement / 1e2  # data is in cm
+        conn_mask = self._readBandData(conn_comp)  # Mask from snaphu
+        displacement *= num.where(conn_mask, 1., num.nan)
+
+        c.displacement = displacement / (4*num.pi) * LAMBDA_SENTINEL
 
         inc_angle = self._dataset_from_dir(op.join(folder, 'incidenceAngle'))
         azi_angle = self._dataset_from_dir(op.join(folder, 'azimuthAngle'))
@@ -1129,7 +1137,9 @@ class ARIA(SceneIO):
         return c
 
     def validate(self, folder, **kwargs):
-        expected_dirs = set(['unwrappedPhase', 'incidenceAngle', 'lookAngle'])
+        expected_dirs = set(
+            ['unwrappedPhase', 'incidenceAngle', 'lookAngle',
+             'connectedComponents'])
         if not op.isdir(folder):
             return False
 

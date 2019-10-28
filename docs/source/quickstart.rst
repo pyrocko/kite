@@ -163,6 +163,48 @@ project or from one of the processed small baseline pairs. The required files ar
 For more information on the util, see the ``--help``.
 
 
+Download and import data from ARIA (NASA)
+-----------------------------------------
+
+The `ARIA <https://aria.jpl.nasa.gov/>`_ web service provides unwrapped Sentinel-1 data. You can explore the data on the `website <https://aria-products.jpl.nasa.gov/>`_ or use ``wget``. For this example we use ``wget`` to download the ascending and descending data products from ARIA from the `2019 Ridgecrest Earthquakes <https://en.wikipedia.org/wiki/2019_Ridgecrest_earthquakes>`_.
+
+.. code-block :: sh
+
+    # Ascending
+    wget https://aria-products.jpl.nasa.gov/search/dataset/grq_v2.0.2_s1-gunw-released/S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2/S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2.nc
+
+    # Descending
+    wget https://aria-products.jpl.nasa.gov/search/dataset/grq_v2.0.2_s1-gunw-released/S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2/S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2.nc
+
+
+We have to use `aria-tools <https://github.com/aria-tools/ARIA-tools>`_ to extract four channels from the ARIA data product:
+
+.. code-block :: sh
+    :caption: We use two workdirs: ``ascending`` and ``descending``.
+
+    # Ascending
+    ariaExtract.py -w ascending -f S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2.nc -d download -l unwrappedPhase,incidenceAngle,azimuthAngle
+
+    ariaExtract.py -w descending -f S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2.nc  -d download -l unwrappedPhase,incidenceAngle,azimuthAngle
+
+For more information see ``ariaExtract.py --help``.
+
+Import ARIA data into Kite
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To import the data into spool use a regular ``load``:
+
+.. code-block :: sh
+
+    spool --load ascending
+
+
+.. note ::
+    
+    ARIA scenes are provided at a high resolution and calculation of the covariance matrix can take a long time!
+
+
+
 Download and import data from COMET LiCSAR
 ------------------------------------------
 
