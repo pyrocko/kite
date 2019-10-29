@@ -1015,7 +1015,7 @@ class LiCSAR(SceneIO):
         c.frame.dN = abs(georef[5])
 
         displacement = self._readBandData(dataset)
-        c.displacement = displacement / (4*num.pi) * LAMBDA_SENTINEL  # rad TWT
+        c.displacement = -displacement / (4*num.pi) * LAMBDA_SENTINEL
 
         try:
             los_n = self._getLOS(filename, '*.geo.N.tif')
