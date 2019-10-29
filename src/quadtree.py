@@ -381,6 +381,10 @@ class Quadtree(object):
     set through :func:`~kite.Quadtree.setCorrection`. If the standard deviation
     exceeds :attr:`~kite.Quadtree.epsilon` the node is split.
 
+    The leaves can also be exported in a *CSV* format by
+    :func:`~kite.Quadtree.export_csv`, or *GeoJSON* by
+    :func:`~kite.Quadtree.export_geojson`.
+
     Controlling attributes are:
 
         * :attr:`~kite.Quadtree.epsilon`, RMS threshold
@@ -392,9 +396,7 @@ class Quadtree(object):
             *meter* or *degree*
 
     :attr:`~kite.Quadtree.leaves` hold the current tree's
-    :class:`~kite.quadtree.QuadNode` 's. The leaves can also be exported in a
-        *CSV* format by :func:`~kite.Quadtree.export_csv`,
-        or *GeoJSON* by :func:`~kite.Quadtree.export_geojson`.
+    :class:`~kite.quadtree.QuadNode` 's.
     """
 
     _displacement_corrections = {

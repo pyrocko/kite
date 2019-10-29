@@ -402,7 +402,7 @@ class Meta(guts.Object):
 
 class SceneConfig(guts.Object):
     """ Configuration object, gathering ``kite.Scene`` and
-        sub-objects configuration.
+    sub-objects configuration.
     """
     meta = Meta.T(
         default=Meta.D(),
@@ -485,7 +485,7 @@ class BaseScene(object):
     @property
     def displacement_px_var(self):
         """ Variance of the surface displacement per pixel.
-            Same dimension as displacement.
+        Same dimension as displacement.
 
         :setter: Set standard deviation of of the displacement.
         :getter: Return the standard deviation matrix.
@@ -512,7 +512,7 @@ class BaseScene(object):
     @property
     def phi(self):
         """ Horizontal angle towards satellite :abbr:`line of sight (LOS)`
-            in radians counter-clockwise from East.
+        in radians counter-clockwise from East.
 
         .. important ::
 
@@ -541,8 +541,8 @@ class BaseScene(object):
     @property
     def theta(self):
         """ Theta is the look vector elevation angle towards satellite from
-            the horizon in radians. Matrix of theta towards satellite's
-            :abbr:`line of sight (LOS)`.
+        the horizon in radians. Matrix of theta towards satellite's
+        :abbr:`line of sight (LOS)`.
 
         .. important ::
 

@@ -772,8 +772,8 @@ class GMTSAR(SceneIO):
 
     .. code-block:: sh
 
-        gmt grd2xyz los_ll.grd | gmt grdtrack -Gdem.grd |
-        awk {'print $1, $2, $4'} |
+        gmt grd2xyz los_ll.grd | gmt grdtrack -Gdem.grd | \\
+        awk {'print $1, $2, $4'} | \\
         SAT_look 20050731.PRM -bos > 20050731.los.enu
     """
     def validate(self, filename, **kwargs):
@@ -821,7 +821,7 @@ class GMTSAR(SceneIO):
         c.frame.spacing = 'degree'
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
-       
+
         c.frame.dN = (grd.variables['lat'][:].max() -
                       c.frame.llLat) / shape[0]
         c.frame.dE = (grd.variables['lon'][:].max() -
@@ -1063,13 +1063,14 @@ class ARIA(SceneIO):
         Expects:
 
         * Extracted layers: unwrappedPhase, lookAngle, incidenceAngle,
-            connectedComponents
+          connectedComponents
 
+    Use ``ariaExtract.py`` to extract the layers:
 
     .. code-block:: sh
 
-        ariaExtract.py -w ascending -f aria-data.nc -d download \
-            -l unwrappedPhase,incidenceAngle,lookAngle
+        ariaExtract.py -w ascending -f aria-data.nc -d download \\
+        -l unwrappedPhase,incidenceAngle,lookAngle
 
     '''
 
