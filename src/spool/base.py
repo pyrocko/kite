@@ -64,7 +64,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             pxMode=True)
 
         self.label = QtGui.QGraphicsSimpleTextItem(
-            'Towards Sat', parent=self)
+            'Towards Sat.', parent=self)
         self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
         # self.label.setFont(QtGui.QFont(
         #     "Helvetica", weight=QtGui.QFont.DemiBold))
@@ -97,7 +97,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         rect_arr = self.arrow.boundingRect()
 
         self.label.setPos(
-            rect_arr.width()/2 - rect_label.width()/2,
+            0.,
             rect_label.height()*1.33)
 
     def setParentItem(self, parent):
@@ -193,9 +193,7 @@ class KitePlot(pg.PlotWidget):
     def scalebar(self):
         ''' Not working '''
         self.scale_bar = pg.ScaleBar(
-            10,
-            width=5,
-            suffix='m')
+            10, width=5, suffix='m')
         self.scale_bar.setParentItem(self.plotItem)
         self.scale_bar.anchor((1, 1), (1, 1), offset=(-20, -20))
 
@@ -232,6 +230,7 @@ class KitePlot(pg.PlotWidget):
 
     @QtCore.pyqtSlot(object)
     def mouseMoved(self, event=None):
+        frame = self.model.frame
         if event is None:
             return
         elif self.image.sceneBoundingRect().contains(event[0]):
@@ -244,6 +243,11 @@ class KitePlot(pg.PlotWidget):
                 self.hint['east'] = map_pos.x()
                 self.hint['north'] = map_pos.y()
                 self.hint['value'] = value
+
+                if frame.isDegree():
+                    self.hint['east'] += frame.llLat
+                    self.hint['north'] += frame.llLon
+
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']
         self.hint_text.setText(

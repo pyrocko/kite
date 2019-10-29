@@ -40,11 +40,7 @@ class EllipsoidSourceDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = EllipsoidSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000)
-        return src
+        return EllipsoidSource()
 
     def formatListItem(self):
         item = '''
@@ -111,11 +107,7 @@ class PointCompoundSourceDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PointCompoundSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000)
-        return src
+        return PointCompoundSource()
 
     def formatListItem(self):
         item = '''

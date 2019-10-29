@@ -16,7 +16,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '1.2.3'
+version = '1.2.4'
 
 
 def _have_openmp():
@@ -119,7 +119,6 @@ setup(
     long_description_content_type='text/markdown',
     license='GPLv3',
     classifiers=[
-        'Development Status :: 4 - Beta',
         'Intended Audience :: Science/Research',
         'Topic :: Scientific/Engineering',
         'Topic :: Scientific/Engineering :: Atmospheric Science',
@@ -132,7 +131,7 @@ setup(
         'Operating System :: MacOS',
         ],
     keywords=[
-        'insar satellite radar earthquake optimization'],
+        'InSAR satellite radar earthquake optimization'],
     python_requires='>=3.5',
     packages=[
         'kite',

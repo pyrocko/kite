@@ -4,6 +4,17 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.4] 29. October 2019
+
+### Added
+- Added ARIA import
+- `quadtree` added GeoJSON export
+- Spool: covariance progress bar
+
+### Fixed
+- Spool: added absolute degree to cursor position
+- bugfixes LiCSAR import
+
 ## [1.2.3] 17. July 2019
 
 ### Added

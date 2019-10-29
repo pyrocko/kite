@@ -85,7 +85,7 @@ class Plot2D(object):
     @data.getter
     def data(self):
         if self._data is None:
-            return num.empty((50, 50))
+            return num.zeros((50, 50))
         return self._data
 
     def _initImagePlot(self, **kwargs):
@@ -271,7 +271,7 @@ class ScenePlot(Plot2D):
             if component not in self.components_available.keys():
                 raise AttributeError('Invalid component %s' % component)
             self.data = self.components_available[component]['eval'](
-                                                                self._scene)
+                self._scene)
         except AttributeError:
             raise AttributeError('Could not access component %s' % component)
 
@@ -404,8 +404,8 @@ class CovariancePlot(object):
         # self.plotPowerfit()
 
         self.fig.subplots_adjust(
-                left=.05, bottom=.075, right=.95, top=.95,
-                wspace=.2, hspace=.25)
+            left=.05, bottom=.075, right=.95, top=.95,
+            wspace=.2, hspace=.25)
 
     def __call__(self):
         self.fig.show()

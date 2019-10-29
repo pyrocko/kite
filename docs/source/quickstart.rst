@@ -14,8 +14,8 @@ Kite supports importing unwrapped displacement scenes from different InSAR proce
 Each processor delivers different file formats and metadata. In order to import the data into Kite, data has to be prepared. Details for each format are described in :mod:`kite.scene_io`.
 
 
-Importing data through ``spool``
---------------------------------
+Importing data to ``spool``
+---------------------------
 
 When you have processed your InSAR data and aligned with the expected import conversions (:mod:`kite.scene_io`), you can use spool to import the data:
 
@@ -47,6 +47,13 @@ You can use start :doc:`../tools/spool` to inspect the scene and manipulate it's
 
     # Or load from Kite format
     spool my_scene.yml
+
+
+.. figure :: ../_images/spool-scene.png
+    :width: 90%
+    :align: center
+
+    **Figure 1**: Manipulating unwrapped InSAR surface displacement data in Spool, Kite's GUI.
 
 
 Scripted data import
@@ -135,6 +142,69 @@ This code snippet shows how to import data from a foreign file format and saving
     kite_scene.yml
 
 
+Download and import data from ARIA (NASA)
+-----------------------------------------
+
+The `ARIA <https://aria.jpl.nasa.gov/>`_ web service provides unwrapped Sentinel-1 data covering selected regions. The data can be explore on the `website <https://aria-products.jpl.nasa.gov/>`_. For this example we use ``wget`` to download the ascending and descending ARIA GUNW data products from ARIA from the `2019 Ridgecrest Earthquakes <https://en.wikipedia.org/wiki/2019_Ridgecrest_earthquakes>`_.
+
+.. code-block :: sh
+
+    # Ascending
+    wget https://aria-products.jpl.nasa.gov/search/dataset/grq_v2.0.2_s1-gunw-released/S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2/S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2.nc
+
+    # Descending
+    wget https://aria-products.jpl.nasa.gov/search/dataset/grq_v2.0.2_s1-gunw-released/S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2/S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2.nc
+
+
+Now use the Python package `ARIA-tools <https://github.com/aria-tools/ARIA-tools>`_ to extract three channels (``unwrappedPhase, incidenceAngle, azimuthAngle``) from the ARIA data product:
+
+.. code-block :: sh
+    :caption: We use two workdirs: ``ascending`` and ``descending``.
+
+    # Extract into ascending/
+    ariaExtract.py -w ascending -f S1-GUNW-A-R-064-tops-20190710_20180703-015013-36885N_35006N-PP-9955-v2_0_2.nc -d download -l unwrappedPhase,incidenceAngle,azimuthAngle
+
+    # Extract into descending/
+    ariaExtract.py -w descending -f S1-GUNW-D-R-071-tops-20190728_20190622-135213-36450N_34472N-PP-b4b2-v2_0_2.nc  -d download -l unwrappedPhase,incidenceAngle,azimuthAngle
+
+For more information see ``ariaExtract.py --help`` and the `ARIA-tools documentation <https://github.com/aria-tools/ARIA-tools>`_.
+
+Import ARIA GUNW data into Kite
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To import the data into spool use a regular ``load``:
+
+.. code-block :: sh
+
+    spool --load ascending
+
+
+.. note ::
+    
+    ARIA scenes are provided at a high resolution and calculation of the covariance matrix can take a long time!
+
+
+
+Download and import data from COMET LiCSAR
+------------------------------------------
+
+A slim client for downloading `COMET LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_ products is included in :mod:`kite.clients`. The script will download the passed unwrapped LiCSAR data and necessary LOS GeoTIFFs into the current directory.
+
+This example will download data from the 2017 Iran–Iraq earthquake (M 7.3) from the `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_:
+
+
+.. code-block :: sh
+    :caption: Download data from COMET LiCSAR Portal.
+
+    python3 -m kite.clients http://gws-access.ceda.ac.uk/public/nceo_geohazards/LiCSAR_products/6/006D_05509_131313/products/20171107_20171201/20171107_20171201.geo.unw.tif .
+
+Now just load the scene into Kite or spool.
+
+.. code-block :: sh
+    :caption: Importing the scene in spool.
+
+    spool --load 20171107_20171201.geo.unw.tif
+
 
 Converting StaMPS velocities to a Kite scene
 --------------------------------------------
@@ -161,23 +231,3 @@ project or from one of the processed small baseline pairs. The required files ar
 
 
 For more information on the util, see the ``--help``.
-
-
-Download and import data from COMET LiCSAR
-------------------------------------------
-
-A slim client for downloading `COMET LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_ products is included in :mod:`kite.clients`. The script will download the passed unwrapped LiCSAR data and necessary LOS GeoTIFFs into the current directory.
-
-This example will download data from the 2017 Iran–Iraq earthquake (M 7.3) from the `COMET LiCSAR Portal <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_:
-
-
-.. code-block :: sh
-    :caption: Download data from COMET LiCSAR Portal.
-
-    python3 -m kite.clients http://gws-access.ceda.ac.uk/public/nceo_geohazards/LiCSAR_products/6/006D_05509_131313/products/20171107_20171201/20171107_20171201.geo.unw.tif .
-
-
-.. code-block :: sh
-    :caption: Importing the scene in spool.
-
-    spool --load=./20171107_20171201.geo.unw.tif

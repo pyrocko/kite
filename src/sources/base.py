@@ -1,6 +1,7 @@
 import numpy as num
 
 from kite.util import Subject
+from pyrocko import orthodrome as od
 from pyrocko.guts import Object, Float
 
 d2r = num.pi / 180.
@@ -10,21 +11,38 @@ km = 1e3
 
 class SandboxSource(Object):
 
+    lat = Float.T(
+        default=0.,
+        help='Latitude in [deg]')
+    lon = Float.T(
+        default=0.,
+        help='Longitude in [deg]')
     easting = Float.T(
+        default=0.,
         help='Easting in [m]')
     northing = Float.T(
+        default=0.,
         help='Northing in [m]')
     depth = Float.T(
+        default=1.*km,
         help='Depth in [m]')
 
     def __init__(self, *args, **kwargs):
         Object.__init__(self, *args, **kwargs)
         self._cached_result = None
         self.evParametersChanged = Subject()
+        self._sandbox = None
 
     def parametersUpdated(self):
         self._cached_result = None
         self.evParametersChanged.notify()
+
+    def getSandboxOffset(self):
+        if not self._sandbox or (self.lat == 0. and self.lon == 0.):
+            return 0., 0.
+        return od.latlon_to_ne_numpy(
+                self._sandbox.frame.llLat, self._sandbox.frame.llLon,
+                self.lat, self.lon)
 
     def getParametersArray(self):
         raise NotImplementedError
@@ -33,9 +51,11 @@ class SandboxSource(Object):
 class SandboxSourceRectangular(SandboxSource):
 
     width = Float.T(
-        help='Width, downdip in [m]')
+        help='Width, downdip in [m]',
+        default=10000.,)
     length = Float.T(
-        help='Length in [m]')
+        help='Length in [m]',
+        default=10000.,)
     strike = Float.T(
         default=45.,
         help='Strike, clockwise from North in [deg]; -180-180')
@@ -67,13 +87,39 @@ class SandboxSourceRectangular(SandboxSource):
         coords[3, 0] = coords[0, 0] - c_strike * c_dip * self.width
         coords[3, 1] = coords[0, 1] + s_strike * c_dip * self.width
 
-        coords[:, 0] += self.easting
-        coords[:, 1] += self.northing
+        north_shift, east_shift = self.getSandboxOffset()
+
+        coords[:, 0] += self.easting + east_shift
+        coords[:, 1] += self.northing + north_shift
+
         return coords
 
     @property
     def segments(self):
         yield self
+
+    @classmethod
+    def fromPyrockoSource(cls, source, store_dir=None, **kwargs):
+        d = dict(
+            lat=source.lat,
+            lon=source.lon,
+            northing=source.north_shift,
+            easting=source.east_shift,
+            depth=source.depth,
+            width=source.width,
+            length=source.length,
+            strike=source.strike,
+            dip=source.dip,
+            rake=source.rake,
+            slip=source.slip)
+
+        if hasattr(cls, 'decimation_factor'):
+            d['decimation_factor'] = source.decimation_factor
+
+        if hasattr(cls, 'store_dir'):
+            d['store_dir'] = store_dir
+
+        return cls(**d)
 
 
 class ProcessorProfile(dict):

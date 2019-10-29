@@ -58,6 +58,7 @@ Available Synthetic Displacement:
     ns = parser.parse_args(args)
 
     log_level = logging.WARNING - ns.verbose * 10
+    log_level = log_level if log_level > logging.DEBUG else logging.DEBUG
 
     logging.basicConfig()
     stream_handler = logging.root.handlers[0]

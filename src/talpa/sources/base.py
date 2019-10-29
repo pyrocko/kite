@@ -49,20 +49,24 @@ class RectangularSourceROI(pg.ROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
+
         strike = float((-self.angle()) % 360)
         width = float(self.size().x())
         length = float(self.size().y())
 
-        parameters = {
-            'strike': strike,
-            'width': width,
-            'length': length,
-            'easting': float(
-                self.pos().x() + num.sin(strike * d2r) * length/2),
-            'northing': float(
-                self.pos().y() + num.cos(strike * d2r) * length/2)
-            }
-        self.newSourceParameters.emit(parameters)
+        northing = float(self.pos().y() + num.cos(strike*d2r) * length/2)
+        easting = float(self.pos().x() + num.sin(strike*d2r) * length/2)
+
+        north_shift, east_shift = self.source.getSandboxOffset()
+        easting -= east_shift
+        northing -= north_shift
+
+        self.newSourceParameters.emit(dict(
+            strike=strike,
+            width=width,
+            length=length,
+            easting=easting,
+            northing=northing))
 
     @QtCore.pyqtSlot()
     def updateROIPosition(self):
@@ -109,8 +113,7 @@ class PointSourceROI(pg.EllipseROI):
         source = self.source
 
         size = 3000.
-        pg.EllipseROI.__init__(
-            self,
+        super().__init__(
             pos=(source.easting - size/2, source.northing - size/2),
             size=size,
             invertible=False,
@@ -136,11 +139,11 @@ class PointSourceROI(pg.EllipseROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
-        parameters = {
-            'easting': float(self.pos().x() + self.size().x()/2),
-            'northing': float(self.pos().y() + self.size().y()/2)
-            }
-        self.newSourceParameters.emit(parameters)
+        north_shift, east_shift = self.source.getSandboxOffset()
+        self.newSourceParameters.emit(dict(
+            easting=float(self.pos().x() + self.size().x()/2 - east_shift),
+            northing=float(self.pos().y() + self.size().y()/2 - north_shift)
+        ))
 
     @QtCore.pyqtSlot()
     def updateROIPosition(self):
@@ -180,7 +183,7 @@ class SourceDelegate(QtCore.QObject):
     EditDialog = None  # QDialog to edit the source
 
     def __init__(self, model, source, index):
-        QtCore.QObject.__init__(self)
+        super().__init__()
         self.source = source
         self.model = model
         self.index = index

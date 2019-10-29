@@ -169,9 +169,12 @@ class DisplacementPlot(pg.PlotItem):
             bottom=('Easting', 'm'),
             left=('Northing', 'm'))
 
+        border_pen = pg.mkPen(255, 255, 255, 50)
+
         self.image = pg.ImageItem(
             None,
             autoDownsample=False,
+            border_pen=border_pen,
             useOpenGL=True)
         self.addItem(self.image)
 
@@ -210,8 +213,8 @@ class DisplacementPlot(pg.PlotItem):
     def transFromFrame(self):
         self.image.resetTransform()
         self.image.scale(
-            self.sandbox.frame.dE,
-            self.sandbox.frame.dN)
+            self.sandbox.frame.dEmeter,
+            self.sandbox.frame.dNmeter)
 
     @QtCore.pyqtSlot()
     def addSourceROIS(self):
@@ -379,7 +382,8 @@ class DisplacementVectors(QtWidgets.QGraphicsItemGroup):
                 pN = int(img_pos.y())
 
                 if (pE >= img_shape[0] or pN >= img_shape[1]) or\
-                   (pE < 0 or pN < 0):
+                   (pE < 0 or pN < 0) or\
+                   num.isnan(mat_E[pE, pN]) or num.isnan(mat_N[pE, pN]):
                     dE = 0.
                     dN = 0.
                 else:
@@ -483,24 +487,26 @@ class ColormapPlots(pg.HistogramLUTWidget):
     @QtCore.pyqtSlot()
     def setSymColormap(self):
         cmap = {'ticks':
-                [[0, (106, 0, 31, 255)],
+                [[0, (0, 0, 0, 255)],
+                 [1e-3, (106, 0, 31, 255)],
                  [.5, (255, 255, 255, 255)],
                  [1., (8, 54, 104, 255)]],
                 'mode': 'rgb'}
         cmap = {'ticks':
-                [[0, (172, 56, 56)],
+                [[0, (0, 0, 0)],
+                 [1e-3, (172, 56, 56)],
                  [.5, (255, 255, 255)],
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
 
-        lvl_min = lvl_max = 0
+        lvl_min = lvl_max = 0.
         for plot in self.plots:
             plt_min = num.nanmin(plot.data)
             plt_max = num.nanmax(plot.data)
             lvl_max = lvl_max if plt_max < lvl_max else plt_max
             lvl_min = lvl_min if plt_min > lvl_min else plt_min
 
-        abs_range = max(abs(lvl_min), abs(lvl_max))
+        abs_range = max(abs(lvl_min), abs(lvl_max)) * 1.01
 
         self.gradient.restoreState(cmap)
         self.setLevels(-abs_range, abs_range)

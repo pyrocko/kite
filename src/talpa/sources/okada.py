@@ -21,9 +21,8 @@ class OkadaSourceDelegate(SourceDelegate):
     class OkadaDialog(SourceEditDialog):
 
         def __init__(self, delegate, *args, **kwargs):
-            SourceEditDialog.__init__(self, delegate,
-                                      ui_file='okada_source.ui',
-                                      *args, **kwargs)
+            super().__init__(delegate, ui_file='okada_source.ui',
+                             *args, **kwargs)
 
             def setLabel(method, fmt, value, suffix=''):
                 method(fmt.format(value) + suffix)
@@ -41,17 +40,12 @@ class OkadaSourceDelegate(SourceDelegate):
     @staticmethod
     def getRepresentedSource(sandbox):
         length = 5000.
-        src = OkadaSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000,
+        return OkadaSource(
             length=length,
-            width=15. * length**.66,
+            width=15.*length**.66,
             strike=45.,
             rake=0,
-            slip=2,
-            )
-        return src
+            slip=2)
 
     def formatListItem(self):
         item = '''

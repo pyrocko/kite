@@ -264,15 +264,19 @@ class PyrockoProcessor(SourceProcessor):
         SourceProcessor.__init__(self, *args)
         self.engine = gf.LocalEngine()
 
-    def process(self, sources, coords, nthreads=0):
+    def process(self, sources, sandbox, nthreads=0):
         result = {
             'processor_profile': dict(),
-            'displacement.n': num.zeros((coords.shape[0])),
-            'displacement.e': num.zeros((coords.shape[0])),
-            'displacement.d': num.zeros((coords.shape[0]))
+            'displacement.n': num.zeros(sandbox.frame.npixel),
+            'displacement.e': num.zeros(sandbox.frame.npixel),
+            'displacement.d': num.zeros(sandbox.frame.npixel)
         }
 
+        coords = sandbox.frame.coordinatesMeter
+
         target = gf.StaticTarget(
+            lats=num.full(sandbox.frame.npixel, sandbox.frame.llLat),
+            lons=num.full(sandbox.frame.npixel, sandbox.frame.llLon),
             east_shifts=coords[:, 0],
             north_shifts=coords[:, 1],
             interpolation='nearest_neighbor')
@@ -286,7 +290,7 @@ class PyrockoProcessor(SourceProcessor):
 
             pyr_sources = [src.pyrocko_source for src in talpa_sources]
 
-            for src in pyr_sources:
+            for src in sources:
                 src.regularize()
 
             try:

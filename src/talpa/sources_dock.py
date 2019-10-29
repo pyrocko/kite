@@ -1,8 +1,9 @@
 from PyQt5 import QtGui, QtCore, QtWidgets
-from functools import partial
 
 from .sources import __sources__
 from .util import SourceEditorDialog
+
+km = 1e3
 
 
 class SourcesListDock(QtWidgets.QDockWidget):
@@ -50,15 +51,22 @@ class SourcesAddButton(QtWidgets.QToolButton):
 
         def addSourceDelegate(self, src):
 
-            def addSource(source):
+            def addSource():
+                source = src.getRepresentedSource(self.sandbox)
+                source.lat = self.sandbox.frame.llLat
+                source.lon = self.sandbox.frame.llLon
+                source.easting = self.sandbox.frame.Emeter[-1] / 2
+                source.northing = self.sandbox.frame.Nmeter[-1] / 2
+                source.depth = 4*km
+
                 if source:
                     self.sandbox.addSource(source)
 
             action = QtWidgets.QAction(src.display_name, self)
             action.setToolTip('<span style="font-family: monospace;">'
                               '%s</span>' % src.__represents__)
-            action.triggered.connect(
-                partial(addSource, src.getRepresentedSource(self.sandbox)))
+
+            action.triggered.connect(addSource)
             self.addAction(action)
             return action
 

@@ -68,18 +68,14 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
     @staticmethod
     def getRepresentedSource(sandbox):
         length = 5000.
-        src = PyrockoRectangularSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
+        return PyrockoRectangularSource(
             depth=4000,
             length=length,
             width=15. * length**.66,
             strike=45.,
             rake=0,
             slip=2,
-            store_dir=getConfig().default_gf_dir or '',
-            )
-        return src
+            store_dir=getConfig().default_gf_dir or '')
 
     def formatListItem(self):
         item = '''
@@ -159,13 +155,8 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PyrockoMomentTensor(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000.,
-            store_dir=getConfig().default_gf_dir or '',
-            )
-        return src
+        return PyrockoMomentTensor(
+            store_dir=getConfig().default_gf_dir or '')
 
     def formatListItem(self):
         item = '''
@@ -277,13 +268,8 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PyrockoDoubleCouple(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000.,
-            store_dir=getConfig().default_gf_dir or '',
-            )
-        return src
+        return PyrockoDoubleCouple(
+            store_dir=getConfig().default_gf_dir or '')
 
     def formatListItem(self):
         item = '''
@@ -393,14 +379,10 @@ class PyrockoRingfaultDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PyrockoRingfaultSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000.,
+        return PyrockoRingfaultSource(
             diameter=10000.,
             store_dir=getConfig().default_gf_dir or '',
             )
-        return src
 
     def formatListItem(self):
         item = '''
@@ -535,13 +517,9 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        src = PyrockoVLVDSource(
-            easting=num.mean(sandbox.frame.E),
-            northing=num.mean(sandbox.frame.N),
-            depth=4000.,
+        return PyrockoVLVDSource(
             volume_change=.25,
             store_dir=getConfig().default_gf_dir or '')
-        return src
 
     def formatListItem(self):
         item = '''

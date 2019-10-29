@@ -1,6 +1,8 @@
 import re
 import glob
-import os.path as op
+import os
+import time
+from datetime import datetime
 
 import utm
 import scipy.io
@@ -13,12 +15,16 @@ __all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
 try:
     from osgeo import gdal
     __all__.append('LiCSAR')
+    __all__.append('ARIA')
 except ImportError:
     pass
 
 
 d2r = num.pi/180.
 km = 1e3
+op = os.path
+
+LAMBDA_SENTINEL = 0.055465763
 
 
 def check_required(required, params):
@@ -61,7 +67,7 @@ class SceneIO(object):
         self.container = AttribDict(
             phi=0.,    # Look orientation counter-clockwise angle from east
             theta=0.,  # Look elevation angle (up from horizontal in degree)
-                       # 90deg North
+                       # 90 deg North
             displacement=None,  # Displacement towards LOS
             frame=AttribDict(
                 llLon=None,  # Lower left corner latitude
@@ -766,8 +772,8 @@ class GMTSAR(SceneIO):
 
     .. code-block:: sh
 
-        gmt grd2xyz los_ll.grd | gmt grdtrack -Gdem.grd |
-        awk {'print $1, $2, $4'} |
+        gmt grd2xyz los_ll.grd | gmt grdtrack -Gdem.grd | \\
+        awk {'print $1, $2, $4'} | \\
         SAT_look 20050731.PRM -bos > 20050731.los.enu
     """
     def validate(self, filename, **kwargs):
@@ -965,7 +971,7 @@ class LiCSAR(SceneIO):
 
     .. note ::
 
-        Requires the python package
+        Requires the Python package
         `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
 
         Expects:
@@ -987,8 +993,9 @@ class LiCSAR(SceneIO):
 
     @staticmethod
     def _readBandData(dataset, band=1):
-        array = dataset.GetRasterBand(band).ReadAsArray()
-        array[array == 0.] = num.nan
+        band = dataset.GetRasterBand(band)
+        array = band.ReadAsArray()
+        array[array == band.GetNoDataValue()] = num.nan
 
         return num.flipud(array)
 
@@ -1008,8 +1015,7 @@ class LiCSAR(SceneIO):
         c.frame.dN = abs(georef[5])
 
         displacement = self._readBandData(dataset)
-        displacement[displacement == -9999.] = num.nan
-        c.displacement = displacement / 1e2  # data is in cm
+        c.displacement = -displacement / (4*num.pi) * LAMBDA_SENTINEL
 
         try:
             los_n = self._getLOS(filename, '*.geo.N.tif')
@@ -1039,12 +1045,107 @@ class LiCSAR(SceneIO):
         return c
 
     def validate(self, filename, **kwargs):
-        try:
-            dataset = gdal.Open(filename, gdal.GA_ReadOnly)
-            meta = dataset.GetMetadata()
-        except Exception:
+        if gdal.IdentifyDriver(filename) is None:
             return False
-        if 'TIFFTAG_DATETIME' in meta.keys():
-            return True
+        return True
+
+
+class ARIA(SceneIO):
+    '''
+    Import unwrapped InSAR scenes from the
+    `NASA/JPL ARIA <https://aria.jpl.nasa.gov/>`_ GUNW data products.
+
+    .. note ::
+
+        Requires the Python package
+        `gdal/osgeo <https://pypi.org/project/GDAL/>`_! Or through
+
+        Expects:
+
+        * Extracted layers: unwrappedPhase, lookAngle, incidenceAngle,
+          connectedComponents
+
+    Use ``ariaExtract.py`` to extract the layers:
+
+    .. code-block:: sh
+
+        ariaExtract.py -w ascending -f aria-data.nc -d download \\
+        -l unwrappedPhase,incidenceAngle,lookAngle
+
+    '''
+
+    @staticmethod
+    def _readBandData(dataset, band=1):
+        band = dataset.GetRasterBand(band)
+        array = band.ReadAsArray()
+        if array.dtype != num.int16 and array.dtype != num.int:
+            array[array == band.GetNoDataValue()] = num.nan
+
+        return num.flipud(array)
+
+    @staticmethod
+    def _dataset_from_dir(folder):
+        files = set(f for f in os.scandir(folder) if f.is_file())
+        for f in files:
+            if op.splitext(f.name)[-1] == '':
+                break
         else:
+            raise ImportError('could not load dataset from %s' % folder)
+
+        return gdal.Open(f.path, gdal.GA_ReadOnly)
+
+    def read(self, folder, **kwargs):
+        unw_phase = self._dataset_from_dir(op.join(folder, 'unwrappedPhase'))
+        georef = unw_phase.GetGeoTransform()
+
+        llLon = georef[0]
+        llLat = georef[3] + unw_phase.RasterYSize * georef[5]
+
+        c = self.container
+
+        c.frame.spacing = 'degree'
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+        c.frame.dE = georef[1]
+        c.frame.dN = abs(georef[5])
+
+        conn_comp = self._dataset_from_dir(op.join(
+            folder, 'connectedComponents'))
+
+        displacement = self._readBandData(unw_phase)
+        conn_mask = self._readBandData(conn_comp)  # Mask from snaphu
+        displacement *= num.where(conn_mask, 1., num.nan)
+
+        c.displacement = displacement / (4*num.pi) * LAMBDA_SENTINEL
+
+        inc_angle = self._dataset_from_dir(op.join(folder, 'incidenceAngle'))
+        azi_angle = self._dataset_from_dir(op.join(folder, 'azimuthAngle'))
+
+        c.theta = num.pi/2 - self._readBandData(inc_angle) * d2r
+        c.phi = self._readBandData(azi_angle) * d2r
+
+        c.meta.scene_id = op.basename(unw_phase.GetDescription())
+        c.meta.scene_title = c.meta.scene_id
+
+        t_slave, t_master = c.meta.scene_id.split('_')
+        c.meta.time_master = datetime(*time.strptime(t_master, '%Y%m%d')[:6]) \
+            .timestamp()
+        c.meta.time_slave = datetime(*time.strptime(t_slave, '%Y%m%d')[:6]) \
+            .timestamp()
+
+        c.meta.satellite_name = 'undefined (ARIA)'
+
+        return c
+
+    def validate(self, folder, **kwargs):
+        expected_dirs = set(
+            ['unwrappedPhase', 'incidenceAngle', 'lookAngle',
+             'connectedComponents'])
+        if not op.isdir(folder):
             return False
+
+        dirs = set(d.name for d in os.scandir(folder) if d.is_dir())
+        if not expected_dirs - dirs:
+            return True
+
+        return False

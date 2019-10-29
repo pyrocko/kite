@@ -181,8 +181,8 @@ class Frame(object):
         else:
             _, dEmeter = latlon_to_ne(
                 self.llLat, self.llLon,
-                self.llLat, self.llLon + self.dE)
-        return dEmeter
+                self.llLat, self.llLon + self.dE * self.cols)
+        return dEmeter / self.cols
 
     @property
     def dNmeter(self):
@@ -191,8 +191,8 @@ class Frame(object):
         else:
             dNmeter, _ = latlon_to_ne(
                 self.llLat, self.llLon,
-                self.llLat + self.dN, self.llLon)
-        return dNmeter
+                self.llLat + self.dN * self.rows, self.llLon)
+        return dNmeter / self.rows
 
     @property
     def spacing(self):
@@ -207,8 +207,16 @@ class Frame(object):
         return num.arange(self.cols) * self.dE
 
     @property_cached
+    def Emeter(self):
+        return num.arange(self.cols) * self.dEmeter
+
+    @property_cached
     def N(self):
         return num.arange(self.rows) * self.dN
+
+    @property_cached
+    def Nmeter(self):
+        return num.arange(self.rows) * self.dNmeter
 
     @property_cached
     def gridE(self):
@@ -284,6 +292,20 @@ class Frame(object):
                                   self.cols, axis=1).flatten()
         return coords
 
+    @property_cached
+    def coordinatesMeter(self):
+        """ Local east and north coordinates [m] of all pixels in
+           ``NxM`` matrix.
+
+        :type: :class:`numpy.ndarray`, size ``NxM``
+        """
+        coords = num.empty((self.rows*self.cols, 2))
+        coords[:, 0] = num.repeat(self.Emeter[num.newaxis, :],
+                                  self.rows, axis=0).flatten()
+        coords[:, 1] = num.repeat(self.Nmeter[:, num.newaxis],
+                                  self.cols, axis=1).flatten()
+        return coords
+
     def mapENMatrix(self, E, N):
         """ Local map coordinates in east and north to matrix
             row and column
@@ -308,6 +330,10 @@ class Frame(object):
 
     def isDegree(self):
         return self.config.spacing == 'degree'
+
+    @property
+    def npixel(self):
+        return self.cols * self.rows
 
     def __eq__(self, other):
         return self.llLat == other.llLat and\
@@ -376,7 +402,7 @@ class Meta(guts.Object):
 
 class SceneConfig(guts.Object):
     """ Configuration object, gathering ``kite.Scene`` and
-        sub-objects configuration.
+    sub-objects configuration.
     """
     meta = Meta.T(
         default=Meta.D(),
@@ -459,7 +485,7 @@ class BaseScene(object):
     @property
     def displacement_px_var(self):
         """ Variance of the surface displacement per pixel.
-            Same dimension as displacement.
+        Same dimension as displacement.
 
         :setter: Set standard deviation of of the displacement.
         :getter: Return the standard deviation matrix.
@@ -477,7 +503,7 @@ class BaseScene(object):
 
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
-        return num.isnan(self.displacement)
+        return ~num.isfinite(self.displacement)
 
     @property
     def shape(self):
@@ -486,7 +512,7 @@ class BaseScene(object):
     @property
     def phi(self):
         """ Horizontal angle towards satellite :abbr:`line of sight (LOS)`
-            in radians counter-clockwise from East.
+        in radians counter-clockwise from East.
 
         .. important ::
 
@@ -515,8 +541,8 @@ class BaseScene(object):
     @property
     def theta(self):
         """ Theta is the look vector elevation angle towards satellite from
-            the horizon in radians. Matrix of theta towards satellite's
-            :abbr:`line of sight (LOS)`.
+        the horizon in radians. Matrix of theta towards satellite's
+        :abbr:`line of sight (LOS)`.
 
         .. important ::
 
@@ -860,8 +886,9 @@ class Scene(BaseScene):
         :raises: TypeError
         """
         scene = self
-        if not op.isfile(path) or op.isdir(path):
+        if not op.isfile(path) and not op.isdir(path):
             raise ImportError('File %s does not exist!' % path)
+
         data = None
 
         for mod_name in scene_io.__all__:
