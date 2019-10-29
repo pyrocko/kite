@@ -1,5 +1,6 @@
 # Kite
-![Python3](https://img.shields.io/badge/python-3.x-brightgreen.svg)
+![Python3](https://img.shields.io/badge/Python-3.x-brightgreen.svg)
+[![Docs](https://img.shields.io/badge/kite-Documentation-blue.svg)](https://pyrocko.org/kite/docs/current/)
 
 _Preparation of InSAR surface displacement maps for geophysical modelling_
 
