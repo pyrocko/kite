@@ -821,7 +821,7 @@ class GMTSAR(SceneIO):
         c.frame.spacing = 'degree'
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
-
+       
         c.frame.dN = (grd.variables['lat'][:].max() -
                       c.frame.llLat) / shape[0]
         c.frame.dE = (grd.variables['lon'][:].max() -
