@@ -5,7 +5,7 @@
 _Preparation of InSAR surface displacement maps for geophysical modelling_
 
 ## Introduction
-This framework is streamlining InSAR displacement processing routines for earthquake inversion through [pyrocko](https://www.pyrocko.org) and Grond.
+This framework is streamlining InSAR displacement processing routines for earthquake inversion through [Pyrocko](https://www.pyrocko.org) and Grond.
 
 Kite features simple and efficient handling of displacement data:
 
@@ -28,6 +28,10 @@ scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 # Inspection of covariance parameters
 scene.quadtree.covariance.plot()
 ```
+
+Visual parametrisation of the quadtree and spatial covariance for SLC and InSAR time-series.
+
+![L'Aquila earthquake unwrapped displacement data](https://pyrocko.org/grond/docs/current/_images/example_spool-quadtree.png)
 
 ## Installation and Requirement
 
