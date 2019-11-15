@@ -245,8 +245,8 @@ class KitePlot(pg.PlotWidget):
                 self.hint['value'] = value
 
                 if frame.isDegree():
-                    self.hint['east'] += frame.llLat
-                    self.hint['north'] += frame.llLon
+                    self.hint['east'] += frame.llLon
+                    self.hint['north'] += frame.llLat
 
         self.hint['length'] = '03' if num.isnan(self.hint['value'])\
                               else self.hint['vlength']
