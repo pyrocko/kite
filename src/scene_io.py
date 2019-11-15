@@ -342,18 +342,18 @@ class Gamma(SceneIO):
 
         fill = None
 
-        nrows = int(params['width'])
+        ncols = int(params['width'])
         nlines = int(params['nlines'])
         radar_frequency = params_slc.get('radar_frequency', None)
 
         displ = num.fromfile(filename, dtype='>f4')
         # Resize array if last line is not scanned completely
-        if (displ.size % nrows) != 0:
-            fill = num.empty(nrows - displ.size % nrows)
+        if (displ.size % ncols) != 0:
+            fill = num.empty(ncols - displ.size % ncols)
             fill.fill(num.nan)
             displ = num.append(displ, fill)
 
-        displ = displ.reshape(nlines, nrows)
+        displ = displ.reshape(nlines, ncols)
         displ[displ == -0.] = num.nan
         displ = num.flipud(displ)
 
@@ -376,10 +376,10 @@ class Gamma(SceneIO):
         theta = theta
 
         if isinstance(phi, num.ndarray):
-            phi = phi.reshape(nlines, nrows)
+            phi = phi.reshape(nlines, ncols)
             phi = num.flipud(phi)
         if isinstance(theta, num.ndarray):
-            theta = theta.reshape(nlines, nrows)
+            theta = theta.reshape(nlines, ncols)
             theta = num.flipud(theta)
 
         if fill is not None:
@@ -436,7 +436,7 @@ class Gamma(SceneIO):
             self._log.info('Using Lat/Lon reference')
             c.frame.spacing = 'degree'
             c.frame.llLat = params['corner_lat'] \
-                + params['post_lat'] * nrows
+                + params['post_lat'] * nlines
             c.frame.llLon = params['corner_lon']
             c.frame.dE = abs(params['post_lon'])
             c.frame.dN = abs(params['post_lat'])
@@ -524,7 +524,7 @@ class ROI_PAC(SceneIO):
 
         par, geo_ref = self._parseParameterFile(par_file)
         nlines = int(par['FILE_LENGTH'])
-        nrows = int(par['WIDTH'])
+        ncols = int(par['WIDTH'])
         wavelength = par['WAVELENGTH']
         heading = par['HEADING_DEG']
         if geo_ref == 'latlon':
@@ -546,9 +546,9 @@ class ROI_PAC(SceneIO):
             num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
         data = num.memmap(filename, dtype='<f4')
-        data = data.reshape(nlines, nrows*2)
+        data = data.reshape(nlines, ncols*2)
 
-        displ = data[:, nrows:]
+        displ = data[:, ncols:]
         displ = num.flipud(displ)
         displ[displ == -0.] = num.nan
         displ = displ / (4.*num.pi) * wavelength
@@ -583,7 +583,7 @@ class ROI_PAC(SceneIO):
         elif geo_ref == 'latlon':
             self._log.info('Georeferencing is in Lat-Lon [degrees].')
             c.frame.spacing = 'degree'
-            c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            c.frame.llLat = par['Y_FIRST'] + par['Y_STEP'] * nlines
             c.frame.llLon = par['X_FIRST']
 
             # c_utm_0 = utm.from_latlon(lat_ref, lon_ref)
@@ -598,7 +598,7 @@ class ROI_PAC(SceneIO):
         elif geo_ref == 'utm':
             self._log.info('Georeferencing is in UTM (zone %d%s)',
                            utm_zone, utm_zone_letter)
-            y_ll = par['Y_FIRST'] + par['Y_STEP'] * nrows
+            y_ll = par['Y_FIRST'] + par['Y_STEP'] * nlines
             c.frame.llLat, c.frame.llLon = utm.to_latlon(
                 par['X_FIRST'], y_ll, utm_zone,
                 zone_letter=utm_zone_letter)
