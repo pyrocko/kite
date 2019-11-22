@@ -118,7 +118,7 @@ class SliderWidget(QtGui.QWidget):
         self.spin.setFrame(False)
 
         self.slider = QtGui.QSlider(
-            QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1, horiz
+            QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1 = hor.
         self.slider.setTickPosition(
             QtGui.QSlider.TicksAbove if horizontal
             else QtGui.QSlider.TicksLeft)
@@ -178,6 +178,10 @@ class SliderWidget(QtGui.QWidget):
         self._value = val
         self.setValue(val)
         self.sigValueChanged.emit(self._value)
+
+    @QtCore.pyqtSlot(object)
+    def sliderChange(self, ev):
+        print(ev)
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):

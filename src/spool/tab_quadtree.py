@@ -40,8 +40,8 @@ class KiteQuadtree(KiteView):
 
 class QQuadLeaf(QtCore.QRectF):
 
-    leaf_outline = pg.mkPen((202, 60, 60), width=1)
-    leaf_fill = pg.mkBrush(202, 60, 60, 120)
+    leaf_outline = pg.mkPen((255, 255, 255, 100), width=1)
+    leaf_fill = pg.mkBrush(0, 0, 0, 0)
 
     def __init__(self, leaf):
         self.id = leaf.id
@@ -54,9 +54,13 @@ class QQuadLeaf(QtCore.QRectF):
         item = QtGui.QGraphicsRectItem(self)
         item.setPen(self.leaf_outline)
         item.setBrush(self.leaf_fill)
-        item.setZValue(1e9)
-        item.setToolTip('Press Delete to remove')
+        item.setZValue(1e8)
         return item
+
+
+class QQuadSelectedLeaf(QQuadLeaf):
+    leaf_outline = pg.mkPen((202, 60, 60), width=1)
+    leaf_fill = pg.mkBrush(202, 60, 60, 120)
 
 
 class KiteQuadtreePlot(KitePlot):
@@ -78,15 +82,13 @@ class KiteQuadtreePlot(KitePlot):
 
         KitePlot.__init__(self, model=model, los_arrow=True)
 
-        # http://paletton.com
-        focalpoint_color = (45, 136, 45)
-        # focalpoint_outline_color = (255, 255, 255, 200)
-        focalpoint_outline_color = (3, 212, 3)
+        focalpoint_color = (78, 255, 0)
+        focalpoint_outline_color = (0, 0, 0)
         self.focal_points = pg.ScatterPlotItem(
-            size=3.,
+            size=3.5,
             pen=pg.mkPen(
                 focalpoint_outline_color,
-                width=.5),
+                width=.3),
             brush=pg.mkBrush(focalpoint_color),
             antialias=True)
 
@@ -94,6 +96,7 @@ class KiteQuadtreePlot(KitePlot):
 
         self.highlighted_leaves = []
         self.selected_leaves = []
+        self.outlined_leaves = []
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
         self.eraseBox.setPen(
@@ -119,11 +122,13 @@ class KiteQuadtreePlot(KitePlot):
         self.model.sigQuadtreeChanged.connect(self.unselectLeaves)
         self.model.sigQuadtreeChanged.connect(self.update)
         self.model.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        self.model.sigQuadtreeChanged.connect(self.updateLeavesOutline)
         self.model.sigCovarianceChanged.connect(covarianceChanged)
 
         # self.model.sigFrameChanged.connect(self.transFromFrame)
         # self.model.sigFrameChanged.connect(self.transFromFrameScatter)
 
+        self.updateLeavesOutline()
         self.updateFocalPoints()
 
     def transFromFrameScatter(self):
@@ -160,32 +165,50 @@ class KiteQuadtreePlot(KitePlot):
         else:
             self.updateEraseBox(ev.buttonDownPos(), ev.pos())
 
-    def getQleaves(self):
-        return [QQuadLeaf(l) for l in self.model.quadtree.leaves]
+    def getQLeaves(self, cls):
+        return [cls(lf) for lf in self.model.quadtree.leaves]
 
+    @QtCore.pyqtSlot()
     def selectLeaves(self):
         self.unselectLeaves()
 
-        self.selected_leaves = [l for l in self.getQleaves()
-                                if self.eraseBox.r.contains(l)]
-        for l in self.selected_leaves:
-            rect_leaf = l.getRectItem()
-            self.highlighted_leaves.append(rect_leaf)
-            self.addItem(rect_leaf)
+        self.selected_leaves = [lf for lf in self.getQLeaves(QQuadSelectedLeaf)
+                                if self.eraseBox.r.contains(lf)]
+        for lf in self.selected_leaves:
+            leaf_item = lf.getRectItem()
+            leaf_item.setZValue(1e9)
+            leaf_item.setToolTip('Press Del to remove')
 
+            self.highlighted_leaves.append(leaf_item)
+            self.addItem(leaf_item)
+
+    @QtCore.pyqtSlot()
     def unselectLeaves(self):
         if self.selected_leaves:
-            for l in self.highlighted_leaves:
-                self.removeItem(l)
+            for lf in self.highlighted_leaves:
+                self.removeItem(lf)
             del self.highlighted_leaves
             del self.selected_leaves
             self.highlighted_leaves = []
             self.selected_leaves = []
 
+    @QtCore.pyqtSlot(object)
     def blacklistSelectedLeaves(self, ev):
         if ev.key() == QtCore.Qt.Key_Delete:
             self.model.quadtree.blacklistLeaves(
-                l.id for l in self.selected_leaves)
+                lf.id for lf in self.selected_leaves)
+
+    @QtCore.pyqtSlot()
+    def updateLeavesOutline(self):
+        for lf in self.outlined_leaves:
+            self.removeItem(lf)
+        del self.outlined_leaves
+        self.outlined_leaves = []
+
+        for lf in self.getQLeaves(QQuadLeaf):
+            leaf_item = lf.getRectItem()
+            self.outlined_leaves.append(leaf_item)
+            self.addItem(leaf_item)
 
 
 class KiteParamQuadtree(KiteParameterGroup):
@@ -234,18 +257,19 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
-        p = {'name': 'epsilon',
-             'value': model.quadtree.epsilon,
-             'type': 'float',
-             'default': model.quadtree._epsilon_init,
-             'step': round((model.quadtree.epsilon -
-                            model.quadtree.epsilon_min)*.1, 3),
-             'limits': (model.quadtree.epsilon_min,
-                        3*model.quadtree._epsilon_init),
-             'editable': True,
-             'decimals': 3,
-             'tip': QuadtreeConfig.epsilon.help
-             }
+        p = {
+            'name': 'epsilon',
+            'type': 'float',
+            'value': model.quadtree.epsilon,
+            'default': model.quadtree._epsilon_init,
+            'step': round((model.quadtree.epsilon -
+                           model.quadtree.epsilon_min)*.1, 3),
+            'limits': (model.quadtree.epsilon_min,
+                       3*model.quadtree._epsilon_init),
+            'editable': True,
+            'decimals': 3,
+            'tip': QuadtreeConfig.epsilon.help
+        }
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
@@ -256,9 +280,9 @@ class KiteParamQuadtree(KiteParameterGroup):
             self.sigNanFraction.emit(self.nan_allowed.value())
 
         p = {'name': 'nan_allowed',
+             'type': 'float',
              'value': model.quadtree.nan_allowed,
              'default': QuadtreeConfig.nan_allowed.default(),
-             'type': 'float',
              'step': 0.05,
              'limits': (0., 1.),
              'editable': True,
@@ -279,9 +303,9 @@ class KiteParamQuadtree(KiteParameterGroup):
         max_d = max(frame.dE, frame.dN)
         limits = (max_d * 5, max_d * (max_px / 4))
         p = {'name': 'tile_size_min',
+             'type': 'float',
              'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
-             'type': 'float',
              'limits': limits,
              'step': 250,
              'editable': True,

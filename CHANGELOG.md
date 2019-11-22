@@ -4,6 +4,16 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Added
+- Spool: Added outline to Quadtree
+
+### Changed
+- Spool:
+  - changed leaf center color
+  - changed satellite arrow label
+
 ## [1.2.4] 29. October 2019
 
 ### Added
