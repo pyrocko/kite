@@ -101,10 +101,12 @@ class SliderWidget(QtGui.QWidget):
     """
     sigValueChanged = QtCore.Signal(object)  # value
 
-    def __init__(self, horizontal=True, parent=None, decimals=3, step=.005):
+    def __init__(self, horizontal=True, parent=None, decimals=3, step=.005,
+                 slider_exponent=1):
         QtGui.QWidget.__init__(self, parent)
-        self.mn = None
-        self.mx = None
+        self.vmin = None
+        self.vmax = None
+        self.slider_exponent = slider_exponent
         self.decimals = decimals
         self.step = 100
         self.valueLen = 2
@@ -122,7 +124,7 @@ class SliderWidget(QtGui.QWidget):
         self.slider.setTickPosition(
             QtGui.QSlider.TicksAbove if horizontal
             else QtGui.QSlider.TicksLeft)
-        # self.slider.setRange (0, 100)
+        self.slider.setRange(0, 99)
         self.slider.sliderMoved.connect(self._update_slider)
 
         layout = QtGui.QHBoxLayout() if horizontal else QtGui.QVBoxLayout()
@@ -134,26 +136,34 @@ class SliderWidget(QtGui.QWidget):
         return self._value
 
     def setValue(self, val):
+        self.setSliderValue(val)
         self.spin.setValue(val)
 
+    def setSliderValue(self, val):
         if val is None:
-            val = self.mn
-        if self.mn is not None:
-            val = (val-self.mn) / (self.mx-self.mn)
-            val *= 99.
+            val = self.vmin
+
+        elif self.vmin is not None and self.vmax is not None:
+            if val <= self.vmin:
+                val = self.vmin
+            val = (val-self.vmin) / (self.vmax-self.vmin)
+
+            val **= 1./self.slider_exponent
+            val *= 99
             val = int(round(val))
+
         self.slider.setValue(val)
 
-    def setRange(self, mn, mx):
+    def setRange(self, vmin, vmax):
         """
-        mn, mx -> arbitrary values that are not equal
+        vmin, vmax -> arbitrary values that are not equal
         """
-        if mn == mx:
+        if vmin == vmax:
             raise ValueError('limits must be different values')
-        self.mn = float(min(mn, mx))
-        self.mx = float(max(mn, mx))
+        self.vmin = float(min(vmin, vmax))
+        self.vmax = float(max(vmin, vmax))
 
-        self.spin.setRange(self.mn, self.mx)
+        self.spin.setRange(self.vmin, self.vmax)
 
     def setOpts(self, bounds=None):
         if bounds is not None:
@@ -165,18 +175,22 @@ class SliderWidget(QtGui.QWidget):
 
     @QtCore.pyqtSlot(int)
     def _update_slider(self, val):
-        if self.mn is not None:
-            val /= 99.  # val->0...1
-            val = val * (self.mx-self.mn) + self.mn
+        val /= 99  # val -> 0...1
+        val **= self.slider_exponent
+
+        if self.vmin is not None and self.vmax is not None:
+            val = val * (self.vmax-self.vmin) + self.vmin
 
         self._value = round(val, self.decimals)
-        self.setValue(self._value)
+
+        self.spin.setValue(self._value)
         self.sigValueChanged.emit(self._value)
 
     @QtCore.pyqtSlot(float)
     def _update_spin(self, val):
         self._value = val
-        self.setValue(val)
+
+        self.setSliderValue(self._value)
         self.sigValueChanged.emit(self._value)
 
     @QtCore.pyqtSlot(object)
@@ -189,20 +203,30 @@ class SliderWidgetParameterItem(WidgetParameterItem):
     """
     def makeWidget(self):
         opts = self.param.opts
-        decimals = opts.get('decimals', 2)
-        step = opts.get('step', .1)
 
-        w = SliderWidget(decimals=decimals, step=step)
+        step = opts.get('step', .1)
+        decimals = opts.get('decimals', 2)
+        slider_exponent = opts.get('slider_exponent', 1)
+
+        w = SliderWidget(
+            decimals=decimals, step=step,
+            slider_exponent=slider_exponent)
+
+        limits = opts.get('limits', None)
+        if limits is not None:
+            w.setRange(*limits)
+
+        value = opts.get('value', None)
+        if value is not None:
+            w.setValue(value)
+
+        suffix = opts.get('suffix', None)
+        w.setSuffix(suffix)
+
+        self.hideWidget = False
         w.sigChanged = w.sigValueChanged
         w.sigChanging = w.sigValueChanged
-        lim = opts.get('limits')
-        if lim:
-            w.setRange(*lim)
-        v = opts.get('value')
-        if lim:
-            w.setValue(v)
-        w.setSuffix(opts.get('suffix', None))
-        self.hideWidget = False
+
         return w
 
 

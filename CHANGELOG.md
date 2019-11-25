@@ -13,6 +13,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Spool:
   - changed leaf center color
   - changed satellite arrow label
+  - Quadtree sliders now behave exponential for better fine-tuning
+
+### Fixed
+- Spool: Fixed displayed coordinates
+- Gamma: Fixed ncols/nrows import
 
 ## [1.2.4] 29. October 2019
 

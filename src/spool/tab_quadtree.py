@@ -268,6 +268,7 @@ class KiteParamQuadtree(KiteParameterGroup):
                        3*model.quadtree._epsilon_init),
             'editable': True,
             'decimals': 3,
+            'slider_exponent': 2,
             'tip': QuadtreeConfig.epsilon.help
         }
         self.epsilon = pTypes.SimpleParameter(**p)
@@ -308,6 +309,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'default': QuadtreeConfig.tile_size_min.default(),
              'limits': limits,
              'step': 250,
+             'slider_exponent': 2,
              'editable': True,
              'suffix': ' m' if frame.isMeter() else ' deg',
              'decimals': 0 if frame.isMeter() else 3,
