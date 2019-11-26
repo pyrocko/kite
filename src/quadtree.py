@@ -555,7 +555,6 @@ class Quadtree(object):
         self.config.epsilon = value
 
         self.evChanged.notify()
-        return
 
     @property_cached
     def _epsilon_init(self):

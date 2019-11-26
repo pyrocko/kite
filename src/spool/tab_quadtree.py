@@ -1,3 +1,4 @@
+import time
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
@@ -115,6 +116,7 @@ class KiteQuadtreePlot(KitePlot):
 
         self.addItem(self.focal_points)
 
+        @QtCore.pyqtSlot()
         def covarianceChanged():
             if self._component == 'weight':
                 self.update()
@@ -136,6 +138,7 @@ class KiteQuadtreePlot(KitePlot):
         self.focal_points.scale(
             self.model.frame.dE, self.model.frame.dN)
 
+    @QtCore.pyqtSlot()
     def updateFocalPoints(self):
         if self.model.quadtree.leaf_focal_points.size == 0:
             self.focal_points.clear()
@@ -247,13 +250,16 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.sigTileMinimum.connect(model.qtproxy.setTileMinimum)
 
         def updateGuard(func):
+
             def wrapper(*args, **kwargs):
                 if not self.sig_guard:
                     func()
+
             return wrapper
 
         # Epsilon control
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
@@ -275,8 +281,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
 
-        # Epsilon control
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateNanFrac():
             self.sigNanFraction.emit(self.nan_allowed.value())
 
@@ -296,6 +302,7 @@ class KiteParamQuadtree(KiteParameterGroup):
 
         # Tile size controls
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateTileSizeMin():
             self.sigTileMinimum.emit(self.tile_size_min.value())
 
@@ -334,6 +341,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.tile_size_max.sigValueChanged.connect(updateTileSizeMax)
 
         # Component control
+        @QtCore.pyqtSlot()
         def changeComponent():
             self.plot.component = self.components.value()
 
@@ -349,6 +357,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.components = pTypes.ListParameter(**p)
         self.components.sigValueChanged.connect(changeComponent)
 
+        @QtCore.pyqtSlot()
         def changeCorrection():
             model.quadtree.setCorrection(correction_method.value())
             self.updateEpsilonLimits()
@@ -374,6 +383,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.pushChild(self.epsilon)
         self.pushChild(self.components)
 
+    @QtCore.pyqtSlot()
     def onConfigUpdate(self):
         self.sig_guard = True
         for p in ['epsilon', 'nan_allowed',

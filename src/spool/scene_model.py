@@ -15,7 +15,7 @@ class SceneModel(QtCore.QObject):
     sigConfigChanged = QtCore.pyqtSignal()
 
     sigFrameChanged = QtCore.pyqtSignal()
-    sigQuadtreeChanged = QtCore.pyqtSignal(object)
+    sigQuadtreeChanged = QtCore.pyqtSignal()
     _sigQuadtreeChanged = QtCore.pyqtSignal()
     sigQuadtreeConfigChanged = QtCore.pyqtSignal()
     sigCovarianceChanged = QtCore.pyqtSignal()
@@ -38,7 +38,7 @@ class SceneModel(QtCore.QObject):
 
         self._ = SignalProxy(
             self._sigQuadtreeChanged,
-            rateLimit=5,
+            rateLimit=20,
             delay=0,
             slot=lambda: self.sigQuadtreeChanged.emit(object))
 
@@ -78,7 +78,7 @@ class SceneModel(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.unsubscribe(
-            self._sigQuadtreeChanged.emit)
+            self.sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.unsubscribe(
             self.sigQuadtreeConfigChanged.emit)
 
@@ -97,7 +97,7 @@ class SceneModel(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.subscribe(
-            self._sigQuadtreeChanged.emit)
+            self.sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.subscribe(
             self.sigQuadtreeConfigChanged.emit)
 
@@ -143,6 +143,7 @@ class SceneModel(QtCore.QObject):
 
 
 class QSceneQuadtreeProxy(QtCore.QObject):
+
     def __init__(self, scene_proxy):
         QtCore.QObject.__init__(self, scene_proxy)
         self.scene_proxy = scene_proxy

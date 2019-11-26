@@ -48,8 +48,8 @@ class Spool(QtWidgets.QApplication):
 
     @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=''):
-        self.splash.showMessage("Loading %s ..." % msg.title(),
-                                QtCore.Qt.AlignBottom)
+        self.splash.showMessage(
+            'Loading %s ...' % msg.title(), QtCore.Qt.AlignBottom)
 
     def addScene(self, scene):
         self.spool_win.addScene(scene)

@@ -187,6 +187,7 @@ class _KiteSubplotPlot(QtGui.QWidget):
 
 
 class KiteNoisePowerspec(_KiteSubplotPlot):
+
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
 
@@ -604,12 +605,10 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
-            self.model.sigQuadtreeChanged.connect(self.update)
             self.parent.matrixButtonGroup.buttonClicked.connect(self.update)
 
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
-            self.model.sigQuadtreeChanged.disconnect(self.update)
             self.parent.matrixButtonGroup.buttonClicked.disconnect(self.update)
 
     def __init__(self, model, parent=None):

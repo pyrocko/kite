@@ -181,21 +181,22 @@ class SliderWidget(QtGui.QWidget):
         if self.vmin is not None and self.vmax is not None:
             val = val * (self.vmax-self.vmin) + self.vmin
 
-        self._value = round(val, self.decimals)
+        val = round(val, self.decimals)
 
-        self.spin.setValue(self._value)
-        self.sigValueChanged.emit(self._value)
+        if self._value != val:
+            self.sigValueChanged.emit(val)
+
+        self._value = val
+        self.spin.setValue(val)
 
     @QtCore.pyqtSlot(float)
     def _update_spin(self, val):
-        self._value = val
-
         self.setSliderValue(self._value)
-        self.sigValueChanged.emit(self._value)
 
-    @QtCore.pyqtSlot(object)
-    def sliderChange(self, ev):
-        print(ev)
+        if self._value != val:
+            self.sigValueChanged.emit(val)
+
+        self._value = val
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
