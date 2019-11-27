@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Spool: Added outline to Quadtree
-- Import of BGR BodenBewegungsDienst data (https://bodenbewegungsdienst.bgr.de)
+- `bbd2kite`: import of BGR BodenBewegungsDienst data (https://bodenbewegungsdienst.bgr.de)
 
 ### Changed
 - Spool:
@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - changed satellite arrow label
   - Quadtree sliders now behave exponential for better fine-tuning
   - Performance upgrade
+- `stamps2kite` parses pixel size in meters instead of grid size
 
 ### Fixed
 - Spool:
