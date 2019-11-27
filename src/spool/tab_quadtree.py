@@ -49,7 +49,7 @@ class KiteQuadtree(KiteView):
 
 class QQuadLeaf(QtCore.QRectF):
 
-    leaf_outline = pg.mkPen((255, 255, 255, 100), width=1)
+    leaf_outline = pg.mkPen((255, 255, 255), width=1)
     leaf_fill = pg.mkBrush(0, 0, 0, 0)
 
     def __init__(self, leaf):
@@ -222,6 +222,7 @@ class KiteQuadtreePlot(KitePlot):
         group = QtGui.QGraphicsItemGroup()
         for lf in self.model.quadtree.leaves:
             group.addToGroup(QQuadLeaf(lf).getRectItem())
+        group.setOpacity(.4)
 
         if self.outlined_leaves is not None:
             self.vb.removeItem(self.outlined_leaves)

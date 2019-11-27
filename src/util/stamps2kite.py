@@ -22,7 +22,8 @@ d2r = num.pi/180.
 r2d = 180./num.pi
 
 
-class AttrDict(dict):
+class DataStruct(dict):
+
     def __getattr__(self, attr):
         return self[attr]
 
@@ -73,7 +74,7 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
     ps_plot_mat = _read_mat(fn_ps_plot)
     params_mat = _read_mat(fn_parms)
 
-    data = AttrDict()
+    data = DataStruct()
     data.ll_coords = num.asarray(ps2_mat['ll0'])
     data.radar_coords = num.asarray(ps2_mat['ij'])
     data.ps_mean_v = num.asarray(ps_plot_mat['ph_disp']).ravel()
@@ -271,7 +272,7 @@ def main():
         description='''Convert StaMPS data into a Kite scene.
 
 Loads the PS velocities from a StaMPS project (i.e. from ps_plot(..., -1);),
-and grids the data into mean velocity bins. The LOS velocities will be
+and grids the data into mean velocity bins. The mean LOS velocities will be
 converted into a Kite Scene.
 
 The data has to be fully processed through StaMPS and may stem from the master

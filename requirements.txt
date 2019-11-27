@@ -4,3 +4,4 @@ PyQt4
 pyrocko
 utm
 geojson
+pyshp

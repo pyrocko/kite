@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Spool: Added outline to Quadtree
+- Import of BGR BodenBewegungsDienst data (https://bodenbewegungsdienst.bgr.de)
 
 ### Changed
 - Spool:
