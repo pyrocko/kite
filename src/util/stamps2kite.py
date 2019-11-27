@@ -2,6 +2,7 @@ import logging
 import glob
 from os import path as op
 from datetime import datetime, timedelta
+import pyrocko.orthodrome as od
 
 import numpy as num
 from scipy import stats, interpolate, io
@@ -161,8 +162,8 @@ def interpolate_look_angles(data):
     return interp
 
 
-def stamps2kite(dirname='.', bins=(800, 800), convert_m=True, import_var=False,
-                **kwargs):
+def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
+                import_var=False, **kwargs):
     '''Convert StaMPS velocity data to a Kite Scene
 
     Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
@@ -202,16 +203,28 @@ def stamps2kite(dirname='.', bins=(800, 800), convert_m=True, import_var=False,
     :param fn_len: The :file:`len.txt` containing number of rows in the
         interferogram. Defaults to ``len.txt``.
     :type fn_len: str
-
-    :param bins: Number of pixels/bins in East and North dimension.
-        Default (800, 800).
-    :type bins: tuple
+    :param px_size: Size of pixels in North and East in meters.
+        Default (200, 200).
+    :type px_size: tuple
+    :param import_var: Import the mean velocity variance, this information
+        is used by the Kite scene to define the covariance.
+    :param import_var: bool
 
     :returns: Kite Scene from the StaMPS data
     :rtype: :class:`kite.Scene`
     '''
     data = read_mat_data(dirname, import_mv2=import_var, **kwargs)
     log.info('Found a StaMPS project at %s', op.abspath(dirname))
+
+    bbox = (data.lons.min(), data.lats.min(),
+            data.lons.max(), data.lats.max())
+    lengthN = od.distance_accurate50m(
+        bbox[0], bbox[1],
+        bbox[0], bbox[3])
+    lengthE = od.distance_accurate50m(
+        bbox[0], bbox[1],
+        bbox[2], bbox[3])
+    bins = (lengthE // px_size[0], lengthN // px_size[1])
 
     if convert_m:
         data.ps_mean_v /= 1e3
@@ -294,10 +307,10 @@ project or the processed small baseline pairs. Required files are:
         default='.',
         help='StaMPS project folder.')
     parser.add_argument(
-        '--resolution', '-r', nargs=2, metavar=('pxN', 'pxE'),
-        dest='resolution', type=int, default=(800, 800),
-        help='resolution of the output grid in North and East (pixels). '
-             'Default is 800 by 800 px.')
+        '--resolution', '-r', nargs=2, metavar=('mN', 'mE'),
+        dest='resolution', type=int, default=(500, 500),
+        help='pixel size of the output grid in North and East (meter).'
+             'Default is 500 m by 500 m.')
     parser.add_argument(
         '--save', '-s', default=None, type=str, dest='save',
         help='filename to save the Kite scene to. If not given, the scene'
@@ -331,7 +344,7 @@ project or the processed small baseline pairs. Required files are:
                 raise UserWarning(
                     'File %s exists! Use --force to overwrite.' % fn_save)
 
-    scene = stamps2kite(dirname=args.folder, bins=args.resolution,
+    scene = stamps2kite(dirname=args.folder, px_size=args.resolution,
                         convert_m=not args.keep_mm,
                         import_var=args.import_var)
 
