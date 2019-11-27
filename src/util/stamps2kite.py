@@ -219,12 +219,12 @@ def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
     bbox = (data.lons.min(), data.lats.min(),
             data.lons.max(), data.lats.max())
     lengthN = od.distance_accurate50m(
-        bbox[0], bbox[1],
-        bbox[0], bbox[3])
+        bbox[1], bbox[0],
+        bbox[3], bbox[0])
     lengthE = od.distance_accurate50m(
-        bbox[0], bbox[1],
-        bbox[2], bbox[3])
-    bins = (lengthE // px_size[0], lengthN // px_size[1])
+        bbox[1], bbox[0],
+        bbox[1], bbox[2])
+    bins = (lengthN // px_size[0], lengthE // px_size[1])
 
     if convert_m:
         data.ps_mean_v /= 1e3
