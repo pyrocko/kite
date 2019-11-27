@@ -38,6 +38,14 @@ class KiteQuadtree(KiteView):
         self.param_quadtree.onConfigUpdate()
         self.param_quadtree.updateEpsilonLimits()
 
+    @QtCore.pyqtSlot()
+    def activateView(self):
+        self.main_widget.activatePlot()
+
+    @QtCore.pyqtSlot()
+    def deactivateView(self):
+        self.main_widget.deactivatePlot()
+
 
 class QQuadLeaf(QtCore.QRectF):
 
@@ -97,7 +105,7 @@ class KiteQuadtreePlot(KitePlot):
 
         self.highlighted_leaves = []
         self.selected_leaves = []
-        self.outlined_leaves = []
+        self.outlined_leaves = None
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
         self.eraseBox.setPen(
@@ -116,22 +124,30 @@ class KiteQuadtreePlot(KitePlot):
 
         self.addItem(self.focal_points)
 
-        @QtCore.pyqtSlot()
-        def covarianceChanged():
-            if self._component == 'weight':
-                self.update()
+        # self.model.sigFrameChanged.connect(self.transFromFrame)
+        # self.model.sigFrameChanged.connect(self.transFromFrameScatter)
 
+    @QtCore.pyqtSlot()
+    def covarianceChanged(self):
+        if self._component == 'weight':
+            self.update()
+
+    def activatePlot(self):
         self.model.sigQuadtreeChanged.connect(self.unselectLeaves)
         self.model.sigQuadtreeChanged.connect(self.update)
         self.model.sigQuadtreeChanged.connect(self.updateFocalPoints)
         self.model.sigQuadtreeChanged.connect(self.updateLeavesOutline)
-        self.model.sigCovarianceChanged.connect(covarianceChanged)
-
-        # self.model.sigFrameChanged.connect(self.transFromFrame)
-        # self.model.sigFrameChanged.connect(self.transFromFrameScatter)
+        self.model.sigCovarianceChanged.connect(self.covarianceChanged)
 
         self.updateLeavesOutline()
         self.updateFocalPoints()
+
+    def deactivatePlot(self):
+        self.model.sigQuadtreeChanged.disconnect(self.unselectLeaves)
+        self.model.sigQuadtreeChanged.disconnect(self.update)
+        self.model.sigQuadtreeChanged.disconnect(self.updateFocalPoints)
+        self.model.sigQuadtreeChanged.disconnect(self.updateLeavesOutline)
+        self.model.sigCovarianceChanged.disconnect(self.covarianceChanged)
 
     def transFromFrameScatter(self):
         self.focal_points.resetTransform()
@@ -203,15 +219,15 @@ class KiteQuadtreePlot(KitePlot):
 
     @QtCore.pyqtSlot()
     def updateLeavesOutline(self):
-        for lf in self.outlined_leaves:
-            self.removeItem(lf)
-        del self.outlined_leaves
-        self.outlined_leaves = []
+        group = QtGui.QGraphicsItemGroup()
+        for lf in self.model.quadtree.leaves:
+            group.addToGroup(QQuadLeaf(lf).getRectItem())
 
-        for lf in self.getQLeaves(QQuadLeaf):
-            leaf_item = lf.getRectItem()
-            self.outlined_leaves.append(leaf_item)
-            self.addItem(leaf_item)
+        if self.outlined_leaves is not None:
+            self.vb.removeItem(self.outlined_leaves)
+
+        self.outlined_leaves = group
+        self.vb.addItem(self.outlined_leaves)
 
 
 class KiteParamQuadtree(KiteParameterGroup):

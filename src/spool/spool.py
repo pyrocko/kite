@@ -62,6 +62,8 @@ class Spool(QtWidgets.QApplication):
 
 
 class SpoolMainWindow(QtWidgets.QMainWindow):
+    VIEWS = [KiteScene, KiteQuadtree, KiteCovariance]
+
     sigImportFile = QtCore.pyqtSignal(str)
     sigLoadFile = QtCore.pyqtSignal(str)
     sigLoadConfig = QtCore.pyqtSignal(str)
@@ -72,7 +74,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
         loadUi(get_resource('spool.ui'), baseinstance=self)
 
-        self.views = [KiteScene, KiteQuadtree, KiteCovariance]
+        self.views = []
+        self.active_view = None
 
         self.ptree = KiteParameterTree(showHeader=False)
         self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
@@ -144,7 +147,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle('Spool - %s' % title)
         if self.model.scene is None or self.tabs.count() != 0:
             return
-        for v in self.views:
+        for v in self.VIEWS:
             self.addView(v)
         self.model.sigProcessingStarted.connect(
             self.processingStarted,
@@ -153,15 +156,31 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             self.processingFinished,
             type=QtCore.Qt.QueuedConnection)
 
+        self.tabs.currentChanged.connect(self.activateView)
+
+        self.activateView(0)
+
     def addView(self, view):
         self.sigLoadingModule.emit(view.title)
         view = view(self)
+
         QtCore.QCoreApplication.processEvents()
         self.tabs.addTab(view, view.title)
         QtCore.QCoreApplication.processEvents()
+
         if hasattr(view, 'parameters'):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)
+
+        self.views.append(view)
+
+    @QtCore.pyqtSlot(int)
+    def activateView(self, index):
+        if self.active_view is not None:
+            self.active_view.deactivateView()
+
+        self.active_view = self.views[index]
+        self.active_view.activateView()
 
     @QtCore.pyqtSlot(str)
     def processingStarted(self, text):

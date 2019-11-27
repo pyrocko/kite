@@ -21,6 +21,8 @@ def get_resource(filename):
 
 
 class KiteView(dockarea.DockArea):
+    title = 'View Prototype'
+
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
@@ -46,6 +48,14 @@ class KiteView(dockarea.DockArea):
 
         self.addDock(dock_main, position='left')
         self.addDock(dock_colormap, position='right')
+
+    @QtCore.pyqtSlot()
+    def activateView(self):
+        pass
+
+    @QtCore.pyqtSlot()
+    def deactivateView(self):
+        pass
 
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):

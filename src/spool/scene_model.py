@@ -38,9 +38,9 @@ class SceneModel(QtCore.QObject):
 
         self._ = SignalProxy(
             self._sigQuadtreeChanged,
-            rateLimit=20,
+            rateLimit=10,
             delay=0,
-            slot=lambda: self.sigQuadtreeChanged.emit(object))
+            slot=lambda: self.sigQuadtreeChanged.emit())
 
         self._log_handler = logging.Handler()
         self._log_handler.setLevel(logging.DEBUG)
@@ -78,7 +78,7 @@ class SceneModel(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.unsubscribe(
-            self.sigQuadtreeChanged.emit)
+            self._sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.unsubscribe(
             self.sigQuadtreeConfigChanged.emit)
 
@@ -97,7 +97,7 @@ class SceneModel(QtCore.QObject):
             self.sigFrameChanged.emit)
 
         self.quadtree.evChanged.subscribe(
-            self.sigQuadtreeChanged.emit)
+            self._sigQuadtreeChanged.emit)
         self.quadtree.evConfigChanged.subscribe(
             self.sigQuadtreeConfigChanged.emit)
 

@@ -22,7 +22,7 @@ d2r = num.pi/180.
 r2d = 180./num.pi
 
 
-class ADict(dict):
+class AttrDict(dict):
     def __getattr__(self, attr):
         return self[attr]
 
@@ -73,7 +73,7 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
     ps_plot_mat = _read_mat(fn_ps_plot)
     params_mat = _read_mat(fn_parms)
 
-    data = ADict()
+    data = AttrDict()
     data.ll_coords = num.asarray(ps2_mat['ll0'])
     data.radar_coords = num.asarray(ps2_mat['ij'])
     data.ps_mean_v = num.asarray(ps_plot_mat['ph_disp']).ravel()

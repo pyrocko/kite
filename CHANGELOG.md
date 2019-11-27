@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - changed leaf center color
   - changed satellite arrow label
   - Quadtree sliders now behave exponential for better fine-tuning
+  - Performance upgrade
 
 ### Fixed
 - Spool:
