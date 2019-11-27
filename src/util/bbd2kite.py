@@ -115,12 +115,12 @@ def bbd2kite(filename, px_size=(200, 200), import_var=False):
     data = read_shapefile(filename)
 
     lengthN = od.distance_accurate50m(
-        data.bbox[0], data.bbox[1],
-        data.bbox[0], data.bbox[3])
+        data.bbox[1], data.bbox[3],
+        data.bbox[3], data.bbox[0])
     lengthE = od.distance_accurate50m(
-        data.bbox[0], data.bbox[1],
-        data.bbox[2], data.bbox[3])
-    bins = (lengthE // px_size[0], lengthN // px_size[1])
+        data.bbox[1], data.bbox[0],
+        data.bbox[1], data.bbox[2])
+    bins = (lengthN // px_size[0], lengthN // px_size[1])
 
     bin_ps_data(data, bins=bins)
 
