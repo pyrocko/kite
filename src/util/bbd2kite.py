@@ -51,7 +51,7 @@ def read_shapefile(filename):
         los_u[isr] = -record.Los_Up
 
         data.ps_mean_v[isr] = record.Mean_Velo
-        data.ps_mean_v[isr] = record.Var_Mean_V
+        data.ps_mean_var[isr] = record.Var_Mean_V
 
         coords[isr] = shape.points[0]
 
