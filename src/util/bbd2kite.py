@@ -2,6 +2,7 @@ import shapefile
 import logging
 import numpy as num
 import os.path as op
+import pyrocko.orthodrome as od
 
 from scipy import stats
 
@@ -30,7 +31,7 @@ def read_shapefile(filename):
     npoints = shp.numRecords
 
     data = DataStruct()
-    data.ll_coords = shp.bbox[:1]
+    data.bbox = shp.bbox
 
     data.ps_mean_v = num.zeros(npoints)
     data.ps_mean_var = num.zeros(npoints)
@@ -94,8 +95,33 @@ def bin_ps_data(data, bins=(800, 800)):
     return data
 
 
-def bbd2kite(filename, bins=(800, 800), import_var=False):
+def bbd2kite(filename, px_size=(200, 200), import_var=False):
+    '''Convert BGR BodenBewegungsDienst PS velocity data to a Kite Scene
+
+    Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
+    BGR BodenBewegungsDienst, and grids the data into mean velocity bins.
+    The LOS velocities will be converted to a Kite Scene
+    (:class:`~kite.Scene`).
+
+    :param filename: Name of the BGR BBD as ESRI shapefile.
+    :type filename: str
+    :param px_size: Size of pixels in North and East in meters.
+        Default (200, 200).
+    :type px_size: tuple
+    :param import_var: Import the mean velocity variance, this information
+        is used by the Kite scene to define the covariance.
+    :param import_var: bool
+    '''
     data = read_shapefile(filename)
+
+    lengthN = od.distance_accurate50m(
+        data.bbox[0], data.bbox[1],
+        data.bbox[0], data.bbox[3])
+    lengthE = od.distance_accurate50m(
+        data.bbox[0], data.bbox[1],
+        data.bbox[2], data.bbox[3])
+    bins = (lengthE // px_size[0], lengthN // px_size[1])
+
     bin_ps_data(data, bins=bins)
 
     log.debug('Setting up the Kite Scene')
@@ -141,12 +167,12 @@ The data is delivered in ESRI shapefile format. Python module pyshp is required.
     parser.add_argument(
         'file', type=str,
         default='.',
-        help='BodenBewegunsDienst shape file project folder.')
+        help='BodenBewegunsDienst shape file.')
     parser.add_argument(
-        '--resolution', '-r', nargs=2, metavar=('pxN', 'pxE'),
-        dest='resolution', type=int, default=(800, 800),
-        help='resolution of the output grid in North and East (pixels). '
-             'Default is 800 by 800 px.')
+        '--resolution', '-r', nargs=2, metavar=('mN', 'mE'),
+        dest='resolution', type=int, default=(500, 500),
+        help='pixel size of the output grid in North and East (meter).'
+             'Default is 500 m by 500 m.')
     parser.add_argument(
         '--save', '-s', default=None, type=str, dest='save',
         help='filename to save the Kite scene to. If not given, the scene'
@@ -176,7 +202,7 @@ The data is delivered in ESRI shapefile format. Python module pyshp is required.
                 raise UserWarning(
                     'File %s exists! Use --force to overwrite.' % fn_save)
 
-    scene = bbd2kite(filename=args.file, bins=args.resolution,
+    scene = bbd2kite(filename=args.file, px_size=args.resolution,
                      import_var=args.import_var)
 
     if fn_save is not None:
