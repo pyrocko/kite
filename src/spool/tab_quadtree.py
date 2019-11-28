@@ -331,7 +331,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         frame = model.frame
         max_px = max(frame.shape)
         max_pxd = max(frame.dE, frame.dN)
-        limits = (max_pxd * 4, max_pxd * (max_px / 4))
+        limits = (max_pxd * model.quadtree.min_node_length_px,
+                  max_pxd * (max_px / 4))
 
         tile_decimals = -math.floor(math.log10(model.quadtree.tile_size_min))
 

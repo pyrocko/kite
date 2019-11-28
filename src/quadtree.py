@@ -25,6 +25,7 @@ class QuadNode(object):
     """
 
     CORNERS = (0, 0), (0, 1), (1, 0), (1, 1)
+    MIN_PIXEL_LENGTH_NODE = 4
 
     def __init__(self, quadtree, llr, llc, length):
         self.children = []
@@ -317,7 +318,7 @@ class QuadNode(object):
         """
         if (self.quadtree._corr_func(self) > self.quadtree.epsilon_min
             or self.length >= 64)\
-           and not self.length < 16:
+           and not self.length < self.MIN_PIXEL_LENGTH_NODE:
             # self.length > .1 * max(self.quadtree._data.shape): !! Expensive
             self.children = tuple(c for c in self._iterSplitNode())
             if len(self.children) == 0:
@@ -518,7 +519,14 @@ class Quadtree(object):
         self.leaf_means = None
         self.leaf_medians = None
 
+    @property
+    def min_node_length_px(self):
+        npx = max(self.frame.cols, self.frame.rows)
+        return int(2**round(num.log(npx / 64)))
+
     def _initTree(self):
+        QuadNode.MIN_PIXEL_LENGTH_NODE = self.min_node_length_px
+
         t0 = time.time()
         for b in self._base_nodes:
             b.createTree()
@@ -647,11 +655,9 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_px(self):
-        dpx = self.scene.frame.dE\
-            if self.scene.frame.dE > self.scene.frame.dN\
-            else self.scene.frame.dN
-        return (int(self.tile_size_min / dpx),
-                int(self.tile_size_max / dpx))
+        dpx = max(self.scene.frame.dE, self.scene.frame.dN)
+        return (round(self.tile_size_min / dpx),
+                round(self.tile_size_max / dpx))
 
     @property_cached
     def nodes(self):
@@ -693,9 +699,10 @@ class Quadtree(object):
         t0 = time.time()
         leaves = []
         for b in self._base_nodes:
-            leaves.extend([lf for lf in b.iterLeaves()
-                           if lf.nan_fraction < self.nan_allowed and
-                           lf.id not in self.config.leaf_blacklist])
+            leaves.extend(
+                [lf for lf in b.iterLeaves()
+                 if lf.nan_fraction < self.nan_allowed and
+                 lf.id not in self.config.leaf_blacklist])
         self._log.debug(
             'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.4f s]' %
             (self.epsilon, len(leaves), time.time() - t0))

@@ -116,7 +116,7 @@ class SliderWidget(QtGui.QWidget):
         self.spin = QtGui.QDoubleSpinBox()
         self.spin.setDecimals(decimals)
         self.spin.setSingleStep(step)
-        self.spin.valueChanged.connect(self._update_spin)
+        self.spin.valueChanged.connect(self._spin_updated)
         self.spin.setFrame(False)
 
         self.slider = QtGui.QSlider(
@@ -125,7 +125,7 @@ class SliderWidget(QtGui.QWidget):
             QtGui.QSlider.TicksAbove if horizontal
             else QtGui.QSlider.TicksLeft)
         self.slider.setRange(0, 99)
-        self.slider.sliderMoved.connect(self._update_slider)
+        self.slider.sliderMoved.connect(self._slider_updated)
 
         layout = QtGui.QHBoxLayout() if horizontal else QtGui.QVBoxLayout()
         self.setLayout(layout)
@@ -175,7 +175,7 @@ class SliderWidget(QtGui.QWidget):
         self.spin.setSuffix(suffix)
 
     @QtCore.pyqtSlot(int)
-    def _update_slider(self, val):
+    def _slider_updated(self, val):
         val /= 99  # val -> 0...1
         val **= self.slider_exponent
 
@@ -185,19 +185,18 @@ class SliderWidget(QtGui.QWidget):
         val = round(val, self.decimals)
 
         if self._value != val:
+            self._value = val
             self.sigValueChanged.emit(val)
 
-        self._value = val
         self.spin.setValue(val)
 
     @QtCore.pyqtSlot(float)
-    def _update_spin(self, val):
+    def _spin_updated(self, val):
         self.setSliderValue(self._value)
 
         if self._value != val:
+            self._value = val
             self.sigValueChanged.emit(val)
-
-        self._value = val
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
