@@ -9,7 +9,7 @@ from scipy import stats
 from kite.scene import Scene, SceneConfig
 
 
-log = logging.getLogger('shp2kite')
+log = logging.getLogger('bbd2kite')
 
 d2r = num.pi/180.
 r2d = 180./num.pi
@@ -95,32 +95,41 @@ def bin_ps_data(data, bins=(800, 800)):
     return data
 
 
-def bbd2kite(filename, px_size=(200, 200), import_var=False):
-    '''Convert BGR BodenBewegungsDienst PS velocity data to a Kite Scene
+def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
+    '''Convert BGR BodenBewegungsdienst PS velocity data to a Kite Scene
 
     Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
-    BGR BodenBewegungsDienst, and grids the data into mean velocity bins.
+    BGR BodenBewegungsdienst, and grids the data into mean velocity bins.
     The LOS velocities will be converted to a Kite Scene
     (:class:`~kite.Scene`).
 
     :param filename: Name of the BGR BBD as ESRI shapefile.
     :type filename: str
     :param px_size: Size of pixels in North and East in meters.
-        Default (200, 200).
+        Default (500, 500).
     :type px_size: tuple
+    :param convert_m: Convert displacement to meters, default True.
+    :type convert_m: bool
     :param import_var: Import the mean velocity variance, this information
         is used by the Kite scene to define the covariance.
     :param import_var: bool
     '''
     data = read_shapefile(filename)
 
+    if convert_m:
+        data.ps_mean_v /= 1e3
+
+    if convert_m and import_var:
+        data.ps_mean_var /= 1e3
+
     lengthN = od.distance_accurate50m(
-        data.bbox[0], data.bbox[1],
-        data.bbox[0], data.bbox[3])
+        data.bbox[1], data.bbox[0],
+        data.bbox[3], data.bbox[0])
     lengthE = od.distance_accurate50m(
-        data.bbox[0], data.bbox[1],
-        data.bbox[2], data.bbox[3])
-    bins = (lengthE // px_size[0], lengthN // px_size[1])
+        data.bbox[1], data.bbox[0],
+        data.bbox[1], data.bbox[2])
+    bins = (round(lengthE / px_size[0]),
+            round(lengthN / px_size[1]))
 
     bin_ps_data(data, bins=bins)
 
@@ -160,7 +169,7 @@ Loads the PS velocities delivered by BGR BodenBewegunsDienst
 (https://bodenbewegungsdienst.bgr.de) and grids the data in mean velocity bins.
 The mean LOS velocities will be converted into a Kite Scene.
 
-The data is delivered in ESRI shapefile format. Python module pyshp is required.
+The data is delivered in ESRI shapefile format.
 ''',
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
@@ -180,6 +189,10 @@ The data is delivered in ESRI shapefile format. Python module pyshp is required.
     parser.add_argument(
         '--force', '-f', default=False, action='store_true', dest='force',
         help='force overwrite of an existing scene.')
+    parser.add_argument(
+        '--keep-mm', action='store_true',
+        default=False,
+        help='keep mm/a and do not convert to m/a.')
     parser.add_argument(
         '--import-var', action='store_true', dest='import_var',
         default=False,
@@ -203,13 +216,14 @@ The data is delivered in ESRI shapefile format. Python module pyshp is required.
                     'File %s exists! Use --force to overwrite.' % fn_save)
 
     scene = bbd2kite(filename=args.file, px_size=args.resolution,
-                     import_var=args.import_var)
+                     import_var=args.import_var,
+                     convert_m=not args.keep_mm)
 
     if fn_save is not None:
         fn_save.rstrip('.yml')
         fn_save.rstrip('.npz')
 
-        log.info('Saving BGR BodenBewegunsDienst scene to file %s[.yml/.npz]...',   # noqa
+        log.info('Saving BGR BodenBewegunsdienst scene to file %s[.yml/.npz]...',   # noqa
                  fn_save)
         scene.save(args.save)
 
