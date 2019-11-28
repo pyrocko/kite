@@ -1,4 +1,5 @@
 import time
+import math
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
@@ -280,17 +281,20 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
+        eps_decimals = -math.floor(math.log10(model.quadtree.epsilon_min))
+        eps_steps = round((model.quadtree.epsilon -
+                           model.quadtree.epsilon_min)*.1, 3)
+
         p = {
             'name': 'epsilon',
             'type': 'float',
             'value': model.quadtree.epsilon,
             'default': model.quadtree._epsilon_init,
-            'step': round((model.quadtree.epsilon -
-                           model.quadtree.epsilon_min)*.1, 3),
+            'step': eps_steps,
             'limits': (model.quadtree.epsilon_min,
                        3*model.quadtree._epsilon_init),
             'editable': True,
-            'decimals': 3,
+            'decimals': eps_decimals,
             'slider_exponent': 2,
             'tip': QuadtreeConfig.epsilon.help
         }
@@ -303,16 +307,17 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateNanFrac():
             self.sigNanFraction.emit(self.nan_allowed.value())
 
-        p = {'name': 'nan_allowed',
-             'type': 'float',
-             'value': model.quadtree.nan_allowed,
-             'default': QuadtreeConfig.nan_allowed.default(),
-             'step': 0.05,
-             'limits': (0., 1.),
-             'editable': True,
-             'decimals': 2,
-             'tip': QuadtreeConfig.nan_allowed.help
-             }
+        p = {
+            'name': 'nan_allowed',
+            'type': 'float',
+            'value': model.quadtree.nan_allowed,
+            'default': QuadtreeConfig.nan_allowed.default(),
+            'step': 0.05,
+            'limits': (0., 1.),
+            'editable': True,
+            'decimals': 2,
+            'tip': QuadtreeConfig.nan_allowed.help
+        }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
         self.nan_allowed.sigValueChanged.connect(updateNanFrac)
@@ -325,8 +330,11 @@ class KiteParamQuadtree(KiteParameterGroup):
 
         frame = model.frame
         max_px = max(frame.shape)
-        max_d = max(frame.dE, frame.dN)
-        limits = (max_d * 5, max_d * (max_px / 4))
+        max_pxd = max(frame.dE, frame.dN)
+        limits = (max_pxd * 4, max_pxd * (max_px / 4))
+
+        tile_decimals = -math.floor(math.log10(model.quadtree.tile_size_min))
+
         p = {'name': 'tile_size_min',
              'type': 'float',
              'value': model.quadtree.tile_size_min,
@@ -336,7 +344,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'slider_exponent': 2,
              'editable': True,
              'suffix': ' m' if frame.isMeter() else ' deg',
-             'decimals': 0 if frame.isMeter() else 3,
+             'decimals': 0 if frame.isMeter() else tile_decimals,
              'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)

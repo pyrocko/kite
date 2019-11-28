@@ -138,6 +138,7 @@ class SliderWidget(QtGui.QWidget):
     def setValue(self, val):
         self.setSliderValue(val)
         self.spin.setValue(val)
+        self._value = val
 
     def setSliderValue(self, val):
         if val is None:
