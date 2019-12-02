@@ -38,6 +38,7 @@ class QuadNode(object):
 
         self.quadtree = quadtree
         self.scene = quadtree.scene
+        self.frame = quadtree.frame
 
     @property_cached
     def nan_fraction(self):
@@ -124,8 +125,8 @@ class QuadNode(object):
         """ Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.median(self.gridE.compressed()))
-        N = float(num.median(self.gridN.compressed()))
+        E = float(num.mean(self.gridE.compressed()) + self.frame.dE/2)
+        N = float(num.mean(self.gridN.compressed()) + self.frame.dN/2)
         return E, N
 
     @property_cached
@@ -133,8 +134,10 @@ class QuadNode(object):
         """ Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.median(self.gridEmeter.compressed()))
-        N = float(num.median(self.gridNmeter.compressed()))
+        E = float(num.mean(self.gridEmeter.compressed()
+                           + self.frame.dEmeter/2))
+        N = float(num.mean(self.gridNmeter.compressed()
+                           + self.frame.dNmeter/2))
         return E, N
 
     @property_cached

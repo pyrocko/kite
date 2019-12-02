@@ -220,6 +220,7 @@ def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
 
     bbox = (data.lons.min(), data.lats.min(),
             data.lons.max(), data.lats.max())
+
     lengthN = od.distance_accurate50m(
         bbox[1], bbox[0],
         bbox[3], bbox[0])
