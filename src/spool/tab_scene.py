@@ -19,6 +19,7 @@ class KiteScene(KiteView):
 
     def __init__(self, spool):
         model = spool.model
+        self.model = model
 
         scene_plot = KiteScenePlot(model)
         self.main_widget = scene_plot
@@ -40,6 +41,8 @@ class KiteScene(KiteView):
 
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
+        spool.actionDerampScene.triggered.connect(self.derampScene)
+        spool.actionDerampScene.setEnabled(True)
 
         KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
@@ -54,6 +57,14 @@ class KiteScene(KiteView):
         self.param_meta.updateValues()
 
         self.dialogTransect.close()
+
+    def derampScene(self, *args):
+        msg = QtGui.QMessageBox.question(
+            self,
+            'De-ramp Scene',
+            'Are you sure you want to de-ramp the scene?')
+        if msg == QtGui.QMessageBox.StandardButton.Yes:
+            self.model.getScene().displacement_deramp(inplace=True)
 
 
 class KiteScenePlot(KitePlot):

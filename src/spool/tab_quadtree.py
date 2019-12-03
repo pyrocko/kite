@@ -1,3 +1,5 @@
+import time
+import math
 from collections import OrderedDict
 
 from PyQt5 import QtCore, QtGui
@@ -37,11 +39,19 @@ class KiteQuadtree(KiteView):
         self.param_quadtree.onConfigUpdate()
         self.param_quadtree.updateEpsilonLimits()
 
+    @QtCore.pyqtSlot()
+    def activateView(self):
+        self.main_widget.activatePlot()
+
+    @QtCore.pyqtSlot()
+    def deactivateView(self):
+        self.main_widget.deactivatePlot()
+
 
 class QQuadLeaf(QtCore.QRectF):
 
-    leaf_outline = pg.mkPen((202, 60, 60), width=1)
-    leaf_fill = pg.mkBrush(202, 60, 60, 120)
+    leaf_outline = pg.mkPen((255, 255, 255), width=1)
+    leaf_fill = pg.mkBrush(0, 0, 0, 0)
 
     def __init__(self, leaf):
         self.id = leaf.id
@@ -54,9 +64,13 @@ class QQuadLeaf(QtCore.QRectF):
         item = QtGui.QGraphicsRectItem(self)
         item.setPen(self.leaf_outline)
         item.setBrush(self.leaf_fill)
-        item.setZValue(1e9)
-        item.setToolTip('Press Delete to remove')
+        item.setZValue(1e8)
         return item
+
+
+class QQuadSelectedLeaf(QQuadLeaf):
+    leaf_outline = pg.mkPen((202, 60, 60), width=1)
+    leaf_fill = pg.mkBrush(202, 60, 60, 120)
 
 
 class KiteQuadtreePlot(KitePlot):
@@ -78,15 +92,13 @@ class KiteQuadtreePlot(KitePlot):
 
         KitePlot.__init__(self, model=model, los_arrow=True)
 
-        # http://paletton.com
-        focalpoint_color = (45, 136, 45)
-        # focalpoint_outline_color = (255, 255, 255, 200)
-        focalpoint_outline_color = (3, 212, 3)
+        focalpoint_color = (78, 255, 0)
+        focalpoint_outline_color = (0, 0, 0)
         self.focal_points = pg.ScatterPlotItem(
-            size=3.,
+            size=3.5,
             pen=pg.mkPen(
                 focalpoint_outline_color,
-                width=.5),
+                width=.3),
             brush=pg.mkBrush(focalpoint_color),
             antialias=True)
 
@@ -94,6 +106,7 @@ class KiteQuadtreePlot(KitePlot):
 
         self.highlighted_leaves = []
         self.selected_leaves = []
+        self.outlined_leaves = None
 
         self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
         self.eraseBox.setPen(
@@ -112,25 +125,37 @@ class KiteQuadtreePlot(KitePlot):
 
         self.addItem(self.focal_points)
 
-        def covarianceChanged():
-            if self._component == 'weight':
-                self.update()
-
-        self.model.sigQuadtreeChanged.connect(self.unselectLeaves)
-        self.model.sigQuadtreeChanged.connect(self.update)
-        self.model.sigQuadtreeChanged.connect(self.updateFocalPoints)
-        self.model.sigCovarianceChanged.connect(covarianceChanged)
-
         # self.model.sigFrameChanged.connect(self.transFromFrame)
         # self.model.sigFrameChanged.connect(self.transFromFrameScatter)
 
+    @QtCore.pyqtSlot()
+    def covarianceChanged(self):
+        if self._component == 'weight':
+            self.update()
+
+    def activatePlot(self):
+        self.model.sigQuadtreeChanged.connect(self.unselectLeaves)
+        self.model.sigQuadtreeChanged.connect(self.update)
+        self.model.sigQuadtreeChanged.connect(self.updateFocalPoints)
+        self.model.sigQuadtreeChanged.connect(self.updateLeavesOutline)
+        self.model.sigCovarianceChanged.connect(self.covarianceChanged)
+
+        self.updateLeavesOutline()
         self.updateFocalPoints()
+
+    def deactivatePlot(self):
+        self.model.sigQuadtreeChanged.disconnect(self.unselectLeaves)
+        self.model.sigQuadtreeChanged.disconnect(self.update)
+        self.model.sigQuadtreeChanged.disconnect(self.updateFocalPoints)
+        self.model.sigQuadtreeChanged.disconnect(self.updateLeavesOutline)
+        self.model.sigCovarianceChanged.disconnect(self.covarianceChanged)
 
     def transFromFrameScatter(self):
         self.focal_points.resetTransform()
         self.focal_points.scale(
             self.model.frame.dE, self.model.frame.dN)
 
+    @QtCore.pyqtSlot()
     def updateFocalPoints(self):
         if self.model.quadtree.leaf_focal_points.size == 0:
             self.focal_points.clear()
@@ -160,32 +185,51 @@ class KiteQuadtreePlot(KitePlot):
         else:
             self.updateEraseBox(ev.buttonDownPos(), ev.pos())
 
-    def getQleaves(self):
-        return [QQuadLeaf(l) for l in self.model.quadtree.leaves]
+    def getQLeaves(self, cls):
+        return [cls(lf) for lf in self.model.quadtree.leaves]
 
+    @QtCore.pyqtSlot()
     def selectLeaves(self):
         self.unselectLeaves()
 
-        self.selected_leaves = [l for l in self.getQleaves()
-                                if self.eraseBox.r.contains(l)]
-        for l in self.selected_leaves:
-            rect_leaf = l.getRectItem()
-            self.highlighted_leaves.append(rect_leaf)
-            self.addItem(rect_leaf)
+        self.selected_leaves = [lf for lf in self.getQLeaves(QQuadSelectedLeaf)
+                                if self.eraseBox.r.contains(lf)]
+        for lf in self.selected_leaves:
+            leaf_item = lf.getRectItem()
+            leaf_item.setZValue(1e9)
+            leaf_item.setToolTip('Press Del to remove')
 
+            self.highlighted_leaves.append(leaf_item)
+            self.addItem(leaf_item)
+
+    @QtCore.pyqtSlot()
     def unselectLeaves(self):
         if self.selected_leaves:
-            for l in self.highlighted_leaves:
-                self.removeItem(l)
+            for lf in self.highlighted_leaves:
+                self.removeItem(lf)
             del self.highlighted_leaves
             del self.selected_leaves
             self.highlighted_leaves = []
             self.selected_leaves = []
 
+    @QtCore.pyqtSlot(object)
     def blacklistSelectedLeaves(self, ev):
         if ev.key() == QtCore.Qt.Key_Delete:
             self.model.quadtree.blacklistLeaves(
-                l.id for l in self.selected_leaves)
+                lf.id for lf in self.selected_leaves)
+
+    @QtCore.pyqtSlot()
+    def updateLeavesOutline(self):
+        group = QtGui.QGraphicsItemGroup()
+        for lf in self.model.quadtree.leaves:
+            group.addToGroup(QQuadLeaf(lf).getRectItem())
+        group.setOpacity(.4)
+
+        if self.outlined_leaves is not None:
+            self.vb.removeItem(self.outlined_leaves)
+
+        self.outlined_leaves = group
+        self.vb.addItem(self.outlined_leaves)
 
 
 class KiteParamQuadtree(KiteParameterGroup):
@@ -224,69 +268,84 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.sigTileMinimum.connect(model.qtproxy.setTileMinimum)
 
         def updateGuard(func):
+
             def wrapper(*args, **kwargs):
                 if not self.sig_guard:
                     func()
+
             return wrapper
 
         # Epsilon control
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
-        p = {'name': 'epsilon',
-             'value': model.quadtree.epsilon,
-             'type': 'float',
-             'default': model.quadtree._epsilon_init,
-             'step': round((model.quadtree.epsilon -
-                            model.quadtree.epsilon_min)*.1, 3),
-             'limits': (model.quadtree.epsilon_min,
-                        3*model.quadtree._epsilon_init),
-             'editable': True,
-             'decimals': 3,
-             'tip': QuadtreeConfig.epsilon.help
-             }
+        eps_decimals = -math.floor(math.log10(model.quadtree.epsilon_min))
+        eps_steps = round((model.quadtree.epsilon -
+                           model.quadtree.epsilon_min)*.1, 3)
+
+        p = {
+            'name': 'epsilon',
+            'type': 'float',
+            'value': model.quadtree.epsilon,
+            'default': model.quadtree._epsilon_init,
+            'step': eps_steps,
+            'limits': (model.quadtree.epsilon_min,
+                       3*model.quadtree._epsilon_init),
+            'editable': True,
+            'decimals': eps_decimals,
+            'slider_exponent': 2,
+            'tip': QuadtreeConfig.epsilon.help
+        }
         self.epsilon = pTypes.SimpleParameter(**p)
         self.epsilon.itemClass = SliderWidgetParameterItem
         self.epsilon.sigValueChanged.connect(updateEpsilon)
 
-        # Epsilon control
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateNanFrac():
             self.sigNanFraction.emit(self.nan_allowed.value())
 
-        p = {'name': 'nan_allowed',
-             'value': model.quadtree.nan_allowed,
-             'default': QuadtreeConfig.nan_allowed.default(),
-             'type': 'float',
-             'step': 0.05,
-             'limits': (0., 1.),
-             'editable': True,
-             'decimals': 2,
-             'tip': QuadtreeConfig.nan_allowed.help
-             }
+        p = {
+            'name': 'nan_allowed',
+            'type': 'float',
+            'value': model.quadtree.nan_allowed,
+            'default': QuadtreeConfig.nan_allowed.default(),
+            'step': 0.05,
+            'limits': (0., 1.),
+            'editable': True,
+            'decimals': 2,
+            'tip': QuadtreeConfig.nan_allowed.help
+        }
         self.nan_allowed = pTypes.SimpleParameter(**p)
         self.nan_allowed.itemClass = SliderWidgetParameterItem
         self.nan_allowed.sigValueChanged.connect(updateNanFrac)
 
         # Tile size controls
         @updateGuard
+        @QtCore.pyqtSlot()
         def updateTileSizeMin():
             self.sigTileMinimum.emit(self.tile_size_min.value())
 
         frame = model.frame
         max_px = max(frame.shape)
-        max_d = max(frame.dE, frame.dN)
-        limits = (max_d * 5, max_d * (max_px / 4))
+        max_pxd = max(frame.dE, frame.dN)
+        limits = (max_pxd * model.quadtree.min_node_length_px,
+                  max_pxd * (max_px / 4))
+
+        tile_decimals = -math.floor(math.log10(model.quadtree.tile_size_min))
+
         p = {'name': 'tile_size_min',
+             'type': 'float',
              'value': model.quadtree.tile_size_min,
              'default': QuadtreeConfig.tile_size_min.default(),
-             'type': 'float',
              'limits': limits,
              'step': 250,
+             'slider_exponent': 2,
              'editable': True,
              'suffix': ' m' if frame.isMeter() else ' deg',
-             'decimals': 0 if frame.isMeter() else 3,
+             'decimals': 0 if frame.isMeter() else tile_decimals,
              'tip': QuadtreeConfig.tile_size_min.help
              }
         self.tile_size_min = pTypes.SimpleParameter(**p)
@@ -308,6 +367,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.tile_size_max.sigValueChanged.connect(updateTileSizeMax)
 
         # Component control
+        @QtCore.pyqtSlot()
         def changeComponent():
             self.plot.component = self.components.value()
 
@@ -323,6 +383,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.components = pTypes.ListParameter(**p)
         self.components.sigValueChanged.connect(changeComponent)
 
+        @QtCore.pyqtSlot()
         def changeCorrection():
             model.quadtree.setCorrection(correction_method.value())
             self.updateEpsilonLimits()
@@ -348,6 +409,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.pushChild(self.epsilon)
         self.pushChild(self.components)
 
+    @QtCore.pyqtSlot()
     def onConfigUpdate(self):
         self.sig_guard = True
         for p in ['epsilon', 'nan_allowed',

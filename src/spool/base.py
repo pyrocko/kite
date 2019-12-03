@@ -21,6 +21,8 @@ def get_resource(filename):
 
 
 class KiteView(dockarea.DockArea):
+    title = 'View Prototype'
+
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
@@ -47,6 +49,14 @@ class KiteView(dockarea.DockArea):
         self.addDock(dock_main, position='left')
         self.addDock(dock_colormap, position='right')
 
+    @QtCore.pyqtSlot()
+    def activateView(self):
+        pass
+
+    @QtCore.pyqtSlot()
+    def deactivateView(self):
+        pass
+
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
@@ -63,9 +73,14 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
             pen=(255, 255, 255),
             pxMode=True)
 
-        self.label = QtGui.QGraphicsSimpleTextItem(
-            'Towards Sat.', parent=self)
-        self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
+        self.label = pg.LabelItem(
+            'Towards Sat.',
+            justify='right', size='8pt',
+            parent=self)
+        self.label.anchor(
+            itemPos=(1., -1.),
+            parentPos=(1., 0.))
+        # self.label.setBrush(pg.mkBrush(255, 255, 255, 180))
         # self.label.setFont(QtGui.QFont(
         #     "Helvetica", weight=QtGui.QFont.DemiBold))
 
@@ -96,15 +111,27 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         rect_label = self.label.boundingRect()
         rect_arr = self.arrow.boundingRect()
 
-        self.label.setPos(
-            0.,
-            rect_label.height()*1.33)
+        self.label.setPos(-rect_label.width()/2., rect_label.height()*1.33)
 
     def setParentItem(self, parent):
         pg.GraphicsWidget.setParentItem(self, parent)
 
     def boundingRect(self):
         return QtCore.QRectF(0, 0, self.width(), self.height())
+
+
+class KitePlotThread(QtCore.QThread):
+    completeSignal = QtCore.Signal()
+
+    def __init__(self, plot):
+        super().__init__()
+        self.plot = plot
+
+    def run(self):
+        plot = self.plot
+        plot._data = plot.components_available[plot.component][1](
+            plot.model)
+        self.completeSignal.emit()
 
 
 class KitePlot(pg.PlotWidget):
@@ -114,6 +141,8 @@ class KitePlot(pg.PlotWidget):
         self.model = model
         self.draw_time = 0.
         self._data = None
+        self.updateThread = KitePlotThread(self)
+        self.updateThread.completeSignal.connect(self._updateImageFromData)
 
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(
@@ -216,13 +245,14 @@ class KitePlot(pg.PlotWidget):
         return self._data
         # return self._data  # num.nan_to_num(_data)
 
-    @QtCore.pyqtSlot(object)
+    @QtCore.pyqtSlot()
     def update(self, obj=None):
-        self._data = None
-        ts = time.time()
+        if not self.updateThread.isRunning():
+            self.updateThread.start()
 
+    @QtCore.pyqtSlot()
+    def _updateImageFromData(self):
         self.image.updateImage(self.data.T)
-        self.draw_time = time.time() - ts
 
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
@@ -276,6 +306,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         self._plot.image.sigImageChanged.connect(self.imageChanged)
         # self.isoCurveControl()
 
+    @QtCore.pyqtSlot()
     def imageChanged(self):
         if self._plot.component == 'weight':
             self.setQualitativeColormap()
@@ -326,6 +357,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
 
 
 class KiteParameterGroup(pTypes.GroupParameter):
+
     def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
         self.model_attr = model_attr
@@ -340,8 +372,8 @@ class KiteParameterGroup(pTypes.GroupParameter):
         if not hasattr(self, 'parameters'):
             return
 
-        if self.model_attr is not None and\
-           hasattr(self.model, self.model_attr):
+        if self.model_attr is not None and \
+                hasattr(self.model, self.model_attr):
             model = getattr(self.model, self.model_attr)
         else:
             model = self.model

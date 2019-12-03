@@ -4,6 +4,30 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.3.0] 3. December 2019
+
+### Added
+- Spool: Added outline to Quadtree Nodes
+- Spool: Added scene de-ramp action
+- `bbd2kite`: import of BGR BodenBewegungsDienst data (https://bodenbewegungsdienst.bgr.de)
+
+### Changed
+- Spool:
+  - changed leaf center color
+  - changed satellite arrow label
+  - Quadtree sliders now behave exponential for better fine-tuning
+  - Performance upgrade
+- `stamps2kite` parses pixel size in meters instead of grid size
+- Quadtree smallest node size is calculated adaptively
+
+### Fixed
+- Spool:
+  - Fixed displayed coordinates
+  - Improvement slider responsiveness
+- Gamma: Fixed ncols/nrows import
+- Quadtree: focal point calculation to accomodate small quadtree nodes.
+- Quadtree: Export UTM GeoJSON
+
 ## [1.2.4] 29. October 2019
 
 ### Added

@@ -25,6 +25,7 @@ class QuadNode(object):
     """
 
     CORNERS = (0, 0), (0, 1), (1, 0), (1, 1)
+    MIN_PIXEL_LENGTH_NODE = 4
 
     def __init__(self, quadtree, llr, llc, length):
         self.children = []
@@ -37,6 +38,7 @@ class QuadNode(object):
 
         self.quadtree = quadtree
         self.scene = quadtree.scene
+        self.frame = quadtree.frame
 
     @property_cached
     def nan_fraction(self):
@@ -123,8 +125,8 @@ class QuadNode(object):
         """ Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.median(self.gridE.compressed()))
-        N = float(num.median(self.gridN.compressed()))
+        E = float(num.mean(self.gridE.compressed()) + self.frame.dE/2)
+        N = float(num.mean(self.gridN.compressed()) + self.frame.dN/2)
         return E, N
 
     @property_cached
@@ -132,8 +134,10 @@ class QuadNode(object):
         """ Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.median(self.gridEmeter.compressed()))
-        N = float(num.median(self.gridNmeter.compressed()))
+        E = float(num.mean(self.gridEmeter.compressed()
+                           + self.frame.dEmeter/2))
+        N = float(num.mean(self.gridNmeter.compressed()
+                           + self.frame.dNmeter/2))
         return E, N
 
     @property_cached
@@ -317,7 +321,7 @@ class QuadNode(object):
         """
         if (self.quadtree._corr_func(self) > self.quadtree.epsilon_min
             or self.length >= 64)\
-           and not self.length < 16:
+           and not self.length < self.MIN_PIXEL_LENGTH_NODE:
             # self.length > .1 * max(self.quadtree._data.shape): !! Expensive
             self.children = tuple(c for c in self._iterSplitNode())
             if len(self.children) == 0:
@@ -518,7 +522,14 @@ class Quadtree(object):
         self.leaf_means = None
         self.leaf_medians = None
 
+    @property
+    def min_node_length_px(self):
+        npx = max(self.frame.cols, self.frame.rows)
+        return int(2**round(num.log(npx / 64)))
+
     def _initTree(self):
+        QuadNode.MIN_PIXEL_LENGTH_NODE = self.min_node_length_px
+
         t0 = time.time()
         for b in self._base_nodes:
             b.createTree()
@@ -555,7 +566,6 @@ class Quadtree(object):
         self.config.epsilon = value
 
         self.evChanged.notify()
-        return
 
     @property_cached
     def _epsilon_init(self):
@@ -648,11 +658,9 @@ class Quadtree(object):
 
     @property_cached
     def _tile_size_lim_px(self):
-        dpx = self.scene.frame.dE\
-            if self.scene.frame.dE > self.scene.frame.dN\
-            else self.scene.frame.dN
-        return (int(self.tile_size_min / dpx),
-                int(self.tile_size_max / dpx))
+        dpx = max(self.scene.frame.dE, self.scene.frame.dN)
+        return (round(self.tile_size_min / dpx),
+                round(self.tile_size_max / dpx))
 
     @property_cached
     def nodes(self):
@@ -694,9 +702,10 @@ class Quadtree(object):
         t0 = time.time()
         leaves = []
         for b in self._base_nodes:
-            leaves.extend([lf for lf in b.iterLeaves()
-                           if lf.nan_fraction < self.nan_allowed and
-                           lf.id not in self.config.leaf_blacklist])
+            leaves.extend(
+                [lf for lf in b.iterLeaves()
+                 if lf.nan_fraction < self.nan_allowed and
+                 lf.id not in self.config.leaf_blacklist])
         self._log.debug(
             'Gathering leaves for epsilon %.4f (nleaves=%d) [%0.4f s]' %
             (self.epsilon, len(leaves), time.time() - t0))
@@ -973,21 +982,19 @@ class Quadtree(object):
                 urN += self.frame.llLat
                 urE += self.frame.llLon
 
-            coords = [
-                (llE, llN),
-                (urE, llN),
-                (urE, urN),
-                (llE, urN),
-                (llE, llN)]
+            coords = num.array([
+                (llN, llE),
+                (llN, urE),
+                (urN, urE),
+                (urN, llE),
+                (llN, llE)])
 
             if self.frame.isMeter():
-                coords_deg = []
-                for c in coords:
-                    c_deg = od.ne_to_latlon_alternative_method(
-                        self.frame.llLon, self.frame.llLat, *c)
-                    coords_deg.append(c_deg)
+                coords = od.ne_to_latlon(
+                    self.frame.llLat, self.frame.llLon, *coords.T)
+                coords = num.array(coords).T
 
-                coords = coords_deg
+            coords = coords[:, [1, 0]].tolist()
 
             feature = geojson.Feature(
                 geometry=geojson.Polygon(coordinates=[coords]),

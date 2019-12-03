@@ -16,7 +16,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '1.2.4'
+version = '1.3.0'
 
 
 def _have_openmp():
@@ -149,7 +149,8 @@ setup(
         'console_scripts':
             ['spool = kite.spool.__main__:main',
              'talpa = kite.talpa.__main__:main',
-             'stamps2kite = kite.util.stamps2kite:main']},
+             'stamps2kite = kite.util.stamps2kite:main',
+             'bbd2kite = kite.util.bbd2kite:main']},
     ext_package='kite',
     ext_modules=[
         Extension(

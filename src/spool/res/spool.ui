@@ -116,7 +116,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>25</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -146,6 +146,7 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <addaction name="actionDerampScene"/>
     <addaction name="actionTransect"/>
     <addaction name="separator"/>
     <addaction name="actionInspect_Noise"/>
@@ -387,6 +388,14 @@
   <action name="actionAbout_Qt5">
    <property name="text">
     <string>About Qt5</string>
+   </property>
+  </action>
+  <action name="actionDerampScene">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>De-ramp scene</string>
    </property>
   </action>
  </widget>

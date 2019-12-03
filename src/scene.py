@@ -439,6 +439,8 @@ class BaseScene(object):
 
     def __init__(self, **kwargs):
         self._initLogging()
+        self.evChanged = Subject()
+        self.evConfigChanged = Subject()
 
         self._displacement = None
         self._displacement_px_var = None
@@ -651,6 +653,7 @@ class BaseScene(object):
         :return: ``None`` if ``inplace=True`` else a new Scene
         :rtype: ``None`` or :class:`~kite.Scene`
         '''
+        self._log.debug('De-ramping scene...')
         coeffs = self.get_ramp_coefficients()
         msk = self.displacement_mask
         coords = self.frame.coordinates
@@ -664,6 +667,8 @@ class BaseScene(object):
 
         if inplace:
             self.displacement -= ramp
+            self.evChanged.notify()
+
         else:
             return self.__class__(
                 config=self.config,
@@ -734,9 +739,6 @@ class Scene(BaseScene):
     """
 
     def __init__(self, config=SceneConfig(), **kwargs):
-        self.evChanged = Subject()
-        self.evConfigChanged = Subject()
-
         self.config = config
         self.meta = self.config.meta
 

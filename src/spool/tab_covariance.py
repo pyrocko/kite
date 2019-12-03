@@ -41,16 +41,21 @@ class KiteCovariance(KiteView):
 
     def __init__(self, spool):
         model = spool.model
+        self.model = model
 
         covariance_plot = KiteNoisePlot(model)
         self.main_widget = covariance_plot
+
+        self.structure_function = KiteStructureFunction(covariance_plot)
+        self.covariogram = KiteCovariogram(covariance_plot)
+
         self.tools = {
             # 'Covariance.powerspecNoise':
             #     KiteNoisePowerspec(covariance_plot),
             'Semi-Variogram: Covariance.structure_spatial':
-                KiteStructureFunction(covariance_plot),
+                self.structure_function,
             'Covariogram: Covariance.covariance_spatial':
-                KiteCovariogram(covariance_plot),
+                self.covariogram,
         }
 
         self.param_covariance = KiteParamCovariance(model)
@@ -78,8 +83,6 @@ class KiteCovariance(KiteView):
             self.modelChanged)
         model.sigCalculateWeightMatrixFinished.connect(
             self.dialogCovarianceInfo.show)
-        model.sigCovarianceChanged.connect(
-            self.dialogCovarianceWarning.test)
 
         KiteView.__init__(self)
 
@@ -93,6 +96,22 @@ class KiteCovariance(KiteView):
         self.param_covariance.updateValues()
         for v in self.tools.values():
             v.update()
+
+    @QtCore.pyqtSlot()
+    def activateView(self):
+        self.model.sigCovarianceChanged.connect(
+            self.dialogCovarianceWarning.test)
+
+        self.structure_function.activatePlot()
+        self.covariogram.activatePlot()
+
+    @QtCore.pyqtSlot()
+    def deactivateView(self):
+        self.model.sigCovarianceChanged.disconnect(
+            self.dialogCovarianceWarning.test)
+
+        self.structure_function.deactivatePlot()
+        self.covariogram.deactivatePlot()
 
 
 class CovarianceNotPosDefWarning(QtGui.QMessageBox):
@@ -118,6 +137,7 @@ class CovarianceNotPosDefWarning(QtGui.QMessageBox):
 
 
 class KiteNoisePlot(KitePlot):
+
     class NoisePatchROI(pg.RectROI):
         def _makePen(self):
             # Generate the pen color for this ROI based on its current state.
@@ -149,6 +169,7 @@ class KiteNoisePlot(KitePlot):
         self.model.sigCovarianceConfigChanged.connect(
             self.onConfigChanged)
 
+    @QtCore.pyqtSlot()
     def onConfigChanged(self):
         llE, llN, sizeE, sizeN = self.model.covariance.noise_coord
         self.roi.setPos((llE, llN), update=False, finish=False)
@@ -156,6 +177,7 @@ class KiteNoisePlot(KitePlot):
         self.update()
         self.transFromFrame()
 
+    @QtCore.pyqtSlot()
     def updateNoiseRegion(self):
         data = self.roi.getArrayRegion(self.image.image, self.image)
         data[data == 0.] = num.nan
@@ -185,8 +207,15 @@ class _KiteSubplotPlot(QtGui.QWidget):
     def addItem(self, *args, **kwargs):
         self.plot.addItem(*args, **kwargs)
 
+    def activatePlot(self):
+        pass
+
+    def deactivatePlot(self):
+        pass
+
 
 class KiteNoisePowerspec(_KiteSubplotPlot):
+
     def __init__(self, parent_plot):
         _KiteSubplotPlot.__init__(self, parent_plot)
 
@@ -207,9 +236,6 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.addItem(self.power)
         # self.addItem(self.power_lin)
 
-        self.model.sigCovarianceChanged.connect(self.update)
-        self.update()
-
     @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
@@ -217,6 +243,13 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.power.setData(k, spec)
         # self.power_lin.setData(
         #     k, covariance.powerspecModel(k))
+
+    def activatePlot(self):
+        self.model.sigCovarianceChanged.connect(self.update)
+        self.update()
+
+    def deactivatePlot(self):
+        self.model.sigCovarianceChanged.disconnect(self.update)
 
 
 class KiteCovariogram(_KiteSubplotPlot):
@@ -272,11 +305,6 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.legend.setParentItem(self.plot.graphicsItem())
         self.legend.addItem(self.cov_model, '')
 
-        self.model.sigCovarianceChanged.connect(
-            self.update)
-
-        self.update()
-
     def setVariance(self):
         self.model.covariance.variance = self.variance.value()
 
@@ -312,6 +340,13 @@ class KiteCovariogram(_KiteSubplotPlot):
                 rms=covariance.covariance_model_rms))
         self.variance.setValue(covariance.variance)
 
+    def activatePlot(self):
+        self.model.sigCovarianceChanged.connect(self.update)
+        self.update()
+
+    def deactivatePlot(self):
+        self.model.sigCovarianceChanged.disconnect(self.update)
+
 
 class KiteStructureFunction(_KiteSubplotPlot):
 
@@ -340,12 +375,8 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
         self.addItem(self.structure)
         self.addItem(self.variance)
-        self.model.sigCovarianceChanged.connect(
-            self.update)
         self.variance.sigPositionChangeFinished.connect(
             self.changeVariance)
-
-        self.update()
 
     @QtCore.pyqtSlot()
     def update(self):
@@ -358,6 +389,13 @@ class KiteStructureFunction(_KiteSubplotPlot):
     def changeVariance(self, inf_line):
         covariance = self.model.covariance
         covariance.variance = inf_line.getYPos()
+
+    def activatePlot(self):
+        self.model.sigCovarianceChanged.connect(self.update)
+        self.update()
+
+    def deactivatePlot(self):
+        self.model.sigCovarianceChanged.disconnect(self.update)
 
 
 class KiteToolNoise(QtGui.QDialog):
@@ -604,12 +642,10 @@ class KiteToolWeightMatrix(QtGui.QDialog):
 
         def proxy_connect(self):
             self.model.sigCovarianceChanged.connect(self.update)
-            self.model.sigQuadtreeChanged.connect(self.update)
             self.parent.matrixButtonGroup.buttonClicked.connect(self.update)
 
         def proxy_disconnect(self):
             self.model.sigCovarianceChanged.disconnect(self.update)
-            self.model.sigQuadtreeChanged.disconnect(self.update)
             self.parent.matrixButtonGroup.buttonClicked.disconnect(self.update)
 
     def __init__(self, model, parent=None):
