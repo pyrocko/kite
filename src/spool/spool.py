@@ -265,14 +265,21 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     def onExportQuadtree(self):
         filename, flt = QtWidgets.QFileDialog.getSaveFileName(
-            filter='GeoJSON (*.json *.geojson);;CSV File *.csv (*.csv)',
+            filter='GeoJSON (*.geojson *.json);;CSV File *.csv (*.csv)',
             caption='Export Quadtree')
 
         if not validateFilename(filename):
             return
-        if flt == 'GeoJSON (*.json *.geojson)':
+
+        if flt == 'GeoJSON (*.geojson *.json)':
+            if not filename.endswith('.geojson') and \
+                    not filename.endswith('.json'):
+                filename += '.geojson'
             self.model.quadtree.export_geojson(filename)
+
         elif flt == 'CSV File *.csv (*.csv)':
+            if not filename.endswith('.csv'):
+                filename += '.geojson'
             self.model.quadtree.export_csv(filename)
         else:
             raise ValueError('unknown filter')

@@ -982,21 +982,19 @@ class Quadtree(object):
                 urN += self.frame.llLat
                 urE += self.frame.llLon
 
-            coords = [
-                (llE, llN),
-                (urE, llN),
-                (urE, urN),
-                (llE, urN),
-                (llE, llN)]
+            coords = num.array([
+                (llN, llE),
+                (llN, urE),
+                (urN, urE),
+                (urN, llE),
+                (llN, llE)])
 
             if self.frame.isMeter():
-                coords_deg = []
-                for c in coords:
-                    c_deg = od.ne_to_latlon_alternative_method(
-                        self.frame.llLon, self.frame.llLat, *c)
-                    coords_deg.append(c_deg)
+                coords = od.ne_to_latlon(
+                    self.frame.llLat, self.frame.llLon, *coords.T)
+                coords = num.array(coords).T
 
-                coords = coords_deg
+            coords = coords[:, [1, 0]].tolist()
 
             feature = geojson.Feature(
                 geometry=geojson.Polygon(coordinates=[coords]),
