@@ -65,6 +65,9 @@ class SceneModel(QtCore.QObject):
         self.connectSlots()
         self.sigSceneModelChanged.emit(object)
 
+    def getScene(self):
+        return self.scene
+
     def disconnectSlots(self):
         if self.scene is None:
             return

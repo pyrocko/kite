@@ -7,7 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 ### Added
-- Spool: Added outline to Quadtree
+- Spool: Added outline to Quadtree Nodes
+- Spool: Added scene de-ramp action
 - `bbd2kite`: import of BGR BodenBewegungsDienst data (https://bodenbewegungsdienst.bgr.de)
 
 ### Changed
