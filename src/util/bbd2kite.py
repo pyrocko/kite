@@ -1,6 +1,8 @@
 import shapefile
 import logging
 import numpy as num
+import utm
+import re
 import os.path as op
 import pyrocko.orthodrome as od
 
@@ -24,11 +26,33 @@ class DataStruct(dict):
         self[attr] = value
 
 
+def read_projection(filename):
+    prj_filename = op.splitext(filename)[0] + '.prj'
+    if not op.exists(prj_filename):
+        log.warning('Could not find %s, defaulting to UTM Zone 32N')
+        return 32, 'N'
+
+    with open(prj_filename, 'r') as f:
+        matches = re.findall(r'[\'"](\w*)[\'"]', f.read())
+
+    if not matches:
+        log.warning('Could not find projection in %s', prj_filename)
+        return 32, 'N'
+
+    projection = matches[0]
+    if 'UTM' not in projection:
+        raise AttributeError('Projection is not UTM: %s' % projection)
+
+    zone, letter = int(projection[-3:-1]), projection[-1]
+    return zone, letter
+
+
 def read_shapefile(filename):
     log.info('Loading data from %s', filename)
     shp = shapefile.Reader(filename)
 
     npoints = shp.numRecords
+    field_name_map = {fld[0].lower(): fld[0] for fld in shp.fields}
 
     data = DataStruct()
     data.bbox = shp.bbox
@@ -44,43 +68,43 @@ def read_shapefile(filename):
     for isr, sr in enumerate(shp.iterShapeRecords()):
         shape = sr.shape
         record = sr.record
-        assert shape.shapeType == 1
+        # assert shape.shapeType == 11
 
-        los_n[isr] = record.Los_North
-        los_e[isr] = record.Los_East
-        los_u[isr] = -record.Los_Up
+        los_n[isr] = getattr(record, field_name_map['los_north'])
+        los_e[isr] = getattr(record, field_name_map['los_east'])
+        los_u[isr] = -getattr(record, field_name_map['los_up'])
 
-        data.ps_mean_v[isr] = record.Mean_Velo
-        data.ps_mean_v[isr] = record.Var_Mean_V
+        data.ps_mean_v[isr] = getattr(record, field_name_map['mean_velo'])
+        data.ps_mean_v[isr] = getattr(record, field_name_map['var_mean_v'])
 
         coords[isr] = shape.points[0]
 
     data.phi = num.arctan2(los_n, los_e)
     data.theta = num.arcsin(los_u)
 
-    data.lons = coords[:, 0]
-    data.lats = coords[:, 1]
+    data.easts = coords[:, 0]
+    data.norths = coords[:, 1]
 
     return data
 
 
 def bin_ps_data(data, bins=(800, 800)):
     log.debug('Binning mean velocity data...')
-    bin_vels, edg_lat, edg_lon, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.ps_mean_v,
+    bin_vels, edg_N, edg_E, _ = stats.binned_statistic_2d(
+        data.norths, data.easts, data.ps_mean_v,
         statistic='mean', bins=bins)
 
     log.debug('Binning LOS angles...')
     bin_phi, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.phi,
+        data.norths, data.easts, data.phi,
         statistic='mean', bins=bins)
     bin_theta, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.theta,
+        data.norths, data.easts, data.theta,
         statistic='mean', bins=bins)
 
     log.debug('Binning mean velocity variance...')
     bin_mean_var, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.ps_mean_var,
+        data.norths, data.easts, data.ps_mean_var,
         statistic='mean', bins=bins)
 
     data.bin_mean_var = bin_mean_var
@@ -89,8 +113,8 @@ def bin_ps_data(data, bins=(800, 800)):
     data.bin_phi = bin_phi
     data.bin_theta = bin_theta
 
-    data.bin_edg_lat = edg_lat
-    data.bin_edg_lon = edg_lon
+    data.bin_edg_N = edg_N
+    data.bin_edg_E = edg_E
 
     return data
 
@@ -122,12 +146,16 @@ def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
     if convert_m and import_var:
         data.ps_mean_var /= 1e3
 
-    lengthN = od.distance_accurate50m(
-        data.bbox[1], data.bbox[0],
-        data.bbox[3], data.bbox[0])
-    lengthE = od.distance_accurate50m(
-        data.bbox[1], data.bbox[0],
-        data.bbox[1], data.bbox[2])
+    # lengthN = od.distance_accurate50m(
+    #     data.bbox[1], data.bbox[0],
+    #     data.bbox[3], data.bbox[0])
+    # lengthE = od.distance_accurate50m(
+    #     data.bbox[1], data.bbox[0],
+    #     data.bbox[1], data.bbox[2])
+
+    lengthE = data.bbox[2] - data.bbox[0]
+    lengthN = data.bbox[3] - data.bbox[1]
+
     bins = (round(lengthE / px_size[0]),
             round(lengthN / px_size[1]))
 
@@ -135,14 +163,19 @@ def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
 
     log.debug('Setting up the Kite Scene')
     config = SceneConfig()
-    config.frame.llLat = data.bin_edg_lat.min()
-    config.frame.llLon = data.bin_edg_lon.min()
-    config.frame.dE = data.bin_edg_lon[1] - data.bin_edg_lon[0]
-    config.frame.dN = data.bin_edg_lat[1] - data.bin_edg_lat[0]
-    config.frame.spacing = 'degree'
+    zone, letter = read_projection(filename)
+
+    llLat, llLon = utm.to_latlon(
+        data.bbox[0], data.bbox[1], zone, letter)
+    config.frame.llLat = llLat
+    config.frame.llLon = llLon
+
+    config.frame.dE = data.bin_edg_E[1] - data.bin_edg_E[0]
+    config.frame.dN = data.bin_edg_N[1] - data.bin_edg_N[0]
+    config.frame.spacing = 'meter'
 
     scene_name = op.basename(op.abspath(filename))
-    config.meta.scene_title = '%s (BodenBewegunsDienst import)' % scene_name
+    config.meta.scene_title = '%s (BodenbewegunsDienst import)' % scene_name
     config.meta.scene_id = scene_name
     # config.meta.time_master = data.tmin.timestamp()
     # config.meta.time_slave = data.tmax.timestamp()
