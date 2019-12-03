@@ -16,7 +16,7 @@ except ImportError:
         def get_include(self):
             return ''
 
-version = '1.2.4'
+version = '1.3.0'
 
 
 def _have_openmp():
