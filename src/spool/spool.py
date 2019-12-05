@@ -78,12 +78,22 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.active_view = None
 
         self.ptree = KiteParameterTree(showHeader=False)
+        self.ptree.setMinimumWidth(400)
         self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
         self.ptree_dock.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetFloatable |
-            QtWidgets.QDockWidget.DockWidgetMovable)
+            QtWidgets.QDockWidget.NoDockWidgetFeatures)
         self.ptree_dock.setWidget(self.ptree)
-        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
+        self.addDockWidget(
+            QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
+
+        self.tabs = QtGui.QTabWidget(self)
+        self.dock_tabs = QtGui.QDockWidget(self)
+        self.dock_tabs.setWidget(self.tabs)
+        self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+
+        self.addDockWidget(
+            QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
+        self.setCentralWidget(self.dock_tabs)
 
         self.model = SceneModel()
         self.model.sigSceneModelChanged.connect(

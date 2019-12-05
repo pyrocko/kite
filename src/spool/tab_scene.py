@@ -68,6 +68,7 @@ class KiteScene(KiteView):
 
 
 class KiteScenePlot(KitePlot):
+
     def __init__(self, model):
         self.components_available = {
             'displacement':
@@ -106,6 +107,7 @@ class KiteScenePlot(KitePlot):
 
 
 class KiteToolTransect(QtGui.QDialog):
+
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
