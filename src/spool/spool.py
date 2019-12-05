@@ -81,13 +81,15 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.ptree.setMinimumWidth(400)
         self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
         self.ptree_dock.setFeatures(
-            QtWidgets.QDockWidget.NoDockWidgetFeatures)
+            QtWidgets.QDockWidget.DockWidgetMovable |
+            QtWidgets.QDockWidget.DockWidgetFloatable)
         self.ptree_dock.setWidget(self.ptree)
         self.addDockWidget(
             QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
 
         self.tabs = QtGui.QTabWidget(self)
-        self.dock_tabs = QtGui.QDockWidget(self)
+        self.dock_tabs = QtWidgets.QDockWidget(
+            'Surface Displacement Data', self)
         self.dock_tabs.setWidget(self.tabs)
         self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
 
