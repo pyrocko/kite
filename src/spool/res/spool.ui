@@ -222,7 +222,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>Export quadtree</string>
+    <string>Export quadtree (GeoJSON, CSV)</string>
    </property>
    <property name="toolTip">
     <string>Scene.quadtree.export(filename)</string>

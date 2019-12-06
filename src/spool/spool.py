@@ -2,10 +2,13 @@
 from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
 import time  # noqa
+import math
 import pyqtgraph as pg
+from datetime import datetime
 
-from kite.qt_utils import loadUi, validateFilename, SceneLog
+from kite.qt_utils import loadUi, validateFilename, SceneLog, QRangeSlider
 from kite.scene import Scene
+from kite.scene_stack import SceneStack
 
 from .scene_model import SceneModel
 from .tab_scene import KiteScene
@@ -79,17 +82,17 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
         self.ptree = KiteParameterTree(showHeader=False)
         self.ptree.setMinimumWidth(400)
-        self.ptree_dock = QtWidgets.QDockWidget('Parameters', self)
-        self.ptree_dock.setFeatures(
+        self.dock_ptree = QtWidgets.QDockWidget('Parameters', self)
+        self.dock_ptree.setFeatures(
             QtWidgets.QDockWidget.DockWidgetMovable |
             QtWidgets.QDockWidget.DockWidgetFloatable)
-        self.ptree_dock.setWidget(self.ptree)
+        self.dock_ptree.setWidget(self.ptree)
         self.addDockWidget(
-            QtCore.Qt.LeftDockWidgetArea, self.ptree_dock)
+            QtCore.Qt.LeftDockWidgetArea, self.dock_ptree)
 
         self.tabs = QtGui.QTabWidget(self)
-        self.dock_tabs = QtWidgets.QDockWidget(
-            'Surface Displacement Data', self)
+        self.dock_tabs = QtWidgets.QDockWidget(self)
+        self.dock_tabs.setTitleBarWidget(QtGui.QWidget())
         self.dock_tabs.setWidget(self.tabs)
         self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
 
@@ -101,6 +104,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.model.sigSceneModelChanged.connect(
             self.buildViews)
 
+        # Connecting signals
         self.sigLoadFile.connect(
             self.model.loadFile)
         self.sigImportFile.connect(
@@ -155,9 +159,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.buildViews()
 
     def buildViews(self):
-        title = self.model.scene.meta.filename or 'Untitled'
+        scene = self.model.getScene()
+
+        title = scene.meta.filename or 'Untitled'
         self.setWindowTitle('Spool - %s' % title)
-        if self.model.scene is None or self.tabs.count() != 0:
+        if scene is None or self.tabs.count() != 0:
             return
         for v in self.VIEWS:
             self.addView(v)
@@ -169,6 +175,9 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             type=QtCore.Qt.QueuedConnection)
 
         self.tabs.currentChanged.connect(self.activateView)
+
+        if isinstance(scene, SceneStack):
+            self.addTimeSlider()
 
         self.activateView(0)
 
@@ -303,6 +312,44 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         if not validateFilename(filename):
             return
         self.sigExportWeightMatrix.emit(filename)
+
+    def addTimeSlider(self):
+        stack = self.model.getScene()
+
+        self.time_slider = QRangeSlider(self)
+        self.time_slider.setMaximumHeight(50)
+
+        slider_tmin = math.ceil(stack.tmin)
+        slider_tmax = math.floor(stack.tmax)
+
+        def datetime_formatter(value):
+            return datetime.fromtimestamp(value).strftime('%Y-%m-%d')
+
+        self.time_slider.setMin(slider_tmin)
+        self.time_slider.setMax(slider_tmax)
+        self.time_slider.setRange(slider_tmin, slider_tmax)
+        self.time_slider.setFormatter(datetime_formatter)
+
+        @QtCore.pyqtSlot(int)
+        def changeTimeRange():
+            tmin, tmax = self.time_slider.getRange()
+
+            stack.set_time_range(tmin, tmax)
+
+        self.time_slider.startValueChanged.connect(changeTimeRange)
+        self.time_slider.endValueChanged.connect(changeTimeRange)
+
+        self.dock_time_slider = QtGui.QDockWidget(
+            'Displacement time series - range control', self)
+        self.dock_time_slider.setWidget(self.time_slider)
+        self.dock_time_slider.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetMovable)
+        self.dock_time_slider.setAllowedAreas(
+            QtCore.Qt.BottomDockWidgetArea |
+            QtCore.Qt.TopDockWidgetArea)
+
+        self.addDockWidget(
+            QtCore.Qt.BottomDockWidgetArea, self.dock_time_slider)
 
     def exit(self):
         pass

@@ -41,6 +41,7 @@ class KiteScene(KiteView):
 
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
+
         spool.actionDerampScene.triggered.connect(self.derampScene)
         spool.actionDerampScene.setEnabled(True)
 
@@ -100,6 +101,7 @@ class KiteScenePlot(KitePlot):
 
         model.sigFrameChanged.connect(self.onFrameChange)
         model.sigSceneModelChanged.connect(self.update)
+        model.sigSceneChanged.connect(self.update)
 
     def onFrameChange(self):
         self.update()

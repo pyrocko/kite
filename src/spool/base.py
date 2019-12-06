@@ -288,6 +288,8 @@ class KiteToolColormap(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
         self._plot = plot
+        self.prev_levels = None
+        self.symmetricColormap = True
 
         zero_marker = pg.InfiniteLine(
             pos=0,
@@ -304,6 +306,8 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         # self.gradient.setOrientation('bottom')
         self.setSymColormap()
         self._plot.image.sigImageChanged.connect(self.imageChanged)
+
+        self.sigLevelsChanged.connect(self.symmetricLevels)
         # self.isoCurveControl()
 
     @QtCore.pyqtSlot()
@@ -312,6 +316,26 @@ class KiteToolColormap(pg.HistogramLUTWidget):
             self.setQualitativeColormap()
         else:
             self.setSymColormap()
+
+        max_range = num.nanmax(num.abs(self._plot.data))
+        self.vb.setYRange(-max_range, max_range)
+
+    @QtCore.pyqtSlot(object)
+    def symmetricLevels(self, *args):
+        if not self.symmetricColormap:
+            return
+
+        levels = self.getLevels()
+        if self.prev_levels is None:
+            self.prev_levels = levels
+            return
+
+        min_change = bool(self.prev_levels[0] - levels[0])
+        func = min if min_change else max
+
+        max_lvl = abs(func(levels))
+        self.prev_levels = levels
+        self.setLevels(-max_lvl, max_lvl)
 
     def setSymColormap(self):
         cmap = {'ticks':
@@ -327,7 +351,11 @@ class KiteToolColormap(pg.HistogramLUTWidget):
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
 
-        lvl_max = num.nanmax(num.abs(self._plot.data)) * 1.01
+        relevant_data = num.abs(self._plot.data[num.isfinite(self._plot.data)])
+        if num.any(relevant_data):
+            lvl_max = num.quantile(relevant_data, .995)
+        else:
+            lvl_max = 1.
 
         self.gradient.restoreState(cmap)
         self.setLevels(-lvl_max, lvl_max)
