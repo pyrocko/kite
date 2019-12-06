@@ -11,14 +11,22 @@ class TSScene(Scene):
     pass
 
 
-class SceneStack(BaseScene):
+class SceneStack(Scene):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self._times = []
-        self._active_timestamp = None
         self._scenes = {}
+
+        self._selected_tmin = None
+        self._selected_tmax = None
+
+        self._range_tmin = None
+        self._range_tmax = None
+
+        self._scene_tmin = None
+        self._scene_tmax = None
 
     @property
     def times(self):
@@ -49,30 +57,54 @@ class SceneStack(BaseScene):
         self._scenes[timestamp] = scene
 
         if self.nscenes == 1:
-            self.set_scene(timestamp)
+            self.phi = scene.phi
+            self.theta = scene.theta
+            self.rows, self.cols = scene.displacement.shape
+            self.frame = scene.frame
+
+        self.set_time_range(self.tmin, self.tmax)
 
     @property
     def displacement(self):
-        return self._scenes[self._active_timestamp].displacement
+        displacement = self._scene_tmax.displacement \
+            - self._scene_tmin.displacement
+        return displacement
+
+    @property
+    def displacement_mask(self):
+        return ~num.isfinite(self.displacement)
 
     @displacement.setter
     def displacement(self):
         raise AttributeError('use add_frame to set the displacement')
 
-    def set_scene(self, timestamp):
-        if timestamp not in self._scenes.keys():
-            raise AttributeError('Timestamp %g not in stack' % timestamp)
+    def get_scene_at(self, timestamp):
+        times = self.times
+        time = times[num.abs(num.array(times) - timestamp).argmin()]
+        return time, self._scenes[time]
 
-        self._log.info('Setting timestamp to %s', dtime(timestamp))
-        if self._active_timestamp == timestamp:
+    def set_time_range(self, tmin, tmax):
+        assert tmin <= tmax, 'required tmin <= tmax'
+        assert tmin >= self.tmin, 'tmin outside of stack time range'
+        assert tmax <= self.tmax, 'tmax outside of stack time range'
+
+        if self._range_tmin == tmin and self._range_tmax == tmax:
+            self._log.debug('Time range unchanged')
             return
 
-        self._active_timestamp = timestamp
+        self._log.info(
+            'Setting time range to %s - %s', dtime(tmin), dtime(tmax))
+
+        self._selected_tmin = tmin
+        self._selected_tmax = tmax
+
+        self._range_tmin, scene_tmin = self.get_scene_at(tmin)
+        self._range_tmax, scene_tmax = self.get_scene_at(tmax)
+
+        if scene_tmin is self._scene_tmin and scene_tmax is self._scene_tmax:
+            return
+
+        self._scene_tmin = scene_tmin
+        self._scene_tmax = scene_tmax
+
         self.evChanged.notify()
-
-    def set_scene_to(self, timestamp):
-        self._log.debug('Setting time to %s', dtime(timestamp))
-
-        times_diff = num.abs(num.array(self.times) - timestamp)
-        closest_timestamp = self.times[num.argmin(times_diff)]
-        self.set_scene(closest_timestamp)

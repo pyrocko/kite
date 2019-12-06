@@ -25,7 +25,7 @@ class QuadNode(object):
     """
 
     CORNERS = (0, 0), (0, 1), (1, 0), (1, 1)
-    MIN_PIXEL_LENGTH_NODE = 4
+    MIN_PIXEL_LENGTH_NODE = None
 
     def __init__(self, quadtree, llr, llc, length):
         self.children = []
@@ -528,7 +528,8 @@ class Quadtree(object):
         return int(2**round(num.log(npx / 64)))
 
     def _initTree(self):
-        QuadNode.MIN_PIXEL_LENGTH_NODE = self.min_node_length_px
+        QuadNode.MIN_PIXEL_LENGTH_NODE = QuadNode.MIN_PIXEL_LENGTH_NODE or \
+            self.min_node_length_px
 
         t0 = time.time()
         for b in self._base_nodes:

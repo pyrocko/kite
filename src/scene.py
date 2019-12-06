@@ -509,7 +509,7 @@ class BaseScene(object):
 
     @property
     def shape(self):
-        return self._displacement.shape
+        return self.displacement.shape
 
     @property
     def phi(self):
@@ -738,8 +738,8 @@ class Scene(BaseScene):
     :type dLon: float, optional
     """
 
-    def __init__(self, config=SceneConfig(), **kwargs):
-        self.config = config
+    def __init__(self, config=None, **kwargs):
+        self.config = config or SceneConfig()
         self.meta = self.config.meta
 
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
@@ -1002,7 +1002,7 @@ class TestScene(Scene):
         scene.meta.title = 'Synthetic Displacement | Uniform Random'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        rand_state = num.random.RandomState(seed=1010)
+        rand_state = num.random.RandomState(seed=kwargs.pop('seed', None))
         scene.displacement = (rand_state.rand(nx, ny)-.5)*2
 
         return scene
@@ -1099,8 +1099,8 @@ class TestScene(Scene):
         scene.displacement = disp
         return scene
 
-    def addNoise(self, noise_amplitude):
-        rand = num.random.RandomState()
+    def addNoise(self, noise_amplitude=1., seed=None):
+        rand = num.random.RandomState(seed)
         noise = rand.randn(*self.displacement.shape) * noise_amplitude
         self.displacement += noise
 
