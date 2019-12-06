@@ -328,10 +328,9 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         levels = self.getLevels()
         if self.prev_levels is None:
             self.prev_levels = levels
-            return
 
-        min_change = bool(self.prev_levels[0] - levels[0])
-        func = min if min_change else max
+        min_changed = bool(self.prev_levels[0] - levels[0])
+        func = min if min_changed else max
 
         max_lvl = abs(func(levels))
         self.prev_levels = levels
