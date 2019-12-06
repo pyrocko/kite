@@ -9,7 +9,8 @@ Kite supports importing unwrapped displacement scenes from different InSAR proce
 * `ISCE <https://winsar.unavco.org/software/isce>`_
 * `SARscape <http://www.sarmap.ch/page.php?page=sarscape>`_
 * `LiCSAR <https://comet.nerc.ac.uk/COMET-LiCS-portal/>`_
-
+* `ARIA  <https://aria.jpl.nasa.gov/products>`_
+* `SNAP <https://step.esa.int/main/toolboxes/snap/>`_
 
 Each processor delivers different file formats and metadata. In order to import the data into Kite, data has to be prepared. Details for each format are described in :mod:`kite.scene_io`.
 
