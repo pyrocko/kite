@@ -9,7 +9,7 @@ logger = logging.getLogger('kite.clients')
 
 
 def _download_file(url, outfile):
-    logger.info('Downloading %s to %s', url, outfile)
+    logger.debug('Downloading %s to %s', url, outfile)
     r = requests.get(url)
 
     with open(outfile, 'wb') as f:
@@ -25,14 +25,16 @@ def download_licsar(unw_url, destination='.'):
 
     scene_name = op.basename(unw_url)
     url_dir = op.dirname(unw_url)
+    product_name = op.basename(unw_url)
 
     os.makedirs(destination, exist_ok=True)
 
-    logger.info('Downloading unwrapped data from LiCSAR: %s', unw_url)
+    logger.info('Downloading surface displacement data from LiCSAR: %s',
+                product_name)
     unw_file = op.join(destination, scene_name)
     _download_file(unw_url, unw_file)
 
-    logger.info('Downloading LOS angles from LiCSAR')
+    logger.info('Downloading LOS angles...')
     scene_id = url_dir.split('/')[-3]
     meta_url = op.normpath(op.join(url_dir, '../../metadata'))
 
@@ -44,7 +46,7 @@ def download_licsar(unw_url, destination='.'):
 
         _download_file(los_url, outfn)
 
-    logger.info('\nDownloaded complete! Open with\n\n\tspool --load=%s',
+    logger.info('Download complete! Open with\n\n\tspool --load=%s',
                 unw_file)
 
 
