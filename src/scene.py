@@ -13,7 +13,7 @@ from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  #
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
-from kite.aps import APSConfig
+from kite.aps import APSConfig, APS
 from kite.util import Subject, property_cached
 from kite import scene_io
 
@@ -802,6 +802,7 @@ class Scene(BaseScene):
         self.import_data = self._import_data
         self.load = self._load
 
+        self.aps = APS(self, config=self.config.aps)
     @property_cached
     def quadtree(self):
         """ Instantiates the scene's quadtree.
@@ -821,12 +822,6 @@ class Scene(BaseScene):
         self._log.debug('Creating kite.Covariance instance')
         from kite.covariance import Covariance
         return Covariance(scene=self, config=self.config.covariance)
-
-    @property_cached
-    def aps(self):
-        self._log.debug('Creating kite.aps module')
-        from kite.aps import APS
-        return APS(self, config=self.config.aps)
 
     @property_cached
     def plot(self):

@@ -444,6 +444,7 @@ class Quadtree(object):
         self.setConfig(config)
 
         self.scene.evConfigChanged.subscribe(self.setConfig)
+        self.scene.evChanged.subscribe(self.reinitializeTree)
 
     def setConfig(self, config=None):
         """ Sets and updated the config of the instance
@@ -497,7 +498,9 @@ class Quadtree(object):
 
         self.config.correction = correction
         self._corr_func = self._displacement_corrections[correction][1]
+        self.reinitializeTree()
 
+    def reinitializeTree(self):
         # Clearing cached properties through None
         self.leaf_center_distance = None
         self.nodes = None
