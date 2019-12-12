@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Import of SNAP products
+- Scene: added method `get_elevation`.
+- Scene: Added APS removal
+- SceneStack: handles stacks of time series
 
 ### Fixed
 - Spool: improved UI

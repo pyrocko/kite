@@ -1,11 +1,24 @@
 #!/bin/python
+import logging
 import unittest
 import numpy as num
-from kite import TestScene
+from kite import TestScene, Scene
 
-from . import common
+# from . import common
 
-common.setLogLevel('DEBUG')
+# common.setLogLevel('DEBUG')
+
+
+def get_scene():
+    sc = Scene()
+    sc.frame.llLat = 52.395833
+    sc.frame.llLon = 13.061389
+    sc.frame.dE = .001
+    sc.frame.dN = .001
+    sc.frame.spacing = 'degree'
+    sc.displacement = num.zeros((500, 500))
+
+    return sc
 
 
 class TestSyntheticsGenerators(unittest.TestCase):
@@ -43,5 +56,11 @@ class TestSyntheticScene(unittest.TestCase):
             qt.tile_size_max = s
 
 
+def test_topo():
+    logging.basicConfig(level=logging.DEBUG)
+    sc = get_scene()
+    return sc.get_elevation()
+
+
 if __name__ == '__main__':
-    unittest.main()
+    test_topo()

@@ -1,9 +1,8 @@
 #!/usr/bin/python3
-import time
 import numpy as num
 from os import path
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -16,6 +15,9 @@ __all__ = ['KiteView', 'KitePlot', 'KiteToolColormap',
            'KiteParameterGroup']
 
 
+d2r = num.pi/180.
+
+
 def get_resource(filename):
     return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
 
@@ -26,6 +28,9 @@ class KiteView(dockarea.DockArea):
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
+        self.tools = getattr(self, 'tools', {})
+
+        self.colormap = KiteToolColormap(self.main_widget)
 
         dock_main = dockarea.Dock(
             self.title,
@@ -34,7 +39,7 @@ class KiteView(dockarea.DockArea):
         dock_colormap = dockarea.Dock(
             'Colormap',
             autoOrientation=False,
-            widget=KiteToolColormap(self.main_widget))
+            widget=self.colormap)
         dock_colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.items()):
@@ -151,6 +156,9 @@ class KitePlot(pg.PlotWidget):
             border=border_pen,
             useOpenGL=True)
 
+        self.hillshade = None
+        self.elevation = None
+
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
         self.plotItem.getAxis('bottom').setZValue(100)
@@ -213,6 +221,82 @@ class KitePlot(pg.PlotWidget):
             itemPos=(1., 0.), parentPos=(1, 0.),
             offset=(-10., 40.))
 
+    def enableHillshade(self):
+        if self.hillshade:
+            return
+
+        from scipy.ndimage import convolve as im_conv
+
+        frame = self.model.frame
+        scene = self.model.getScene()
+
+        elevation = scene.get_elevation()
+        print(elevation.shape)
+
+        contrast = 1.
+
+        elevation_angle = 45.
+        azimuth = 45.
+
+        size_ramp = 10
+        ramp = num.linspace(-1, 1, size_ramp)
+
+        ramp_x = num.tile(ramp, size_ramp)\
+            .reshape(size_ramp, size_ramp)
+        ramp_y = ramp_x.T
+        ramp = ramp_x + ramp_y
+
+        ramp = ramp / ramp.max() * contrast
+        # ramp = num.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
+        # convolution of two 2-dimensional arrays
+        shad = im_conv(elevation, ramp.T)
+        shad = -1. * shad
+
+        # if there are strong artifical edges in the data, shades get
+        # dominated by them. Cutting off the largest and smallest 2% of
+        # shades helps
+
+        percentile2 = num.quantile(shad, 0.02)
+        percentile98 = num.quantile(shad, 0.98)
+
+        shad = num.where(shad > percentile98, percentile98, shad)
+        shad = num.where(shad < percentile2, percentile2, shad)
+        shad -= shad.min()
+        shad /= shad.max()
+
+        # normalize to range [0 1]
+        hillshade = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=None,
+            useOpenGL=False)
+        hillshade.resetTransform()
+        hillshade.scale(frame.dE, frame.dN)
+
+        elev_img = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=None,
+            useOpenGL=False)
+        elev_img.resetTransform()
+        elev_img.scale(frame.dE, frame.dN)
+
+        elev_img.updateImage(elevation.T, autoLevels=True)
+        hillshade.updateImage(shad.T, autoLevels=True)
+
+        self.hillshade = hillshade
+        self.elevation = elev_img
+        self.removeItem(self.image)
+        self.addItem(self.elevation)
+        self.addItem(self.hillshade)
+        self.addItem(self.image)
+
+    def disableHillshade(self):
+        if not self.hillshade:
+            return
+        self.removeItem(self.hillshade)
+        self.hillshade = None
+
     def transFromFrame(self):
         frame = self.model.frame
 
@@ -252,7 +336,7 @@ class KitePlot(pg.PlotWidget):
 
     @QtCore.pyqtSlot()
     def _updateImageFromData(self):
-        self.image.updateImage(self.data.T)
+        self.image.updateImage(self.data.T, opacity=.7)
 
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
@@ -289,7 +373,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
         self._plot = plot
         self.prev_levels = None
-        self.symmetricColormap = True
+        self.symmetric_colormap = True
 
         zero_marker = pg.InfiniteLine(
             pos=0,
@@ -310,6 +394,9 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         self.sigLevelsChanged.connect(self.symmetricLevels)
         # self.isoCurveControl()
 
+    def set_symmetric_colormap(self, symmetric):
+        self.symmetric_colormap = symmetric
+
     @QtCore.pyqtSlot()
     def imageChanged(self):
         if self._plot.component == 'weight':
@@ -322,7 +409,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
 
     @QtCore.pyqtSlot(object)
     def symmetricLevels(self, *args):
-        if not self.symmetricColormap:
+        if not self.symmetric_colormap:
             return
 
         levels = self.getLevels()

@@ -54,7 +54,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>24</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -84,7 +84,18 @@
     <property name="title">
      <string>Tools</string>
     </property>
+    <widget class="QMenu" name="menu_APS">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
+     <property name="title">
+      <string>Atmospheric Phase Screen (APS)</string>
+     </property>
+     <addaction name="actionApply_APS"/>
+     <addaction name="actionRemove_APS"/>
+    </widget>
     <addaction name="actionDerampScene"/>
+    <addaction name="menu_APS"/>
     <addaction name="actionTransect"/>
     <addaction name="separator"/>
     <addaction name="actionInspect_Noise"/>
@@ -334,6 +345,16 @@
    </property>
    <property name="text">
     <string>De-ramp scene</string>
+   </property>
+  </action>
+  <action name="actionApply_APS">
+   <property name="text">
+    <string>Apply APS</string>
+   </property>
+  </action>
+  <action name="actionRemove_APS">
+   <property name="text">
+    <string>Remove APS</string>
    </property>
   </action>
  </widget>

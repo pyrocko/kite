@@ -190,7 +190,7 @@ class KiteNoisePlot(KitePlot):
         self.model.covariance.noise_data = data.T
 
 
-class _KiteSubplotPlot(QtGui.QWidget):
+class KiteSubplot(QtGui.QWidget):
     def __init__(self, parent_plot):
         QtGui.QWidget.__init__(self)
         self.parent_plot = parent_plot
@@ -214,10 +214,10 @@ class _KiteSubplotPlot(QtGui.QWidget):
         pass
 
 
-class KiteNoisePowerspec(_KiteSubplotPlot):
+class KiteNoisePowerspec(KiteSubplot):
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
+        KiteSubplot.__init__(self, parent_plot)
 
         self.power = pg.PlotDataItem(antialias=True)
         # self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
@@ -252,7 +252,7 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.disconnect(self.update)
 
 
-class KiteCovariogram(_KiteSubplotPlot):
+class KiteCovariogram(KiteSubplot):
 
     legend_template = {
         'exponential':
@@ -268,7 +268,7 @@ class KiteCovariogram(_KiteSubplotPlot):
             self.setCursor(QtCore.Qt.SizeVerCursor)
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
+        KiteSubplot.__init__(self, parent_plot)
         self.plot.setLabels(
             bottom=('Distance', 'm'),
             left='Covariance (m<sup>2</sup>)')
@@ -348,7 +348,7 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.disconnect(self.update)
 
 
-class KiteStructureFunction(_KiteSubplotPlot):
+class KiteStructureFunction(KiteSubplot):
 
     class VarianceLine(pg.InfiniteLine):
         def __init__(self, *args, **kwargs):
@@ -356,7 +356,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
             self.setCursor(QtCore.Qt.SizeVerCursor)
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
+        KiteSubplot.__init__(self, parent_plot)
         frame = self.model.frame
 
         self.structure = pg.PlotDataItem(

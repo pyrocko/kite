@@ -281,7 +281,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
-        eps_decimals = -math.floor(math.log10(model.quadtree.epsilon_min))
+        eps_decimals = -math.floor(math.log10(
+            model.quadtree.epsilon_min or 1e-3))
         eps_steps = round((model.quadtree.epsilon -
                            model.quadtree.epsilon_min)*.1, 3)
 

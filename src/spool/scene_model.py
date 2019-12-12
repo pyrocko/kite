@@ -20,6 +20,7 @@ class SceneModel(QtCore.QObject):
     sigQuadtreeConfigChanged = QtCore.pyqtSignal()
     sigCovarianceChanged = QtCore.pyqtSignal()
     sigCovarianceConfigChanged = QtCore.pyqtSignal()
+    sigAPSChanged = QtCore.pyqtSignal()
 
     sigProcessingStarted = QtCore.pyqtSignal(str)
     sigProcessingFinished = QtCore.pyqtSignal()
@@ -34,6 +35,8 @@ class SceneModel(QtCore.QObject):
         self.frame = None
         self.quadtree = None
         self.covariance = None
+        self.aps = None
+
         self.log = SceneLogModel(self)
 
         self._ = SignalProxy(
@@ -61,6 +64,7 @@ class SceneModel(QtCore.QObject):
         self.frame = scene.frame
         self.quadtree = scene.quadtree
         self.covariance = scene.covariance
+        self.aps = scene.aps
 
         self.connectSlots()
         self.sigSceneModelChanged.emit(object)
@@ -90,6 +94,9 @@ class SceneModel(QtCore.QObject):
         self.covariance.evConfigChanged.unsubscribe(
             self.sigCovarianceConfigChanged.emit)
 
+        self.aps.evChanged.unsubscribe(
+            self.sigAPSChanged.emit)
+
     def connectSlots(self):
         self.scene.evChanged.subscribe(
             self.sigSceneChanged.emit)
@@ -108,6 +115,9 @@ class SceneModel(QtCore.QObject):
             self.sigCovarianceChanged.emit)
         self.covariance.evConfigChanged.subscribe(
             self.sigCovarianceConfigChanged.emit)
+
+        self.aps.evChanged.subscribe(
+            self.sigAPSChanged.emit)
 
     @QtCore.pyqtSlot(str)
     def exportWeightMatrix(self, filename):

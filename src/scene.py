@@ -5,12 +5,15 @@ import utm
 import os.path as op
 import copy
 from datetime import datetime as dt
+from scipy import interpolate
 
 from pyrocko import guts
-from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy  # noqa
+from pyrocko.dataset.topo import srtmgl3
+from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
+from kite.aps import APSConfig
 from kite.util import Subject, property_cached
 from kite import scene_io
 
@@ -214,6 +217,14 @@ class Frame(object):
     def N(self):
         return num.arange(self.rows) * self.dN
 
+    @property
+    def lengthE(self):
+        return self.cols * self.dE
+
+    @property
+    def lengthN(self):
+        return self.rows * self.dN
+
     @property_cached
     def Nmeter(self):
         return num.arange(self.rows) * self.dNmeter
@@ -280,16 +291,25 @@ class Frame(object):
 
     @property_cached
     def coordinates(self):
-        """ Local east and north coordinates [m] of all pixels in
-           ``NxM`` matrix.
+        """ Local east and north coordinates of all pixels in
+           ``Nx2`` matrix.
 
-        :type: :class:`numpy.ndarray`, size ``NxM``
+        :type: :class:`numpy.ndarray`, size ``Nx2``
         """
         coords = num.empty((self.rows*self.cols, 2))
         coords[:, 0] = num.repeat(self.E[num.newaxis, :],
                                   self.rows, axis=0).flatten()
         coords[:, 1] = num.repeat(self.N[:, num.newaxis],
                                   self.cols, axis=1).flatten()
+
+        if self.isMeter():
+            coords = ne_to_latlon(self.llLat, self.llLon, *coords.T)
+            coords = num.array(coords).T
+
+        else:
+            coords[:, 0] += self.llLon
+            coords[:, 1] += self.llLat
+
         return coords
 
     @property_cached
@@ -416,6 +436,9 @@ class SceneConfig(guts.Object):
     covariance = CovarianceConfig.T(
         default=CovarianceConfig.D(),
         help='Covariance parameters')
+    aps = APSConfig.T(
+        default=APSConfig.D(),
+        help='Atmospheric Phase Screen')
 
     @property
     def old_import(self):
@@ -676,6 +699,37 @@ class BaseScene(object):
                 phi=self.phi,
                 displacement=self.displacement - ramp)
 
+    def get_elevation(self, interpolation='nearest_neighbor'):
+        assert interpolation in ('nearest_neighbor', 'bivariate')
+        self._log.info('Getting elevation...')
+        # region = llLon, urLon, llLat, urLon
+        coords = self.frame.coordinates
+        lons = coords[:, 0]
+        lats = coords[:, 1]
+
+        region = (lons.min(), lons.max(), lats.min(), lats.max())
+        if not srtmgl3.covers(region):
+            raise AssertionError('Region is outside of SRTMGL3 topo dataset')
+
+        tile = srtmgl3.get(region)
+        if not tile:
+            raise AssertionError('Cannot get SRTMGL3 topo dataset')
+
+        if interpolation == 'nearest_neighbor':
+            iy = num.rint((lats - tile.ymin) / tile.dy).astype(num.intp)
+            ix = num.rint((lons - tile.xmin) / tile.dx).astype(num.intp)
+
+            elevation = tile.data[(iy, ix)]
+
+        elif interpolation == 'bivariate':
+            interp = interpolate.RectBivariateSpline(
+                tile.y(), tile.x(), tile.data)
+            elevation = interp(lats, lons, grid=False)
+
+        elevation = elevation.reshape(self.displacement.shape)
+
+        return elevation
+
     def __neg__(self):
         ret = copy.deepcopy(self)
         ret.displacement *= -1
@@ -767,6 +821,12 @@ class Scene(BaseScene):
         self._log.debug('Creating kite.Covariance instance')
         from kite.covariance import Covariance
         return Covariance(scene=self, config=self.config.covariance)
+
+    @property_cached
+    def aps(self):
+        self._log.debug('Creating kite.aps module')
+        from kite.aps import APS
+        return APS(self, config=self.config.aps)
 
     @property_cached
     def plot(self):

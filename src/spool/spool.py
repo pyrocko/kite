@@ -14,6 +14,7 @@ from .scene_model import SceneModel
 from .tab_scene import KiteScene
 from .tab_quadtree import KiteQuadtree  # noqa
 from .tab_covariance import KiteCovariance  # noqa
+from .tab_aps import KiteAPS  # noqa
 from .base import get_resource
 
 
@@ -65,7 +66,7 @@ class Spool(QtWidgets.QApplication):
 
 
 class SpoolMainWindow(QtWidgets.QMainWindow):
-    VIEWS = [KiteScene, KiteQuadtree, KiteCovariance]
+    VIEWS = [KiteScene, KiteQuadtree, KiteCovariance, KiteAPS]
 
     sigImportFile = QtCore.pyqtSignal(str)
     sigLoadFile = QtCore.pyqtSignal(str)
