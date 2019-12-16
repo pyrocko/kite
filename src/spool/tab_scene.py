@@ -101,6 +101,8 @@ class KiteScenePlot(KitePlot):
 
         model.sigFrameChanged.connect(self.onFrameChange)
         model.sigSceneModelChanged.connect(self.update)
+
+        # Todo: use activateView
         model.sigSceneChanged.connect(self.update)
 
     def onFrameChange(self):

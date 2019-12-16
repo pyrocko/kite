@@ -318,7 +318,8 @@ class KiteToolColormap(pg.HistogramLUTWidget):
             self.setSymColormap()
 
         max_range = num.nanmax(num.abs(self._plot.data))
-        self.vb.setYRange(-max_range, max_range)
+        if max_range is not num.nan:
+            self.vb.setYRange(-max_range, max_range)
 
     @QtCore.pyqtSlot(object)
     def symmetricLevels(self, *args):
@@ -352,7 +353,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
 
         relevant_data = num.abs(self._plot.data[num.isfinite(self._plot.data)])
         if num.any(relevant_data):
-            lvl_max = num.quantile(relevant_data, .995)
+            lvl_max = num.quantile(relevant_data, .999)
         else:
             lvl_max = 1.
 
