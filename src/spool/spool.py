@@ -19,6 +19,7 @@ from .base import get_resource
 
 
 class Spool(QtWidgets.QApplication):
+
     def __init__(self, scene=None, import_file=None, load_file=None):
         QtWidgets.QApplication.__init__(self, ['Spool'])
         # self.setStyle('plastique')
@@ -101,7 +102,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
         self.setCentralWidget(self.dock_tabs)
 
-        self.model = SceneModel()
+        self.model = SceneModel(self)
         self.model.sigSceneModelChanged.connect(
             self.buildViews)
 
@@ -146,7 +147,6 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.setValue(0)
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
-        self.progress.setWindowTitle('Processing...')
         self.progress.reset()
         self.progress_timer = None
 
@@ -168,11 +168,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             return
         for v in self.VIEWS:
             self.addView(v)
-        self.model.sigProcessingStarted.connect(
-            self.processingStarted,
+        self.model.sigProgressStarted.connect(
+            self.progressStarted,
             type=QtCore.Qt.QueuedConnection)
-        self.model.sigProcessingFinished.connect(
-            self.processingFinished,
+        self.model.sigProgressFinished.connect(
+            self.progressFinished,
             type=QtCore.Qt.QueuedConnection)
 
         self.tabs.currentChanged.connect(self.activateView)
@@ -204,20 +204,27 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.active_view = self.views[index]
         self.active_view.activateView()
 
-    @QtCore.pyqtSlot(str)
-    def processingStarted(self, text):
-        quadtree = self.model.quadtree
-        covariance = self.model.covariance
+    @QtCore.pyqtSlot(object)
+    def progressStarted(self, args):
+        print(args, self.progress.isVisible())
+        if self.progress.isVisible():
+            return
 
-        ncombinations = quadtree.nleaves*(quadtree.nleaves+1)/2
+        nargs = len(args)
 
+        text = args[0]
+        maximum = 0 if nargs < 2 else args[1]
+        progress_func = None if nargs < 3 else args[2]
+
+        self.progress.setWindowTitle('Processing...')
         self.progress.setLabelText(text)
-        self.progress.setMaximum(ncombinations)
+        self.progress.setMaximum(maximum)
         self.progress.setValue(0)
 
         @QtCore.pyqtSlot()
         def updateProgress():
-            self.progress.setValue(covariance.finished_combinations)
+            if progress_func:
+                self.progress.setValue(progress_func())
 
         self.progress_timer = QtCore.QTimer()
         self.progress_timer.timeout.connect(updateProgress)
@@ -226,7 +233,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.show()
 
     @QtCore.pyqtSlot()
-    def processingFinished(self):
+    def progressFinished(self):
         self.progress.reset()
         if self.progress_timer is not None:
             self.progress_timer.stop()

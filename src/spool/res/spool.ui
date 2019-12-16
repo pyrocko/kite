@@ -54,7 +54,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>25</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -349,12 +349,18 @@
   </action>
   <action name="actionApply_APS">
    <property name="text">
-    <string>Apply APS</string>
+    <string>Apply APS Model</string>
    </property>
   </action>
   <action name="actionRemove_APS">
    <property name="text">
-    <string>Remove APS</string>
+    <string>Remove APS Model</string>
+   </property>
+   <property name="iconText">
+    <string>Remove APS Model</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove APS Model</string>
    </property>
   </action>
  </widget>

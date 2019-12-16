@@ -228,6 +228,7 @@ static state_covariance calc_covariance_matrix(
         }
     #endif
     Py_END_ALLOW_THREADS
+    finished_combinations = 0;
     return SUCCESS;
 }
 

@@ -63,6 +63,20 @@ class KiteView(dockarea.DockArea):
         pass
 
 
+class KitePlotThread(QtCore.QThread):
+    completeSignal = QtCore.Signal()
+
+    def __init__(self, plot):
+        super().__init__()
+        self.plot = plot
+
+    def run(self):
+        plot = self.plot
+        plot._data = plot.components_available[plot.component][1](
+            plot.model)
+        self.completeSignal.emit()
+
+
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
     def __init__(self, model):
@@ -123,20 +137,6 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
     def boundingRect(self):
         return QtCore.QRectF(0, 0, self.width(), self.height())
-
-
-class KitePlotThread(QtCore.QThread):
-    completeSignal = QtCore.Signal()
-
-    def __init__(self, plot):
-        super().__init__()
-        self.plot = plot
-
-    def run(self):
-        plot = self.plot
-        plot._data = plot.components_available[plot.component][1](
-            plot.model)
-        self.completeSignal.emit()
 
 
 class KitePlot(pg.PlotWidget):
@@ -222,24 +222,18 @@ class KitePlot(pg.PlotWidget):
             offset=(-10., 40.))
 
     def enableHillshade(self):
-        if self.hillshade:
-            return
-
         from scipy.ndimage import convolve as im_conv
-
         frame = self.model.frame
-        scene = self.model.getScene()
+        scene = self.model.scene
 
         elevation = scene.get_elevation()
-        print(elevation.shape)
 
         contrast = 1.
-
         elevation_angle = 45.
         azimuth = 45.
 
         size_ramp = 10
-        ramp = num.linspace(-1, 1, size_ramp)
+        ramp = num.linspace(-1, 1, size_ramp)[::-1]
 
         ramp_x = num.tile(ramp, size_ramp)\
             .reshape(size_ramp, size_ramp)
@@ -249,7 +243,7 @@ class KitePlot(pg.PlotWidget):
         ramp = ramp / ramp.max() * contrast
         # ramp = num.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
         # convolution of two 2-dimensional arrays
-        shad = im_conv(elevation, ramp.T)
+        shad = im_conv(elevation, ramp)
         shad = -1. * shad
 
         # if there are strong artifical edges in the data, shades get
@@ -290,6 +284,8 @@ class KitePlot(pg.PlotWidget):
         self.addItem(self.elevation)
         self.addItem(self.hillshade)
         self.addItem(self.image)
+
+        self.update()
 
     def disableHillshade(self):
         if not self.hillshade:
@@ -336,7 +332,9 @@ class KitePlot(pg.PlotWidget):
 
     @QtCore.pyqtSlot()
     def _updateImageFromData(self):
-        self.image.updateImage(self.data.T, opacity=.7)
+        self.image.updateImage(
+            self.data.T,
+            opacity=.7 if self.hillshade else 1.)
 
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
