@@ -1211,14 +1211,14 @@ class SNAP_Gamma(SceneIO):
             'num_output_lines', 'num_samples_per_line',
             'lat_pixel_res', 'lon_pixel_res')
 
-        par_file = glob.glob('*Abstracted_Metadata.txt')
+        par_file = glob.glob(op.join(path, '*Abstracted_Metadata.txt'))
         for file in par_file:
             params = self._parseParameterFile(file)
             if check_required(required_utm, params)\
                or check_required(required_lat_lon, params):
                 if not log:
                     self._log.info('Found parameter file %s' % file)
-                return params
+                return op.basename(file), params
 
         raise ImportError(
             'Parameter file %s does not hold required parameters' %
@@ -1226,8 +1226,8 @@ class SNAP_Gamma(SceneIO):
 
     def validate(self, filename, **kwargs):
         try:
-            par_file = glob.glob('*Abstracted_Metadata.txt')
-            self._getParameters(par_file, filename)
+            folder = op.dirname(op.abspath(filename))
+            self._getParameters(folder)
             return True
         except ImportError:
             return False
@@ -1259,9 +1259,8 @@ class SNAP_Gamma(SceneIO):
         :rtype: dict
         :raises: ImportError
         """
-        par_file = kwargs.pop('par_file', filename)
-
-        params = self._getParameters(par_file, log=True)
+        par_file, params = self._getParameters(
+            op.dirname(op.abspath(filename)), log=True)
 
         ncols = int(params['num_samples_per_line'])
         nlines = int(params['num_output_lines'])
@@ -1280,7 +1279,7 @@ class SNAP_Gamma(SceneIO):
         displ[displ == -0.] = num.nan
         displ = num.flipud(displ)
 
-        if radar_frequency is not None and False:
+        if radar_frequency is not None and '_dsp_' not in par_file:
             radar_frequency = float(radar_frequency)
             radar_frequency *= 1e6  # SNAP gives MHz
             self._log.info('Scaling displacement by radar_frequency %f GHz',
@@ -1291,9 +1290,6 @@ class SNAP_Gamma(SceneIO):
 
         else:
             wavelength = 'None'
-            self._log.warning(
-                'Could not determine radar_frequency from *.slc.par file!'
-                ' Leaving displacement to radians.')
 
         inc_angle = self._getLOSAngles(
             filename, 'incidenceAngleFromEllipsoid.rslc').copy()
