@@ -141,7 +141,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
 class KitePlot(pg.PlotWidget):
 
-    def __init__(self, model, los_arrow=False):
+    def __init__(self, model, los_arrow=False, auto_downsample=False):
         pg.PlotWidget.__init__(self)
         self.model = model
         self.draw_time = 0.
@@ -152,7 +152,7 @@ class KitePlot(pg.PlotWidget):
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(
             None,
-            autoDownsample=False,
+            autoDownsample=auto_downsample,
             border=border_pen,
             useOpenGL=True)
 

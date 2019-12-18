@@ -85,7 +85,8 @@ class KiteAPSPlot(KitePlot):
         }
         self._component = 'displacement'
 
-        KitePlot.__init__(self, model=model, los_arrow=False)
+        KitePlot.__init__(
+            self, model=model, los_arrow=False, auto_downsample=True)
 
         llE, llN, sizeE, sizeN = self.model.aps.get_patch_coords()
         self.roi = self.TopoPatchROI(
