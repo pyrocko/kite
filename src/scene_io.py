@@ -309,11 +309,11 @@ class Gamma(SceneIO):
         phi_files = glob.glob('%s/%s' % (path, pattern))
         if len(phi_files) == 0:
             self._log.warning('Could not find LOS file %s, '
-                              'defaulting to angle to 0. [rad]' % pattern)
+                              'defaulting to angle to 0.' % pattern)
             return 0.
         elif len(phi_files) > 1:
             self._log.warning('Found multiple LOS files %s, '
-                              'defaulting to angle 0. [rad]' % pattern)
+                              'defaulting to angle 0.' % pattern)
             return 0.
 
         filename = phi_files[0]
@@ -344,7 +344,7 @@ class Gamma(SceneIO):
 
         ncols = int(params['width'])
         nlines = int(params['nlines'])
-        radar_frequency = params_slc.get('radar_frequency', None)
+        radar_frequency = float(params_slc.get('radar_frequency', None))
 
         displ = num.fromfile(filename, dtype='>f4')
         # Resize array if last line is not scanned completely
@@ -821,7 +821,7 @@ class GMTSAR(SceneIO):
         c.frame.spacing = 'degree'
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
-       
+
         c.frame.dN = (grd.variables['lat'][:].max() -
                       c.frame.llLat) / shape[0]
         c.frame.dE = (grd.variables['lon'][:].max() -
@@ -842,7 +842,7 @@ class GMTSAR(SceneIO):
             c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
-            self._log.warning('Defaulting theta to pi/2 and phi to 0. [rad]')
+            self._log.warning('Defaulting theta to pi/2 and phi to 0.')
             c.theta = num.pi/2
             c.phi = 0.
         return c
@@ -1150,23 +1150,32 @@ class ARIA(SceneIO):
 
         return False
 
+
 class SNAP_Gamma(SceneIO):
-    """
+    """SNAP import
 
     Reading geocoded displacement maps (unwrapped igs) originating
-        from SNAP software using the export option 
-        a) File -> Export -> SARexport -> Gamma 
-        and 
-        b) File -> Export -> Other -> Product Metadata.
+    from SNAP software using the export option.
+
+    When georeferencing the scene, export the incidence angle from ellpsoid in
+    the tab **Processing Parameters**.
+    Export the unwrapped **displacement** band and
+    **incidenceAngleFromEllipsoid** to Gamma format:
+
+    1. File -> Export -> SAR Formats -> Gamma
+
+    Select **Metadata -> Abstracted_Metadata** and
+    2. File -> Export -> Other -> Product Metadata.
 
     .. note :: Expects:
 
-        * [:file:`*`] Binary file from SNAP Gamma Export with displacement in radians
+        * [:file:`*`] Binary file from SNAP Gamma Export with displacement in
+            radians
         * [:file:`*.Abstracted_Metadata.txt`] Metadata (parameter) file
-        If you want to translate radians to
-          meters using the `radar_frequency`.
-        * [:file:`*par`] Parameter file, describing ``first_near_lat, 
-        last_near_long, num_output_lines, num_samples_per_line, 
+            If you want to translate radians to
+            meters using the `radar_frequency`.
+        * [:file:`*par`] Parameter file, describing ``first_near_lat,
+        last_near_long, num_output_lines, num_samples_per_line,
                 lat_pixel_res, lon_pixel_res, radar_frequency and heading.``
         * [:file:`incidenceAngleFromEllipsoid.rslc`] Incidence angle file.
 
@@ -1187,19 +1196,22 @@ class SNAP_Gamma(SceneIO):
                         continue
 
                     groups = parsed.groups()
-                    params[groups[0]] = safe_cast(groups[1], float,
-                                                default=groups[1].strip())
+                    params[groups[0]] = safe_cast(
+                        groups[1], float,
+                        default=groups[1].strip())
         return params
 
     def _getParameters(self, path, log=False):
-        required_utm = ['post_north', 'post_east', 'corner_east',
-                        'corner_north', 'num_output_lines', 
-                        'num_samples_per_line']
-        required_lat_lon = ['first_near_lat', 'last_near_long', 
-                            'num_output_lines', 'num_samples_per_line', 
-                            'lat_pixel_res', 'lon_pixel_res']
+        required_utm = (
+            'post_north', 'post_east', 'corner_east',
+            'corner_north', 'num_output_lines',
+            'num_samples_per_line')
+        required_lat_lon = (
+            'first_near_lat', 'last_near_long',
+            'num_output_lines', 'num_samples_per_line',
+            'lat_pixel_res', 'lon_pixel_res')
 
-        par_file = glob.glob('*_Abstracted_Metadata.txt')
+        par_file = glob.glob('*Abstracted_Metadata.txt')
         for file in par_file:
             params = self._parseParameterFile(file)
             if check_required(required_utm, params)\
@@ -1209,13 +1221,12 @@ class SNAP_Gamma(SceneIO):
                 return params
 
         raise ImportError(
-                    'Parameter file %s does not hold required parameters' %
-                    par_file )
-
+            'Parameter file %s does not hold required parameters' %
+            par_file)
 
     def validate(self, filename, **kwargs):
         try:
-            par_file = glob.glob('*.Abstracted_Metadata.txt')
+            par_file = glob.glob('*Abstracted_Metadata.txt')
             self._getParameters(par_file, filename)
             return True
         except ImportError:
@@ -1223,14 +1234,14 @@ class SNAP_Gamma(SceneIO):
 
     def _getLOSAngles(self, filename, pattern):
         path = op.dirname(op.realpath(filename))
-        phi_files = glob.glob('%s/%s' % (path, pattern))
+        phi_files = glob.glob(op.join(path, pattern))
         if len(phi_files) == 0:
             self._log.warning('Could not find LOS file %s, '
-                              'defaulting to angle to 0. [rad]' % pattern)
+                              'defaulting to angle to 0.', pattern)
             return 0.
         elif len(phi_files) > 1:
             self._log.warning('Found multiple LOS files %s, '
-                              'defaulting to angle 0. [rad]' % pattern)
+                              'defaulting to angle 0.', pattern)
             return 0.
 
         filename = phi_files[0]
@@ -1252,14 +1263,14 @@ class SNAP_Gamma(SceneIO):
 
         params = self._getParameters(par_file, log=True)
 
-        fill = None
-
         ncols = int(params['num_samples_per_line'])
         nlines = int(params['num_output_lines'])
         radar_frequency = params.get('radar_frequency', None)
-        heading_par = params.get('centre_heading', None)
+        heading_par = float(params.get('centre_heading', None))
         displ = num.fromfile(filename, dtype='>f4')
+
         # Resize array if last line is not scanned completely
+        fill = 0
         if (displ.size % ncols) != 0:
             fill = num.empty(ncols - displ.size % ncols)
             fill.fill(num.nan)
@@ -1269,10 +1280,11 @@ class SNAP_Gamma(SceneIO):
         displ[displ == -0.] = num.nan
         displ = num.flipud(displ)
 
-        if radar_frequency is not None:
+        if radar_frequency is not None and False:
             radar_frequency = float(radar_frequency)
-            self._log.info('Scaling displacement by radar_frequency %f GHz'
-                           % (radar_frequency/1e9))
+            radar_frequency *= 1e6  # SNAP gives MHz
+            self._log.info('Scaling displacement by radar_frequency %f GHz',
+                           radar_frequency/1e9)
             wavelength = util.C / radar_frequency
             displ /= -4*num.pi
             displ *= wavelength
@@ -1283,34 +1295,28 @@ class SNAP_Gamma(SceneIO):
                 'Could not determine radar_frequency from *.slc.par file!'
                 ' Leaving displacement to radians.')
 
-        phi = num.deg2rad(-float(heading_par) + 180.)
-        phi = num.full_like(displ, phi)
-        inci = self._getLOSAngles(filename, 'incidenceAngleFromEllipsoid.rslc')
+        inc_angle = self._getLOSAngles(
+            filename, 'incidenceAngleFromEllipsoid.rslc').copy()
+        if fill:
+            inc_angle = num.append(inc_angle, fill)
+        inc_angle[inc_angle == 0.] = num.nan
 
-
-        theta = 90 - inci.reshape(num.shape(displ)[0], num.shape(displ)[1])
-        #theta = num.flipud(theta)
-
-        if fill is not None:
-            theta = num.append(theta, fill)
-            phi = num.append(phi, fill)
+        phi = num.full_like(displ, (180. - heading_par))
+        theta = 90. - inc_angle.reshape(displ.shape)
+        theta = num.flipud(theta)
 
         c = self.container
 
         c.displacement = displ
-        c.theta = theta
-        c.phi = phi
+        c.theta = theta * d2r
+        c.phi = phi * d2r
 
         c.meta.wavelength = wavelength
-        c.meta.title = params.get('title', 'None')
+        c.meta.title = params.get('PRODUCT', 'SNAP Import')
         c.meta.satellite_name = params.get('SPH_DESCRIPTOR', 'None')
-        orb = params.get('PASS', 'None')
-        if orb[0] == 'A':
-            c.meta.orbital_node = 'Ascending'
-        elif orb[0] == 'D':
-            c.meta.orbital_node = 'Descending'
-        else:
-            c.meta.orbital_node = 'Undefined'
+
+        orb = params.get('PASS', None)
+        c.meta.orbital_node = orb.title() if orb else None
 
         c.bin_file = filename
         c.par_file = par_file
@@ -1325,11 +1331,12 @@ class SNAP_Gamma(SceneIO):
                                   ' defaulting to N!')
                 utm_zone_letter = 'N'
 
-            self._log.info('Using UTM reference: Zone %d%s'
-                           % (utm_zone, utm_zone_letter))
+            self._log.info('Using UTM reference: Zone %d%s',
+                           utm_zone, utm_zone_letter)
+            c.frame.spacing = 'meter'
 
-            dN = params['post_north']
-            dE = params['post_east']
+            dN = abs(params['post_north'])
+            dE = abs(params['post_east'])
 
             utm_corn_e = params['corner_east']
             utm_corn_n = params['corner_north']
@@ -1343,19 +1350,28 @@ class SNAP_Gamma(SceneIO):
             llLat, llLon = utm.to_latlon(utm_e.min(), utm_n.min(),
                                          utm_zone, utm_zone_letter)
 
-            c.frame.llLat = llLat
-            c.frame.llLon = llLon
-
-            c.frame.dE = abs(dE)
-            c.frame.dN = abs(dN)
-
         else:
             self._log.info('Using Lat/Lon reference')
             c.frame.spacing = 'degree'
-            c.frame.llLat = params['first_near_lat'] \
-                + params['lat_pixel_res'] * nlines
-            c.frame.llLon = params['first_near_long']
-            c.frame.dE = abs(params['lon_pixel_res'])
-            c.frame.dN = abs(params['lat_pixel_res'])
+
+            if orb.lower() == 'ascending':
+                llLat = params['last_near_lat']
+                llLon = params['last_near_long']
+
+            elif orb.lower() == 'descending':
+                llLat = params['last_far_lat']
+                llLon = params['first_near_long']
+
+            else:
+                raise AttributeError('cannot determine orbit')
+
+            dE = abs(params['lon_pixel_res'])
+            dN = abs(params['lat_pixel_res'])
+
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+
+        c.frame.dE = dE
+        c.frame.dN = dN
 
         return c
