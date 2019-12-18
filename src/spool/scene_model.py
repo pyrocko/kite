@@ -195,6 +195,7 @@ class SceneModel(QtCore.QObject):
 
         if progress.isHidden():
             progress.show()
+            QtCore.QCoreApplication.processEvents()
 
         if status['finished']:
             progress.reset()
