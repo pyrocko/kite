@@ -75,7 +75,7 @@ def read_shapefile(filename):
         los_u[isr] = -getattr(record, field_name_map['los_up'])
 
         data.ps_mean_v[isr] = getattr(record, field_name_map['mean_velo'])
-        data.ps_mean_v[isr] = getattr(record, field_name_map['var_mean_v'])
+        data.ps_mean_var[isr] = getattr(record, field_name_map['var_mean_v'])
 
         coords[isr] = shape.points[0]
 
@@ -90,21 +90,21 @@ def read_shapefile(filename):
 
 def bin_ps_data(data, bins=(800, 800)):
     log.debug('Binning mean velocity data...')
-    bin_vels, edg_N, edg_E, _ = stats.binned_statistic_2d(
-        data.norths, data.easts, data.ps_mean_v,
+    bin_vels, edg_E, edg_N, _ = stats.binned_statistic_2d(
+        data.easts, data.norths, data.ps_mean_v,
         statistic='mean', bins=bins)
 
     log.debug('Binning LOS angles...')
     bin_phi, _, _, _ = stats.binned_statistic_2d(
-        data.norths, data.easts, data.phi,
+        data.easts, data.norths, data.phi,
         statistic='mean', bins=bins)
     bin_theta, _, _, _ = stats.binned_statistic_2d(
-        data.norths, data.easts, data.theta,
+        data.easts, data.norths, data.theta,
         statistic='mean', bins=bins)
 
     log.debug('Binning mean velocity variance...')
     bin_mean_var, _, _, _ = stats.binned_statistic_2d(
-        data.norths, data.easts, data.ps_mean_var,
+        data.easts, data.norths, data.ps_mean_var,
         statistic='mean', bins=bins)
 
     data.bin_mean_var = bin_mean_var
@@ -142,8 +142,6 @@ def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
 
     if convert_m:
         data.ps_mean_v /= 1e3
-
-    if convert_m and import_var:
         data.ps_mean_var /= 1e3
 
     # lengthN = od.distance_accurate50m(
@@ -175,7 +173,7 @@ def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
     config.frame.spacing = 'meter'
 
     scene_name = op.basename(op.abspath(filename))
-    config.meta.scene_title = '%s (BodenbewegunsDienst import)' % scene_name
+    config.meta.scene_title = '%s (BodenbewegungsDienst import)' % scene_name
     config.meta.scene_id = scene_name
     # config.meta.time_master = data.tmin.timestamp()
     # config.meta.time_slave = data.tmax.timestamp()
@@ -196,9 +194,9 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='''Convert BodenBewegunsDienst PS displacements into a Kite scene.
+        description='''Convert BodenbewegungsDienst PS displacements into a Kite scene.
 
-Loads the PS velocities delivered by BGR BodenBewegunsDienst
+Loads the PS velocities delivered by BGR BodenbewegungsDienst
 (https://bodenbewegungsdienst.bgr.de) and grids the data in mean velocity bins.
 The mean LOS velocities will be converted into a Kite Scene.
 
@@ -209,12 +207,12 @@ The data is delivered in ESRI shapefile format.
     parser.add_argument(
         'file', type=str,
         default='.',
-        help='BodenBewegunsDienst shape file.')
+        help='BodenbewegungsDienst shape file.')
     parser.add_argument(
-        '--resolution', '-r', nargs=2, metavar=('mN', 'mE'),
+        '--resolution', '-r', nargs=2, metavar=('mE', 'mN'),
         dest='resolution', type=int, default=(500, 500),
-        help='pixel size of the output grid in North and East (meter).'
-             'Default is 500 m by 500 m.')
+        help='pixel size of the output grid in east and north (meter).'
+             ' Default is 500 m by 500 m.')
     parser.add_argument(
         '--save', '-s', default=None, type=str, dest='save',
         help='filename to save the Kite scene to. If not given, the scene'
