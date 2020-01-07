@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 import numpy as num
 from os import path
 
@@ -222,7 +221,7 @@ class KitePlot(pg.PlotWidget):
             offset=(-10., 40.))
 
     def enableHillshade(self):
-        from scipy.ndimage import convolve as im_conv
+        from scipy.signal import fftconvolve
         frame = self.model.frame
         scene = self.model.scene
 
@@ -243,7 +242,8 @@ class KitePlot(pg.PlotWidget):
         ramp = ramp / ramp.max() * contrast
         # ramp = num.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
         # convolution of two 2-dimensional arrays
-        shad = im_conv(elevation, ramp)
+
+        shad = fftconvolve(elevation, ramp, mode='valid')
         shad = -1. * shad
 
         # if there are strong artifical edges in the data, shades get

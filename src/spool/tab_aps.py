@@ -154,10 +154,6 @@ class KiteAPSCorrelation(KiteSubplot):
         aps = self.model.aps
         elevation, displacement = aps.get_data()
 
-        mask = num.isfinite(displacement)
-        elevation = elevation[mask]
-        displacement = displacement[mask]
-
         step = max(1, displacement.size // self.MAXPOINTS)
 
         self.aps_correlation.setData(

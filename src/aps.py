@@ -48,15 +48,14 @@ class APS(object):
         displacement = scene.displacement[rowmin:rowmax, colmin:colmax]
         elevation = self.get_elevation()[rowmin:rowmax, colmin:colmax]
 
+        mask = num.isfinite(displacement)
+        elevation = elevation[mask]
+        displacement = displacement[mask]
+
         return elevation, displacement
 
     def get_correlation(self):
         elevation, displacement = self.get_data()
-
-        mask = num.isfinite(displacement)
-        displacement = displacement[mask]
-        elevation = elevation[mask]
-
         slope, intercept, _, _, _ = stats.linregress(
             elevation.ravel(), displacement.ravel())
 
