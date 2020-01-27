@@ -1265,7 +1265,6 @@ class SNAP_Gamma(SceneIO):
         ncols = int(params['num_samples_per_line'])
         nlines = int(params['num_output_lines'])
         radar_frequency = params.get('radar_frequency', None)
-        print('radar_frequency', radar_frequency)
         heading_par = float(params.get('centre_heading', None))
         displ = num.fromfile(filename, dtype='>f4')
 
@@ -1280,7 +1279,7 @@ class SNAP_Gamma(SceneIO):
         displ[displ == -0.] = num.nan
         displ = num.flipud(displ)
 
-        if radar_frequency is not None and '_dsp_' not in par_file:
+        if radar_frequency and '_dsp_' not in par_file:
             radar_frequency = float(radar_frequency)
             radar_frequency *= 1e6  # SNAP gives MHz
             self._log.info('Scaling displacement by radar_frequency %f GHz',
@@ -1289,7 +1288,7 @@ class SNAP_Gamma(SceneIO):
             displ /= -4*num.pi
             displ *= wavelength
 
-        elif radar_frequency is None and '_dsp_' not in par_file:
+        elif not radar_frequency and '_dsp_' not in par_file:
             self._log.warning('Could not determine radar_frequency!')
             wavelength = None
 

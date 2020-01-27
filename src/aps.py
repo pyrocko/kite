@@ -1,4 +1,3 @@
-import logging
 import numpy as num
 from scipy import stats
 
@@ -84,7 +83,7 @@ class APS(object):
             self._log.error('No APS model applied')
             return
 
-        self._log.info('Removing APS model to displacement')
+        self._log.info('Removing APS model from displacement')
         scene = self.scene
         elevation = scene.get_elevation()
         slope, intercept = self.config.model_coefficients

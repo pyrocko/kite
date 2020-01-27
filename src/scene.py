@@ -89,7 +89,7 @@ class Frame(object):
     The pixel spacing is given by ``dE`` and ``dN`` which can meters or degree.
     """
 
-    def __init__(self, scene, config=FrameConfig()):
+    def __init__(self, scene, config=None):
         self.evChanged = Subject()
         self._scene = scene
         self._log = scene._log.getChild('Frame')
@@ -103,7 +103,7 @@ class Frame(object):
         self.utm_zone_letter = None
         self._meter_grid = None
 
-        self._updateConfig(config)
+        self._updateConfig(config or FrameConfig())
         self._scene.evConfigChanged.subscribe(self._updateConfig)
         self._scene.evChanged.subscribe(self.updateExtent)
 
@@ -127,8 +127,10 @@ class Frame(object):
         self.cols = self._scene.cols
         self.rows = self._scene.rows
 
-        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
-            utm.from_latlon(self.llLat, self.llLon)
+        (self.llEutm,
+         self.llNutm,
+         self.utm_zone,
+         self.utm_zone_letter) = utm.from_latlon(self.llLat, self.llLon)
 
         self.E = None
         self.N = None
