@@ -2,7 +2,7 @@ import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtCore, QtWidgets
 
 from .base import KiteView, KitePlot
 from .tab_covariance import KiteSubplot
@@ -57,11 +57,11 @@ class KiteAPS(KiteView):
         self.main_widget.activatePlot()
 
     def applyAPS(self):
-        msg = QtGui.QMessageBox.question(
+        msg = QtWidgets.QMessageBox.question(
             self,
             'Apply APS to Scene',
             'Are you sure you want to apply APS to the scene?')
-        if msg == QtGui.QMessageBox.StandardButton.Yes:
+        if msg == QtWidgets.QMessageBox.StandardButton.Yes:
             self.model.getScene().aps.apply_model()
 
     def removeAPS(self):
