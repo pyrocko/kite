@@ -1265,6 +1265,7 @@ class SNAP_Gamma(SceneIO):
         ncols = int(params['num_samples_per_line'])
         nlines = int(params['num_output_lines'])
         radar_frequency = params.get('radar_frequency', None)
+        print('radar_frequency', radar_frequency)
         heading_par = float(params.get('centre_heading', None))
         displ = num.fromfile(filename, dtype='>f4')
 
@@ -1288,8 +1289,12 @@ class SNAP_Gamma(SceneIO):
             displ /= -4*num.pi
             displ *= wavelength
 
+        elif radar_frequency is None and '_dsp_' not in par_file:
+            self._log.warning('Could not determine radar_frequency!')
+            wavelength = None
+
         else:
-            wavelength = 'None'
+            wavelength = None
 
         inc_angle = self._getLOSAngles(
             filename, 'incidenceAngleFromEllipsoid.rslc').copy()
