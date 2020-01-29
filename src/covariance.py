@@ -2,6 +2,10 @@
 # -*- coding: utf-8 -*-
 import numpy as num
 import scipy as sp
+try:
+    from scipy import fftpack as fft
+except ImportError:
+    from scipy import fft
 import time
 
 from kite import covariance_ext
@@ -842,7 +846,7 @@ class Covariance(object):
 
             The cosine transform of the power spectrum is an estimate
             of the data covariance (see Hanssen, 2001)."""
-        cos = sp.fftpack.idct(p_spec, type=3)
+        cos = fft.idct(p_spec, type=3)
         return cos
 
     def setSamplingMethod(self, method):
