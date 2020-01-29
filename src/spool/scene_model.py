@@ -3,8 +3,11 @@ from pyqtgraph import SignalProxy
 import logging
 from datetime import datetime
 
-from pyrocko.dataset.util import set_download_callback as\
-    pyrocko_download_callback
+try:
+    from pyrocko.dataset.util import set_download_callback as\
+        pyrocko_download_callback
+except ImportError:
+    pyrocko_download_callback = None
 
 from kite import Scene
 from kite.qt_utils import SceneLogModel
@@ -57,7 +60,11 @@ class SceneModel(QtCore.QObject):
         logging.root.addHandler(self._log_handler)
 
         self._download_status = None
-        pyrocko_download_callback(self.download_progress)
+        if pyrocko_download_callback:
+            pyrocko_download_callback(self.download_progress)
+        else:
+            self.log.warning(
+                'Update Pyrocko to receive download progress for topography!')
 
         self.qtproxy = QSceneQuadtreeProxy(self)
 
