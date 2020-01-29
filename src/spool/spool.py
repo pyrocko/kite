@@ -48,8 +48,8 @@ class Spool(QtWidgets.QApplication):
         elif load_file is not None:
             self.loadScene(load_file)
 
-        self.splash.finish(self.spool_win)
         self.spool_win.show()
+        self.splash.finish(self.spool_win)
 
     @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=''):

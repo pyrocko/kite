@@ -399,6 +399,7 @@ class KiteStructureFunction(KiteSubplot):
 
 
 class KiteToolNoise(QtGui.QDialog):
+
     class NoisePlot(KitePlot):
         def __init__(self, model):
             self.components_available = {
@@ -565,6 +566,7 @@ class KiteToolNoise(QtGui.QDialog):
 
 
 class KiteToolWeightMatrix(QtGui.QDialog):
+
     class MatrixPlot(KitePlot):
         def __init__(self, model, parent):
             from pyqtgraph.graphicsItems.GradientEditorItem import Gradients

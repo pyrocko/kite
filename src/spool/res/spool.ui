@@ -89,13 +89,14 @@
       <bool>false</bool>
      </property>
      <property name="title">
-      <string>Atmospheric Phase Screen (APS)</string>
+      <string>Empricial APS</string>
      </property>
      <addaction name="actionApply_APS"/>
      <addaction name="actionRemove_APS"/>
     </widget>
     <addaction name="actionDerampScene"/>
     <addaction name="menu_APS"/>
+    <addaction name="actionGACOS"/>
     <addaction name="actionTransect"/>
     <addaction name="separator"/>
     <addaction name="actionInspect_Noise"/>
@@ -361,6 +362,19 @@
    </property>
    <property name="toolTip">
     <string>Remove APS Model</string>
+   </property>
+  </action>
+  <action name="actionLoad_GACOS_Grids">
+   <property name="text">
+    <string>Load GACOS Grids</string>
+   </property>
+  </action>
+  <action name="actionGACOS">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>GACOS APS</string>
    </property>
   </action>
  </widget>

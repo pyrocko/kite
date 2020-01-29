@@ -44,16 +44,32 @@ class GACOSGrid(object):
 
         self.urLon = ulLon + self.cols * self.dLon
 
-    def get_corrections(self, llLat, llLon, dLat, dLon, rows, cols):
+    def contains(self, llLat, llLon, dLat, dLon, rows, cols):
         ulLat = llLat + dLat * rows
-        ulLon = llLon
         urLon = llLon + dLon * cols
 
-        assert llLat >= self.llLat
-        assert llLon >= self.llLon
+        boundary_exception = AssertionError(
+            'GACOS Grid does not contain scene!\n'
+            ' llLat: %.4f urLat: %.4f\n'
+            ' llLon: %.4f urLon: %.4f\n'
+            'Scene:\n'
+            ' llLat: %.4f urLat: %.4f\n'
+            ' llLon: %.4f urLon: %.4f'
+            % (self.llLat, self.ulLat, self.llLon, self.urLon,
+               llLat, ulLat, llLon, urLon))
 
-        assert urLon <= self.urLon
-        assert ulLat <= self.ulLat
+        assert llLat >= self.llLat, boundary_exception
+        assert llLon >= self.llLon, boundary_exception
+
+        assert urLon <= self.urLon, boundary_exception
+        assert ulLat <= self.ulLat, boundary_exception
+
+    def get_corrections(self, llLat, llLon, dLat, dLon, rows, cols):
+        self.contains(llLat, llLon, dLat, dLon, rows, cols)
+
+        ulLat = llLat + dLat * rows
+        ulLon = llLon
+        urLon = llLon + dLon * cols  # noqa
 
         row_offset = (self.ulLat - ulLat) // -self.dLat
         col_offset = (ulLon - self.llLon) // self.dLon
@@ -61,11 +77,10 @@ class GACOSGrid(object):
         idx_rows = row_offset + (num.arange(rows) * dLat // -self.dLat)
         idx_cols = col_offset + (num.arange(cols) * dLon // self.dLon)
 
-        idx_rows = num.repeat(idx_rows, cols)
-        idx_cols = num.tile(idx_cols, rows)
+        idx_rows = num.repeat(idx_rows, cols).astype(num.intp)
+        idx_cols = num.tile(idx_cols, rows).astype(num.intp)
 
-        idx = num.c_[idx_rows.astype(num.intp), idx_cols.astype(num.intp)]
-        return self.data[idx[:, 0], idx[:, 1]].reshape(rows, cols)
+        return self.data[idx_rows, idx_cols].reshape(rows, cols)
 
     @classmethod
     def load(cls, filename):
@@ -96,14 +111,21 @@ class GACOSGrid(object):
 
 
 class GACOSConfig(Object):
-    grd_filename = List.T(String.T, default=[])
-    applied = Bool.T(default=False)
+    grd_filenames = List.T(
+        default=[],
+        help='List of *two* GACOS gridfiles.')
+    applied = Bool.T(
+        default=False,
+        help='Is the correction applied.')
 
 
 class GACOSCorrection(object):
 
     def __init__(self, scene=None, config=None):
+        print(config)
         self.config = config or GACOSConfig()
+        print(self.config)
+        self.scene = scene
 
         if scene:
             self._log = scene._log.getChild('GACOSCorrection')
@@ -112,11 +134,28 @@ class GACOSCorrection(object):
 
         self.grids = []
 
-        for filename in self.config.grd_filename:
+        assert len(self.config.grd_filenames) < 2
+        for filename in self.config.grd_filenames:
             self.load(filename)
+
+    def has_data(self):
+        if len(self.grids) == 2:
+            return True
+        return False
 
     def is_applied(self):
         return self.config.applied
+
+    def _scene_extent(self):
+        frame = self.scene.frame
+        return {
+            'llLat': frame.llLat,
+            'llLon': frame.llLon,
+            'dLat': frame.dNdegree,
+            'dLon': frame.dEdegree,
+            'cols': frame.cols,
+            'rows': frame.rows
+        }
 
     def load(self, filename):
         if len(self.grids) > 2:
@@ -126,26 +165,24 @@ class GACOSCorrection(object):
         if not op.exists(filename):
             raise OSError('cannot find GACOS grid %s' % filename)
 
-        self._log.info('Loading %s', filename)
-        grid = GACOSGrid.load(filename)
-        self.grids.append(grid)
-        self.config.append(filename)
+        self._log.warning('Loading %s', filename)
+        grd = GACOSGrid.load(filename)
+        grd.contains(**self._scene_extent())
+
+        self.grids.append(grd)
+        self.config.grd_filenames.append(filename)
+
+    def unload(self):
+        self.grids = []
+        self.config.grd_filenames = []
 
     def get_correction(self):
-        if self.grids != 2:
-            raise AttributeError('We need to load two GACOS grids to apply!')
+        if len(self.grids) != 2:
+            raise AttributeError(
+                'We need two GACOS grids to calculate the corrections!')
 
-        frame = self.scene.frame
         grids = sorted(self.grids, key=lambda grd: grd.time)
-
-        extent = {
-            'llLat': frame.llLat,
-            'llLon': frame.llLon,
-            'dLat': frame.dLat,
-            'dLon': frame.dLon,
-            'cols': frame.cols,
-            'rows': frame.rows
-        }
+        extent = self._scene_extent()
 
         corr_date1 = grids[0].get_corrections(**extent)
         corr_date2 = grids[1].get_corrections(**extent)
@@ -154,7 +191,7 @@ class GACOSCorrection(object):
 
     def apply_model(self):
         if self.is_applied():
-            self._log.warning('GACOS correction already applied!')
+            self._log.warning('GACOS correction is already applied!')
             return
 
         self._log.info('Applying GACOS model to displacement')

@@ -7,13 +7,15 @@ import copy
 from datetime import datetime as dt
 from scipy import interpolate
 
-from pyrocko import guts
+from pyrocko.guts import Object, Float, StringChoice, String, Timestamp, \
+    Dict, load
 from pyrocko.dataset.topo import srtmgl3
 from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
 from kite.aps import APSConfig, APS
+from kite.gacos import GACOSConfig, GACOSCorrection
 from kite.util import Subject, property_cached
 from kite import scene_io
 
@@ -48,21 +50,21 @@ class SceneError(Exception):
     pass
 
 
-class FrameConfig(guts.Object):
+class FrameConfig(Object):
     """Config object holding :class:`kite.scene.Scene` configuration """
-    llLat = guts.Float.T(
+    llLat = Float.T(
         default=0.,
         help='Scene latitude of lower left corner')
-    llLon = guts.Float.T(
+    llLon = Float.T(
         default=0.,
         help='Scene longitude of lower left corner')
-    dN = guts.Float.T(
+    dN = Float.T(
         default=25.,
         help='Scene pixel spacing in north, give [m] or [deg]')
-    dE = guts.Float.T(
+    dE = Float.T(
         default=25.,
         help='Scene pixel spacing in east, give [m] or [deg]')
-    spacing = guts.StringChoice.T(
+    spacing = StringChoice.T(
         choices=('degree', 'meter'),
         default='meter',
         help='Unit of pixel space')
@@ -80,7 +82,7 @@ class FrameConfig(guts.Object):
                 kwargs['spacing'] = 'degree'
                 self.old_import = True
 
-        guts.Object.__init__(self, *args, **kwargs)
+        Object.__init__(self, *args, **kwargs)
 
 
 class Frame(object):
@@ -183,21 +185,42 @@ class Frame(object):
     def dEmeter(self):
         if self.isMeter():
             return self.dE
-        else:
-            _, dEmeter = latlon_to_ne(
-                self.llLat, self.llLon,
-                self.llLat, self.llLon + self.dE * self.cols)
+
+        _, dEmeter = latlon_to_ne(
+            self.llLat, self.llLon,
+            self.llLat, self.llLon + self.dE * self.cols)
         return dEmeter / self.cols
 
     @property
     def dNmeter(self):
         if self.isMeter():
             return self.dN
-        else:
-            dNmeter, _ = latlon_to_ne(
-                self.llLat, self.llLon,
-                self.llLat + self.dN * self.rows, self.llLon)
+        dNmeter, _ = latlon_to_ne(
+            self.llLat, self.llLon,
+            self.llLat + self.dN * self.rows, self.llLon)
         return dNmeter / self.rows
+
+    @property
+    def dEdegree(self):
+        if self.isDegree():
+            return self.dE
+
+        lat, lon = ne_to_latlon(
+            self.llLat, self.llLon,
+            0., self.dE * self.cols)
+        distLon = lon - self.llLon
+        return distLon / self.cols
+
+    @property
+    def dNdegree(self):
+        if self.isDegree():
+            return self.dE
+
+        lat, lon = ne_to_latlon(
+            self.llLat, self.llLon,
+            self.dN * self.rows, 0.)
+        distLat = lat - self.llLat
+        return distLat / self.rows
 
     @property
     def spacing(self):
@@ -366,35 +389,35 @@ class Frame(object):
             self.cols == other.cols
 
 
-class Meta(guts.Object):
+class Meta(Object):
     """ Meta configuration for ``Scene``.
     """
-    scene_title = guts.String.T(
+    scene_title = String.T(
         default='Unnamed Scene',
         help='Scene title')
-    scene_id = guts.String.T(
+    scene_id = String.T(
         default='None',
         help='Scene identification')
-    satellite_name = guts.String.T(
+    satellite_name = String.T(
         default='Undefined Mission',
         help='Satellite mission name')
-    wavelength = guts.Float.T(
+    wavelength = Float.T(
         optional=True,
         help='Wavelength in [m]')
-    orbital_node = guts.StringChoice.T(
+    orbital_node = StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',
         help='Orbital direction, ascending/descending')
-    time_master = guts.Timestamp.T(
+    time_master = Timestamp.T(
         default=1481116161.930574,
         help='Timestamp for master acquisition')
-    time_slave = guts.Timestamp.T(
+    time_slave = Timestamp.T(
         default=1482239325.482,
         help='Timestamp for slave acquisition')
-    extra = guts.Dict.T(
+    extra = Dict.T(
         default={},
         help='Extra header information')
-    filename = guts.String.T(
+    filename = String.T(
         optional=True)
 
     def __init__(self, *args, **kwargs):
@@ -409,7 +432,7 @@ class Meta(guts.Object):
                 kwargs[new] = kwargs.pop(old, None)
                 self.old_import = True
 
-        guts.Object.__init__(self, *args, **kwargs)
+        Object.__init__(self, *args, **kwargs)
 
     @property
     def time_separation(self):
@@ -422,7 +445,7 @@ class Meta(guts.Object):
             dt.fromtimestamp(self.time_master)
 
 
-class SceneConfig(guts.Object):
+class SceneConfig(Object):
     """ Configuration object, gathering ``kite.Scene`` and
     sub-objects configuration.
     """
@@ -440,7 +463,10 @@ class SceneConfig(guts.Object):
         help='Covariance parameters')
     aps = APSConfig.T(
         default=APSConfig.D(),
-        help='Atmospheric Phase Screen')
+        help='Empirical APS correction')
+    gacos = GACOSConfig.T(
+        default=GACOSConfig.D(),
+        help='GACOS APS correction')
 
     @property
     def old_import(self):
@@ -795,6 +821,7 @@ class Scene(BaseScene):
     """
 
     def __init__(self, config=None, **kwargs):
+        print(config)
         self.config = config or SceneConfig()
         self.meta = self.config.meta
 
@@ -805,6 +832,8 @@ class Scene(BaseScene):
         self.load = self._load
 
         self.aps = APS(self, config=self.config.aps)
+        self.gacos = GACOSCorrection(self, config=self.config.gacos)
+
     @property_cached
     def quadtree(self):
         """ Instantiates the scene's quadtree.
@@ -927,7 +956,7 @@ class Scene(BaseScene):
 
     def load_config(self, filename):
         self._log.debug('Loading config from %s' % filename)
-        self.config = guts.load(filename=filename)
+        self.config = load(filename=filename)
         self.meta = self.config.meta
 
         self.evConfigChanged.notify()

@@ -2,9 +2,11 @@ import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
+from pyqtgraph import dockarea
 
-from .base import KiteView, KitePlot
+from kite.qt_utils import loadUi
+from .base import KiteView, KitePlot, get_resource
 from .tab_covariance import KiteSubplot
 
 
@@ -45,6 +47,10 @@ class KiteAPS(KiteView):
         spool.actionApply_APS.triggered.connect(self.applyAPS)
         spool.actionRemove_APS.triggered.connect(self.removeAPS)
         spool.menu_APS.setEnabled(True)
+
+        self.GACOSDialog = GACOSCorrectionDialog(model, spool)
+        spool.actionGACOS.triggered.connect(self.GACOSDialog.show)
+        spool.actionGACOS.setEnabled(True)
 
     @QtCore.pyqtSlot()
     def activateView(self):
@@ -176,3 +182,74 @@ class KiteAPSCorrelation(KiteSubplot):
     def deactivatePlot(self):
         self.model.sigSceneChanged.disconnect(self.update)
         self.model.sigAPSChanged.disconnect(self.update)
+
+
+class GACOSCorrectionDialog(QtGui.QDialog):
+
+    class GACOSPlot(KitePlot):
+
+        def __init__(self, model, parent):
+            self._component = 'gacos_correction'
+            self.parent = parent
+
+            KitePlot.__init__(self, model)
+            self.model = model
+
+            self.update()
+
+        def update(self):
+            gacos = self.model.scene.gacos
+            if not gacos.has_data():
+                return
+
+            corr = gacos.get_correction()
+            corr = num.flipud(corr).T
+            self.image.updateImage(corr, autoLevels=True)
+            self.transFromFrame()
+
+    def __init__(self, model, parent=None):
+        QtGui.QDialog.__init__(self, parent)
+        self.model = model
+
+        loadUi(get_resource('gacos_correction.ui'), baseinstance=self)
+        self.closeButton.setIcon(
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+
+        self.gacos_plot = self.GACOSPlot(model, self)
+        self.dockarea = dockarea.DockArea(self)
+
+        self.dockarea.addDock(
+            dockarea.Dock(
+                'GACOS.get_correction()',
+                widget=self.gacos_plot,
+                size=(4, 4),
+                autoOrientation=False),
+            position='left')
+
+        self.horizontalLayoutPlot.addWidget(self.dockarea)
+
+        self.loadGrids.released.connect(self.load_grids)
+
+    @QtCore.pyqtSlot()
+    def load_grids(self):
+        filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(
+            filter='GACOS file *.ztd (*.ztd)',
+            caption='Load two GACOS APS Grids')
+        if not filenames:
+            return
+        if len(filenames) != 2:
+            QtWidgets.QMessageBox.warning(
+                self, 'GACOS APS Correction Error',
+                'We need two GACOS Grids to perform APS correction!')
+            return
+
+        try:
+            for filename in filenames:
+                gacos = self.model.scene.gacos
+                gacos.load(filename)
+        except Exception as e:
+            QtWidgets.QMessageBox.critical(
+                self, 'GACOS APS Correction Error',
+                str(e))
+            return
+        self.gacos_plot.update()
