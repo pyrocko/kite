@@ -62,9 +62,6 @@ class SceneModel(QtCore.QObject):
         self._download_status = None
         if pyrocko_download_callback:
             pyrocko_download_callback(self.download_progress)
-        else:
-            self.log.warning(
-                'Update Pyrocko to receive download progress for topography!')
 
         self.qtproxy = QSceneQuadtreeProxy(self)
 
