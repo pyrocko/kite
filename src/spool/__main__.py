@@ -2,7 +2,9 @@
 import logging
 import sys
 import argparse as ap
+
 from kite.spool import spool
+from kite import Scene, TestScene
 
 
 def main(args=None):
@@ -14,7 +16,7 @@ def main(args=None):
 
     epilog = '''Spool is part of the kite InSAR framework.
 
-Author: Marius Isken (marius.isken@gfz-potsdam.de)
+Author: Marius Paul Isken (marius.isken@gfz-potsdam.de)
 Documentation: https://pyrocko.org'''
     desc = 'InSAR deformation inspector, quadtree and covariance'
 
@@ -36,11 +38,18 @@ Documentation: https://pyrocko.org'''
                         default=None,
                         help='''Import file or directory
 Supported formats are:
- * Matlab  (*.mat)
- * GAMMA   (* binary and *.par file)
- * GMTSAR  (*.grd binary and *.los.* file)
- * ISCE    (*.unw.geo with *.unw.geo.xml and; *.rdr.geo for LOS data)
- * ROI_PAC (* binary and *.rsc file''')
+ - Matlab   *.mat
+ - GAMMA    * binary and *.par file
+ - GMTSAR   *.grd binary and *.los.* file
+ - ISCE     *.unw.geo with *.unw.geo.xml and; *.rdr.geo for LOS data
+ - ROI_PAC  * binary and *.rsc file
+ - SARSCAPE *los_ll.grd and *.los.enu file
+ - SNAP     *.rsc and *.Abstracted_Metadata.txt file (GAMMA Export)
+ - ARIA     Extracted layers: unwrappedPhase, lookAngle, incidenceAngle,
+             connectedComponents
+ - LiCSAR   *.unw.tif and LOS data, see client.download_licsar
+
+ For more informatio see the online documentation at https://pyrocko.org''')
     parser.add_argument('--synthetic', type=str, default=None,
                         choices=['fractal', 'sine', 'gauss'],
                         help='''Synthetic Tests
@@ -70,7 +79,6 @@ Available Synthetic Displacement:
 
     sc = None
     if ns.synthetic is not None:
-        from kite import TestScene
         if ns.synthetic == 'fractal':
             sc = TestScene.createFractal()
         elif ns.synthetic == 'sine':
@@ -81,12 +89,13 @@ Available Synthetic Displacement:
             parser.print_help()
             sys.exit(0)
 
+    elif ns.file is not None:
+        sc = Scene.load(ns.file)
+
     if sc:
         spool(scene=sc)
     elif ns.load is not None:
         spool(import_file=ns.load)
-    elif ns.file is not None:
-        spool(load_file=ns.file)
 
 
 if __name__ == '__main__':

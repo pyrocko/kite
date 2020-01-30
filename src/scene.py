@@ -821,7 +821,6 @@ class Scene(BaseScene):
     """
 
     def __init__(self, config=None, **kwargs):
-        print(config)
         self.config = config or SceneConfig()
         self.meta = self.config.meta
 
@@ -829,7 +828,6 @@ class Scene(BaseScene):
 
         # wiring special methods
         self.import_data = self._import_data
-        self.load = self._load
 
         self.aps = APS(self, config=self.config.aps)
         self.gacos = GACOSCorrection(self, config=self.config.gacos)
@@ -921,8 +919,8 @@ class Scene(BaseScene):
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
 
-    @dynamicmethod
-    def _load(self, filename):
+    @classmethod
+    def load(cls, filename):
         """ Load a kite scene from file ``filename.[npz,yml]``
         structure.
 
@@ -931,28 +929,31 @@ class Scene(BaseScene):
         :returns: Scene object from data resources
         :rtype: :class:`~kite.Scene`
         """
-        scene = self
-        components = ['displacement', 'theta', 'phi']
-
         basename = op.splitext(filename)[0]
-        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
+
         try:
             data = num.load('%s.npz' % basename)
-            for i, comp in enumerate(components):
-                scene.__setattr__(comp, data['arr_%d' % i])
+            displacement = data['arr_0']
+            theta = data['arr_1']
+            phi = data['arr_2']
         except IOError:
             raise UserIOWarning('Could not load data from %s.npz' % basename)
 
         try:
-            scene.load_config('%s.yml' % basename)
+            config = load(filename='%s.yml' % basename)
         except IOError:
             raise UserIOWarning('Could not load %s.yml' % basename)
+
+        scene = cls(
+            displacement=displacement,
+            theta=theta,
+            phi=phi,
+            config=config)
+        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
 
         scene.meta.filename = op.basename(filename)
         scene._testImport()
         return scene
-
-    load = staticmethod(_load)
 
     def load_config(self, filename):
         self._log.debug('Loading config from %s' % filename)
