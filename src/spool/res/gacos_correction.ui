@@ -58,31 +58,32 @@
     <layout class="QHBoxLayout" name="horizontalLayoutPlot"/>
    </item>
    <item>
+    <layout class="QVBoxLayout" name="verticalLayout_2">
+     <item>
+      <widget class="QLabel" name="gridInformation">
+       <property name="text">
+        <string>Grid Information</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPushButton" name="loadGrids">
        <property name="text">
-        <string>Load GACOS Grids</string>
+        <string>Load GACOS Grid Files</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="applyAPS">
+      <widget class="QPushButton" name="toggleGACOS">
        <property name="enabled">
         <bool>false</bool>
        </property>
        <property name="text">
         <string>Apply GACOS APS</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QPushButton" name="removeAPS">
-       <property name="enabled">
-        <bool>false</bool>
-       </property>
-       <property name="text">
-        <string>Remove GACOS APS</string>
        </property>
       </widget>
      </item>
@@ -132,7 +133,4 @@
    </hints>
   </connection>
  </connections>
- <buttongroups>
-  <buttongroup name="matrixButtonGroup"/>
- </buttongroups>
 </ui>

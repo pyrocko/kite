@@ -203,8 +203,7 @@ class GACOSCorrectionDialog(QtGui.QDialog):
                 return
 
             corr = gacos.get_correction()
-            corr = num.flipud(corr).T
-            self.image.updateImage(corr, autoLevels=True)
+            self.image.updateImage(corr.T, autoLevels=True)
             self.transFromFrame()
 
     def __init__(self, model, parent=None):
@@ -227,11 +226,14 @@ class GACOSCorrectionDialog(QtGui.QDialog):
             position='left')
 
         self.horizontalLayoutPlot.addWidget(self.dockarea)
-
         self.loadGrids.released.connect(self.load_grids)
+        self.toggleGACOS.released.connect(self.toggle_gacos)
+        self.update_widgets()
 
     @QtCore.pyqtSlot()
     def load_grids(self):
+        gacos = self.model.scene.gacos
+
         filenames, _ = QtWidgets.QFileDialog.getOpenFileNames(
             filter='GACOS file *.ztd (*.ztd)',
             caption='Load two GACOS APS Grids')
@@ -245,7 +247,6 @@ class GACOSCorrectionDialog(QtGui.QDialog):
 
         try:
             for filename in filenames:
-                gacos = self.model.scene.gacos
                 gacos.load(filename)
         except Exception as e:
             QtWidgets.QMessageBox.critical(
@@ -253,3 +254,36 @@ class GACOSCorrectionDialog(QtGui.QDialog):
                 str(e))
             return
         self.gacos_plot.update()
+        self.update_widgets()
+
+    def update_widgets(self):
+        gacos = self.model.scene.gacos
+
+        tmpl_str = '''
+<b>Loaded GACOS Grids</b><br />
+Grid 1 @{grd0.time}: {grd0.filename}<br />
+Grid 2 @{grd1.time}: {grd1.filename}
+'''
+
+        if gacos.has_data():
+            self.toggleGACOS.setEnabled(True)
+
+            self.gridInformation.setText(
+                tmpl_str.format(
+                    grd0=gacos.grids[0], grd1=gacos.grids[1]))
+
+            if gacos.is_applied():
+                self.toggleGACOS.setText('Remove GACOS APS')
+            else:
+                self.toggleGACOS.setText('Apply GACOS APS')
+        else:
+            self.gridInformation.setText('No grid loaded')
+            self.toggleGACOS.setEnabled(False)
+
+    def toggle_gacos(self):
+        gacos = self.model.scene.gacos
+        if gacos.is_applied():
+            gacos.remove_model()
+        else:
+            gacos.apply_model()
+        self.update_widgets()

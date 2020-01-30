@@ -80,7 +80,7 @@ class GACOSGrid(object):
         idx_rows = num.repeat(idx_rows, cols).astype(num.intp)
         idx_cols = num.tile(idx_cols, rows).astype(num.intp)
 
-        return self.data[idx_rows, idx_cols].reshape(rows, cols)
+        return num.flipud(self.data[idx_rows, idx_cols].reshape(rows, cols))
 
     @classmethod
     def load(cls, filename):
@@ -122,9 +122,7 @@ class GACOSConfig(Object):
 class GACOSCorrection(object):
 
     def __init__(self, scene=None, config=None):
-        print(config)
         self.config = config or GACOSConfig()
-        print(self.config)
         self.scene = scene
 
         if scene:
@@ -134,7 +132,7 @@ class GACOSCorrection(object):
 
         self.grids = []
 
-        assert len(self.config.grd_filenames) < 2
+        assert len(self.config.grd_filenames) <= 2
         for filename in self.config.grd_filenames:
             self.load(filename)
 
@@ -158,7 +156,7 @@ class GACOSCorrection(object):
         }
 
     def load(self, filename):
-        if len(self.grids) > 2:
+        if len(self.grids) == 2:
             raise AttributeError('We already loaded two GACOS grids!')
 
         filename = op.abspath(filename)
@@ -170,7 +168,10 @@ class GACOSCorrection(object):
         grd.contains(**self._scene_extent())
 
         self.grids.append(grd)
-        self.config.grd_filenames.append(filename)
+        self.grids = sorted(self.grids, key=lambda grd: grd.time)
+
+        if filename not in self.config.grd_filenames:
+            self.config.grd_filenames.append(filename)
 
     def unload(self):
         self.grids = []
@@ -181,11 +182,10 @@ class GACOSCorrection(object):
             raise AttributeError(
                 'We need two GACOS grids to calculate the corrections!')
 
-        grids = sorted(self.grids, key=lambda grd: grd.time)
         extent = self._scene_extent()
 
-        corr_date1 = grids[0].get_corrections(**extent)
-        corr_date2 = grids[1].get_corrections(**extent)
+        corr_date1 = self.grids[0].get_corrections(**extent)
+        corr_date2 = self.grids[1].get_corrections(**extent)
 
         return corr_date2 - corr_date1
 
@@ -199,8 +199,6 @@ class GACOSCorrection(object):
         self.scene.displacement -= correction
         self.config.applied = True
 
-        self.scene.evChanged()
-
     def remove_model(self):
         if not self.is_applied():
             self._log.warning('GACOS correction is not applied!')
@@ -210,5 +208,3 @@ class GACOSCorrection(object):
         correction = self.get_correction()
         self.scene.displacement += correction
         self.config.applied = False
-
-        self.scene.evChanged()
