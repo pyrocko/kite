@@ -19,6 +19,8 @@ from kite.gacos import GACOSConfig, GACOSCorrection
 from kite.util import Subject, property_cached
 from kite import scene_io
 
+from .scene_mask import click_mask_matplotlib
+
 
 def read(filename):
     scene = Scene()
@@ -874,6 +876,11 @@ class Scene(BaseScene):
 
         from kite.spool import spool
         spool(scene=self)
+
+    def click_mask(self):
+        """ Mask an area by clicking a polygon """
+        mask = click_mask_matplotlib(self)
+        return mask
 
     def _testImport(self):
         try:
