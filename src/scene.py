@@ -502,6 +502,8 @@ class BaseScene(object):
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
 
+        self._elevation = {}
+
         frame_config = kwargs.pop('frame_config', FrameConfig())
 
         for fattr in ('llLat', 'llLon', 'dLat', 'dLon'):
@@ -532,7 +534,6 @@ class BaseScene(object):
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self.displacement_mask = None
         self.evChanged.notify()
 
     @property
@@ -550,7 +551,7 @@ class BaseScene(object):
     def displacement_px_var(self, value):
         self._displacement_px_var = value
 
-    @property_cached
+    @property
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
 
@@ -729,34 +730,38 @@ class BaseScene(object):
 
     def get_elevation(self, interpolation='nearest_neighbor'):
         assert interpolation in ('nearest_neighbor', 'bivariate')
-        self._log.info('Getting elevation...')
-        # region = llLon, urLon, llLat, urLon
-        coords = self.frame.coordinates
-        lons = coords[:, 0]
-        lats = coords[:, 1]
 
-        region = (lons.min(), lons.max(), lats.min(), lats.max())
-        if not srtmgl3.covers(region):
-            raise AssertionError('Region is outside of SRTMGL3 topo dataset')
+        if self._elevation.get(interpolation, None) is None:
+            self._log.debug('Getting elevation...')
+            # region = llLon, urLon, llLat, urLon
+            coords = self.frame.coordinates
+            lons = coords[:, 0]
+            lats = coords[:, 1]
 
-        tile = srtmgl3.get(region)
-        if not tile:
-            raise AssertionError('Cannot get SRTMGL3 topo dataset')
+            region = (lons.min(), lons.max(), lats.min(), lats.max())
+            if not srtmgl3.covers(region):
+                raise AssertionError(
+                    'Region is outside of SRTMGL3 topo dataset')
 
-        if interpolation == 'nearest_neighbor':
-            iy = num.rint((lats - tile.ymin) / tile.dy).astype(num.intp)
-            ix = num.rint((lons - tile.xmin) / tile.dx).astype(num.intp)
+            tile = srtmgl3.get(region)
+            if not tile:
+                raise AssertionError('Cannot get SRTMGL3 topo dataset')
 
-            elevation = tile.data[(iy, ix)]
+            if interpolation == 'nearest_neighbor':
+                iy = num.rint((lats - tile.ymin) / tile.dy).astype(num.intp)
+                ix = num.rint((lons - tile.xmin) / tile.dx).astype(num.intp)
 
-        elif interpolation == 'bivariate':
-            interp = interpolate.RectBivariateSpline(
-                tile.y(), tile.x(), tile.data)
-            elevation = interp(lats, lons, grid=False)
+                elevation = tile.data[(iy, ix)]
 
-        elevation = elevation.reshape(self.displacement.shape)
+            elif interpolation == 'bivariate':
+                interp = interpolate.RectBivariateSpline(
+                    tile.y(), tile.x(), tile.data)
+                elevation = interp(lats, lons, grid=False)
 
-        return elevation
+            elevation = elevation.reshape(self.displacement.shape)
+            self._elevation[interpolation] = elevation
+
+        return self._elevation[interpolation]
 
     def __neg__(self):
         ret = copy.deepcopy(self)
