@@ -193,18 +193,24 @@ class GACOSCorrection(object):
         if self.is_applied():
             self._log.warning('GACOS correction is already applied!')
             return
+        scene = self.scene
 
         self._log.info('Applying GACOS model to displacement')
         correction = self.get_correction()
-        self.scene.displacement -= correction
+        correction *= 1./num.sin(scene.phi)
+
+        scene._displacement -= correction
         self.config.applied = True
+        scene.evChanged.notify()
 
     def remove_model(self):
         if not self.is_applied():
             self._log.warning('GACOS correction is not applied!')
             return
+        scene = self.scene
 
         self._log.info('Removing GACOS model from displacement')
         correction = self.get_correction()
-        self.scene.displacement += correction
+        scene._displacement += correction
         self.config.applied = False
+        scene.evChanged.notify()
