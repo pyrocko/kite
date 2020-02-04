@@ -1,6 +1,5 @@
 import numpy as num
 import pyqtgraph as pg
-import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
@@ -277,7 +276,7 @@ Grid 2 @{grd1.time}: {grd1.filename}
             else:
                 self.toggleGACOS.setText('Apply GACOS APS')
         else:
-            self.gridInformation.setText('No grid loaded')
+            self.gridInformation.setText('No grids loaded.')
             self.toggleGACOS.setEnabled(False)
 
     def toggle_gacos(self):

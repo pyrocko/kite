@@ -17,9 +17,6 @@ class APS(object):
         self.config = config or APSConfig()
         self._log = scene._log.getChild('APS')
 
-        if self.is_applied():
-            self.apply_model()
-
         self.evChanged = Subject()
 
     def get_elevation(self):
@@ -73,7 +70,7 @@ class APS(object):
         slope, intercept = self.get_correlation()
 
         correction = elevation * slope + intercept
-        scene.displacement -= correction
+        scene._displacement -= correction
 
         self.config.model_coefficients = (slope, intercept)
         scene.evChanged.notify()
@@ -89,7 +86,7 @@ class APS(object):
         slope, intercept = self.config.model_coefficients
 
         correction = elevation * slope + intercept
-        scene.displacement += correction
+        scene._displacement += correction
 
         self.config.model_coefficients = None
         if not mute:
