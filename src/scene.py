@@ -19,7 +19,7 @@ from kite.gacos import GACOSConfig, GACOSCorrection
 from kite.util import Subject, property_cached
 from kite import scene_io
 
-from .scene_mask import click_mask_matplotlib
+from kite.scene_mask import PolygonMask, PolygonMaskConfig
 
 
 def read(filename):
@@ -469,6 +469,9 @@ class SceneConfig(Object):
     gacos = GACOSConfig.T(
         default=GACOSConfig.D(),
         help='GACOS APS correction')
+    polygon_mask = PolygonMaskConfig.T(
+        default=PolygonMaskConfig.D(),
+        help='Displacement mask polygon')
 
     @property
     def old_import(self):
@@ -838,6 +841,21 @@ class Scene(BaseScene):
 
         self.aps = APS(self, config=self.config.aps)
         self.gacos = GACOSCorrection(self, config=self.config.gacos)
+        self.polygon_mask = PolygonMask(self, config=self.config.polygon_mask)
+
+    @property
+    def displacement(self):
+        self._displacement.mask = self.polygon_mask.get_mask()
+        return self._displacement
+
+    @displacement.setter
+    def displacement(self, value):
+        _setDataNumpy(self, '_displacement', value)
+        self.rows, self.cols = self._displacement.shape
+        self.displacement_mask = None
+        self._displacement = self._displacement.view(num.ma.MaskedArray)
+        self._displacement.fill_value = num.nan
+        self.evChanged.notify()
 
     @property_cached
     def quadtree(self):
@@ -876,11 +894,6 @@ class Scene(BaseScene):
 
         from kite.spool import spool
         spool(scene=self)
-
-    def click_mask(self):
-        """ Mask an area by clicking a polygon """
-        mask = click_mask_matplotlib(self)
-        return mask
 
     def _testImport(self):
         try:
