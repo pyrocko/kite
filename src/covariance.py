@@ -16,8 +16,8 @@ from kite.util import (Subject, property_cached,  # noqa
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
-NOISE_PATCH_MIN_PX = 1024
-NOISE_PATCH_MAX_NAN = 0.6
+NOISE_PATCH_MIN_PX = 256*256
+NOISE_PATCH_MAX_NAN = 0.8
 
 noise_regimes = [
     (1./2000, num.inf),
@@ -382,7 +382,8 @@ class Covariance(object):
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.4f s]'
                         % (time.time() - t0))
-        return node_selection[num.argmin(fitness)]
+        node = node_selection[num.argmin(fitness)]
+        return node
 
     def _mapLeaves(self, nx, ny):
         """ Helper function returning appropriate
@@ -475,7 +476,11 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
-        return num.linalg.inv(self.covariance_matrix_focal)
+        try:
+            return num.linalg.inv(self.covariance_matrix_focal)
+        except num.linalg.LinAlgError as e:
+            self._log.exception(e)
+            return num.eye(self.covariance_matrix_focal.shape[0])
 
     @property_cached
     def weight_vector(self):
