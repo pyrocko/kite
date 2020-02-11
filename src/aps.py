@@ -29,7 +29,22 @@ class APS(object):
     def get_patch_coords(self):
         if self.config.patch_coords is None:
             frame = self.scene.frame
-            return 0., 0, frame.lengthE / 5, frame.lengthN / 5
+            scene = self.scene
+            rstate = num.random.RandomState(123)
+
+            while True:
+                llE = rstate.uniform(0, frame.lengthE * (4/5))
+                llN = rstate.uniform(0, frame.lengthN * (4/5))
+                urE = frame.lengthE / 5
+                urN = frame.lengthN / 5
+
+                colmin, colmax = frame.mapENMatrix(llE, llE + urE)
+                rowmin, rowmax = frame.mapENMatrix(llN, llN + urN)
+
+                displacement = scene.displacement[rowmin:rowmax, colmin:colmax]
+                if num.any(displacement):
+                    return llE, llN, urE, urN
+
         return self.config.patch_coords
 
     def get_data(self):
