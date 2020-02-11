@@ -29,13 +29,8 @@ class PolygonMask(object):
     def get_points(self):
         if self._points is None:
             f = self.scene.frame
-            self._points = [(c, r) for r in range(f.rows)
-                            for c in range(f.cols)]
-#            rows, cols = num.meshgrid(f.rows, f.cols)
-#            rows = rows.ravel()
-#            cols = cols.ravel()
-#
-#            self._points
+            cols, rows = num.meshgrid(range(f.cols), range(f.rows))
+            self._points = num.vstack((cols.ravel(), rows.ravel())).T
         return self._points
 
     def click_one_polygon(self):
@@ -52,15 +47,12 @@ class PolygonMask(object):
 
         #  Click polygon to mask
         polygon = plt.ginput(-1)
-        print(polygon)
         self.add_polygon(polygon)
 
     def add_polygon(self, polygon):
         pid = len(self.config.polygons)
         while pid in self.config.polygons:
             pid += 1
-        print(pid)
-
         self.config.polygons[pid] = polygon
 
     def remove_polygon(self, pid):

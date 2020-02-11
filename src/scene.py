@@ -23,13 +23,12 @@ from kite.scene_mask import PolygonMask, PolygonMaskConfig
 
 
 def read(filename):
-    scene = Scene()
     try:
-        scene.load(filename)
-        return scene
+        return Scene.load(filename)
     except (ImportError, UserIOWarning):
         pass
     try:
+        scene = Scene()
         scene.import_data(filename)
         return scene
     except ImportError:
@@ -845,14 +844,14 @@ class Scene(BaseScene):
 
     @property
     def displacement(self):
-        self._displacement.mask = self.polygon_mask.get_mask()
-        return self._displacement
+        if self._displacement is not None:
+            self._displacement.mask = self.polygon_mask.get_mask()
+        return self._displacement.filled()
 
     @displacement.setter
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self.displacement_mask = None
         self._displacement = self._displacement.view(num.ma.MaskedArray)
         self._displacement.fill_value = num.nan
         self.evChanged.notify()
