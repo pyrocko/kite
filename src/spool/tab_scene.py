@@ -13,6 +13,22 @@ from .base import KiteView, KitePlot, KiteParameterGroup, get_resource
 
 __all__ = ['KiteScene']
 
+km = 1e3
+pen_roi = pg.mkPen(
+    (255, 23, 68), width=2)
+pen_roi_highlight = pg.mkPen(
+    (115, 210, 22), width=2, style=QtCore.Qt.DashLine)
+
+
+class PolygonMaskROI(pg.PolyLineROI):
+
+    def _makePen(self):
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
+            return pen_roi_highlight
+        else:
+            return self.pen
+
 
 class KiteScene(KiteView):
     title = 'Scene'
@@ -20,8 +36,10 @@ class KiteScene(KiteView):
     def __init__(self, spool):
         model = spool.model
         self.model = model
+        self.spool = spool
 
         scene_plot = KiteScenePlot(model)
+        self.scene_plot = scene_plot
         self.main_widget = scene_plot
         self.tools = {
             # 'Components': KiteToolComponents(self.main_widget),
@@ -42,6 +60,12 @@ class KiteScene(KiteView):
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
         spool.actionTransect.setEnabled(True)
 
+        spool.actionAddPolygonMask.triggered.connect(scene_plot.newMaskPolygon)
+        spool.actionAddPolygonMask.setEnabled(True)
+        spool.actionTogglePolygonMask.triggered.connect(self.togglePolygonMask)
+        spool.actionTogglePolygonMask.setEnabled(True)
+        self.updatePolygonActionText()
+
         spool.actionDerampScene.triggered.connect(self.derampScene)
         spool.actionDerampScene.setEnabled(True)
 
@@ -58,6 +82,18 @@ class KiteScene(KiteView):
         self.param_meta.updateValues()
 
         self.dialogTransect.close()
+
+    def togglePolygonMask(self):
+        polygon_mask = self.model.scene.polygon_mask
+        polygon_mask.set_enabled(not polygon_mask.is_enabled())
+        self.updatePolygonActionText()
+
+    def updatePolygonActionText(self):
+        polygon_mask = self.model.scene.polygon_mask
+        if polygon_mask.is_enabled():
+            self.spool.actionTogglePolygonMask.setText('Remove Mask')
+        else:
+            self.spool.actionTogglePolygonMask.setText('Apply Mask')
 
     def derampScene(self, *args):
         msg = QtGui.QMessageBox.question(
@@ -101,9 +137,66 @@ class KiteScenePlot(KitePlot):
 
         model.sigFrameChanged.connect(self.onFrameChange)
         model.sigSceneModelChanged.connect(self.update)
+        self.loadMaskPolygons()
 
         # Todo: use activateView
         model.sigSceneChanged.connect(self.update)
+        self.model = model
+
+    def roiToVertices(self, roi):
+        frame = self.model.scene.frame
+
+        return [(h.pos().x() / frame.dE,
+                 h.pos().y() / frame.dN)
+                for h in roi.getHandles()]
+
+    def verticesToRoi(self, vertices):
+        frame = self.model.scene.frame
+
+        return [((v[0] / frame.cols) * frame.lengthE,
+                 (v[1] / frame.rows) * frame.lengthN)
+                for v in vertices]
+
+    def loadMaskPolygons(self):
+        scene = self.model.scene
+        for pid, vertices in scene.polygon_mask.polygons.items():
+            self.createMaskPolygon(pid, vertices)
+
+    def newMaskPolygon(self):
+        scene = self.model.scene
+        frame = self.model.scene.frame
+
+        vertices = num.array([
+            (0., 0.), (0., 1.),
+            (1., 1.), (1., 0.)])
+        vertices[:, 0] *= frame.cols / 6
+        vertices[:, 1] *= frame.rows / 6
+        vertices[:, 0] += frame.cols / 2
+        vertices[:, 1] += frame.rows / 2
+
+        pid = scene.polygon_mask.add_polygon(vertices.tolist())
+        self.createMaskPolygon(pid, vertices)
+
+    def createMaskPolygon(self, pid, vertices):
+        roi = PolygonMaskROI(
+            self.verticesToRoi(vertices),
+            pen=pen_roi,
+            movable=False,
+            removable=True,
+            closed=True)
+        roi.pid = pid
+
+        roi.sigRegionChangeFinished.connect(self.updatePolygonMask)
+        roi.sigRemoveRequested.connect(self.removePolygonMask)
+        self.addItem(roi)
+
+    def updatePolygonMask(self, roi):
+        vertices = self.roiToVertices(roi)
+        self.model.scene.polygon_mask.update_polygon(roi.pid, vertices)
+
+    def removePolygonMask(self, roi):
+        self.model.scene.polygon_mask.remove_polygon(roi.pid)
+        self.removeItem(roi)
 
     def onFrameChange(self):
         self.update()

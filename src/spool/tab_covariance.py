@@ -102,6 +102,7 @@ class KiteCovariance(KiteView):
         self.model.sigCovarianceChanged.connect(
             self.dialogCovarianceWarning.test)
 
+        self.main_widget.update()
         self.structure_function.activatePlot()
         self.covariogram.activatePlot()
 

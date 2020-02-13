@@ -4,7 +4,8 @@ import os.path as op
 import numpy as num
 from datetime import datetime, timedelta
 
-from pyrocko.guts import Object, String, Bool, List
+from pyrocko.guts import Bool, List
+from .plugin import PluginConfig, Plugin
 
 
 def load_params(filename):
@@ -110,7 +111,7 @@ class GACOSGrid(object):
         return cls(filename, time, data, ulLat, ulLon, dLat, dLon)
 
 
-class GACOSConfig(Object):
+class GACOSConfig(PluginConfig):
     grd_filenames = List.T(
         default=[],
         help='List of *two* GACOS gridfiles.')
@@ -119,7 +120,7 @@ class GACOSConfig(Object):
         help='Is the correction applied.')
 
 
-class GACOSCorrection(object):
+class GACOSCorrection(Plugin):
 
     def __init__(self, scene=None, config=None):
         self.config = config or GACOSConfig()
@@ -140,9 +141,6 @@ class GACOSCorrection(object):
         if len(self.grids) == 2:
             return True
         return False
-
-    def is_applied(self):
-        return self.config.applied
 
     def _scene_extent(self):
         frame = self.scene.frame
@@ -189,28 +187,10 @@ class GACOSCorrection(object):
 
         return corr_date2 - corr_date1
 
-    def apply_model(self):
-        if self.is_applied():
-            self._log.warning('GACOS correction is already applied!')
-            return
-        scene = self.scene
-
+    def apply(self, displacement):
         self._log.info('Applying GACOS model to displacement')
         correction = self.get_correction()
-        correction *= 1./num.sin(scene.phi)
+        correction *= 1./num.sin(self.scene.phi)
 
-        scene._displacement -= correction
-        self.config.applied = True
-        scene.evChanged.notify()
-
-    def remove_model(self):
-        if not self.is_applied():
-            self._log.warning('GACOS correction is not applied!')
-            return
-        scene = self.scene
-
-        self._log.info('Removing GACOS model from displacement')
-        correction = self.get_correction()
-        scene._displacement += correction
-        self.config.applied = False
-        scene.evChanged.notify()
+        displacement -= correction
+        return displacement

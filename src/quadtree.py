@@ -27,7 +27,7 @@ class QuadNode(object):
     CORNERS = (0, 0), (0, 1), (1, 0), (1, 1)
     MIN_PIXEL_LENGTH_NODE = None
 
-    def __init__(self, quadtree, llr, llc, length):
+    def __init__(self, quadtree, displacement, llr, llc, length):
         self.children = []
         self.llr = int(llr)
         self.llc = int(llc)
@@ -37,6 +37,7 @@ class QuadNode(object):
         self.id = 'node_%d-%d_%d' % (self.llr, self.llc, self.length)
 
         self.quadtree = quadtree
+        self._displacement = displacement
         self.scene = quadtree.scene
         self.frame = quadtree.frame
 
@@ -118,7 +119,7 @@ class QuadNode(object):
          - works on tree leaves only.
         :type: float
         """
-        return float(self.quadtree.scene.covariance.getLeafWeight(self))
+        return float(self.scene.covariance.getLeafWeight(self))
 
     @property_cached
     def focal_point(self):
@@ -145,7 +146,7 @@ class QuadNode(object):
         """ Displacement array, slice from :attr:`kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
-        return self.scene.displacement[self._slice_rows, self._slice_cols]
+        return self._displacement[self._slice_rows, self._slice_cols]
 
     @property_cached
     def displacement_masked(self):
@@ -307,6 +308,7 @@ class QuadNode(object):
             yield None
         for nr, nc in self.CORNERS:
             n = QuadNode(self.quadtree,
+                         self._displacement,
                          self.llr + self.length / 2 * nr,
                          self.llc + self.length / 2 * nc,
                          self.length / 2)
@@ -427,13 +429,14 @@ class Quadtree(object):
             lambda n: n.weight,
     }
 
-    def __init__(self, scene, config=QuadtreeConfig()):
+    def __init__(self, scene, config=None):
         self.evChanged = Subject()
         self.evConfigChanged = Subject()
         self._leaves = None
         self.scene = scene
         self.displacement = self.scene.displacement
         self.frame = self.scene.frame
+        self._scene_state = None
 
         # Cached matrices
         self._leaf_matrix_means = num.empty_like(self.displacement)
@@ -441,10 +444,10 @@ class Quadtree(object):
         self._leaf_matrix_weights = num.empty_like(self.displacement)
 
         self._log = scene._log.getChild('Quadtree')
-        self.setConfig(config)
+        self.setConfig(config or QuadtreeConfig())
 
         self.scene.evConfigChanged.subscribe(self.setConfig)
-        self.scene.evChanged.subscribe(self.reinitializeTree)
+        # self.scene.evChanged.subscribe(self.reinitializeTree)
 
     def setConfig(self, config=None):
         """ Sets and updated the config of the instance
@@ -500,6 +503,10 @@ class Quadtree(object):
         self._corr_func = self._displacement_corrections[correction][1]
         self.reinitializeTree()
 
+    def ensureTree(self):
+        if self._scene_state != self.scene.get_state_hash():
+            self.reinitializeTree()
+
     def reinitializeTree(self):
         # Clearing cached properties through None
         self.leaf_center_distance = None
@@ -538,6 +545,7 @@ class Quadtree(object):
         for b in self._base_nodes:
             b.createTree()
 
+        self._scene_state = self.scene.get_state_hash()
         self._log.debug('Tree created, %d nodes [%0.4f s]',
                         self.nnodes, time.time() - t0)
 
@@ -911,11 +919,13 @@ class Quadtree(object):
         nx, ny = num.ceil(num.array(self.displacement.shape) / init_length)
         self._log.debug('Creating %d base nodes', nx * ny)
 
+        displacement = self.scene.displacement
         for ir in range(int(nx)):
             for ic in range(int(ny)):
                 llr = ir * init_length
                 llc = ic * init_length
-                self._base_nodes.append(QuadNode(self, llr, llc, init_length))
+                node = QuadNode(self, displacement, llr, llc, init_length)
+                self._base_nodes.append(node)
 
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')

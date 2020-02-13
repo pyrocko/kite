@@ -4,6 +4,7 @@ import numpy as num
 import utm
 import os.path as op
 import copy
+import hashlib
 from datetime import datetime as dt
 from scipy import interpolate
 
@@ -493,7 +494,8 @@ def dynamicmethod(func):
 class BaseScene(object):
 
     def __init__(self, **kwargs):
-        self._initLogging()
+        self._log = logging.getLogger(self.__class__.__name__)
+
         self.evChanged = Subject()
         self.evConfigChanged = Subject()
 
@@ -520,9 +522,6 @@ class BaseScene(object):
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.__setattr__(attr, data)
-
-    def _initLogging(self):
-        self._log = logging.getLogger(self.__class__.__name__)
 
     @property
     def displacement(self):
@@ -842,18 +841,30 @@ class Scene(BaseScene):
         self.gacos = GACOSCorrection(self, config=self.config.gacos)
         self.polygon_mask = PolygonMask(self, config=self.config.polygon_mask)
 
+        self._proc_displacement = None
+
+        self.processing_states = {
+            self.gacos: None,
+            self.aps: None,
+            self.polygon_mask: None
+        }
+
     @property
     def displacement(self):
-        if self._displacement is not None:
-            self._displacement.mask = self.polygon_mask.get_mask()
-        return self._displacement.filled()
+        if self.has_processing_changed() or self._proc_displacement is None:
+            self._proc_displacement = self._displacement.copy()
+            for plugin, state in self.processing_states.items():
+                if not plugin.is_enabled():
+                    continue
+                plugin.apply(self._proc_displacement)
+                self.processing_states[plugin] = plugin.get_state_hash()
+
+        return self._proc_displacement
 
     @displacement.setter
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self._displacement = self._displacement.view(num.ma.MaskedArray)
-        self._displacement.fill_value = num.nan
         self.evChanged.notify()
 
     @property_cached
@@ -883,6 +894,19 @@ class Scene(BaseScene):
         self._log.debug('Creating kite.ScenePlot instance')
         from kite.plot2d import ScenePlot
         return ScenePlot(self)
+
+    def has_processing_changed(self):
+        for plugin, state in self.processing_states.items():
+            if state != plugin.get_state_hash():
+                self._log.debug('processing states changed')
+                return True
+        return False
+
+    def get_state_hash(self):
+        sha = hashlib.sha1()
+        for plugin, state in self.processing_states.items():
+            sha.update(plugin.get_state_hash().encode())
+        return sha.digest().hex()
 
     def spool(self):
         """ Start the spool user interface :class:`~kite.spool.Spool` to inspect
@@ -928,7 +952,7 @@ class Scene(BaseScene):
         _file, ext = op.splitext(filename)
         filename = _file if ext in ['.yml', '.npz'] else filename
 
-        components = ['displacement', 'theta', 'phi']
+        components = ['_displacement', 'theta', 'phi']
         self._log.debug('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),

@@ -31,7 +31,6 @@ class KiteAPS(KiteView):
         self.model = model
 
         self.main_widget = KiteAPSPlot(model)
-
         self.aps_correlation = KiteAPSCorrelation(self.main_widget)
 
         self.tools = {
@@ -46,6 +45,9 @@ class KiteAPS(KiteView):
         spool.actionApply_APS.triggered.connect(self.applyAPS)
         spool.actionRemove_APS.triggered.connect(self.removeAPS)
         spool.menu_APS.setEnabled(True)
+
+        self.main_widget.region_changed.connect(
+            self.aps_correlation.update)
 
         self.GACOSDialog = GACOSCorrectionDialog(model, spool)
         spool.actionGACOS.triggered.connect(self.GACOSDialog.show)
@@ -67,13 +69,15 @@ class KiteAPS(KiteView):
             'Apply APS to Scene',
             'Are you sure you want to apply APS to the scene?')
         if msg == QtWidgets.QMessageBox.StandardButton.Yes:
-            self.model.getScene().aps.apply_model()
+            self.model.getScene().aps.set_enabled(True)
 
     def removeAPS(self):
-        self.model.getScene().aps.remove_model()
+        self.model.getScene().aps.set_enabled(False)
 
 
 class KiteAPSPlot(KitePlot):
+
+    region_changed = QtCore.Signal()
 
     class TopoPatchROI(pg.RectROI):
         def _makePen(self):
@@ -116,6 +120,7 @@ class KiteAPSPlot(KitePlot):
         sizeE, sizeN = self.roi.size()
         patch_coords = (llE, llN, sizeE, sizeN)
         self.model.aps.set_patch_coords(*patch_coords)
+        self.region_changed.emit()
 
     def activatePlot(self):
         self.enableHillshade()
@@ -175,12 +180,10 @@ class KiteAPSCorrelation(KiteSubplot):
 
     def activatePlot(self):
         self.model.sigSceneChanged.connect(self.update)
-        self.model.sigAPSChanged.connect(self.update)
         self.update()
 
     def deactivatePlot(self):
         self.model.sigSceneChanged.disconnect(self.update)
-        self.model.sigAPSChanged.disconnect(self.update)
 
 
 class GACOSCorrectionDialog(QtGui.QDialog):
@@ -271,7 +274,7 @@ Grid 2 @{grd1.time}: {grd1.filename}
                 tmpl_str.format(
                     grd0=gacos.grids[0], grd1=gacos.grids[1]))
 
-            if gacos.is_applied():
+            if gacos.is_enabled():
                 self.toggleGACOS.setText('Remove GACOS APS')
             else:
                 self.toggleGACOS.setText('Apply GACOS APS')
@@ -281,8 +284,8 @@ Grid 2 @{grd1.time}: {grd1.filename}
 
     def toggle_gacos(self):
         gacos = self.model.scene.gacos
-        if gacos.is_applied():
-            gacos.remove_model()
+        if gacos.is_enabled():
+            gacos.set_enabled(False)
         else:
-            gacos.apply_model()
+            gacos.set_enabled(True)
         self.update_widgets()

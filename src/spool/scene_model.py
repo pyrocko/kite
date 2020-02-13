@@ -26,7 +26,6 @@ class SceneModel(QtCore.QObject):
     sigQuadtreeConfigChanged = QtCore.pyqtSignal()
     sigCovarianceChanged = QtCore.pyqtSignal()
     sigCovarianceConfigChanged = QtCore.pyqtSignal()
-    sigAPSChanged = QtCore.pyqtSignal()
 
     sigProgressStarted = QtCore.pyqtSignal(object)
     sigProgressFinished = QtCore.pyqtSignal()
@@ -127,9 +126,6 @@ class SceneModel(QtCore.QObject):
             self.sigCovarianceChanged.emit)
         self.covariance.evConfigChanged.subscribe(
             self.sigCovarianceConfigChanged.emit)
-
-        self.aps.evChanged.subscribe(
-            self.sigAPSChanged.emit)
 
     @QtCore.pyqtSlot(str)
     def exportWeightMatrix(self, filename):

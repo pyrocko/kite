@@ -17,6 +17,7 @@ class KiteQuadtree(KiteView):
 
     def __init__(self, spool):
         model = spool.model
+        self.model = model
         self.main_widget = KiteQuadtreePlot(model)
         self.tools = {}
 
@@ -41,6 +42,7 @@ class KiteQuadtree(KiteView):
 
     @QtCore.pyqtSlot()
     def activateView(self):
+        self.model.scene.quadtree.ensureTree()
         self.main_widget.activatePlot()
 
     @QtCore.pyqtSlot()
@@ -140,6 +142,7 @@ class KiteQuadtreePlot(KitePlot):
         self.model.sigQuadtreeChanged.connect(self.updateLeavesOutline)
         self.model.sigCovarianceChanged.connect(self.covarianceChanged)
 
+        self.update()
         self.updateLeavesOutline()
         self.updateFocalPoints()
 

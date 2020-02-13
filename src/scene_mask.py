@@ -2,26 +2,29 @@ import matplotlib.pyplot as plt
 from matplotlib.path import Path
 import numpy as num
 
-from pyrocko.guts import Object, Dict, Bool
-from kite.util import Subject
+from pyrocko.guts import Dict, Bool
+
+from .plugin import PluginConfig, Plugin
 
 
-class PolygonMaskConfig(Object):
+class PolygonMaskConfig(PluginConfig):
     polygons = Dict.T(optional=True, default={})
     applied = Bool.T(default=True)
 
 
-class PolygonMask(object):
+class PolygonMask(Plugin):
 
     def __init__(self, scene, config=None):
         self.scene = scene
         self.config = config or PolygonMaskConfig()
-        self._points = None 
-        
+        self._points = None
+
         self._log = scene._log.getChild('Mask')
 
-        self.evChanged = Subject()
-    
+    @property
+    def polygons(self):
+        return self.config.polygons
+
     @property
     def npolygons(self):
         return len(self.config.polygons)
@@ -46,31 +49,37 @@ class PolygonMask(object):
         ax.set_title('Click to add vertex. Press ENTER to finish.')
 
         #  Click polygon to mask
-        polygon = plt.ginput(-1)
-        self.add_polygon(polygon)
+        vertices = plt.ginput(-1)
+        self.add_polygon(vertices)
 
-    def add_polygon(self, polygon):
+    def add_polygon(self, vertices):
         pid = len(self.config.polygons)
         while pid in self.config.polygons:
             pid += 1
-        self.config.polygons[pid] = polygon
+        self.config.polygons[pid] = vertices
+        self.update()
+
+        return pid
 
     def remove_polygon(self, pid):
         self.config.polygons.pop(pid, None)
+        self.update()
 
-    def is_applied(self):
-        return self.config.applied
+    def update_polygon(self, pid, vertices):
+        if pid not in self.config.polygons:
+            return
+        self.config.polygons[pid] = vertices
+        self.update()
 
-    def get_mask(self):
-        if not self.config.applied or not self.npolygons:
-            return None
+    def apply(self, displacement):
         sc = self.scene
         points = self.get_points()
 
         mask = num.full((sc.frame.rows, sc.frame.cols), False)
-        for polygon in self.config.polygons.values():
-            p = Path(polygon)
+        for vertices in self.config.polygons.values():
+            p = Path(vertices)
             mask |= p.contains_points(points).reshape(
-                    sc.frame.rows, sc.frame.cols)
+                sc.frame.rows, sc.frame.cols)
 
-        return mask
+        displacement[mask] = num.nan
+        return displacement

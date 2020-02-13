@@ -54,7 +54,7 @@
      <x>0</x>
      <y>0</y>
      <width>1164</width>
-     <height>24</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuActions">
@@ -98,6 +98,9 @@
     <addaction name="menu_APS"/>
     <addaction name="actionGACOS"/>
     <addaction name="actionTransect"/>
+    <addaction name="separator"/>
+    <addaction name="actionAddPolygonMask"/>
+    <addaction name="actionTogglePolygonMask"/>
     <addaction name="separator"/>
     <addaction name="actionInspect_Noise"/>
     <addaction name="actionInspect_Weights"/>
@@ -375,6 +378,22 @@
    </property>
    <property name="text">
     <string>GACOS APS</string>
+   </property>
+  </action>
+  <action name="actionAddPolygonMask">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>New Polygon Mask</string>
+   </property>
+  </action>
+  <action name="actionTogglePolygonMask">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Apply Mask</string>
    </property>
   </action>
  </widget>

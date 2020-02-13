@@ -1,30 +1,28 @@
 import numpy as num
 from scipy import stats
 
-from pyrocko.guts import Object, Tuple
-from kite.util import Subject
+from pyrocko.guts import Tuple
+
+from .plugin import PluginConfig, Plugin
 
 
-class APSConfig(Object):
+class APSConfig(PluginConfig):
     patch_coords = Tuple.T(optional=True)
     model_coefficients = Tuple.T(optional=True)
 
 
-class APS(object):
+class APS(Plugin):
 
     def __init__(self, scene, config=None):
         self.scene = scene
         self.config = config or APSConfig()
         self._log = scene._log.getChild('APS')
 
-        self.evChanged = Subject()
-
     def get_elevation(self):
         return self.scene.get_elevation()
 
     def set_patch_coords(self, xmin, ymin, xsize, ysize):
         self.config.patch_coords = (xmin, ymin, xsize, ysize)
-        self.evChanged.notify()
 
     def get_patch_coords(self):
         if self.config.patch_coords is None:
@@ -41,7 +39,8 @@ class APS(object):
                 colmin, colmax = frame.mapENMatrix(llE, llE + urE)
                 rowmin, rowmax = frame.mapENMatrix(llN, llN + urN)
 
-                displacement = scene.displacement[rowmin:rowmax, colmin:colmax]
+                displacement = scene._displacement[
+                    rowmin:rowmax, colmin:colmax]
                 if num.any(displacement):
                     return llE, llN, urE, urN
 
@@ -56,7 +55,7 @@ class APS(object):
 
         colmin, colmax = frame.mapENMatrix(coords[0], coords[0] + coords[2])
         rowmin, rowmax = frame.mapENMatrix(coords[1], coords[1] + coords[3])
-        displacement = scene.displacement[rowmin:rowmax, colmin:colmax]
+        displacement = scene._displacement[rowmin:rowmax, colmin:colmax]
         elevation = self.get_elevation()[rowmin:rowmax, colmin:colmax]
 
         mask = num.isfinite(displacement)
@@ -72,37 +71,13 @@ class APS(object):
 
         return slope, intercept
 
-    def is_applied(self):
-        return bool(self.config.model_coefficients)
-
-    def apply_model(self):
+    def apply(self, displacement):
         self._log.info('Applying APS model to displacement')
-        if self.is_applied():
-            self.remove_model(mute=True)
 
         scene = self.scene
         elevation = scene.get_elevation()
         slope, intercept = self.get_correlation()
 
         correction = elevation * slope + intercept
-        scene._displacement -= correction
-
-        self.config.model_coefficients = (slope, intercept)
-        scene.evChanged.notify()
-
-    def remove_model(self, mute=False):
-        if not self.config.model_coefficients:
-            self._log.error('No APS model applied')
-            return
-
-        self._log.info('Removing APS model from displacement')
-        scene = self.scene
-        elevation = scene.get_elevation()
-        slope, intercept = self.config.model_coefficients
-
-        correction = elevation * slope + intercept
-        scene._displacement += correction
-
-        self.config.model_coefficients = None
-        if not mute:
-            scene.evChanged.notify()
+        displacement -= correction
+        return displacement
