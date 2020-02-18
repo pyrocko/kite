@@ -338,7 +338,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         limits = (max_pxd * model.quadtree.min_node_length_px,
                   max_pxd * (max_px / 4))
 
-        tile_decimals = -math.floor(math.log10(model.quadtree.tile_size_min))
+        tile_decimals = 2
 
         p = {'name': 'tile_size_min',
              'type': 'float',
@@ -348,7 +348,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'step': 250,
              'slider_exponent': 2,
              'editable': True,
-             'suffix': ' m' if frame.isMeter() else ' deg',
+             'suffix': ' m' if frame.isMeter() else '°',
              'decimals': 0 if frame.isMeter() else tile_decimals,
              'tip': QuadtreeConfig.tile_size_min.help
              }
