@@ -957,6 +957,9 @@ class Scene(BaseScene):
 
         num.savez('%s.npz' % (filename),
                   *[getattr(self, arr) for arr in components])
+
+        self.gacos.save(op.dirname(op.abspath(filename)))
+
         self.saveConfig('%s.yml' % filename)
 
     def saveConfig(self, filename):

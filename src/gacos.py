@@ -1,6 +1,7 @@
 import logging
 import re
 import os.path as op
+import shutil
 import numpy as num
 from datetime import datetime, timedelta
 
@@ -155,13 +156,12 @@ class GACOSCorrection(Plugin):
 
     def load(self, filename):
         if len(self.grids) == 2:
-            raise AttributeError('We already loaded two GACOS grids!')
+            raise AttributeError('already loaded two GACOS grids!')
 
-        filename = op.abspath(filename)
         if not op.exists(filename):
             raise OSError('cannot find GACOS grid %s' % filename)
 
-        self._log.warning('Loading %s', filename)
+        self._log.info('Loading %s', filename)
         grd = GACOSGrid.load(filename)
         grd.contains(**self._scene_extent())
 
@@ -175,10 +175,20 @@ class GACOSCorrection(Plugin):
         self.grids = []
         self.config.grd_filenames = []
 
+    def save(self, dirname):
+        for grd_file in self.config.grd_filenames:
+            self._log.info('copying GACOS grid %s', grd_file)
+            shutil.copy(grd_file, dirname)
+            shutil.copy(grd_file + '.rsc', dirname)
+
+        self.config.grd_filenames = [
+            './%s' % op.basename(grd_file)
+            for grd_file in self.config.grd_filenames]
+
     def get_correction(self):
         if len(self.grids) != 2:
             raise AttributeError(
-                'We need two GACOS grids to calculate the corrections!')
+                'need two GACOS grids to calculate the corrections!')
 
         extent = self._scene_extent()
 
