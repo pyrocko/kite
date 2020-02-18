@@ -196,6 +196,24 @@ class QuadNode(object):
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
         return num.nanmedian(theta[~self.displacement_mask])
 
+    @property
+    def unitE(self):
+        unitE = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 1]
+        return num.nanmedian(unitE[~self.displacement_mask])
+
+    @property
+    def unitN(self):
+        unitN = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 2]
+        return num.nanmedian(unitN[~self.displacement_mask])
+
+    @property
+    def unitU(self):
+        unitU = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 0]
+        return num.nanmedian(unitU[~self.displacement_mask])
+
     @property_cached
     def gridE(self):
         """ Grid holding local east coordinates,
@@ -974,13 +992,14 @@ class Quadtree(object):
         self._log.debug('Exporting Quadtree as to %s', filename)
         with open(filename, mode='w') as f:
             f.write(
-                '# node_id, focal_point_E, focal_point_N, theta, phi, '
-                'mean_displacement, median_displacement, absolute_weight\n')
+                '# node_id, focal_point_E, focal_point_N, theta, phi,'
+                ' unitE, unitN, unitU,'
+                ' mean_displacement, median_displacement, absolute_weight\n')
             for lf in self.leaves:
                 f.write(
                     '{lf.id}, {lf.focal_point[0]}, {lf.focal_point[1]}, '
-                    '{lf.theta}, {lf.phi}, '
-                    '{lf.mean}, {lf.median}, {lf.weight}\n'.format(lf=lf))
+                    '{lf.theta}, {lf.phi}, {lf.unitE}, {lf.unitN}, {lf.unitU},'
+                    ' {lf.mean}, {lf.median}, {lf.weight}\n'.format(lf=lf))
 
     def export_geojson(self, filename):
         import geojson
@@ -1014,10 +1033,16 @@ class Quadtree(object):
                 geometry=geojson.Polygon(coordinates=[coords]),
                 id=lf.id,
                 properties={
-                    'mean': lf.mean,
-                    'median': lf.median,
-                    'std': lf.std,
-                    'var': lf.var
+                    'mean': float(lf.mean),
+                    'median': float(lf.median),
+                    'std': float(lf.std),
+                    'var': float(lf.var),
+
+                    'phi': float(lf.phi),
+                    'theta': float(lf.theta),
+                    'unitE': float(lf.unitE),
+                    'unitN': float(lf.unitN),
+                    'unitU': float(lf.unitU),
                 })
             features.append(feature)
 
