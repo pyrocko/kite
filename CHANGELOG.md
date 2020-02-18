@@ -8,9 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 - Import of SNAP products
-- Scene: added method `get_elevation`.
-- Scene: Added APS removal
+- Scene: Added method `get_elevation`
+- Scene: Added polygon masking of unwanted areas
+- Scene: Added empirical APS removal
+- Scene: Added GACOS APS import and removal
 - SceneStack: handles stacks of time series
+
+### Changed
+- QuadTree: Exporting unit vectors [ENU]
 
 ### Fixed
 - Spool: improved UI
