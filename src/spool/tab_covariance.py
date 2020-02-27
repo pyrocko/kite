@@ -773,7 +773,7 @@ class KiteParamCovariance(KiteParameterGroup):
             ('covariance_model_rms', None),
             ('noise_patch_size_km2', None),
             ('noise_patch_coord',
-             lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
+             lambda c: ', '.join(['%.2f' % f for f in c.noise_coord.tolist()]))
             ])
 
         model.sigCovarianceChanged.connect(self.updateValues)

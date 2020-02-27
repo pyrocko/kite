@@ -474,6 +474,7 @@ class KiteParameterGroup(pTypes.GroupParameter):
     def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
         self.model_attr = model_attr
+        self.parameters = []
 
         if isinstance(self.parameters, list):
             self.parameters = dict.fromkeys(self.parameters)

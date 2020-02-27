@@ -41,6 +41,11 @@ class Deramp(Plugin):
 
         return coeffs
 
+    def set_demean(self, demean):
+        assert isinstance(demean, bool)
+        self.config.demean = demean
+        self.update()
+
     def apply(self, displacement):
         '''Fit a plane onto the displacement data and substract it
 

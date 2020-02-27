@@ -3,9 +3,10 @@ import pyqtgraph as pg
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
+import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from kite.qt_utils import loadUi
-from .base import KiteView, KitePlot, get_resource
+from .base import KiteView, KitePlot, get_resource, KiteParameterGroup
 from .tab_covariance import KiteSubplot
 
 
@@ -36,6 +37,9 @@ class KiteAPS(KiteView):
         self.tools = {
             'APS Correlation': self.aps_correlation
         }
+
+        self.aps_ctrl = EmpiricalAPSParams(model)
+        self.parameters = [self.aps_ctrl]
 
         KiteView.__init__(self)
 
@@ -288,3 +292,28 @@ Grid 2 @{grd1.time}: {grd1.filename}
         else:
             gacos.set_enabled(True)
         self.update_widgets()
+
+
+class EmpiricalAPSParams(KiteParameterGroup):
+    def __init__(self, model, **kwargs):
+        scene = model.getScene()
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.APS (empirical)'
+
+        KiteParameterGroup.__init__(
+            self, model=model, model_attr='scene', **kwargs)
+
+        p = {
+            'name': 'applied',
+            'type': 'bool',
+            'value': scene.aps.config.applied,
+            'tip': 'detrend the scene'
+        }
+        self.applied = pTypes.SimpleParameter(**p)
+
+        def toggle_applied(param, checked):
+            self.model.getScene().aps.set_enabled(checked)
+
+        self.applied.sigValueChanged.connect(toggle_applied)
+
+        self.pushChild(self.applied)

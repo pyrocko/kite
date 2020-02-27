@@ -46,14 +46,16 @@ class KiteScene(KiteView):
             # 'Displacement Transect': KiteToolTransect(self.main_widget),
         }
 
-        self.param_scene = KiteParamScene(model, scene_plot)
-        self.param_frame = KiteParamSceneFrame(model, expanded=False)
-        self.param_meta = KiteParamSceneMeta(model, expanded=False)
+        self.param_scene = ParamScene(model, scene_plot)
+        self.param_frame = ParamSceneFrame(model, expanded=False)
+        self.param_meta = ParamSceneMeta(model, expanded=False)
 
         self.param_scene.addChild(self.param_frame)
         self.param_scene.addChild(self.param_meta)
 
-        self.parameters = [self.param_scene]
+        self.deramp_ctrl = DerampParams(model)
+
+        self.parameters = [self.param_scene, self.deramp_ctrl]
 
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
 
@@ -63,10 +65,6 @@ class KiteScene(KiteView):
         spool.actionTogglePolygonMask.setChecked(
             model.getScene().polygon_mask.is_enabled())
         spool.actionTogglePolygonMask.toggled.connect(self.togglePolygonMask)
-
-        spool.actionDerampScene.setChecked(
-            model.getScene().deramp.is_enabled())
-        spool.actionDerampScene.toggled.connect(self.derampScene)
 
         KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
@@ -85,17 +83,6 @@ class KiteScene(KiteView):
     def togglePolygonMask(self, checked):
         polygon_mask = self.model.scene.polygon_mask
         polygon_mask.set_enabled(checked)
-
-    def derampScene(self, checked):
-        if checked:
-            msg = QtGui.QMessageBox.question(
-                self,
-                'De-ramp Scene',
-                'Are you sure you want to de-ramp the scene?')
-            if msg == QtGui.QMessageBox.StandardButton.Yes:
-                self.model.getScene().deramp.set_enabled(True)
-        else:
-            self.model.getScene().deramp.set_enabled(False)
 
 
 class KiteScenePlot(KitePlot):
@@ -283,7 +270,7 @@ class KiteToolTransect(QtGui.QDialog):
         return
 
 
-class KiteParamScene(KiteParameterGroup):
+class ParamScene(KiteParameterGroup):
     def __init__(self, model, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
@@ -328,7 +315,7 @@ class KiteParamScene(KiteParameterGroup):
         self.pushChild(component)
 
 
-class KiteParamSceneFrame(KiteParameterGroup):
+class ParamSceneFrame(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.frame'
@@ -355,7 +342,7 @@ class KiteParamSceneFrame(KiteParameterGroup):
                                     **kwargs)
 
 
-class KiteParamSceneMeta(KiteParameterGroup):
+class ParamSceneMeta(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         from datetime import datetime as dt
         kwargs['type'] = 'group'
@@ -429,3 +416,42 @@ class KiteParamSceneMeta(KiteParameterGroup):
         self.pushChild(self.satellite_name)
         self.pushChild(self.scene_id)
         self.pushChild(self.scene_title)
+
+
+class DerampParams(KiteParameterGroup):
+    def __init__(self, model, **kwargs):
+        scene = model.getScene()
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.detrend'
+
+        KiteParameterGroup.__init__(
+            self, model=model, model_attr='scene', **kwargs)
+
+        p = {
+            'name': 'demean',
+            'type': 'bool',
+            'value': scene.deramp.config.demean,
+            'tip': 'substract mean of displacement'
+        }
+        self.demean = pTypes.SimpleParameter(**p)
+
+        def toggle_demean(param, checked):
+            self.model.getScene().deramp.set_demean(checked)
+
+        self.demean.sigValueChanged.connect(toggle_demean)
+
+        p = {
+            'name': 'applied',
+            'type': 'bool',
+            'value': scene.deramp.config.applied,
+            'tip': 'detrend the scene'
+        }
+        self.applied = pTypes.SimpleParameter(**p)
+
+        def toggle_applied(param, checked):
+            self.model.getScene().deramp.set_enabled(checked)
+
+        self.applied.sigValueChanged.connect(toggle_applied)
+
+        self.pushChild(self.applied)
+        self.pushChild(self.demean)

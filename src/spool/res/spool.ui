@@ -85,8 +85,6 @@
      <string>Tools</string>
     </property>
     <addaction name="actionGACOS"/>
-    <addaction name="actionApplyEmpiricalAPS"/>
-    <addaction name="actionDerampScene"/>
     <addaction name="separator"/>
     <addaction name="actionAddPolygonMask"/>
     <addaction name="actionTogglePolygonMask"/>
