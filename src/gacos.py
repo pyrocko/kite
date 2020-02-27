@@ -178,8 +178,11 @@ class GACOSCorrection(Plugin):
     def save(self, dirname):
         for grd_file in self.config.grd_filenames:
             self._log.info('copying GACOS grid %s', grd_file)
-            shutil.copy(grd_file, dirname)
-            shutil.copy(grd_file + '.rsc', dirname)
+            try:
+                shutil.copy(grd_file, dirname)
+                shutil.copy(grd_file + '.rsc', dirname)
+            except shutil.SameFileError:
+                pass
 
         self.config.grd_filenames = [
             './%s' % op.basename(grd_file)

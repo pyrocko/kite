@@ -5,6 +5,7 @@ import utm
 import os.path as op
 import copy
 import hashlib
+import time
 from datetime import datetime as dt
 from scipy import interpolate
 
@@ -15,8 +16,11 @@ from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  #
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
+
 from kite.aps import APSConfig, APS
 from kite.gacos import GACOSConfig, GACOSCorrection
+from kite.deramp import Deramp, DerampConfig
+
 from kite.util import Subject, property_cached
 from kite import scene_io
 
@@ -472,6 +476,9 @@ class SceneConfig(Object):
     polygon_mask = PolygonMaskConfig.T(
         default=PolygonMaskConfig.D(),
         help='Displacement mask polygon')
+    deramp = DerampConfig.T(
+        default=DerampConfig.D(),
+        help='Displacement deramp config')
 
     @property
     def old_import(self):
@@ -674,63 +681,6 @@ class BaseScene(object):
                 * num.sin(self.phi)
         return self._los_factors
 
-    def get_ramp_coefficients(self):
-        '''Fit plane through the displacement data.
-
-        :returns: Mean of the displacement and slopes in easting coefficients
-            of the fitted plane. The array hold
-            ``[offset_e, offset_n, slope_e, slope_n]``.
-        :rtype: :class:`numpy.ndarray`
-        '''
-        msk = ~self.displacement_mask
-        displacement = self.displacement[msk]
-
-        coords = self.frame.coordinates[msk.flatten()]
-
-        # Add ones for the offset
-        coords = num.hstack((
-            num.ones_like(coords),
-            coords))
-
-        coeffs, res, _, _ = num.linalg.lstsq(
-            coords, displacement, rcond=None)
-
-        return coeffs
-
-    def displacement_deramp(self, demean=True, inplace=True):
-        '''Fit a plane onto the displacement data and substract it
-
-        :param demean: Demean the displacement
-        :type demean: bool
-        :param inplace: Replace data of the scene (default: True)
-        :type inplace: bool
-
-        :return: ``None`` if ``inplace=True`` else a new Scene
-        :rtype: ``None`` or :class:`~kite.Scene`
-        '''
-        self._log.debug('De-ramping scene...')
-        coeffs = self.get_ramp_coefficients()
-        msk = self.displacement_mask
-        coords = self.frame.coordinates
-
-        ramp = coeffs[2:] * coords
-        if demean:
-            ramp += coeffs[:2]
-
-        ramp = ramp.sum(axis=1).reshape(self.shape)
-        ramp[msk] = num.nan
-
-        if inplace:
-            self.displacement -= ramp
-            self.evChanged.notify()
-
-        else:
-            return self.__class__(
-                config=self.config,
-                theta=self.theta,
-                phi=self.phi,
-                displacement=self.displacement - ramp)
-
     def get_elevation(self, interpolation='nearest_neighbor'):
         assert interpolation in ('nearest_neighbor', 'bivariate')
 
@@ -840,24 +790,31 @@ class Scene(BaseScene):
         self.aps = APS(self, config=self.config.aps)
         self.gacos = GACOSCorrection(self, config=self.config.gacos)
         self.polygon_mask = PolygonMask(self, config=self.config.polygon_mask)
+        self.deramp = Deramp(self, config=self.config.deramp)
 
         self._proc_displacement = None
 
         self.processing_states = {
             self.gacos: None,
             self.aps: None,
-            self.polygon_mask: None
+            self.polygon_mask: None,
+            self.deramp: None
         }
 
     @property
     def displacement(self):
         if self.has_processing_changed() or self._proc_displacement is None:
+
             self._proc_displacement = self._displacement.copy()
             for plugin, state in self.processing_states.items():
+                self.processing_states[plugin] = plugin.get_state_hash()
                 if not plugin.is_enabled():
                     continue
+                t = time.time()
+
                 plugin.apply(self._proc_displacement)
-                self.processing_states[plugin] = plugin.get_state_hash()
+                self._log.debug('applied %s in %.4f s',
+                                plugin.__class__.__name__, time.time() - t)
 
         return self._proc_displacement
 

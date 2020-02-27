@@ -58,16 +58,15 @@ class KiteScene(KiteView):
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
 
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
-        spool.actionTransect.setEnabled(True)
 
         spool.actionAddPolygonMask.triggered.connect(scene_plot.newMaskPolygon)
-        spool.actionAddPolygonMask.setEnabled(True)
-        spool.actionTogglePolygonMask.triggered.connect(self.togglePolygonMask)
-        spool.actionTogglePolygonMask.setEnabled(True)
-        self.updatePolygonActionText()
+        spool.actionTogglePolygonMask.setChecked(
+            model.getScene().polygon_mask.is_enabled())
+        spool.actionTogglePolygonMask.toggled.connect(self.togglePolygonMask)
 
-        spool.actionDerampScene.triggered.connect(self.derampScene)
-        spool.actionDerampScene.setEnabled(True)
+        spool.actionDerampScene.setChecked(
+            model.getScene().deramp.is_enabled())
+        spool.actionDerampScene.toggled.connect(self.derampScene)
 
         KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
@@ -83,25 +82,20 @@ class KiteScene(KiteView):
 
         self.dialogTransect.close()
 
-    def togglePolygonMask(self):
+    def togglePolygonMask(self, checked):
         polygon_mask = self.model.scene.polygon_mask
-        polygon_mask.set_enabled(not polygon_mask.is_enabled())
-        self.updatePolygonActionText()
+        polygon_mask.set_enabled(checked)
 
-    def updatePolygonActionText(self):
-        polygon_mask = self.model.scene.polygon_mask
-        if polygon_mask.is_enabled():
-            self.spool.actionTogglePolygonMask.setText('Remove Mask')
+    def derampScene(self, checked):
+        if checked:
+            msg = QtGui.QMessageBox.question(
+                self,
+                'De-ramp Scene',
+                'Are you sure you want to de-ramp the scene?')
+            if msg == QtGui.QMessageBox.StandardButton.Yes:
+                self.model.getScene().deramp.set_enabled(True)
         else:
-            self.spool.actionTogglePolygonMask.setText('Apply Mask')
-
-    def derampScene(self, *args):
-        msg = QtGui.QMessageBox.question(
-            self,
-            'De-ramp Scene',
-            'Are you sure you want to de-ramp the scene?')
-        if msg == QtGui.QMessageBox.StandardButton.Yes:
-            self.model.getScene().displacement_deramp(inplace=True)
+            self.model.getScene().deramp.set_enabled(False)
 
 
 class KiteScenePlot(KitePlot):
@@ -145,14 +139,12 @@ class KiteScenePlot(KitePlot):
 
     def roiToVertices(self, roi):
         frame = self.model.scene.frame
-
         return [(h.pos().x() / frame.dE,
                  h.pos().y() / frame.dN)
                 for h in roi.getHandles()]
 
     def verticesToRoi(self, vertices):
         frame = self.model.scene.frame
-
         return [((v[0] / frame.cols) * frame.lengthE,
                  (v[1] / frame.rows) * frame.lengthN)
                 for v in vertices]

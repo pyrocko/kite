@@ -42,16 +42,15 @@ class KiteAPS(KiteView):
         for dock in self.tool_docks:
             dock.setStretch(10, .5)
 
-        spool.actionApply_APS.triggered.connect(self.applyAPS)
-        spool.actionRemove_APS.triggered.connect(self.removeAPS)
-        spool.menu_APS.setEnabled(True)
+        spool.actionApplyEmpiricalAPS.setChecked(
+            model.getScene().aps.is_enabled())
+        spool.actionApplyEmpiricalAPS.toggled.connect(self.toggleAPS)
 
         self.main_widget.region_changed.connect(
             self.aps_correlation.update)
 
         self.GACOSDialog = GACOSCorrectionDialog(model, spool)
         spool.actionGACOS.triggered.connect(self.GACOSDialog.show)
-        spool.actionGACOS.setEnabled(True)
 
     @QtCore.pyqtSlot()
     def activateView(self):
@@ -63,16 +62,16 @@ class KiteAPS(KiteView):
         self.aps_correlation.deactivatePlot()
         self.main_widget.activatePlot()
 
-    def applyAPS(self):
-        msg = QtWidgets.QMessageBox.question(
-            self,
-            'Apply APS to Scene',
-            'Are you sure you want to apply APS to the scene?')
-        if msg == QtWidgets.QMessageBox.StandardButton.Yes:
-            self.model.getScene().aps.set_enabled(True)
-
-    def removeAPS(self):
-        self.model.getScene().aps.set_enabled(False)
+    def toggleAPS(self, checked):
+        if checked:
+            msg = QtWidgets.QMessageBox.question(
+                self,
+                'Apply APS to Scene',
+                'Are you sure you want to apply APS to the scene?')
+            if msg == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.model.getScene().aps.set_enabled(True)
+        else:
+            self.model.getScene().aps.set_enabled(False)
 
 
 class KiteAPSPlot(KitePlot):
