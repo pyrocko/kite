@@ -12,7 +12,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Scene: Added polygon masking of unwanted areas
 - Scene: Added empirical APS removal
 - Scene: Added GACOS APS import and removal
+- Scene: Added Deramping
 - SceneStack: handles stacks of time series
+- Spool: Added Plugin handlers
 
 ### Changed
 - QuadTree: Exporting unit vectors [ENU]
