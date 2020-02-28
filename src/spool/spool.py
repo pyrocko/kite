@@ -3,6 +3,7 @@ from PyQt5 import QtGui, QtCore, QtWidgets
 import sys
 import time  # noqa
 import math
+import os.path as op
 import pyqtgraph as pg
 from datetime import datetime
 
@@ -150,6 +151,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.progress.reset()
         self.progress_timer = None
 
+        self.state_hash = None
+
     def aboutDialog(self):
         self._about = QtGui.QDialog(self)
         loadUi(get_resource('about.ui'), baseinstance=self._about)
@@ -158,6 +161,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def addScene(self, scene):
         self.model.setScene(scene)
         self.buildViews()
+        self.state_hash = scene.get_state_hash()
 
     def buildViews(self):
         scene = self.model.getScene()
@@ -241,7 +245,10 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     def onSaveConfig(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            filter='YAML file *.yml (*.yml)', caption='Save scene YAML config')
+            parent=self,
+            directory=op.dirname(self.model.scene.meta.filename),
+            filter='YAML file *.yml (*.yml)',
+            caption='Save scene YAML config')
         if not validateFilename(filename):
             return
         self.model.scene.saveConfig(filename)
@@ -250,9 +257,12 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             'Scene config successfuly saved!'
             '<p style="font-family: monospace;">%s'
             '</p>' % filename)
+        self.state_hash = self.model.scene.get_state_hash()
 
     def onSaveScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            parent=self,
+            directory=op.dirname(self.model.scene.meta.filename),
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')
         if not validateFilename(filename):
@@ -263,16 +273,19 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             'Scene successfuly saved!'
             '<p style="font-family: monospace;">%s'
             '</p>' % filename)
+        self.state_hash = self.model.scene.get_state_hash()
 
     def onLoadConfig(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            filter='YAML file *.yml (*.yml)', caption='Load scene YAML config')
+            filter='YAML file *.yml (*.yml)',
+            caption='Load scene YAML config')
         if not validateFilename(filename):
             return
         self.sigLoadConfig.emit(filename)
 
     def onOpenScene(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
+            parent=self,
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Load kite scene')
         if not validateFilename(filename):
@@ -294,6 +307,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     def onExportQuadtree(self):
         filename, flt = QtWidgets.QFileDialog.getSaveFileName(
+            parent=self,
             filter='GeoJSON (*.geojson *.json);;CSV File *.csv (*.csv)',
             caption='Export Quadtree')
 
@@ -341,7 +355,6 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         @QtCore.pyqtSlot(int)
         def changeTimeRange():
             tmin, tmax = self.time_slider.getRange()
-
             stack.set_time_range(tmin, tmax)
 
         self.time_slider.startValueChanged.connect(changeTimeRange)
@@ -359,8 +372,25 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(
             QtCore.Qt.BottomDockWidgetArea, self.dock_time_slider)
 
-    def exit(self):
-        pass
+    def closeEvent(self, ev):
+        if self.state_hash == self.model.scene.get_state_hash():
+            return
+
+        msg_box = QtGui.QMessageBox(
+            parent=self,
+            text='The scene has been modified')
+        msg_box.setStandardButtons(
+            QtGui.QMessageBox.Save |
+            QtGui.QMessageBox.Discard |
+            QtGui.QMessageBox.Cancel)
+        msg_box.setInformativeText('Do you want to save your changes?')
+        msg_box.setDefaultButton(QtGui.QMessageBox.Save)
+        ret = msg_box.exec()
+
+        if ret == QtGui.QMessageBox.Save:
+            self.onSaveScene()
+        elif ret == QtGui.QMessageBox.Cancel:
+            ev.ignore()
 
 
 class KiteParameterTree(pg.parametertree.ParameterTree):

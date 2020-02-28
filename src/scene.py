@@ -859,11 +859,21 @@ class Scene(BaseScene):
                 return True
         return False
 
+    def get_plugin_state_hash(self):
+        sha = hashlib.sha1()
+        for plugin, state in self.processing_states.items():
+            sha.update(plugin.get_state_hash().encode())
+
+        return sha.hexdigest()
+
     def get_state_hash(self):
         sha = hashlib.sha1()
         for plugin, state in self.processing_states.items():
             sha.update(plugin.get_state_hash().encode())
-        return sha.digest().hex()
+
+        sha.update(self.covariance.get_state_hash().encode())
+        sha.update(self.quadtree.get_state_hash().encode())
+        return sha.hexdigest()
 
     def spool(self):
         """ Start the spool user interface :class:`~kite.spool.Spool` to inspect
@@ -937,6 +947,7 @@ class Scene(BaseScene):
         :returns: Scene object from data resources
         :rtype: :class:`~kite.Scene`
         """
+        filename = op.abspath(filename)
         basename = op.splitext(filename)[0]
 
         try:
@@ -949,6 +960,7 @@ class Scene(BaseScene):
 
         try:
             config = load(filename='%s.yml' % basename)
+            config.meta.filename = filename
         except IOError:
             raise UserIOWarning('Could not load %s.yml' % basename)
 
@@ -957,14 +969,15 @@ class Scene(BaseScene):
             theta=theta,
             phi=phi,
             config=config)
-        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
+        scene._log.debug('Loading from %s[.npz,.yml]', basename)
 
-        scene.meta.filename = op.basename(filename)
+        scene.meta.filename = filename
+
         scene._testImport()
         return scene
 
     def load_config(self, filename):
-        self._log.debug('Loading config from %s' % filename)
+        self._log.debug('Loading config from %s', filename)
         self.config = load(filename=filename)
         self.meta = self.config.meta
 
@@ -1001,7 +1014,7 @@ class Scene(BaseScene):
         if data is None:
             raise ImportError('Could not recognize format for %s' % path)
 
-        scene.meta.filename = op.basename(path)
+        scene.meta.filename = op.abspath(path)
         return scene._import_from_dict(scene, data)
 
     _class_list = map('* :class:`~kite.scene_io.{}`'.format, scene_io.__all__)

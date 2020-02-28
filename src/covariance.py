@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import numpy as num
 import scipy as sp
+from hashlib import sha1
 try:
     from scipy import fftpack as fft
 except ImportError:
@@ -1133,6 +1134,11 @@ class Covariance(object):
                  '\nThe matrix is symmetric and ordered by QuadNode.id:\n'
         header += ', '.join([l.id for l in self.quadtree.leaves])
         num.savetxt(filename, self.weight_matrix, header=header)
+
+    def get_state_hash(self):
+        sha = sha1()
+        sha.update(str(self.config).encode())
+        return sha.digest().hex()
 
     @property_cached
     def plot(self):

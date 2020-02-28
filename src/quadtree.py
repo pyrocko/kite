@@ -1,5 +1,6 @@
 import numpy as num
 import time
+from hashlib import sha1
 from pyrocko import guts
 from pyrocko import orthodrome as od
 
@@ -522,7 +523,7 @@ class Quadtree(object):
         self.reinitializeTree()
 
     def ensureTree(self):
-        if self._scene_state != self.scene.get_state_hash():
+        if self._scene_state != self.scene.get_plugin_state_hash():
             self.reinitializeTree()
 
     def reinitializeTree(self):
@@ -563,7 +564,7 @@ class Quadtree(object):
         for b in self._base_nodes:
             b.createTree()
 
-        self._scene_state = self.scene.get_state_hash()
+        self._scene_state = self.scene.get_plugin_state_hash()
         self._log.debug('Tree created, %d nodes [%0.4f s]',
                         self.nnodes, time.time() - t0)
 
@@ -1050,6 +1051,11 @@ class Quadtree(object):
             features)
         with open(filename, 'w') as f:
             geojson.dump(collection, f)
+
+    def get_state_hash(self):
+        sha = sha1()
+        sha.update(str(self.config).encode())
+        return sha.digest().hex()
 
 
 __all__ = ['Quadtree', 'QuadtreeConfig']

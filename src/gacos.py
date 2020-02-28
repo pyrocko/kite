@@ -158,11 +158,16 @@ class GACOSCorrection(Plugin):
         if len(self.grids) == 2:
             raise AttributeError('already loaded two GACOS grids!')
 
-        if not op.exists(filename):
-            raise OSError('cannot find GACOS grid %s' % filename)
+        if filename.startswith('./'):
+            abs_path = op.join(op.dirname(self.scene.meta.filename), filename)
+        else:
+            abs_path = filename
+        if not op.exists(abs_path):
+            raise OSError('cannot find GACOS grid %s' % abs_path)
 
         self._log.info('Loading %s', filename)
-        grd = GACOSGrid.load(filename)
+
+        grd = GACOSGrid.load(abs_path)
         grd.contains(**self._scene_extent())
 
         self.grids.append(grd)
@@ -178,6 +183,7 @@ class GACOSCorrection(Plugin):
     def save(self, dirname):
         for grd_file in self.config.grd_filenames:
             self._log.info('copying GACOS grid %s', grd_file)
+            grd_file = op.join(op.dirname(self.scene.meta.filename), grd_file)
             try:
                 shutil.copy(grd_file, dirname)
                 shutil.copy(grd_file + '.rsc', dirname)
