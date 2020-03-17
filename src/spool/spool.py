@@ -210,7 +210,6 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     @QtCore.pyqtSlot(object)
     def progressStarted(self, args):
-        print(args, self.progress.isVisible())
         if self.progress.isVisible():
             return
 
