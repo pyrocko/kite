@@ -251,8 +251,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.parameters = OrderedDict(
             [('nleaves', None),
              ('reduction_rms', None),
-             ('reduction_efficiency', None),
-             ('epsilon_min', None),
+             # ('reduction_efficiency', None),
+             # ('epsilon_min', None),
              ('nnodes', None),
              ])
 
