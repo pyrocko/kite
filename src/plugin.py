@@ -9,7 +9,7 @@ class PluginConfig(Object):
     def get_hash(self):
         sha = sha1()
         sha.update(str(self).encode())
-        return sha.digest().hex()
+        return sha.hexdigest()
 
 
 class Plugin(object):

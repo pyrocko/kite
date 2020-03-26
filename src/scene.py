@@ -711,7 +711,7 @@ class BaseScene(object):
                     tile.y(), tile.x(), tile.data)
                 elevation = interp(lats, lons, grid=False)
 
-            elevation = elevation.reshape(self.displacement.shape)
+            elevation = elevation.reshape(self.rows, self.cols)
             self._elevation[interpolation] = elevation
 
         return self._elevation[interpolation]
@@ -787,10 +787,10 @@ class Scene(BaseScene):
         # wiring special methods
         self.import_data = self._import_data
 
-        self.aps = APS(self, config=self.config.aps)
-        self.gacos = GACOSCorrection(self, config=self.config.gacos)
-        self.polygon_mask = PolygonMask(self, config=self.config.polygon_mask)
-        self.deramp = Deramp(self, config=self.config.deramp)
+        self.aps = APS(self, self.config.aps)
+        self.gacos = GACOSCorrection(self, self.config.gacos)
+        self.polygon_mask = PolygonMask(self, self.config.polygon_mask)
+        self.deramp = Deramp(self, self.config.deramp)
 
         self._proc_displacement = None
 
@@ -810,8 +810,8 @@ class Scene(BaseScene):
                 self.processing_states[plugin] = plugin.get_state_hash()
                 if not plugin.is_enabled():
                     continue
-                t = time.time()
 
+                t = time.time()
                 plugin.apply(self._proc_displacement)
                 self._log.debug('applied %s in %.4f s',
                                 plugin.__class__.__name__, time.time() - t)
@@ -855,7 +855,8 @@ class Scene(BaseScene):
     def has_processing_changed(self):
         for plugin, state in self.processing_states.items():
             if state != plugin.get_state_hash():
-                self._log.debug('processing states changed')
+                self._log.debug(
+                    'processing states changed: %s', plugin.__class__.__name__)
                 return True
         return False
 
@@ -897,7 +898,7 @@ class Scene(BaseScene):
             self.theta
             self.phi
         except Exception as e:
-            print(e)
+            self._log.exception(e)
             raise ImportError('Something went wrong during import - '
                               'see Exception!')
 
