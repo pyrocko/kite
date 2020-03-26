@@ -242,10 +242,15 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             self.progress_timer.stop()
             self.progress_timer = None
 
+    def getSceneDirname(self):
+        if self.model.scene.meta.filename:
+            return op.dirname(self.model.scene.meta.filename)
+        return None
+
     def onSaveConfig(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             parent=self,
-            directory=op.dirname(self.model.scene.meta.filename),
+            directory=self.getSceneDirname(),
             filter='YAML file *.yml (*.yml)',
             caption='Save scene YAML config')
         if not validateFilename(filename):
@@ -261,7 +266,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def onSaveScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             parent=self,
-            directory=op.dirname(self.model.scene.meta.filename),
+            directory=self.getSceneDirname(),
             filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
             caption='Save scene')
         if not validateFilename(filename):

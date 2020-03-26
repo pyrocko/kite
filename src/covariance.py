@@ -318,7 +318,8 @@ class Covariance(object):
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,
                                 node.sizeE, node.sizeN]
-        return self.noise_data
+
+        return self._noise_data
 
     @noise_data.setter
     def noise_data(self, data):
@@ -1012,10 +1013,10 @@ class Covariance(object):
                     distance,
                     covariance,
                     p0=coeff)
-            except RuntimeError:
-                self._log.warning('Could not fit the %s'
-                                  ' covariance model'
-                                  % self.config.model_function)
+            except (RuntimeError, TypeError) as e:
+                self._log.exception(e)
+                self._log.warning('Could not fit the %s covariance model',
+                                  self.config.model_function)
             finally:
                 self.config.model_coefficients = tuple(map(float, coeff))
 

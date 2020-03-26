@@ -180,15 +180,23 @@ class KiteNoisePlot(KitePlot):
 
     @QtCore.pyqtSlot()
     def updateNoiseRegion(self):
-        data = self.roi.getArrayRegion(self.image.image, self.image)
+        scene = self.model.getScene()
+
+        llE, llN = self.roi.pos()
+        sizeE, sizeN = self.roi.size()
+
+        llEpx, llNpx = scene.frame.mapENMatrix(llE, llN)
+        sEpx, sNpx = scene.frame.mapENMatrix(sizeE, sizeN)
+        slice_E = slice(llEpx, llEpx + sEpx)
+        slice_N = slice(llNpx, llNpx + sNpx)
+
+        data = scene.displacement[slice_N, slice_E]
         data[data == 0.] = num.nan
         if num.all(num.isnan(data)):
             return
 
-        llE, llN = self.roi.pos()
-        sizeE, sizeN = self.roi.size()
         self.model.covariance.noise_coord = (llE, llN, sizeE, sizeN)
-        self.model.covariance.noise_data = data.T
+        self.model.covariance.noise_data = data
 
 
 class KiteSubplot(QtGui.QWidget):
