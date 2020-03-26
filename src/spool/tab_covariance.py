@@ -848,6 +848,20 @@ class KiteParamCovariance(KiteParameterGroup):
         model_function = pTypes.ListParameter(**p)
         model_function.sigValueChanged.connect(changeModelFunction)
 
+        def toggle_adaptive_subsampling(param, checked):
+            model.covariance.config.adaptive_subsampling = checked
+
+        p = {
+            'name': 'adaptive_subsampling',
+            'type': 'bool',
+            'value': model.covariance.config.adaptive_subsampling,
+            'tip': 'detrend the scene'
+        }
+        adaptive_subsampling = pTypes.SimpleParameter(**p)
+        adaptive_subsampling.sigValueChanged.connect(
+            toggle_adaptive_subsampling)
+
+        self.pushChild(adaptive_subsampling)
         self.pushChild(model_function)
         self.pushChild(spatial_bins)
         self.pushChild(spatial_pairs)
