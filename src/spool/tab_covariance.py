@@ -358,7 +358,6 @@ class KiteStructureFunction(KiteSubplot):
 
     def __init__(self, parent_plot):
         KiteSubplot.__init__(self, parent_plot)
-        frame = self.model.frame
 
         self.structure = pg.PlotDataItem(
             antialias=True,
@@ -371,8 +370,8 @@ class KiteStructureFunction(KiteSubplot):
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
         self.plot.setLabels(
-            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
-            left='Covariance (m<sup>2</sup>)')
+            bottom=('Distance', 'm'),
+            left='Variance (m<sup>2</sup>)')
 
         self.addItem(self.structure)
         self.addItem(self.variance)
