@@ -99,7 +99,12 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
         data.px_width = int(rw.readline())
 
     data.look_angles = num.loadtxt(fn_look_angle)[::2]
-    data.heading = float(num.asarray(params_mat['heading']))
+
+    heading = float(num.asarray(params_mat['heading']))
+    if num.isnan(heading):
+        raise ValueError('Heading information in parms.mat is missing!')
+
+    data.heading = heading
 
     return data
 
