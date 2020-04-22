@@ -646,9 +646,10 @@ class Covariance(object):
             Pixels in northing and easting (`nE`, `nN`),
             defaults to `(1024, 1024)`.
         :type shape: tuple, optional
-        :param dEdN: The sampling distance in easting, defaults to
-            (:attr:`kite.scene.Frame.dE`, :attr:`kite.scene.Frame.dN`).
-        :type dE: tuple, floats
+        :param dEdN: The sampling distance in east and north [m], defaults to
+            (:attr:`kite.scene.Frame.dEmeter`,
+             :attr:`kite.scene.Frame.dNmeter`).
+        :type dEdN: tuple, floats
         :returns: synthetic noise patch
         :rtype: :class:`numpy.ndarray`
         """
@@ -666,7 +667,7 @@ class Covariance(object):
         spec = num.fft.fft2(rfield)
 
         if not dEdN:
-            dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
+            dE, dN = (self.scene.frame.dEmeter, self.scene.frame.dNmeter)
         kE = num.fft.fftfreq(nE, dE)
         kN = num.fft.fftfreq(nN, dN)
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
@@ -700,11 +701,8 @@ class Covariance(object):
                 k_rad < num.sqrt(kN[mkN].max()**2 + kE[mkE].max()**2))
             res = interp_pspec(kN[mkN, num.newaxis],
                                kE[num.newaxis, mkE], grid=True)
-            print((amp.shape, res.shape))
-            print((kN.size, kE.size))
             amp = res
             amp = num.fft.fftshift(amp)
-            print((amp.min(), amp.max()))
 
         spec *= amp
         noise = num.abs(num.fft.ifft2(spec))
@@ -769,19 +767,20 @@ class Covariance(object):
             noise = self.noise_data
         else:
             noise = data.copy()
-        if norm not in ['1d', '2d', '3d']:
-            raise AttributeError('norm must be either 1d, 2d or 3d')
+        if norm not in ('1d', '2d', '3d'):
+            raise AttributeError('norm must be 1d, 2d or 3d')
 
         # noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
+        noise -= noise.mean()
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
         power_spec = (num.abs(spectrum)/spectrum.size)**2
 
         kE = shift(num.fft.fftfreq(power_spec.shape[1],
-                                   d=self.quadtree.frame.dE))
+                                   d=self.quadtree.frame.dEmeter))
         kN = shift(num.fft.fftfreq(power_spec.shape[0],
-                                   d=self.quadtree.frame.dN))
+                                   d=self.quadtree.frame.dNmeter))
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         power_spec[k_rad == 0.] = 0.
 
@@ -800,21 +799,30 @@ class Covariance(object):
         def power1d(k):
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
+
+            cos_theta = num.cos(theta)
+            sin_theta = num.sin(theta)
             for i in range(k.size):
-                kE = num.cos(theta) * k[i]
-                kN = num.sin(theta) * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE))
+                kE = cos_theta * k[i]
+                kN = sin_theta * k[i]
+                power[i] = num.mean(power_interp.ev(kN, kE))
+
+            power *= 2 * num.pi
             return power
 
         def power2d(k):
             """ Mean 2D Power works! """
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
+
+            cos_theta = num.cos(theta)
+            sin_theta = num.sin(theta)
             for i in range(k.size):
-                kE = num.sin(theta) * k[i]
-                kN = num.cos(theta) * k[i]
+                kE = sin_theta * k[i]
+                kN = cos_theta * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
+
             return power
 
         def power3d(k):
@@ -829,7 +837,7 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         k = num.linspace(k_rad[k_rad > 0].min(),
                          k_rad.max(), nk)
-        dk = 1./k.min() / (2. * nk)
+        dk = 1./(k[1] - k[0]) / (2*nk)
         return power(k), k, dk, spectrum, kE, kN
 
     def _powerCosineTransform(self, p_spec):
@@ -897,6 +905,7 @@ class Covariance(object):
         nbins = self.config.spatial_bins
         npairs = self.config.spatial_pairs
         noise_data = self.noise_data.ravel()
+        noise_data -= noise_data.mean()
 
         grdE = self.noise_data_gridE
         grdN = self.noise_data_gridN
