@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 - Spool: improved UI
 - Covariance: fixing sparse spool noise window selection
+- Covariance: fixed spectral 1D estmiation // performance improvements
 
 ## [1.3.0] 3. December 2019
 
