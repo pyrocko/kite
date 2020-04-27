@@ -1,5 +1,6 @@
 import numpy as num
 import time
+from hashlib import sha1
 from pyrocko import guts
 from pyrocko import orthodrome as od
 
@@ -25,9 +26,9 @@ class QuadNode(object):
     """
 
     CORNERS = (0, 0), (0, 1), (1, 0), (1, 1)
-    MIN_PIXEL_LENGTH_NODE = 4
+    MIN_PIXEL_LENGTH_NODE = None
 
-    def __init__(self, quadtree, llr, llc, length):
+    def __init__(self, quadtree, displacement, llr, llc, length):
         self.children = []
         self.llr = int(llr)
         self.llc = int(llc)
@@ -37,6 +38,7 @@ class QuadNode(object):
         self.id = 'node_%d-%d_%d' % (self.llr, self.llc, self.length)
 
         self.quadtree = quadtree
+        self._displacement = displacement
         self.scene = quadtree.scene
         self.frame = quadtree.frame
 
@@ -118,7 +120,7 @@ class QuadNode(object):
          - works on tree leaves only.
         :type: float
         """
-        return float(self.quadtree.scene.covariance.getLeafWeight(self))
+        return float(self.scene.covariance.getLeafWeight(self))
 
     @property_cached
     def focal_point(self):
@@ -145,7 +147,7 @@ class QuadNode(object):
         """ Displacement array, slice from :attr:`kite.Scene.displacement`
         :type: :class:`numpy.ndarray`
         """
-        return self.scene.displacement[self._slice_rows, self._slice_cols]
+        return self._displacement[self._slice_rows, self._slice_cols]
 
     @property_cached
     def displacement_masked(self):
@@ -194,6 +196,24 @@ class QuadNode(object):
         """
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
         return num.nanmedian(theta[~self.displacement_mask])
+
+    @property
+    def unitE(self):
+        unitE = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 1]
+        return num.nanmedian(unitE[~self.displacement_mask])
+
+    @property
+    def unitN(self):
+        unitN = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 2]
+        return num.nanmedian(unitN[~self.displacement_mask])
+
+    @property
+    def unitU(self):
+        unitU = self.scene.los_rotation_factors[
+            self._slice_rows, self._slice_cols, 0]
+        return num.nanmedian(unitU[~self.displacement_mask])
 
     @property_cached
     def gridE(self):
@@ -307,6 +327,7 @@ class QuadNode(object):
             yield None
         for nr, nc in self.CORNERS:
             n = QuadNode(self.quadtree,
+                         self._displacement,
                          self.llr + self.length / 2 * nr,
                          self.llc + self.length / 2 * nc,
                          self.length / 2)
@@ -427,13 +448,14 @@ class Quadtree(object):
             lambda n: n.weight,
     }
 
-    def __init__(self, scene, config=QuadtreeConfig()):
+    def __init__(self, scene, config=None):
         self.evChanged = Subject()
         self.evConfigChanged = Subject()
         self._leaves = None
         self.scene = scene
         self.displacement = self.scene.displacement
         self.frame = self.scene.frame
+        self._scene_state = None
 
         # Cached matrices
         self._leaf_matrix_means = num.empty_like(self.displacement)
@@ -441,9 +463,10 @@ class Quadtree(object):
         self._leaf_matrix_weights = num.empty_like(self.displacement)
 
         self._log = scene._log.getChild('Quadtree')
-        self.setConfig(config)
+        self.setConfig(config or QuadtreeConfig())
 
         self.scene.evConfigChanged.subscribe(self.setConfig)
+        # self.scene.evChanged.subscribe(self.reinitializeTree)
 
     def setConfig(self, config=None):
         """ Sets and updated the config of the instance
@@ -497,7 +520,13 @@ class Quadtree(object):
 
         self.config.correction = correction
         self._corr_func = self._displacement_corrections[correction][1]
+        self.reinitializeTree()
 
+    def ensureTree(self):
+        if self._scene_state != self.scene.get_plugin_state_hash():
+            self.reinitializeTree()
+
+    def reinitializeTree(self):
         # Clearing cached properties through None
         self.leaf_center_distance = None
         self.nodes = None
@@ -528,12 +557,14 @@ class Quadtree(object):
         return int(2**round(num.log(npx / 64)))
 
     def _initTree(self):
-        QuadNode.MIN_PIXEL_LENGTH_NODE = self.min_node_length_px
+        QuadNode.MIN_PIXEL_LENGTH_NODE = QuadNode.MIN_PIXEL_LENGTH_NODE or \
+            self.min_node_length_px
 
         t0 = time.time()
         for b in self._base_nodes:
             b.createTree()
 
+        self._scene_state = self.scene.get_plugin_state_hash()
         self._log.debug('Tree created, %d nodes [%0.4f s]',
                         self.nnodes, time.time() - t0)
 
@@ -907,11 +938,13 @@ class Quadtree(object):
         nx, ny = num.ceil(num.array(self.displacement.shape) / init_length)
         self._log.debug('Creating %d base nodes', nx * ny)
 
+        displacement = self.scene.displacement
         for ir in range(int(nx)):
             for ic in range(int(ny)):
                 llr = ir * init_length
                 llc = ic * init_length
-                self._base_nodes.append(QuadNode(self, llr, llc, init_length))
+                node = QuadNode(self, displacement, llr, llc, init_length)
+                self._base_nodes.append(node)
 
         if len(self._base_nodes) == 0:
             raise AssertionError('Could not init base nodes.')
@@ -960,13 +993,14 @@ class Quadtree(object):
         self._log.debug('Exporting Quadtree as to %s', filename)
         with open(filename, mode='w') as f:
             f.write(
-                '# node_id, focal_point_E, focal_point_N, theta, phi, '
-                'mean_displacement, median_displacement, absolute_weight\n')
+                '# node_id, focal_point_E, focal_point_N, theta, phi,'
+                ' unitE, unitN, unitU,'
+                ' mean_displacement, median_displacement, absolute_weight\n')
             for lf in self.leaves:
                 f.write(
                     '{lf.id}, {lf.focal_point[0]}, {lf.focal_point[1]}, '
-                    '{lf.theta}, {lf.phi}, '
-                    '{lf.mean}, {lf.median}, {lf.weight}\n'.format(lf=lf))
+                    '{lf.theta}, {lf.phi}, {lf.unitE}, {lf.unitN}, {lf.unitU},'
+                    ' {lf.mean}, {lf.median}, {lf.weight}\n'.format(lf=lf))
 
     def export_geojson(self, filename):
         import geojson
@@ -1000,10 +1034,16 @@ class Quadtree(object):
                 geometry=geojson.Polygon(coordinates=[coords]),
                 id=lf.id,
                 properties={
-                    'mean': lf.mean,
-                    'median': lf.median,
-                    'std': lf.std,
-                    'var': lf.var
+                    'mean': float(lf.mean),
+                    'median': float(lf.median),
+                    'std': float(lf.std),
+                    'var': float(lf.var),
+
+                    'phi': float(lf.phi),
+                    'theta': float(lf.theta),
+                    'unitE': float(lf.unitE),
+                    'unitN': float(lf.unitN),
+                    'unitU': float(lf.unitU),
                 })
             features.append(feature)
 
@@ -1011,6 +1051,11 @@ class Quadtree(object):
             features)
         with open(filename, 'w') as f:
             geojson.dump(collection, f)
+
+    def get_state_hash(self):
+        sha = sha1()
+        sha.update(str(self.config).encode())
+        return sha.digest().hex()
 
 
 __all__ = ['Quadtree', 'QuadtreeConfig']

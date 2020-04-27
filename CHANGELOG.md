@@ -4,6 +4,26 @@ All notable changes to Kite will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Added
+- Import of SNAP products
+- Scene: Added method `get_elevation`
+- Scene: Added polygon masking of unwanted areas
+- Scene: Added empirical APS removal
+- Scene: Added GACOS APS import and removal
+- Scene: Added Deramping as module
+- SceneStack: handles stacks of time series
+- Spool: Added Plugin handlers
+
+### Changed
+- QuadTree: Exporting unit vectors [ENU]
+
+### Fixed
+- Spool: improved UI
+- Covariance: fixing sparse spool noise window selection
+- Covariance: fixed spectral 1D estmiation // performance improvements
+
 ## [1.3.0] 3. December 2019
 
 ### Added

@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 import numpy as num
 import scipy as sp
+from hashlib import sha1
+try:
+    from scipy import fftpack as fft
+except ImportError:
+    from scipy import fft
 import time
 
 from kite import covariance_ext
@@ -12,8 +17,8 @@ from kite.util import (Subject, property_cached,  # noqa
 
 __all__ = ['Covariance', 'CovarianceConfig']
 
-NOISE_PATCH_MIN_PX = 1024
-NOISE_PATCH_MAX_NAN = 0.6
+NOISE_PATCH_MIN_PX = 256*256
+NOISE_PATCH_MAX_NAN = 0.8
 
 noise_regimes = [
     (1./2000, num.inf),
@@ -167,13 +172,13 @@ class Covariance(object):
         self.frame = scene.frame
         self.quadtree = scene.quadtree
         self.scene = scene
+        self.nthreads = 0
         self._noise_data = None
         self._powerspec1d_cached = None
         self._powerspec2d_cached = None
         self._powerspec3d_cached = None
         self._noise_data_grid = None
         self._initialized = False
-        self._nthreads = 0
         self._log = scene._log.getChild('Covariance')
 
         self.setConfig(config)
@@ -230,22 +235,6 @@ class Covariance(object):
         self.weight_matrix_focal = None
         self._initialized = False
         self.evChanged.notify()
-
-    @property
-    def nthreads(self):
-        """ Number of threads (CPU cores) to use for full covariance
-            calculation
-
-        Setting ``nthreads`` to ``0`` uses all available cores (default).
-
-        :setter: Sets the number of threads
-        :type: int
-        """
-        return self._nthreads
-
-    @nthreads.setter
-    def nthreads(self, value):
-        self._nthreads = int(value)
 
     @property
     def finished_combinations(self):
@@ -313,7 +302,8 @@ class Covariance(object):
             self.noise_data = node.displacement
             self.noise_coord = [node.llE, node.llN,
                                 node.sizeE, node.sizeN]
-        return self.noise_data
+
+        return self._noise_data
 
     @noise_data.setter
     def noise_data(self, data):
@@ -378,7 +368,8 @@ class Covariance(object):
 
         self._log.debug('Fetched noise from Quadtree.nodes [%0.4f s]'
                         % (time.time() - t0))
-        return node_selection[num.argmin(fitness)]
+        node = node_selection[num.argmin(fitness)]
+        return node
 
     def _mapLeaves(self, nx, ny):
         """ Helper function returning appropriate
@@ -471,7 +462,11 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
-        return num.linalg.inv(self.covariance_matrix_focal)
+        try:
+            return num.linalg.inv(self.covariance_matrix_focal)
+        except num.linalg.LinAlgError as e:
+            self._log.exception(e)
+            return num.eye(self.covariance_matrix_focal.shape[0])
 
     @property_cached
     def weight_vector(self):
@@ -502,8 +497,7 @@ class Covariance(object):
         :rtype: thon:numpy.ndarray
         """
         self._initialized = True
-        if nthreads is None:
-            nthreads = self.nthreads
+        nthreads = nthreads or self.nthreads
 
         nl = len(self.quadtree.leaves)
         self._leaf_mapping = {}
@@ -549,7 +543,8 @@ class Covariance(object):
                             self.scene.frame.gridNmeter.filled(),
                             leaf_map,
                             self.covariance_model, self.variance,
-                            nthreads, self.config.adaptive_subsampling)\
+                            nthreads,
+                            self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
 
             if self.quadtree.leaf_mean_px_var is not None:
@@ -651,9 +646,10 @@ class Covariance(object):
             Pixels in northing and easting (`nE`, `nN`),
             defaults to `(1024, 1024)`.
         :type shape: tuple, optional
-        :param dEdN: The sampling distance in easting, defaults to
-            (:attr:`kite.scene.Frame.dE`, :attr:`kite.scene.Frame.dN`).
-        :type dE: tuple, floats
+        :param dEdN: The sampling distance in east and north [m], defaults to
+            (:attr:`kite.scene.Frame.dEmeter`,
+             :attr:`kite.scene.Frame.dNmeter`).
+        :type dEdN: tuple, floats
         :returns: synthetic noise patch
         :rtype: :class:`numpy.ndarray`
         """
@@ -671,7 +667,7 @@ class Covariance(object):
         spec = num.fft.fft2(rfield)
 
         if not dEdN:
-            dE, dN = (self.scene.frame.dE, self.scene.frame.dN)
+            dE, dN = (self.scene.frame.dEmeter, self.scene.frame.dNmeter)
         kE = num.fft.fftfreq(nE, dE)
         kN = num.fft.fftfreq(nN, dN)
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
@@ -705,11 +701,8 @@ class Covariance(object):
                 k_rad < num.sqrt(kN[mkN].max()**2 + kE[mkE].max()**2))
             res = interp_pspec(kN[mkN, num.newaxis],
                                kE[num.newaxis, mkE], grid=True)
-            print((amp.shape, res.shape))
-            print((kN.size, kE.size))
             amp = res
             amp = num.fft.fftshift(amp)
-            print((amp.min(), amp.max()))
 
         spec *= amp
         noise = num.abs(num.fft.ifft2(spec))
@@ -774,19 +767,20 @@ class Covariance(object):
             noise = self.noise_data
         else:
             noise = data.copy()
-        if norm not in ['1d', '2d', '3d']:
-            raise AttributeError('norm must be either 1d, 2d or 3d')
+        if norm not in ('1d', '2d', '3d'):
+            raise AttributeError('norm must be 1d, 2d or 3d')
 
         # noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
+        noise -= noise.mean()
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
         power_spec = (num.abs(spectrum)/spectrum.size)**2
 
         kE = shift(num.fft.fftfreq(power_spec.shape[1],
-                                   d=self.quadtree.frame.dE))
+                                   d=self.quadtree.frame.dEmeter))
         kN = shift(num.fft.fftfreq(power_spec.shape[0],
-                                   d=self.quadtree.frame.dN))
+                                   d=self.quadtree.frame.dNmeter))
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         power_spec[k_rad == 0.] = 0.
 
@@ -805,21 +799,30 @@ class Covariance(object):
         def power1d(k):
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
+
+            cos_theta = num.cos(theta)
+            sin_theta = num.sin(theta)
             for i in range(k.size):
-                kE = num.cos(theta) * k[i]
-                kN = num.sin(theta) * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE))
+                kE = cos_theta * k[i]
+                kN = sin_theta * k[i]
+                power[i] = num.mean(power_interp.ev(kN, kE))
+
+            power *= 2 * num.pi
             return power
 
         def power2d(k):
             """ Mean 2D Power works! """
             theta = num.linspace(-num.pi, num.pi, ndeg, False)
             power = num.empty_like(k)
+
+            cos_theta = num.cos(theta)
+            sin_theta = num.sin(theta)
             for i in range(k.size):
-                kE = num.sin(theta) * k[i]
-                kN = num.cos(theta) * k[i]
+                kE = sin_theta * k[i]
+                kN = cos_theta * k[i]
                 power[i] = num.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
+
             return power
 
         def power3d(k):
@@ -834,7 +837,7 @@ class Covariance(object):
         k_rad = num.sqrt(kN[:, num.newaxis]**2 + kE[num.newaxis, :]**2)
         k = num.linspace(k_rad[k_rad > 0].min(),
                          k_rad.max(), nk)
-        dk = 1./k.min() / (2. * nk)
+        dk = 1./(k[1] - k[0]) / (2*nk)
         return power(k), k, dk, spectrum, kE, kN
 
     def _powerCosineTransform(self, p_spec):
@@ -842,7 +845,7 @@ class Covariance(object):
 
             The cosine transform of the power spectrum is an estimate
             of the data covariance (see Hanssen, 2001)."""
-        cos = sp.fftpack.idct(p_spec, type=3)
+        cos = fft.idct(p_spec, type=3)
         return cos
 
     def setSamplingMethod(self, method):
@@ -902,6 +905,7 @@ class Covariance(object):
         nbins = self.config.spatial_bins
         npairs = self.config.spatial_pairs
         noise_data = self.noise_data.ravel()
+        noise_data -= noise_data.mean()
 
         grdE = self.noise_data_gridE
         grdN = self.noise_data_gridN
@@ -1002,10 +1006,10 @@ class Covariance(object):
                     distance,
                     covariance,
                     p0=coeff)
-            except RuntimeError:
-                self._log.warning('Could not fit the %s'
-                                  ' covariance model'
-                                  % self.config.model_function)
+            except (RuntimeError, TypeError) as e:
+                self._log.exception(e)
+                self._log.warning('Could not fit the %s covariance model',
+                                  self.config.model_function)
             finally:
                 self.config.model_coefficients = tuple(map(float, coeff))
 
@@ -1124,6 +1128,11 @@ class Covariance(object):
                  '\nThe matrix is symmetric and ordered by QuadNode.id:\n'
         header += ', '.join([l.id for l in self.quadtree.leaves])
         num.savetxt(filename, self.weight_matrix, header=header)
+
+    def get_state_hash(self):
+        sha = sha1()
+        sha.update(str(self.config).encode())
+        return sha.digest().hex()
 
     @property_cached
     def plot(self):

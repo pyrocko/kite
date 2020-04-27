@@ -47,68 +47,6 @@
      <height>16777215</height>
     </size>
    </property>
-   <layout class="QHBoxLayout" name="horizontalLayout">
-    <item>
-     <widget class="QSplitter" name="splitter">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>1</horstretch>
-        <verstretch>1</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="minimumSize">
-       <size>
-        <width>1151</width>
-        <height>651</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>16777215</height>
-       </size>
-      </property>
-      <property name="orientation">
-       <enum>Qt::Horizontal</enum>
-      </property>
-      <widget class="QTabWidget" name="tabs">
-       <property name="enabled">
-        <bool>true</bool>
-       </property>
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>0</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>16777215</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="tabPosition">
-        <enum>QTabWidget::North</enum>
-       </property>
-       <property name="tabShape">
-        <enum>QTabWidget::Rounded</enum>
-       </property>
-       <property name="documentMode">
-        <bool>false</bool>
-       </property>
-       <property name="movable">
-        <bool>true</bool>
-       </property>
-      </widget>
-     </widget>
-    </item>
-   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -146,12 +84,16 @@
     <property name="title">
      <string>Tools</string>
     </property>
-    <addaction name="actionDerampScene"/>
-    <addaction name="actionTransect"/>
+    <addaction name="actionGACOS"/>
+    <addaction name="separator"/>
+    <addaction name="actionAddPolygonMask"/>
+    <addaction name="actionTogglePolygonMask"/>
     <addaction name="separator"/>
     <addaction name="actionInspect_Noise"/>
     <addaction name="actionInspect_Weights"/>
     <addaction name="actionCalculate_WeightMatrix"/>
+    <addaction name="separator"/>
+    <addaction name="actionTransect"/>
     <addaction name="separator"/>
     <addaction name="actionLog"/>
    </widget>
@@ -268,7 +210,7 @@
   </action>
   <action name="actionTransect">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string notr="true">Scene Transect</string>
@@ -284,7 +226,7 @@
     </iconset>
    </property>
    <property name="text">
-    <string>Export quadtree</string>
+    <string>Export quadtree (GeoJSON, CSV)</string>
    </property>
    <property name="toolTip">
     <string>Scene.quadtree.export(filename)</string>
@@ -391,11 +333,70 @@
    </property>
   </action>
   <action name="actionDerampScene">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>De-ramp scene</string>
+   </property>
+  </action>
+  <action name="actionApply_APS">
+   <property name="text">
+    <string>Apply APS Model</string>
+   </property>
+  </action>
+  <action name="actionRemove_APS">
+   <property name="text">
+    <string>Remove APS Model</string>
+   </property>
+   <property name="iconText">
+    <string>Remove APS Model</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove APS Model</string>
+   </property>
+  </action>
+  <action name="actionLoad_GACOS_Grids">
+   <property name="text">
+    <string>Load GACOS Grids</string>
+   </property>
+  </action>
+  <action name="actionGACOS">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>GACOS APS</string>
+   </property>
+  </action>
+  <action name="actionAddPolygonMask">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>New Polygon Mask</string>
+   </property>
+  </action>
+  <action name="actionTogglePolygonMask">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Apply Mask</string>
+   </property>
+  </action>
+  <action name="actionApplyEmpiricalAPS">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Apply empirical APS</string>
    </property>
   </action>
  </widget>

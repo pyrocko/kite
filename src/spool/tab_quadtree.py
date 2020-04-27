@@ -17,6 +17,7 @@ class KiteQuadtree(KiteView):
 
     def __init__(self, spool):
         model = spool.model
+        self.model = model
         self.main_widget = KiteQuadtreePlot(model)
         self.tools = {}
 
@@ -41,6 +42,7 @@ class KiteQuadtree(KiteView):
 
     @QtCore.pyqtSlot()
     def activateView(self):
+        self.model.scene.quadtree.ensureTree()
         self.main_widget.activatePlot()
 
     @QtCore.pyqtSlot()
@@ -140,6 +142,7 @@ class KiteQuadtreePlot(KitePlot):
         self.model.sigQuadtreeChanged.connect(self.updateLeavesOutline)
         self.model.sigCovarianceChanged.connect(self.covarianceChanged)
 
+        self.update()
         self.updateLeavesOutline()
         self.updateFocalPoints()
 
@@ -248,8 +251,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         self.parameters = OrderedDict(
             [('nleaves', None),
              ('reduction_rms', None),
-             ('reduction_efficiency', None),
-             ('epsilon_min', None),
+             # ('reduction_efficiency', None),
+             # ('epsilon_min', None),
              ('nnodes', None),
              ])
 
@@ -281,7 +284,8 @@ class KiteParamQuadtree(KiteParameterGroup):
         def updateEpsilon():
             self.sigEpsilon.emit(self.epsilon.value())
 
-        eps_decimals = -math.floor(math.log10(model.quadtree.epsilon_min))
+        eps_decimals = -math.floor(math.log10(
+            model.quadtree.epsilon_min or 1e-3))
         eps_steps = round((model.quadtree.epsilon -
                            model.quadtree.epsilon_min)*.1, 3)
 
@@ -334,7 +338,7 @@ class KiteParamQuadtree(KiteParameterGroup):
         limits = (max_pxd * model.quadtree.min_node_length_px,
                   max_pxd * (max_px / 4))
 
-        tile_decimals = -math.floor(math.log10(model.quadtree.tile_size_min))
+        tile_decimals = 2
 
         p = {'name': 'tile_size_min',
              'type': 'float',
@@ -344,7 +348,7 @@ class KiteParamQuadtree(KiteParameterGroup):
              'step': 250,
              'slider_exponent': 2,
              'editable': True,
-             'suffix': ' m' if frame.isMeter() else ' deg',
+             'suffix': ' m' if frame.isMeter() else '°',
              'decimals': 0 if frame.isMeter() else tile_decimals,
              'tip': QuadtreeConfig.tile_size_min.help
              }

@@ -1,9 +1,7 @@
-#!/usr/bin/python3
-import time
 import numpy as num
 from os import path
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -16,6 +14,9 @@ __all__ = ['KiteView', 'KitePlot', 'KiteToolColormap',
            'KiteParameterGroup']
 
 
+d2r = num.pi/180.
+
+
 def get_resource(filename):
     return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
 
@@ -26,6 +27,9 @@ class KiteView(dockarea.DockArea):
     def __init__(self):
         dockarea.DockArea.__init__(self)
         self.tool_docks = []
+        self.tools = getattr(self, 'tools', {})
+
+        self.colormap = KiteToolColormap(self.main_widget)
 
         dock_main = dockarea.Dock(
             self.title,
@@ -34,7 +38,7 @@ class KiteView(dockarea.DockArea):
         dock_colormap = dockarea.Dock(
             'Colormap',
             autoOrientation=False,
-            widget=KiteToolColormap(self.main_widget))
+            widget=self.colormap)
         dock_colormap.setStretch(1, None)
 
         for i, (name, tool) in enumerate(self.tools.items()):
@@ -56,6 +60,20 @@ class KiteView(dockarea.DockArea):
     @QtCore.pyqtSlot()
     def deactivateView(self):
         pass
+
+
+class KitePlotThread(QtCore.QThread):
+    completeSignal = QtCore.Signal()
+
+    def __init__(self, plot):
+        super().__init__()
+        self.plot = plot
+
+    def run(self):
+        plot = self.plot
+        plot._data = plot.components_available[plot.component][1](
+            plot.model)
+        self.completeSignal.emit()
 
 
 class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
@@ -120,23 +138,9 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         return QtCore.QRectF(0, 0, self.width(), self.height())
 
 
-class KitePlotThread(QtCore.QThread):
-    completeSignal = QtCore.Signal()
-
-    def __init__(self, plot):
-        super().__init__()
-        self.plot = plot
-
-    def run(self):
-        plot = self.plot
-        plot._data = plot.components_available[plot.component][1](
-            plot.model)
-        self.completeSignal.emit()
-
-
 class KitePlot(pg.PlotWidget):
 
-    def __init__(self, model, los_arrow=False):
+    def __init__(self, model, los_arrow=False, auto_downsample=False):
         pg.PlotWidget.__init__(self)
         self.model = model
         self.draw_time = 0.
@@ -147,9 +151,12 @@ class KitePlot(pg.PlotWidget):
         border_pen = pg.mkPen(255, 255, 255, 50)
         self.image = pg.ImageItem(
             None,
-            autoDownsample=False,
+            autoDownsample=auto_downsample,
             border=border_pen,
             useOpenGL=True)
+
+        self.hillshade = None
+        self.elevation = None
 
         self.setAspectLocked(True)
         self.plotItem.getAxis('left').setZValue(100)
@@ -213,6 +220,79 @@ class KitePlot(pg.PlotWidget):
             itemPos=(1., 0.), parentPos=(1, 0.),
             offset=(-10., 40.))
 
+    def enableHillshade(self):
+        from scipy.signal import fftconvolve
+        frame = self.model.frame
+        scene = self.model.scene
+
+        elevation = scene.get_elevation()
+
+        contrast = 1.
+        elevation_angle = 45.
+        azimuth = 45.
+
+        size_ramp = 10
+        ramp = num.linspace(-1, 1, size_ramp)[::-1]
+
+        ramp_x = num.tile(ramp, size_ramp)\
+            .reshape(size_ramp, size_ramp)
+        ramp_y = ramp_x.T
+        ramp = ramp_x + ramp_y
+
+        ramp = ramp / ramp.max() * contrast
+        # ramp = num.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
+        # convolution of two 2-dimensional arrays
+
+        shad = fftconvolve(elevation, ramp, mode='valid')
+        shad = -1. * shad
+
+        # if there are strong artifical edges in the data, shades get
+        # dominated by them. Cutting off the largest and smallest 2% of
+        # shades helps
+
+        percentile2 = num.quantile(shad, 0.02)
+        percentile98 = num.quantile(shad, 0.98)
+
+        shad = num.where(shad > percentile98, percentile98, shad)
+        shad = num.where(shad < percentile2, percentile2, shad)
+        shad -= shad.min()
+        shad /= shad.max()
+
+        # normalize to range [0 1]
+        hillshade = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=None,
+            useOpenGL=False)
+        hillshade.resetTransform()
+        hillshade.scale(frame.dE, frame.dN)
+
+        elev_img = pg.ImageItem(
+            None,
+            autoDownsample=False,
+            border=None,
+            useOpenGL=False)
+        elev_img.resetTransform()
+        elev_img.scale(frame.dE, frame.dN)
+
+        elev_img.updateImage(elevation.T, autoLevels=True)
+        hillshade.updateImage(shad.T, autoLevels=True)
+
+        self.hillshade = hillshade
+        self.elevation = elev_img
+        self.removeItem(self.image)
+        self.addItem(self.elevation)
+        self.addItem(self.hillshade)
+        self.addItem(self.image)
+
+        self.update()
+
+    def disableHillshade(self):
+        if not self.hillshade:
+            return
+        self.removeItem(self.hillshade)
+        self.hillshade = None
+
     def transFromFrame(self):
         frame = self.model.frame
 
@@ -252,7 +332,9 @@ class KitePlot(pg.PlotWidget):
 
     @QtCore.pyqtSlot()
     def _updateImageFromData(self):
-        self.image.updateImage(self.data.T)
+        self.image.updateImage(
+            self.data.T,
+            opacity=.7 if self.hillshade else 1.)
 
         self.hint['precision'], self.hint['vlength'] =\
             calcPrecission(self.data)
@@ -288,6 +370,8 @@ class KiteToolColormap(pg.HistogramLUTWidget):
     def __init__(self, plot):
         pg.HistogramLUTWidget.__init__(self, image=plot.image)
         self._plot = plot
+        self.prev_levels = None
+        self.symmetric_colormap = True
 
         zero_marker = pg.InfiniteLine(
             pos=0,
@@ -304,7 +388,12 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         # self.gradient.setOrientation('bottom')
         self.setSymColormap()
         self._plot.image.sigImageChanged.connect(self.imageChanged)
+
+        self.sigLevelsChanged.connect(self.symmetricLevels)
         # self.isoCurveControl()
+
+    def set_symmetric_colormap(self, symmetric):
+        self.symmetric_colormap = symmetric
 
     @QtCore.pyqtSlot()
     def imageChanged(self):
@@ -312,6 +401,26 @@ class KiteToolColormap(pg.HistogramLUTWidget):
             self.setQualitativeColormap()
         else:
             self.setSymColormap()
+
+        max_range = num.nanmax(num.abs(self._plot.data))
+        if max_range is not num.nan:
+            self.vb.setYRange(-max_range, max_range)
+
+    @QtCore.pyqtSlot(object)
+    def symmetricLevels(self, *args):
+        if not self.symmetric_colormap:
+            return
+
+        levels = self.getLevels()
+        if self.prev_levels is None:
+            self.prev_levels = levels
+
+        min_changed = bool(self.prev_levels[0] - levels[0])
+        func = min if min_changed else max
+
+        max_lvl = abs(func(levels))
+        self.prev_levels = levels
+        self.setLevels(-max_lvl, max_lvl)
 
     def setSymColormap(self):
         cmap = {'ticks':
@@ -327,7 +436,11 @@ class KiteToolColormap(pg.HistogramLUTWidget):
                  [1., (51, 53, 120)]],
                 'mode': 'rgb'}
 
-        lvl_max = num.nanmax(num.abs(self._plot.data)) * 1.01
+        relevant_data = num.abs(self._plot.data[num.isfinite(self._plot.data)])
+        if num.any(relevant_data):
+            lvl_max = num.quantile(relevant_data, .999)
+        else:
+            lvl_max = 1.
 
         self.gradient.restoreState(cmap)
         self.setLevels(-lvl_max, lvl_max)
@@ -361,6 +474,8 @@ class KiteParameterGroup(pTypes.GroupParameter):
     def __init__(self, model, model_attr=None, **kwargs):
         self.model = model
         self.model_attr = model_attr
+
+        self.parameters = getattr(self, 'parameters', [])
 
         if isinstance(self.parameters, list):
             self.parameters = dict.fromkeys(self.parameters)

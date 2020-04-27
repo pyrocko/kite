@@ -4,25 +4,36 @@ import numpy as num
 import utm
 import os.path as op
 import copy
+import hashlib
+import time
 from datetime import datetime as dt
+from scipy import interpolate
 
-from pyrocko import guts
-from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy  # noqa
+from pyrocko.guts import Object, Float, StringChoice, String, Timestamp, \
+    Dict, load
+from pyrocko.dataset.topo import srtmgl3
+from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
 
 from kite.quadtree import QuadtreeConfig
 from kite.covariance import CovarianceConfig
+
+from kite.aps import APSConfig, APS
+from kite.gacos import GACOSConfig, GACOSCorrection
+from kite.deramp import Deramp, DerampConfig
+
 from kite.util import Subject, property_cached
 from kite import scene_io
 
+from kite.scene_mask import PolygonMask, PolygonMaskConfig
+
 
 def read(filename):
-    scene = Scene()
     try:
-        scene.load(filename)
-        return scene
+        return Scene.load(filename)
     except (ImportError, UserIOWarning):
         pass
     try:
+        scene = Scene()
         scene.import_data(filename)
         return scene
     except ImportError:
@@ -45,21 +56,21 @@ class SceneError(Exception):
     pass
 
 
-class FrameConfig(guts.Object):
+class FrameConfig(Object):
     """Config object holding :class:`kite.scene.Scene` configuration """
-    llLat = guts.Float.T(
+    llLat = Float.T(
         default=0.,
         help='Scene latitude of lower left corner')
-    llLon = guts.Float.T(
+    llLon = Float.T(
         default=0.,
         help='Scene longitude of lower left corner')
-    dN = guts.Float.T(
+    dN = Float.T(
         default=25.,
         help='Scene pixel spacing in north, give [m] or [deg]')
-    dE = guts.Float.T(
+    dE = Float.T(
         default=25.,
         help='Scene pixel spacing in east, give [m] or [deg]')
-    spacing = guts.StringChoice.T(
+    spacing = StringChoice.T(
         choices=('degree', 'meter'),
         default='meter',
         help='Unit of pixel space')
@@ -77,7 +88,7 @@ class FrameConfig(guts.Object):
                 kwargs['spacing'] = 'degree'
                 self.old_import = True
 
-        guts.Object.__init__(self, *args, **kwargs)
+        Object.__init__(self, *args, **kwargs)
 
 
 class Frame(object):
@@ -86,7 +97,7 @@ class Frame(object):
     The pixel spacing is given by ``dE`` and ``dN`` which can meters or degree.
     """
 
-    def __init__(self, scene, config=FrameConfig()):
+    def __init__(self, scene, config=None):
         self.evChanged = Subject()
         self._scene = scene
         self._log = scene._log.getChild('Frame')
@@ -100,7 +111,7 @@ class Frame(object):
         self.utm_zone_letter = None
         self._meter_grid = None
 
-        self._updateConfig(config)
+        self._updateConfig(config or FrameConfig())
         self._scene.evConfigChanged.subscribe(self._updateConfig)
         self._scene.evChanged.subscribe(self.updateExtent)
 
@@ -124,8 +135,10 @@ class Frame(object):
         self.cols = self._scene.cols
         self.rows = self._scene.rows
 
-        self.llEutm, self.llNutm, self.utm_zone, self.utm_zone_letter = \
-            utm.from_latlon(self.llLat, self.llLon)
+        (self.llEutm,
+         self.llNutm,
+         self.utm_zone,
+         self.utm_zone_letter) = utm.from_latlon(self.llLat, self.llLon)
 
         self.E = None
         self.N = None
@@ -178,21 +191,42 @@ class Frame(object):
     def dEmeter(self):
         if self.isMeter():
             return self.dE
-        else:
-            _, dEmeter = latlon_to_ne(
-                self.llLat, self.llLon,
-                self.llLat, self.llLon + self.dE * self.cols)
+
+        _, dEmeter = latlon_to_ne(
+            self.llLat, self.llLon,
+            self.llLat, self.llLon + self.dE * self.cols)
         return dEmeter / self.cols
 
     @property
     def dNmeter(self):
         if self.isMeter():
             return self.dN
-        else:
-            dNmeter, _ = latlon_to_ne(
-                self.llLat, self.llLon,
-                self.llLat + self.dN * self.rows, self.llLon)
+        dNmeter, _ = latlon_to_ne(
+            self.llLat, self.llLon,
+            self.llLat + self.dN * self.rows, self.llLon)
         return dNmeter / self.rows
+
+    @property
+    def dEdegree(self):
+        if self.isDegree():
+            return self.dE
+
+        lat, lon = ne_to_latlon(
+            self.llLat, self.llLon,
+            0., self.dE * self.cols)
+        distLon = lon - self.llLon
+        return distLon / self.cols
+
+    @property
+    def dNdegree(self):
+        if self.isDegree():
+            return self.dE
+
+        lat, lon = ne_to_latlon(
+            self.llLat, self.llLon,
+            self.dN * self.rows, 0.)
+        distLat = lat - self.llLat
+        return distLat / self.rows
 
     @property
     def spacing(self):
@@ -213,6 +247,14 @@ class Frame(object):
     @property_cached
     def N(self):
         return num.arange(self.rows) * self.dN
+
+    @property
+    def lengthE(self):
+        return self.cols * self.dE
+
+    @property
+    def lengthN(self):
+        return self.rows * self.dN
 
     @property_cached
     def Nmeter(self):
@@ -280,16 +322,25 @@ class Frame(object):
 
     @property_cached
     def coordinates(self):
-        """ Local east and north coordinates [m] of all pixels in
-           ``NxM`` matrix.
+        """ Local east and north coordinates of all pixels in
+           ``Nx2`` matrix.
 
-        :type: :class:`numpy.ndarray`, size ``NxM``
+        :type: :class:`numpy.ndarray`, size ``Nx2``
         """
         coords = num.empty((self.rows*self.cols, 2))
         coords[:, 0] = num.repeat(self.E[num.newaxis, :],
                                   self.rows, axis=0).flatten()
         coords[:, 1] = num.repeat(self.N[:, num.newaxis],
                                   self.cols, axis=1).flatten()
+
+        if self.isMeter():
+            coords = ne_to_latlon(self.llLat, self.llLon, *coords.T)
+            coords = num.array(coords).T
+
+        else:
+            coords[:, 0] += self.llLon
+            coords[:, 1] += self.llLat
+
         return coords
 
     @property_cached
@@ -344,35 +395,35 @@ class Frame(object):
             self.cols == other.cols
 
 
-class Meta(guts.Object):
+class Meta(Object):
     """ Meta configuration for ``Scene``.
     """
-    scene_title = guts.String.T(
+    scene_title = String.T(
         default='Unnamed Scene',
         help='Scene title')
-    scene_id = guts.String.T(
+    scene_id = String.T(
         default='None',
         help='Scene identification')
-    satellite_name = guts.String.T(
+    satellite_name = String.T(
         default='Undefined Mission',
         help='Satellite mission name')
-    wavelength = guts.Float.T(
+    wavelength = Float.T(
         optional=True,
         help='Wavelength in [m]')
-    orbital_node = guts.StringChoice.T(
+    orbital_node = StringChoice.T(
         choices=['Ascending', 'Descending', 'Undefined'],
         default='Undefined',
         help='Orbital direction, ascending/descending')
-    time_master = guts.Timestamp.T(
+    time_master = Timestamp.T(
         default=1481116161.930574,
         help='Timestamp for master acquisition')
-    time_slave = guts.Timestamp.T(
+    time_slave = Timestamp.T(
         default=1482239325.482,
         help='Timestamp for slave acquisition')
-    extra = guts.Dict.T(
+    extra = Dict.T(
         default={},
         help='Extra header information')
-    filename = guts.String.T(
+    filename = String.T(
         optional=True)
 
     def __init__(self, *args, **kwargs):
@@ -387,7 +438,7 @@ class Meta(guts.Object):
                 kwargs[new] = kwargs.pop(old, None)
                 self.old_import = True
 
-        guts.Object.__init__(self, *args, **kwargs)
+        Object.__init__(self, *args, **kwargs)
 
     @property
     def time_separation(self):
@@ -400,7 +451,7 @@ class Meta(guts.Object):
             dt.fromtimestamp(self.time_master)
 
 
-class SceneConfig(guts.Object):
+class SceneConfig(Object):
     """ Configuration object, gathering ``kite.Scene`` and
     sub-objects configuration.
     """
@@ -416,6 +467,18 @@ class SceneConfig(guts.Object):
     covariance = CovarianceConfig.T(
         default=CovarianceConfig.D(),
         help='Covariance parameters')
+    aps = APSConfig.T(
+        default=APSConfig.D(),
+        help='Empirical APS correction')
+    gacos = GACOSConfig.T(
+        default=GACOSConfig.D(),
+        help='GACOS APS correction')
+    polygon_mask = PolygonMaskConfig.T(
+        default=PolygonMaskConfig.D(),
+        help='Displacement mask polygon')
+    deramp = DerampConfig.T(
+        default=DerampConfig.D(),
+        help='Displacement deramp config')
 
     @property
     def old_import(self):
@@ -438,7 +501,8 @@ def dynamicmethod(func):
 class BaseScene(object):
 
     def __init__(self, **kwargs):
-        self._initLogging()
+        self._log = logging.getLogger(self.__class__.__name__)
+
         self.evChanged = Subject()
         self.evConfigChanged = Subject()
 
@@ -450,6 +514,8 @@ class BaseScene(object):
         self.cols = 0
         self.rows = 0
         self.los = LOSUnitVectors(scene=self)
+
+        self._elevation = {}
 
         frame_config = kwargs.pop('frame_config', FrameConfig())
 
@@ -463,9 +529,6 @@ class BaseScene(object):
             data = kwargs.pop(attr, None)
             if data is not None:
                 self.__setattr__(attr, data)
-
-    def _initLogging(self):
-        self._log = logging.getLogger(self.__class__.__name__)
 
     @property
     def displacement(self):
@@ -481,7 +544,6 @@ class BaseScene(object):
     def displacement(self, value):
         _setDataNumpy(self, '_displacement', value)
         self.rows, self.cols = self._displacement.shape
-        self.displacement_mask = None
         self.evChanged.notify()
 
     @property
@@ -499,7 +561,7 @@ class BaseScene(object):
     def displacement_px_var(self, value):
         self._displacement_px_var = value
 
-    @property_cached
+    @property
     def displacement_mask(self):
         """ Displacement :attr:`numpy.nan` mask
 
@@ -509,7 +571,7 @@ class BaseScene(object):
 
     @property
     def shape(self):
-        return self._displacement.shape
+        return self.displacement.shape
 
     @property
     def phi(self):
@@ -619,62 +681,40 @@ class BaseScene(object):
                 * num.sin(self.phi)
         return self._los_factors
 
-    def get_ramp_coefficients(self):
-        '''Fit plane through the displacement data.
+    def get_elevation(self, interpolation='nearest_neighbor'):
+        assert interpolation in ('nearest_neighbor', 'bivariate')
 
-        :returns: Mean of the displacement and slopes in easting coefficients
-            of the fitted plane. The array hold
-            ``[offset_e, offset_n, slope_e, slope_n]``.
-        :rtype: :class:`numpy.ndarray`
-        '''
-        msk = ~self.displacement_mask
-        displacement = self.displacement[msk]
+        if self._elevation.get(interpolation, None) is None:
+            self._log.debug('Getting elevation...')
+            # region = llLon, urLon, llLat, urLon
+            coords = self.frame.coordinates
+            lons = coords[:, 0]
+            lats = coords[:, 1]
 
-        coords = self.frame.coordinates[msk.flatten()]
+            region = (lons.min(), lons.max(), lats.min(), lats.max())
+            if not srtmgl3.covers(region):
+                raise AssertionError(
+                    'Region is outside of SRTMGL3 topo dataset')
 
-        # Add ones for the offset
-        coords = num.hstack((
-            num.ones_like(coords),
-            coords))
+            tile = srtmgl3.get(region)
+            if not tile:
+                raise AssertionError('Cannot get SRTMGL3 topo dataset')
 
-        coeffs, res, _, _ = num.linalg.lstsq(
-            coords, displacement, rcond=None)
+            if interpolation == 'nearest_neighbor':
+                iy = num.rint((lats - tile.ymin) / tile.dy).astype(num.intp)
+                ix = num.rint((lons - tile.xmin) / tile.dx).astype(num.intp)
 
-        return coeffs
+                elevation = tile.data[(iy, ix)]
 
-    def displacement_deramp(self, demean=True, inplace=True):
-        '''Fit a plane onto the displacement data and substract it
+            elif interpolation == 'bivariate':
+                interp = interpolate.RectBivariateSpline(
+                    tile.y(), tile.x(), tile.data)
+                elevation = interp(lats, lons, grid=False)
 
-        :param demean: Demean the displacement
-        :type demean: bool
-        :param inplace: Replace data of the scene (default: True)
-        :type inplace: bool
+            elevation = elevation.reshape(self.rows, self.cols)
+            self._elevation[interpolation] = elevation
 
-        :return: ``None`` if ``inplace=True`` else a new Scene
-        :rtype: ``None`` or :class:`~kite.Scene`
-        '''
-        self._log.debug('De-ramping scene...')
-        coeffs = self.get_ramp_coefficients()
-        msk = self.displacement_mask
-        coords = self.frame.coordinates
-
-        ramp = coeffs[2:] * coords
-        if demean:
-            ramp += coeffs[:2]
-
-        ramp = ramp.sum(axis=1).reshape(self.shape)
-        ramp[msk] = num.nan
-
-        if inplace:
-            self.displacement -= ramp
-            self.evChanged.notify()
-
-        else:
-            return self.__class__(
-                config=self.config,
-                theta=self.theta,
-                phi=self.phi,
-                displacement=self.displacement - ramp)
+        return self._elevation[interpolation]
 
     def __neg__(self):
         ret = copy.deepcopy(self)
@@ -738,15 +778,51 @@ class Scene(BaseScene):
     :type dLon: float, optional
     """
 
-    def __init__(self, config=SceneConfig(), **kwargs):
-        self.config = config
+    def __init__(self, config=None, **kwargs):
+        self.config = config or SceneConfig()
         self.meta = self.config.meta
 
         BaseScene.__init__(self, frame_config=self.config.frame, **kwargs)
 
         # wiring special methods
         self.import_data = self._import_data
-        self.load = self._load
+
+        self.aps = APS(self, self.config.aps)
+        self.gacos = GACOSCorrection(self, self.config.gacos)
+        self.polygon_mask = PolygonMask(self, self.config.polygon_mask)
+        self.deramp = Deramp(self, self.config.deramp)
+
+        self._proc_displacement = None
+
+        self.processing_states = {
+            self.gacos: None,
+            self.aps: None,
+            self.polygon_mask: None,
+            self.deramp: None
+        }
+
+    @property
+    def displacement(self):
+        if self.has_processing_changed() or self._proc_displacement is None:
+
+            self._proc_displacement = self._displacement.copy()
+            for plugin, state in self.processing_states.items():
+                self.processing_states[plugin] = plugin.get_state_hash()
+                if not plugin.is_enabled():
+                    continue
+
+                t = time.time()
+                plugin.apply(self._proc_displacement)
+                self._log.debug('applied %s in %.4f s',
+                                plugin.__class__.__name__, time.time() - t)
+
+        return self._proc_displacement
+
+    @displacement.setter
+    def displacement(self, value):
+        _setDataNumpy(self, '_displacement', value)
+        self.rows, self.cols = self._displacement.shape
+        self.evChanged.notify()
 
     @property_cached
     def quadtree(self):
@@ -776,6 +852,30 @@ class Scene(BaseScene):
         from kite.plot2d import ScenePlot
         return ScenePlot(self)
 
+    def has_processing_changed(self):
+        for plugin, state in self.processing_states.items():
+            if state != plugin.get_state_hash():
+                self._log.debug(
+                    'processing states changed: %s', plugin.__class__.__name__)
+                return True
+        return False
+
+    def get_plugin_state_hash(self):
+        sha = hashlib.sha1()
+        for plugin, state in self.processing_states.items():
+            sha.update(plugin.get_state_hash().encode())
+
+        return sha.hexdigest()
+
+    def get_state_hash(self):
+        sha = hashlib.sha1()
+        for plugin, state in self.processing_states.items():
+            sha.update(plugin.get_state_hash().encode())
+
+        sha.update(self.covariance.get_state_hash().encode())
+        sha.update(self.quadtree.get_state_hash().encode())
+        return sha.hexdigest()
+
     def spool(self):
         """ Start the spool user interface :class:`~kite.spool.Spool` to inspect
         the scene.
@@ -798,7 +898,7 @@ class Scene(BaseScene):
             self.theta
             self.phi
         except Exception as e:
-            print(e)
+            self._log.exception(e)
             raise ImportError('Something went wrong during import - '
                               'see Exception!')
 
@@ -820,11 +920,14 @@ class Scene(BaseScene):
         _file, ext = op.splitext(filename)
         filename = _file if ext in ['.yml', '.npz'] else filename
 
-        components = ['displacement', 'theta', 'phi']
+        components = ['_displacement', 'theta', 'phi']
         self._log.debug('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),
                   *[getattr(self, arr) for arr in components])
+
+        self.gacos.save(op.dirname(op.abspath(filename)))
+
         self.saveConfig('%s.yml' % filename)
 
     def saveConfig(self, filename):
@@ -835,8 +938,8 @@ class Scene(BaseScene):
         self.config.dump(filename='%s' % filename,
                          header='kite.Scene YAML Config')
 
-    @dynamicmethod
-    def _load(self, filename):
+    @classmethod
+    def load(cls, filename):
         """ Load a kite scene from file ``filename.[npz,yml]``
         structure.
 
@@ -845,32 +948,38 @@ class Scene(BaseScene):
         :returns: Scene object from data resources
         :rtype: :class:`~kite.Scene`
         """
-        scene = self
-        components = ['displacement', 'theta', 'phi']
-
+        filename = op.abspath(filename)
         basename = op.splitext(filename)[0]
-        scene._log.debug('Loading from %s[.npz,.yml]' % basename)
+
         try:
             data = num.load('%s.npz' % basename)
-            for i, comp in enumerate(components):
-                scene.__setattr__(comp, data['arr_%d' % i])
+            displacement = data['arr_0']
+            theta = data['arr_1']
+            phi = data['arr_2']
         except IOError:
             raise UserIOWarning('Could not load data from %s.npz' % basename)
 
         try:
-            scene.load_config('%s.yml' % basename)
+            config = load(filename='%s.yml' % basename)
+            config.meta.filename = filename
         except IOError:
             raise UserIOWarning('Could not load %s.yml' % basename)
 
-        scene.meta.filename = op.basename(filename)
+        scene = cls(
+            displacement=displacement,
+            theta=theta,
+            phi=phi,
+            config=config)
+        scene._log.debug('Loading from %s[.npz,.yml]', basename)
+
+        scene.meta.filename = filename
+
         scene._testImport()
         return scene
 
-    load = staticmethod(_load)
-
     def load_config(self, filename):
-        self._log.debug('Loading config from %s' % filename)
-        self.config = guts.load(filename=filename)
+        self._log.debug('Loading config from %s', filename)
+        self.config = load(filename=filename)
         self.meta = self.config.meta
 
         self.evConfigChanged.notify()
@@ -906,7 +1015,7 @@ class Scene(BaseScene):
         if data is None:
             raise ImportError('Could not recognize format for %s' % path)
 
-        scene.meta.filename = op.basename(path)
+        scene.meta.filename = op.abspath(path)
         return scene._import_from_dict(scene, data)
 
     _class_list = map('* :class:`~kite.scene_io.{}`'.format, scene_io.__all__)
@@ -1002,7 +1111,7 @@ class TestScene(Scene):
         scene.meta.title = 'Synthetic Displacement | Uniform Random'
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        rand_state = num.random.RandomState(seed=1010)
+        rand_state = num.random.RandomState(seed=kwargs.pop('seed', None))
         scene.displacement = (rand_state.rand(nx, ny)-.5)*2
 
         return scene
@@ -1099,8 +1208,8 @@ class TestScene(Scene):
         scene.displacement = disp
         return scene
 
-    def addNoise(self, noise_amplitude):
-        rand = num.random.RandomState()
+    def addNoise(self, noise_amplitude=1., seed=None):
+        rand = num.random.RandomState(seed)
         noise = rand.randn(*self.displacement.shape) * noise_amplitude
         self.displacement += noise
 

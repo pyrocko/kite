@@ -102,6 +102,7 @@ class KiteCovariance(KiteView):
         self.model.sigCovarianceChanged.connect(
             self.dialogCovarianceWarning.test)
 
+        self.main_widget.update()
         self.structure_function.activatePlot()
         self.covariogram.activatePlot()
 
@@ -179,18 +180,26 @@ class KiteNoisePlot(KitePlot):
 
     @QtCore.pyqtSlot()
     def updateNoiseRegion(self):
-        data = self.roi.getArrayRegion(self.image.image, self.image)
+        scene = self.model.getScene()
+
+        llE, llN = self.roi.pos()
+        sizeE, sizeN = self.roi.size()
+
+        llEpx, llNpx = scene.frame.mapENMatrix(llE, llN)
+        sEpx, sNpx = scene.frame.mapENMatrix(sizeE, sizeN)
+        slice_E = slice(llEpx, llEpx + sEpx)
+        slice_N = slice(llNpx, llNpx + sNpx)
+
+        data = scene.displacement[slice_N, slice_E]
         data[data == 0.] = num.nan
         if num.all(num.isnan(data)):
             return
 
-        llE, llN = self.roi.pos()
-        sizeE, sizeN = self.roi.size()
         self.model.covariance.noise_coord = (llE, llN, sizeE, sizeN)
-        self.model.covariance.noise_data = data.T
+        self.model.covariance.noise_data = data
 
 
-class _KiteSubplotPlot(QtGui.QWidget):
+class KiteSubplot(QtGui.QWidget):
     def __init__(self, parent_plot):
         QtGui.QWidget.__init__(self)
         self.parent_plot = parent_plot
@@ -214,10 +223,10 @@ class _KiteSubplotPlot(QtGui.QWidget):
         pass
 
 
-class KiteNoisePowerspec(_KiteSubplotPlot):
+class KiteNoisePowerspec(KiteSubplot):
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
+        KiteSubplot.__init__(self, parent_plot)
 
         self.power = pg.PlotDataItem(antialias=True)
         # self.power_lin = pg.PlotDataItem(antialias=True, pen=pen_green_dash)
@@ -252,7 +261,7 @@ class KiteNoisePowerspec(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.disconnect(self.update)
 
 
-class KiteCovariogram(_KiteSubplotPlot):
+class KiteCovariogram(KiteSubplot):
 
     legend_template = {
         'exponential':
@@ -268,7 +277,7 @@ class KiteCovariogram(_KiteSubplotPlot):
             self.setCursor(QtCore.Qt.SizeVerCursor)
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
+        KiteSubplot.__init__(self, parent_plot)
         self.plot.setLabels(
             bottom=('Distance', 'm'),
             left='Covariance (m<sup>2</sup>)')
@@ -348,7 +357,7 @@ class KiteCovariogram(_KiteSubplotPlot):
         self.model.sigCovarianceChanged.disconnect(self.update)
 
 
-class KiteStructureFunction(_KiteSubplotPlot):
+class KiteStructureFunction(KiteSubplot):
 
     class VarianceLine(pg.InfiniteLine):
         def __init__(self, *args, **kwargs):
@@ -356,8 +365,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
             self.setCursor(QtCore.Qt.SizeVerCursor)
 
     def __init__(self, parent_plot):
-        _KiteSubplotPlot.__init__(self, parent_plot)
-        frame = self.model.frame
+        KiteSubplot.__init__(self, parent_plot)
 
         self.structure = pg.PlotDataItem(
             antialias=True,
@@ -370,8 +378,8 @@ class KiteStructureFunction(_KiteSubplotPlot):
                        'anchors': ((1., 0.), (1., 1.)),
                        'color': pg.mkColor(255, 255, 255, 155)})
         self.plot.setLabels(
-            bottom=('Distance', 'm' if frame.isMeter() else '&deg;'),
-            left='Covariance (m<sup>2</sup>)')
+            bottom=('Distance', 'm'),
+            left='Variance (m<sup>2</sup>)')
 
         self.addItem(self.structure)
         self.addItem(self.variance)
@@ -399,6 +407,7 @@ class KiteStructureFunction(_KiteSubplotPlot):
 
 
 class KiteToolNoise(QtGui.QDialog):
+
     class NoisePlot(KitePlot):
         def __init__(self, model):
             self.components_available = {
@@ -565,6 +574,7 @@ class KiteToolNoise(QtGui.QDialog):
 
 
 class KiteToolWeightMatrix(QtGui.QDialog):
+
     class MatrixPlot(KitePlot):
         def __init__(self, model, parent):
             from pyqtgraph.graphicsItems.GradientEditorItem import Gradients
@@ -770,7 +780,7 @@ class KiteParamCovariance(KiteParameterGroup):
             ('covariance_model_rms', None),
             ('noise_patch_size_km2', None),
             ('noise_patch_coord',
-             lambda c: ', '.join([str(f) for f in c.noise_coord.tolist()])),
+             lambda c: ', '.join(['%.2f' % f for f in c.noise_coord.tolist()]))
             ])
 
         model.sigCovarianceChanged.connect(self.updateValues)
@@ -838,6 +848,20 @@ class KiteParamCovariance(KiteParameterGroup):
         model_function = pTypes.ListParameter(**p)
         model_function.sigValueChanged.connect(changeModelFunction)
 
+        def toggle_adaptive_subsampling(param, checked):
+            model.covariance.config.adaptive_subsampling = checked
+
+        p = {
+            'name': 'adaptive_subsampling',
+            'type': 'bool',
+            'value': model.covariance.config.adaptive_subsampling,
+            'tip': 'detrend the scene'
+        }
+        adaptive_subsampling = pTypes.SimpleParameter(**p)
+        adaptive_subsampling.sigValueChanged.connect(
+            toggle_adaptive_subsampling)
+
+        self.pushChild(adaptive_subsampling)
         self.pushChild(model_function)
         self.pushChild(spatial_bins)
         self.pushChild(spatial_pairs)

@@ -13,6 +13,22 @@ from .base import KiteView, KitePlot, KiteParameterGroup, get_resource
 
 __all__ = ['KiteScene']
 
+km = 1e3
+pen_roi = pg.mkPen(
+    (255, 23, 68), width=2)
+pen_roi_highlight = pg.mkPen(
+    (115, 210, 22), width=2, style=QtCore.Qt.DashLine)
+
+
+class PolygonMaskROI(pg.PolyLineROI):
+
+    def _makePen(self):
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
+            return pen_roi_highlight
+        else:
+            return self.pen
+
 
 class KiteScene(KiteView):
     title = 'Scene'
@@ -20,29 +36,35 @@ class KiteScene(KiteView):
     def __init__(self, spool):
         model = spool.model
         self.model = model
+        self.spool = spool
 
         scene_plot = KiteScenePlot(model)
+        self.scene_plot = scene_plot
         self.main_widget = scene_plot
         self.tools = {
             # 'Components': KiteToolComponents(self.main_widget),
             # 'Displacement Transect': KiteToolTransect(self.main_widget),
         }
 
-        self.param_scene = KiteParamScene(model, scene_plot)
-        self.param_frame = KiteParamSceneFrame(model, expanded=False)
-        self.param_meta = KiteParamSceneMeta(model, expanded=False)
+        self.param_scene = ParamScene(model, scene_plot)
+        self.param_frame = ParamSceneFrame(model, expanded=False)
+        self.param_meta = ParamSceneMeta(model, expanded=False)
 
         self.param_scene.addChild(self.param_frame)
         self.param_scene.addChild(self.param_meta)
 
-        self.parameters = [self.param_scene]
+        self.deramp_ctrl = DerampParams(model)
+
+        self.parameters = [self.param_scene, self.deramp_ctrl]
 
         self.dialogTransect = KiteToolTransect(scene_plot, spool)
 
         spool.actionTransect.triggered.connect(self.dialogTransect.show)
-        spool.actionTransect.setEnabled(True)
-        spool.actionDerampScene.triggered.connect(self.derampScene)
-        spool.actionDerampScene.setEnabled(True)
+
+        spool.actionAddPolygonMask.triggered.connect(scene_plot.newMaskPolygon)
+        spool.actionTogglePolygonMask.setChecked(
+            model.getScene().polygon_mask.is_enabled())
+        spool.actionTogglePolygonMask.toggled.connect(self.togglePolygonMask)
 
         KiteView.__init__(self)
         model.sigSceneModelChanged.connect(self.modelChanged)
@@ -58,16 +80,13 @@ class KiteScene(KiteView):
 
         self.dialogTransect.close()
 
-    def derampScene(self, *args):
-        msg = QtGui.QMessageBox.question(
-            self,
-            'De-ramp Scene',
-            'Are you sure you want to de-ramp the scene?')
-        if msg == QtGui.QMessageBox.StandardButton.Yes:
-            self.model.getScene().displacement_deramp(inplace=True)
+    def togglePolygonMask(self, checked):
+        polygon_mask = self.model.scene.polygon_mask
+        polygon_mask.set_enabled(checked)
 
 
 class KiteScenePlot(KitePlot):
+
     def __init__(self, model):
         self.components_available = {
             'displacement':
@@ -99,6 +118,64 @@ class KiteScenePlot(KitePlot):
 
         model.sigFrameChanged.connect(self.onFrameChange)
         model.sigSceneModelChanged.connect(self.update)
+        self.loadMaskPolygons()
+
+        # Todo: use activateView
+        model.sigSceneChanged.connect(self.update)
+        self.model = model
+
+    def roiToVertices(self, roi):
+        frame = self.model.scene.frame
+        return [(h.pos().x() / frame.dE,
+                 h.pos().y() / frame.dN)
+                for h in roi.getHandles()]
+
+    def verticesToRoi(self, vertices):
+        frame = self.model.scene.frame
+        return [((v[0] / frame.cols) * frame.lengthE,
+                 (v[1] / frame.rows) * frame.lengthN)
+                for v in vertices]
+
+    def loadMaskPolygons(self):
+        scene = self.model.scene
+        for pid, vertices in scene.polygon_mask.polygons.items():
+            self.createMaskPolygon(pid, vertices)
+
+    def newMaskPolygon(self):
+        scene = self.model.scene
+        frame = self.model.scene.frame
+
+        vertices = num.array([
+            (0., 0.), (0., 1.),
+            (1., 1.), (1., 0.)])
+        vertices[:, 0] *= frame.cols / 6
+        vertices[:, 1] *= frame.rows / 6
+        vertices[:, 0] += frame.cols / 2
+        vertices[:, 1] += frame.rows / 2
+
+        pid = scene.polygon_mask.add_polygon(vertices.tolist())
+        self.createMaskPolygon(pid, vertices)
+
+    def createMaskPolygon(self, pid, vertices):
+        roi = PolygonMaskROI(
+            self.verticesToRoi(vertices),
+            pen=pen_roi,
+            movable=False,
+            removable=True,
+            closed=True)
+        roi.pid = pid
+
+        roi.sigRegionChangeFinished.connect(self.updatePolygonMask)
+        roi.sigRemoveRequested.connect(self.removePolygonMask)
+        self.addItem(roi)
+
+    def updatePolygonMask(self, roi):
+        vertices = self.roiToVertices(roi)
+        self.model.scene.polygon_mask.update_polygon(roi.pid, vertices)
+
+    def removePolygonMask(self, roi):
+        self.model.scene.polygon_mask.remove_polygon(roi.pid)
+        self.removeItem(roi)
 
     def onFrameChange(self):
         self.update()
@@ -106,6 +183,7 @@ class KiteScenePlot(KitePlot):
 
 
 class KiteToolTransect(QtGui.QDialog):
+
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
@@ -192,7 +270,7 @@ class KiteToolTransect(QtGui.QDialog):
         return
 
 
-class KiteParamScene(KiteParameterGroup):
+class ParamScene(KiteParameterGroup):
     def __init__(self, model, plot, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = 'Scene'
@@ -237,7 +315,7 @@ class KiteParamScene(KiteParameterGroup):
         self.pushChild(component)
 
 
-class KiteParamSceneFrame(KiteParameterGroup):
+class ParamSceneFrame(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         kwargs['type'] = 'group'
         kwargs['name'] = '.frame'
@@ -264,7 +342,7 @@ class KiteParamSceneFrame(KiteParameterGroup):
                                     **kwargs)
 
 
-class KiteParamSceneMeta(KiteParameterGroup):
+class ParamSceneMeta(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         from datetime import datetime as dt
         kwargs['type'] = 'group'
@@ -338,3 +416,42 @@ class KiteParamSceneMeta(KiteParameterGroup):
         self.pushChild(self.satellite_name)
         self.pushChild(self.scene_id)
         self.pushChild(self.scene_title)
+
+
+class DerampParams(KiteParameterGroup):
+    def __init__(self, model, **kwargs):
+        scene = model.getScene()
+        kwargs['type'] = 'group'
+        kwargs['name'] = 'Scene.detrend'
+
+        KiteParameterGroup.__init__(
+            self, model=model, model_attr='scene', **kwargs)
+
+        p = {
+            'name': 'demean',
+            'type': 'bool',
+            'value': scene.deramp.config.demean,
+            'tip': 'substract mean of displacement'
+        }
+        self.demean = pTypes.SimpleParameter(**p)
+
+        def toggle_demean(param, checked):
+            self.model.getScene().deramp.set_demean(checked)
+
+        self.demean.sigValueChanged.connect(toggle_demean)
+
+        p = {
+            'name': 'applied',
+            'type': 'bool',
+            'value': scene.deramp.config.applied,
+            'tip': 'detrend the scene'
+        }
+        self.applied = pTypes.SimpleParameter(**p)
+
+        def toggle_applied(param, checked):
+            self.model.getScene().deramp.set_enabled(checked)
+
+        self.applied.sigValueChanged.connect(toggle_applied)
+
+        self.pushChild(self.applied)
+        self.pushChild(self.demean)

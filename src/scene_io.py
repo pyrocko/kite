@@ -10,7 +10,7 @@ import numpy as num
 
 from kite import util
 
-__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape']
+__all__ = ['Gamma', 'Matlab', 'ISCE', 'GMTSAR', 'ROI_PAC', 'SARscape', 'SNAP_Gamma']
 
 try:
     from osgeo import gdal
@@ -309,11 +309,11 @@ class Gamma(SceneIO):
         phi_files = glob.glob('%s/%s' % (path, pattern))
         if len(phi_files) == 0:
             self._log.warning('Could not find LOS file %s, '
-                              'defaulting to angle to 0. [rad]' % pattern)
+                              'defaulting to angle to 0.' % pattern)
             return 0.
         elif len(phi_files) > 1:
             self._log.warning('Found multiple LOS files %s, '
-                              'defaulting to angle 0. [rad]' % pattern)
+                              'defaulting to angle 0.' % pattern)
             return 0.
 
         filename = phi_files[0]
@@ -344,7 +344,7 @@ class Gamma(SceneIO):
 
         ncols = int(params['width'])
         nlines = int(params['nlines'])
-        radar_frequency = params_slc.get('radar_frequency', None)
+        radar_frequency = float(params_slc.get('radar_frequency', None))
 
         displ = num.fromfile(filename, dtype='>f4')
         # Resize array if last line is not scanned completely
@@ -821,7 +821,7 @@ class GMTSAR(SceneIO):
         c.frame.spacing = 'degree'
         c.frame.llLat = grd.variables['lat'][:].min()
         c.frame.llLon = grd.variables['lon'][:].min()
-       
+
         c.frame.dN = (grd.variables['lat'][:].max() -
                       c.frame.llLat) / shape[0]
         c.frame.dE = (grd.variables['lon'][:].max() -
@@ -842,7 +842,7 @@ class GMTSAR(SceneIO):
             c.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
-            self._log.warning('Defaulting theta to pi/2 and phi to 0. [rad]')
+            self._log.warning('Defaulting theta to pi/2 and phi to 0.')
             c.theta = num.pi/2
             c.phi = 0.
         return c
@@ -1149,3 +1149,229 @@ class ARIA(SceneIO):
             return True
 
         return False
+
+
+class SNAP_Gamma(SceneIO):
+    """SNAP import
+
+    Reading geocoded displacement maps (unwrapped igs) originating
+    from SNAP software using the export option.
+
+    When georeferencing the scene, export the incidence angle from ellpsoid in
+    the tab **Processing Parameters**.
+    Export the unwrapped **displacement** band and
+    **incidenceAngleFromEllipsoid** to Gamma format:
+
+    1. File -> Export -> SAR Formats -> Gamma
+
+    Select **Metadata -> Abstracted_Metadata** and
+    2. File -> Export -> Other -> Product Metadata.
+
+    .. note :: Expects:
+
+        * [:file:`*`] Binary file from SNAP Gamma Export with displacement in
+            radians
+        * [:file:`*.Abstracted_Metadata.txt`] Metadata (parameter) file
+            If you want to translate radians to
+            meters using the `radar_frequency`.
+        * [:file:`*par`] Parameter file, describing ``first_near_lat,
+        last_near_long, num_output_lines, num_samples_per_line,
+                lat_pixel_res, lon_pixel_res, radar_frequency and heading.``
+        * [:file:`incidenceAngleFromEllipsoid.rslc`] Incidence angle file.
+
+    .. warning ::
+
+        * Data has to be georeferenced to latitude/longitude or UTM!
+        * Look vector files - expected to have a particular name
+    """
+    @staticmethod
+    def _parseParameterFile(filename):
+        params = {}
+        rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
+        with open(filename, mode='r') as par:
+            for line in par:
+                if line[:29] == 'metadata.Abstracted_Metadata.':
+                    parsed = rc.match(line[29:])
+                    if parsed is None:
+                        continue
+
+                    groups = parsed.groups()
+                    params[groups[0]] = safe_cast(
+                        groups[1], float,
+                        default=groups[1].strip())
+        return params
+
+    def _getParameters(self, path, log=False):
+        required_utm = (
+            'post_north', 'post_east', 'corner_east',
+            'corner_north', 'num_output_lines',
+            'num_samples_per_line')
+        required_lat_lon = (
+            'first_near_lat', 'last_near_long',
+            'num_output_lines', 'num_samples_per_line',
+            'lat_pixel_res', 'lon_pixel_res')
+
+        par_file = glob.glob(op.join(path, '*Abstracted_Metadata.txt'))
+        for file in par_file:
+            params = self._parseParameterFile(file)
+            if check_required(required_utm, params)\
+               or check_required(required_lat_lon, params):
+                if not log:
+                    self._log.info('Found parameter file %s' % file)
+                return op.basename(file), params
+
+        raise ImportError(
+            'Parameter file %s does not hold required parameters' %
+            par_file)
+
+    def validate(self, filename, **kwargs):
+        try:
+            folder = op.dirname(op.abspath(filename))
+            self._getParameters(folder)
+            return True
+        except ImportError:
+            return False
+
+    def _getLOSAngles(self, filename, pattern):
+        path = op.dirname(op.realpath(filename))
+        phi_files = glob.glob(op.join(path, pattern))
+        if len(phi_files) == 0:
+            self._log.warning('Could not find LOS file %s, '
+                              'defaulting to angle to 0.', pattern)
+            return 0.
+        elif len(phi_files) > 1:
+            self._log.warning('Found multiple LOS files %s, '
+                              'defaulting to angle 0.', pattern)
+            return 0.
+
+        filename = phi_files[0]
+        self._log.info('Loading LOS %s from %s' % (pattern, filename))
+        return num.memmap(filename, mode='r', dtype='>f4')
+
+    def read(self, filename, **kwargs):
+        """
+        :param filename: Gamma software parameter file
+        :type filename: str
+        :param par_file: Corresponding parameter (:file:`*par`) file.
+                         (optional)
+        :type par_file: str
+        :returns: Import dictionary
+        :rtype: dict
+        :raises: ImportError
+        """
+        par_file, params = self._getParameters(
+            op.dirname(op.abspath(filename)), log=True)
+
+        ncols = int(params['num_samples_per_line'])
+        nlines = int(params['num_output_lines'])
+        radar_frequency = params.get('radar_frequency', None)
+        heading_par = float(params.get('centre_heading', None))
+        displ = num.fromfile(filename, dtype='>f4')
+
+        # Resize array if last line is not scanned completely
+        fill = 0
+        if (displ.size % ncols) != 0:
+            fill = num.empty(ncols - displ.size % ncols)
+            fill.fill(num.nan)
+            displ = num.append(displ, fill)
+
+        displ = displ.reshape(nlines, ncols)
+        displ[displ == -0.] = num.nan
+        displ = num.flipud(displ)
+
+        if radar_frequency and '_dsp_' not in par_file:
+            radar_frequency = float(radar_frequency)
+            radar_frequency *= 1e6  # SNAP gives MHz
+            self._log.info('Scaling displacement by radar_frequency %f GHz',
+                           radar_frequency/1e9)
+            wavelength = util.C / radar_frequency
+            displ /= -4*num.pi
+            displ *= wavelength
+
+        elif not radar_frequency and '_dsp_' not in par_file:
+            self._log.warning('Could not determine radar_frequency!')
+            wavelength = None
+
+        else:
+            wavelength = None
+
+        inc_angle = self._getLOSAngles(
+            filename, 'incidenceAngleFromEllipsoid.rslc').copy()
+        if fill:
+            inc_angle = num.append(inc_angle, fill)
+        inc_angle[inc_angle == 0.] = num.nan
+
+        phi = num.full_like(displ, (180. - heading_par))
+        theta = 90. - inc_angle.reshape(displ.shape)
+        theta = num.flipud(theta)
+
+        c = self.container
+
+        c.displacement = displ
+        c.theta = theta * d2r
+        c.phi = phi * d2r
+
+        c.meta.wavelength = wavelength
+        c.meta.title = params.get('PRODUCT', 'SNAP Import')
+        c.meta.satellite_name = params.get('SPH_DESCRIPTOR', 'None')
+
+        orb = params.get('PASS', None)
+        c.meta.orbital_node = orb.title() if orb else None
+
+        c.bin_file = filename
+        c.par_file = par_file
+
+        if params['map_projection'] == 'UTM':
+            utm_zone = params['projection_zone']
+            try:
+                utm_zone_letter = utm.latitude_to_zone_letter(
+                    params['center_latitude'])
+            except ValueError:
+                self._log.warning('Could not parse UTM Zone letter,'
+                                  ' defaulting to N!')
+                utm_zone_letter = 'N'
+
+            self._log.info('Using UTM reference: Zone %d%s',
+                           utm_zone, utm_zone_letter)
+            c.frame.spacing = 'meter'
+
+            dN = abs(params['post_north'])
+            dE = abs(params['post_east'])
+
+            utm_corn_e = params['corner_east']
+            utm_corn_n = params['corner_north']
+
+            utm_corn_eo = utm_corn_e + dE * displ.shape[1]
+            utm_corn_no = utm_corn_n + dN * displ.shape[0]
+
+            utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
+            utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
+
+            llLat, llLon = utm.to_latlon(utm_e.min(), utm_n.min(),
+                                         utm_zone, utm_zone_letter)
+
+        else:
+            self._log.info('Using Lat/Lon reference')
+            c.frame.spacing = 'degree'
+
+            if orb.lower() == 'ascending':
+                llLat = params['last_near_lat']
+                llLon = params['last_near_long']
+
+            elif orb.lower() == 'descending':
+                llLat = params['last_far_lat']
+                llLon = params['first_near_long']
+
+            else:
+                raise AttributeError('cannot determine orbit')
+
+            dE = abs(params['lon_pixel_res'])
+            dN = abs(params['lat_pixel_res'])
+
+        c.frame.llLat = llLat
+        c.frame.llLon = llLon
+
+        c.frame.dE = dE
+        c.frame.dN = dN
+
+        return c

@@ -127,9 +127,9 @@ static state_covariance calc_covariance_matrix(
     for (il1=0; il1<nleaves; il1++) {
         if (adaptive_subsampling) {
             l_length = map[il1*4+1] - map[il1*4+0];
-            subsampling[il1] = ceil(LOG2(l_length)) * 2;
+            subsampling[il1] = ceil(LOG2(l_length));
         } else {
-           subsampling[il1] = 1;
+            subsampling[il1] = 1;
         }
     }
 
@@ -228,10 +228,11 @@ static state_covariance calc_covariance_matrix(
         }
     #endif
     Py_END_ALLOW_THREADS
+    finished_combinations = 0;
     return SUCCESS;
 }
 
-static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
+static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args, PyObject *kwds) {
     PyObject *E_arr, *N_arr, *map_arr, *coeff;
     PyArrayObject *c_E_arr, *c_N_arr, *c_map_arr, *cov_arr;
 
@@ -240,11 +241,25 @@ static PyObject* w_calc_covariance_matrix(PyObject *m, PyObject *args) {
     npy_intp shape_coord[2], shape_dist[2], nleaves;
     npy_intp shape_want_map[2] = {-1, 4};
 
+    nthreads = 0;
+    adaptive_subsampling = 1;
+
     struct module_state *st = GETSTATE(m);
     state_covariance err;
 
-    if (! PyArg_ParseTuple(args, "OOOOdII", &E_arr, &N_arr, &map_arr, &coeff, &variance, &nthreads, &adaptive_subsampling)) {
-        PyErr_SetString(st->error, "usage: distances(EastCoords, NorthCoords, map, model_coefficients, nthreads, adaptive_subsampling)");
+    static char *kwlist[] = {
+        "E",
+        "N",
+        "map",
+        "coefficients",
+        "variance",
+        "nthreads",
+        "adaptive_subsampling",
+        NULL
+    };
+
+    if (! PyArg_ParseTupleAndKeywords(args, kwds, "OOOOd|Ip", kwlist, &E_arr, &N_arr, &map_arr, &coeff, &variance, &nthreads, &adaptive_subsampling)) {
+        PyErr_SetString(st->error, "usage: distances(East, North, map, model_coefficients, nthreads=0, adaptive_subsampling=True)");
         return NULL;
     }
 
@@ -298,11 +313,17 @@ static PyObject* w_get_finished_combinations(PyObject *m) {
 }
 
 static PyMethodDef CovarianceExtMethods[] = {
-    {"covariance_matrix", (PyCFunction)w_calc_covariance_matrix, METH_VARARGS,
-     "Calculates the covariance matrix for full resolution." },
-    {"get_finished_combinations", (PyCFunction)w_get_finished_combinations, METH_NOARGS,
-     "Get the number of finished combinations. Total combinations are nleaves*(nleaves+1)/2." },
-    {NULL, NULL}         /* Sentinel */
+    {
+     "covariance_matrix",
+     (PyCFunctionWithKeywords) w_calc_covariance_matrix,
+     METH_VARARGS | METH_KEYWORDS,
+     "Calculates the covariance matrix for full resolution."
+    }, {
+     "get_finished_combinations",
+     (PyCFunction) w_get_finished_combinations,
+     METH_NOARGS,
+     "Get the number of calculated combinations. Total combinations are nleaves*(nleaves+1)/2."
+    }, {NULL, NULL}         /* Sentinel */
 };
 
 static int calc_covariance_matrix_traverse(PyObject *m, visitproc visit, void *arg) {
