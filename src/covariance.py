@@ -773,7 +773,6 @@ class Covariance(object):
         # noise = squareMatrix(noise)
         shift = num.fft.fftshift
 
-        noise -= noise.mean()
         spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
         power_spec = (num.abs(spectrum)/spectrum.size)**2
 
