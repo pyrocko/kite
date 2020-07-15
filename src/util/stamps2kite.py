@@ -162,8 +162,18 @@ def interpolate_look_angles(data):
          data.bin_radar_i.ravel() - data.radar_coords[1].min()])
 
     interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles)
-    data.bin_look_angles = interp(radar_coords.T).reshape(
+    bin_look_angles = interp(radar_coords.T).reshape(
         *data.bin_ps_mean_v.shape)
+
+    npix_missing_la = num.isnan(
+        bin_look_angles[~num.isnan(data.bin_ps_mean_v)]).sum()
+
+    if npix_missing_la:
+        log.warning(
+            'Found %i pixels in displacements that have no look angle'
+            ' information! This may result in errors later!' % npix_missing_la)
+
+    data.bin_look_angles = bin_look_angles
     return interp
 
 
