@@ -147,7 +147,7 @@ def interpolate_look_angles(data):
               data.px_width, data.px_length)
     log.debug('Radar coordinates data: length %d - %d; width %d - %d',
               data.radar_coords[1].min(), data.radar_coords[1].max(),
-              data.radar_coords[0].min(), data.radar_coords[0].max())
+              data.radar_coords[2].min(), data.radar_coords[2].max())
     log.debug('Binned radar coordinate ranges: length %d - %d; width %d - %d',
               num.nanmin(data.bin_radar_i), num.nanmax(data.bin_radar_i),
               num.nanmin(data.bin_radar_j), num.nanmax(data.bin_radar_j))
@@ -158,7 +158,7 @@ def interpolate_look_angles(data):
         .reshape(2, 2500)
 
     radar_coords = num.vstack(
-        [data.bin_radar_j.ravel() - data.radar_coords[0].min(),
+        [data.bin_radar_j.ravel() - data.radar_coords[2].min(),
          data.bin_radar_i.ravel() - data.radar_coords[1].min()])
 
     interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles)
