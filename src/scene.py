@@ -920,7 +920,7 @@ class Scene(BaseScene):
         _file, ext = op.splitext(filename)
         filename = _file if ext in ['.yml', '.npz'] else filename
 
-        components = ['_displacement', 'theta', 'phi']
+        components = ['_displacement', 'theta', 'phi', 'displacement_px_var']
         self._log.debug('Saving scene data to %s.npz' % filename)
 
         num.savez('%s.npz' % (filename),
@@ -953,9 +953,13 @@ class Scene(BaseScene):
 
         try:
             data = num.load('%s.npz' % basename)
+            print(num.shape(data))
             displacement = data['arr_0']
             theta = data['arr_1']
             phi = data['arr_2']
+            if num.shape(data)[0]>3:
+                displacement_px_var = data['arr_3']
+
         except IOError:
             raise UserIOWarning('Could not load data from %s.npz' % basename)
 
@@ -965,11 +969,20 @@ class Scene(BaseScene):
         except IOError:
             raise UserIOWarning('Could not load %s.yml' % basename)
 
-        scene = cls(
-            displacement=displacement,
-            theta=theta,
-            phi=phi,
-            config=config)
+        if num.shape(data)[0]>3:
+            scene = cls(
+                displacement=displacement,
+                theta=theta,
+                phi=phi,
+                displacement_px_var = displacement_px_var,
+                config=config)
+        else:
+            scene = cls(
+                displacement=displacement,
+                theta=theta,
+                phi=phi,
+                config=config)
+                
         scene._log.debug('Loading from %s[.npz,.yml]', basename)
 
         scene.meta.filename = filename
