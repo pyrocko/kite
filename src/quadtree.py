@@ -102,7 +102,10 @@ class QuadNode(object):
         if self.displacement_px_var is not None:
             nvalid_leaf = num.sum(num.isfinite(self.displacement_px_var))
             nmat = nvalid_leaf * nvalid_leaf
-            return float(num.nansum(self.displacement_px_var)/nmat)
+            if nmat>0.:
+                return float(num.nansum(self.displacement_px_var)/nmat)
+            else:
+                return float(0.)
             
         return None
 

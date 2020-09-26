@@ -953,7 +953,6 @@ class Scene(BaseScene):
 
         try:
             data = num.load('%s.npz' % basename)
-            print(num.shape(data))
             displacement = data['arr_0']
             theta = data['arr_1']
             phi = data['arr_2']
