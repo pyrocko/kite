@@ -547,11 +547,11 @@ class Covariance(object):
                             self.config.adaptive_subsampling)\
                 .reshape(nleaves, nleaves)
 
-            if self.quadtree.leaf_mean_px_var is not None:
+            if self.quadtree.leaf_mat_mean_px_var is not None:
                 self._log.debug(
                     'Adding variance from scene.displacement_px_var')
                 cov_matrix[num.diag_indices_from(cov_matrix)] +=\
-                    self.quadtree.leaf_mean_px_var
+                    self.quadtree.leaf_mat_mean_px_var
 
         else:
             raise TypeError('Covariance calculation %s method not defined!'
