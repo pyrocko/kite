@@ -5,13 +5,13 @@ import utm
 import re
 import os.path as op
 import pyrocko.orthodrome as od
-
+import osgeo 
 from scipy import stats
 
 from kite.scene import Scene, SceneConfig
 
 
-log = logging.getLogger('bbd2kite')
+log = logging.getLogger('bbdtl32kite')
 
 d2r = num.pi/180.
 r2d = 180./num.pi
@@ -26,12 +26,11 @@ class DataStruct(dict):
         self[attr] = value
 
 
-def read_projection(filename):
+def read_projection(filename, bbox):
     prj_filename = op.splitext(filename)[0] + '.prj'
     if not op.exists(prj_filename):
         log.warning('Could not find %s, defaulting to UTM Zone 32N')
         return 32, 'N'
-
     with open(prj_filename, 'r') as f:
         matches = re.findall(r'[\'"](\w*)[\'"]', f.read())
 
@@ -40,11 +39,23 @@ def read_projection(filename):
         return 32, 'N'
 
     projection = matches[0]
-    if 'UTM' not in projection:
-        raise AttributeError('Projection is not UTM: %s' % projection)
+    if 'UTM' in projection:
+        zone, letter = int(projection[-3:-1]), projection[-1]
+        log.info('Projection is: %s' % projection)
+    elif 'UTM' not in projection:
+        if 'ETRS89' in projection:
+            log.info('Projection is: %s' % projection)
+            utm_coords = utm.from_latlon(bbox[0], bbox[1])
+            zone = utm_coords[2]
+            letter = utm_coords[3]
+        else:
+            log.warning('Unknown projection: %s , \
+                         assume geographic coordinates anyway.' % projection)
+            utm_coords = utm.from_latlon(bbox[0], bbox[1])
+            zone = utm_coords[2]
+            letter = utm_coords[3]
 
-    zone, letter = int(projection[-3:-1]), projection[-1]
-    return zone, letter
+    return projection, zone, letter
 
 
 def read_shapefile(filename):
@@ -53,10 +64,8 @@ def read_shapefile(filename):
 
     npoints = shp.numRecords
     field_name_map = {fld[0].lower(): fld[0] for fld in shp.fields}
-
     data = DataStruct()
     data.bbox = shp.bbox
-
     data.ps_mean_v = num.zeros(npoints)
     data.ps_mean_var = num.zeros(npoints)
     los_n = num.zeros(npoints)
@@ -69,19 +78,55 @@ def read_shapefile(filename):
         shape = sr.shape
         record = sr.record
         # assert shape.shapeType == 11
-
-        los_n[isr] = getattr(record, field_name_map['los_north'])
-        los_e[isr] = getattr(record, field_name_map['los_east'])
-        los_u[isr] = -getattr(record, field_name_map['los_up'])
-
-        data.ps_mean_v[isr] = getattr(record, field_name_map['mean_velo'])
-        data.ps_mean_var[isr] = getattr(record, field_name_map['var_mean_v'])
+        if 'vup' in field_name_map:
+            data.ps_mean_v[isr] = getattr(record, field_name_map['vup'])
+            data.ps_mean_var[isr] = getattr(record, field_name_map['var_vup'])
+            los_n[isr] = 0.
+            los_e[isr] = 0.
+            los_u[isr] = 1. 
+        else:
+            if 'vlos' in field_name_map:
+                data.ps_mean_v[isr] = getattr(record, field_name_map['vlos'])
+                if 'var_vlos' in field_name_map:
+                    data.ps_mean_var[isr] = getattr(record, field_name_map['var_vlos'])
+                elif 'var_mean_v' in field_name_map:
+                    data.ps_mean_var[isr] = getattr(record, field_name_map['var_mean_v'])
+                else:
+                    data.ps_mean_var[isr] = 1.
+                    log.info('Could not find PS variance info. Default to variance of 1.')
+                los_n[isr] = getattr(record, field_name_map['los_north'])
+                los_e[isr] = getattr(record, field_name_map['los_east'])
+                los_u[isr] = -getattr(record, field_name_map['los_up'])
+            elif 'mean_velo' in field_name_map:
+                data.ps_mean_v[isr] = getattr(record, field_name_map['mean_velo'])
+                data.ps_mean_var[isr] = getattr(record, field_name_map['var_mean_v'])
+                los_n[isr] = getattr(record, field_name_map['los_north'])
+                los_e[isr] = getattr(record, field_name_map['los_east'])
+                los_u[isr] = -getattr(record, field_name_map['los_up'])
+            else:
+                raise AttributeError('Unknown displacement attribute (not  mean_velo, not vlos)')
 
         coords[isr] = shape.points[0]
 
-    data.phi = num.arctan2(los_n, los_e)
+    data.phi = num.arctan2(los_n, los_e) - num.pi
     data.theta = num.arcsin(los_u)
-
+    if 'stack_id_1' in field_name_map:
+        stack_id = getattr(record, field_name_map['stack_id_1'])
+    elif 'stack_id' in field_name_map:
+        stack_id = getattr(record, field_name_map['stack_id'])
+    else:
+        stack_id = 'unknown'
+            
+        
+    if stack_id[:3]=='ASC':
+        data.orbit = 'Ascending'
+    elif stack_id[:3]=='DES':
+        data.orbit = 'Descending'
+    else:
+        log.info('Could not determine orbit mode from stack id.')
+        data.orbit = 'x'
+        
+        
     data.easts = coords[:, 0]
     data.norths = coords[:, 1]
 
@@ -93,6 +138,7 @@ def bin_ps_data(data, bins=(800, 800)):
     bin_vels, edg_E, edg_N, _ = stats.binned_statistic_2d(
         data.easts, data.norths, data.ps_mean_v,
         statistic='mean', bins=bins)
+    
 
     log.debug('Binning LOS angles...')
     bin_phi, _, _, _ = stats.binned_statistic_2d(
@@ -119,7 +165,7 @@ def bin_ps_data(data, bins=(800, 800)):
     return data
 
 
-def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
+def bbdtl32kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
     '''Convert BGR BodenBewegungsdienst PS velocity data to a Kite Scene
 
     Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
@@ -139,49 +185,67 @@ def bbd2kite(filename, px_size=(500, 500), import_var=False, convert_m=True):
     :param import_var: bool
     '''
     data = read_shapefile(filename)
-
     if convert_m:
         data.ps_mean_v /= 1e3
         data.ps_mean_var /= 1e3
-
-    # lengthN = od.distance_accurate50m(
-    #     data.bbox[1], data.bbox[0],
-    #     data.bbox[3], data.bbox[0])
-    # lengthE = od.distance_accurate50m(
-    #     data.bbox[1], data.bbox[0],
-    #     data.bbox[1], data.bbox[2])
-
-    lengthE = data.bbox[2] - data.bbox[0]
-    lengthN = data.bbox[3] - data.bbox[1]
-
+        
+    projection, zone, letter = read_projection(filename, data.bbox)    
+    if 'UTM' not in projection:
+        lengthN = od.distance_accurate50m(
+            data.bbox[1], data.bbox[0],
+            data.bbox[3], data.bbox[0])
+        lengthE = od.distance_accurate50m(
+            data.bbox[1], data.bbox[0],
+            data.bbox[1], data.bbox[2])
+    else:
+        lengthE = data.bbox[2] - data.bbox[0]
+        lengthN = data.bbox[3] - data.bbox[1]
+    
     bins = (round(lengthE / px_size[0]),
             round(lengthN / px_size[1]))
-
+    if num.min(bins)<10:
+        raise AttributeError('Set resolution of gridded data is too'
+                              'coarse with %d pixels in east and %d '
+                              'pixels in north direction. '
+                               'Decrease pixel size to get more than '
+                               '10 pixels in both directions.' 
+                               % (int(bins[0]), int(bins[1])))
+    
     bin_ps_data(data, bins=bins)
 
     log.debug('Setting up the Kite Scene')
     config = SceneConfig()
-    zone, letter = read_projection(filename)
-
-    llLat, llLon = utm.to_latlon(
-        data.bbox[0], data.bbox[1], zone, letter)
+    
+    if 'UTM' in projection:
+    
+        llLat, llLon = utm.to_latlon(
+            data.bbox[1], data.bbox[2], zone, letter)
+    else:
+        llLat = data.bbox[1]
+        llLon = data.bbox[0]
+        
     config.frame.llLat = llLat
     config.frame.llLon = llLon
 
     config.frame.dE = data.bin_edg_E[1] - data.bin_edg_E[0]
     config.frame.dN = data.bin_edg_N[1] - data.bin_edg_N[0]
-    config.frame.spacing = 'meter'
+    config.frame.spacing = 'degree'
 
     scene_name = op.basename(op.abspath(filename))
     config.meta.scene_title = '%s (BodenbewegungsDienst import)' % scene_name
-    config.meta.scene_id = scene_name
+    config.meta.scene_id = scene_name[:-4]
+    config.meta.scene_id
+    config.meta.satellite_name = 'Sentinel-1'
+    if data.orbit != 'x':
+        config.meta.orbital_node = data.orbit
+        
     # config.meta.time_master = data.tmin.timestamp()
     # config.meta.time_slave = data.tmax.timestamp()
 
     scene = Scene(
-        theta=data.bin_theta,
-        phi=data.bin_phi,
-        displacement=data.bin_ps_mean_v,
+        theta=data.bin_theta.T,
+        phi=data.bin_phi.T,
+        displacement=data.bin_ps_mean_v.T,
         config=config)
 
     if import_var:
@@ -246,7 +310,7 @@ The data is delivered in ESRI shapefile format.
                 raise UserWarning(
                     'File %s exists! Use --force to overwrite.' % fn_save)
 
-    scene = bbd2kite(filename=args.file, px_size=args.resolution,
+    scene = bbdtl32kite(filename=args.file, px_size=args.resolution,
                      import_var=args.import_var,
                      convert_m=not args.keep_mm)
 
