@@ -41,7 +41,7 @@ def download_licsar(unw_url, destination='.'):
     for unit in ('E', 'N', 'U'):
         fn = '%s.geo.%s.tif' % (scene_id, unit)
         los_url = op.join(meta_url, fn)
-        los_url = re.sub(r'^(http:/)\b', r'\1/', los_url, 0)
+        los_url = re.sub(r'^(https:/)\b', r'\1/', los_url, 0)
         outfn = op.normpath(op.join(destination, fn))
 
         _download_file(los_url, outfn)
