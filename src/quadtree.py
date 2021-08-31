@@ -84,12 +84,31 @@ class QuadNode(object):
 
     @property_cached
     def mean_px_var(self):
-        """ Variance of displacement
+        """ Mean pixel variance of displacement in leaf
         :type: float
         """
         if self.displacement_px_var is not None:
             return float(num.nanmean(self.displacement_px_var))
+            
         return None
+    
+    @property_cached
+    def mat_mean_px_var(self):
+        """ Mean matrix pixel variance in leaf
+        
+        Mean value of Matrix with pixel variance in
+        :type: float
+        """
+        if self.displacement_px_var is not None:
+            nvalid_leaf = num.sum(num.isfinite(self.displacement_px_var))
+            nmat = nvalid_leaf * nvalid_leaf
+            if nmat>0.:
+                return float(num.nansum(self.displacement_px_var)/nmat)
+            else:
+                return float(0.)
+            
+        return None
+
 
     @property_cached
     def corr_median(self):
@@ -759,6 +778,17 @@ class Quadtree(object):
         """
         if self.scene.displacement_px_var is not None:
             return num.array([lf.mean_px_var for lf in self.leaves])
+        return None
+    
+    @property
+    def leaf_mat_mean_px_var(self):
+        """
+        :getter: Mean pixel variance in each quadtree,
+            if :attr:`kite.Scene.displacement_px_var` is set.
+        :type: :class:`numpy.ndarray`, size ``N``.
+        """
+        if self.scene.displacement_px_var is not None:
+            return num.array([lf.mat_mean_px_var for lf in self.leaves])
         return None
 
     @property_cached
