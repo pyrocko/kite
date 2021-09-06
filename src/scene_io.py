@@ -895,8 +895,8 @@ class SARscape(SceneIO):
         c.frame.spacing = 'meter'
 
         c.frame.llLat, c.frame.llLon = utm.to_latlon(
-            float(map_info[3]) - header.lines * dN,
-            float(map_info[4]),
+            float(map_info[3]),
+            float(map_info[4]) - header.lines * dN,
             zone_number=int(map_info[7]),
             northern=True if map_info[8] == 'Northern' else False)
 
