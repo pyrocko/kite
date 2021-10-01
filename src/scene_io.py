@@ -765,7 +765,8 @@ class GMTSAR(SceneIO):
         Expects:
 
         * Displacement grid (NetCDF, :file:`*los_ll.grd`) in meter
-          (in case use "gmt grdmath los_cm_ll.grd 0.01 MUL = los_m_ll.grd')
+          (in case use "gmt grdmath los_cm_ll.grd 0.01 MUL = los_m_ll.grd').
+          If grid file is in netCDF4 format, the python library netCDF4 is needed.
         * LOS binary data (see instruction, :file:`*.los.enu`)
 
     Calculate the corresponding unit look vectors with GMT5SAR ``SAT_look``:
@@ -809,12 +810,29 @@ class GMTSAR(SceneIO):
 
     def read(self, path, **kwargs):
         from scipy.io import netcdf
+        import subprocess
+        
         path = op.abspath(path)
-        c = self.container
-
-        grd = netcdf.netcdf_file(self._getDisplacementFile(path),
+        filename = self._getDisplacementFile(path)
+        command = "ncinfo " + filename
+        subtext = subprocess.Popen(command, 
+                                   stdout=subprocess.PIPE,
+                                   shell=True)
+        (ncinfo, err) = subtext.communicate()
+        ncinfo = str(ncinfo)
+        if ((ncinfo.find('netCDF4')>0) & (ncinfo.find('NETCDF3')<0)):
+            print('GMTSAR grid in netcdf4')
+            from netCDF4 import Dataset 
+            grd = Dataset(self._getDisplacementFile(path), 'r')
+        else:
+            print('GMTSAR grid in netcdf3 classic')
+            grd = netcdf.netcdf_file(self._getDisplacementFile(path),
                                  mode='r', version=2)
+            grd = netcdf.netcdf_file(self._getDisplacementFile(path),
+                                 mode='r', version=2)
+
         displ = grd.variables['z'][:].copy()
+        c = self.container
         c.displacement = displ
         shape = c.displacement.shape
         # LatLon
@@ -834,7 +852,7 @@ class GMTSAR(SceneIO):
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
 
-            phi = num.arctan(n/e)
+            phi = num.arctan2(n,e)
             theta = num.arcsin(u)
             # phi[n < 0] += num.pi
 
