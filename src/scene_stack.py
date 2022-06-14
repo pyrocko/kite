@@ -12,7 +12,6 @@ class TSScene(Scene):
 
 
 class SceneStack(Scene):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -51,9 +50,9 @@ class SceneStack(Scene):
     def add_scene(self, scene, timestamp):
         assert isinstance(scene, TSScene)
         if scene in self._scenes.values():
-            raise AttributeError('Scene already in stack')
+            raise AttributeError("Scene already in stack")
 
-        self._log.info('Adding frame to stack at %s', dtime(timestamp))
+        self._log.info("Adding frame to stack at %s", dtime(timestamp))
         self._scenes[timestamp] = scene
 
         if self.nscenes == 1:
@@ -66,8 +65,7 @@ class SceneStack(Scene):
 
     @property
     def displacement(self):
-        displacement = self._scene_tmax.displacement \
-            - self._scene_tmin.displacement
+        displacement = self._scene_tmax.displacement - self._scene_tmin.displacement
         return displacement
 
     @property
@@ -76,7 +74,7 @@ class SceneStack(Scene):
 
     @displacement.setter
     def displacement(self):
-        raise AttributeError('use add_frame to set the displacement')
+        raise AttributeError("use add_frame to set the displacement")
 
     def get_scene_at(self, timestamp):
         times = self.times
@@ -84,16 +82,15 @@ class SceneStack(Scene):
         return time, self._scenes[time]
 
     def set_time_range(self, tmin, tmax):
-        assert tmin <= tmax, 'required tmin <= tmax'
-        assert tmin >= self.tmin, 'tmin outside of stack time range'
-        assert tmax <= self.tmax, 'tmax outside of stack time range'
+        assert tmin <= tmax, "required tmin <= tmax"
+        assert tmin >= self.tmin, "tmin outside of stack time range"
+        assert tmax <= self.tmax, "tmax outside of stack time range"
 
         if self._range_tmin == tmin and self._range_tmax == tmax:
-            self._log.debug('Time range unchanged')
+            self._log.debug("Time range unchanged")
             return
 
-        self._log.info(
-            'Setting time range to %s - %s', dtime(tmin), dtime(tmax))
+        self._log.info("Setting time range to %s - %s", dtime(tmin), dtime(tmax))
 
         self._selected_tmin = tmin
         self._selected_tmax = tmax

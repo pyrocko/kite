@@ -12,11 +12,10 @@ class APSConfig(PluginConfig):
 
 
 class APS(Plugin):
-
     def __init__(self, scene, config=None):
         self.scene = scene
         self.config = config or APSConfig()
-        self._log = scene._log.getChild('APS')
+        self._log = scene._log.getChild("APS")
 
     def get_elevation(self):
         return self.scene.get_elevation()
@@ -31,16 +30,15 @@ class APS(Plugin):
             rstate = num.random.RandomState(123)
 
             while True:
-                llE = rstate.uniform(0, frame.lengthE * (4/5))
-                llN = rstate.uniform(0, frame.lengthN * (4/5))
+                llE = rstate.uniform(0, frame.lengthE * (4 / 5))
+                llN = rstate.uniform(0, frame.lengthN * (4 / 5))
                 urE = frame.lengthE / 5
                 urN = frame.lengthN / 5
 
                 colmin, colmax = frame.mapENMatrix(llE, llE + urE)
                 rowmin, rowmax = frame.mapENMatrix(llN, llN + urN)
 
-                displacement = scene._displacement[
-                    rowmin:rowmax, colmin:colmax]
+                displacement = scene._displacement[rowmin:rowmax, colmin:colmax]
                 if num.any(displacement):
                     return llE, llN, urE, urN
 
@@ -51,7 +49,7 @@ class APS(Plugin):
         frame = self.scene.frame
         coords = self.get_patch_coords()
         if not coords:
-            raise AttributeError('Set coordinates for APS.')
+            raise AttributeError("Set coordinates for APS.")
 
         colmin, colmax = frame.mapENMatrix(coords[0], coords[0] + coords[2])
         rowmin, rowmax = frame.mapENMatrix(coords[1], coords[1] + coords[3])
@@ -67,12 +65,13 @@ class APS(Plugin):
     def get_correlation(self):
         elevation, displacement = self.get_data()
         slope, intercept, _, _, _ = stats.linregress(
-            elevation.ravel(), displacement.ravel())
+            elevation.ravel(), displacement.ravel()
+        )
 
         return slope, intercept
 
     def apply(self, displacement):
-        self._log.info('Applying APS model to displacement')
+        self._log.info("Applying APS model to displacement")
 
         scene = self.scene
         elevation = scene.get_elevation()

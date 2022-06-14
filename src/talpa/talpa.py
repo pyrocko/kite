@@ -14,16 +14,16 @@ from kite.qt_utils import loadUi, SceneLog, validateFilename
 
 
 class Talpa(QtWidgets.QApplication):
-
     def __init__(self, filename=None):
-        QtWidgets.QApplication.__init__(self, ['Talpa'])
+        QtWidgets.QApplication.__init__(self, ["Talpa"])
 
-        splash_img = QtGui.QPixmap(
-            get_resource('talpa_splash.png'))\
-            .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
+        splash_img = QtGui.QPixmap(get_resource("talpa_splash.png")).scaled(
+            QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio
+        )
         self.splash = QtWidgets.QSplashScreen(
-            splash_img, QtCore.Qt.WindowStaysOnTopHint)
-        self.updateSplashMessage('Talpa')
+            splash_img, QtCore.Qt.WindowStaysOnTopHint
+        )
+        self.updateSplashMessage("Talpa")
         self.splash.show()
         self.processEvents()
 
@@ -42,46 +42,35 @@ class Talpa(QtWidgets.QApplication):
         sys.exit(rc)
 
     @QtCore.pyqtSlot(str)
-    def updateSplashMessage(self, msg=''):
-        self.splash.showMessage("Loading %s ..." % msg.title(),
-                                QtCore.Qt.AlignBottom)
+    def updateSplashMessage(self, msg=""):
+        self.splash.showMessage("Loading %s ..." % msg.title(), QtCore.Qt.AlignBottom)
 
 
 class TalpaMainWindow(QtWidgets.QMainWindow):
-
     def __init__(self, *args, **kwargs):
-        filename = kwargs.pop('filename', None)
+        filename = kwargs.pop("filename", None)
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
-        loadUi(get_resource('talpa.ui'), baseinstance=self)
+        loadUi(get_resource("talpa.ui"), baseinstance=self)
         self.sandbox = SandboxModel.empty()
 
         self.log = SceneLog(self, self.sandbox)
 
-        self.actionSaveModel.triggered.connect(
-            self.onSaveModel)
-        self.actionLoadModel.triggered.connect(
-            self.loadModel)
-        self.actionExportKiteScene.triggered.connect(
-            self.onExportScene)
-        self.actionChangeExtent.triggered.connect(
-            self.extentDialog)
-        self.actionChangeLos.triggered.connect(
-            self.losDialog)
-        self.actionLoadReferenceScene.triggered.connect(
-            self.onLoadReferenceScene)
+        self.actionSaveModel.triggered.connect(self.onSaveModel)
+        self.actionLoadModel.triggered.connect(self.loadModel)
+        self.actionExportKiteScene.triggered.connect(self.onExportScene)
+        self.actionChangeExtent.triggered.connect(self.extentDialog)
+        self.actionChangeLos.triggered.connect(self.losDialog)
+        self.actionLoadReferenceScene.triggered.connect(self.onLoadReferenceScene)
 
-        self.actionConfiguration.triggered.connect(
-            self.configDialog)
+        self.actionConfiguration.triggered.connect(self.configDialog)
 
         self.actionHelp.triggered.connect(
-            lambda: QtGui.QDesktopServices.openUrl('https://pyrocko.org'))
-        self.actionAbout_Talpa.triggered.connect(
-            self.aboutDialog().show)
-        self.actionLog.triggered.connect(
-            self.log.show)
+            lambda: QtGui.QDesktopServices.openUrl("https://pyrocko.org")
+        )
+        self.actionAbout_Talpa.triggered.connect(self.aboutDialog().show)
+        self.actionLog.triggered.connect(self.log.show)
 
-        self.sandbox.sigModelChanged.connect(
-            self.createMisfitWindow)
+        self.sandbox.sigModelChanged.connect(self.createMisfitWindow)
 
         if filename is not None:
             self.loadModel(filename)
@@ -95,7 +84,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
 
     def aboutDialog(self):
         self._about = QtWidgets.QDialog(self)
-        loadUi(get_resource('about.ui'), baseinstance=self._about)
+        loadUi(get_resource("about.ui"), baseinstance=self._about)
         return self._about
 
     @QtCore.pyqtSlot()
@@ -118,8 +107,8 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def onSaveModel(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            filter='YAML *.yml (*.yml)',
-            caption='Save SandboxScene')
+            filter="YAML *.yml (*.yml)", caption="Save SandboxScene"
+        )
         if not validateFilename(filename):
             return
         self.sandbox.model.save(filename)
@@ -128,8 +117,8 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
     def loadModel(self, filename=None):
         if filename is None:
             filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-                filter='YAML *.yml (*.yml)',
-                caption='Load SandboxScene')
+                filter="YAML *.yml (*.yml)", caption="Load SandboxScene"
+            )
         if not validateFilename(filename):
             return
         model = SandboxScene.load(filename)
@@ -137,8 +126,8 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
 
     def onLoadReferenceScene(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            filter='YAML *.yml (*.yml)',
-            caption='Load kite.Scene')
+            filter="YAML *.yml (*.yml)", caption="Load kite.Scene"
+        )
         if not validateFilename(filename):
             return
         self.sandbox.model.loadReferenceScene(filename)
@@ -159,14 +148,16 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
                 self.misfitWindow.close()
 
         self.misfitWindow.windowClosed.connect(
-            lambda: self.actionMisfitScene.setChecked(False))
+            lambda: self.actionMisfitScene.setChecked(False)
+        )
         self.actionMisfitScene.toggled.connect(toggleWindow)
         self.actionMisfitScene.setEnabled(True)
 
     def onExportScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
-            caption='Save scene')
+            filter="YAML *.yml and NumPy container *.npz (*.yml *.npz)",
+            caption="Save scene",
+        )
         if not validateFilename(filename):
             return
         scene = self.sandbox.model.getKiteScene()
@@ -181,17 +172,16 @@ class MisfitWindow(QtWidgets.QMainWindow):
 
     def __init__(self, sandbox, *args, **kwargs):
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
-        loadUi(get_resource('window_reference.ui'), self)
+        loadUi(get_resource("window_reference.ui"), self)
 
         self.move(
-            self.parent().window().mapToGlobal(
-                self.parent().window().rect().center()) -
-            self.mapToGlobal(self.rect().center()))
+            self.parent().window().mapToGlobal(self.parent().window().rect().center())
+            - self.mapToGlobal(self.rect().center())
+        )
 
         self.sandbox = sandbox
 
-        self.actionOptimizeSource.triggered.connect(
-            self.sandbox.optimizeSource)
+        self.actionOptimizeSource.triggered.connect(self.sandbox.optimizeSource)
 
         self.createView(self.sandbox)
 

@@ -10,21 +10,20 @@ from scipy import stats, interpolate, io
 try:
     import h5py
 except ImportError as e:
-    raise e('Please install h5py library')
+    raise e("Please install h5py library")
 
 import matplotlib.pyplot as plt
 from matplotlib import colors
 
 from kite.scene import Scene, SceneConfig
 
-log = logging.getLogger('stamps2kite')
+log = logging.getLogger("stamps2kite")
 
-d2r = num.pi/180.
-r2d = 180./num.pi
+d2r = num.pi / 180.0
+r2d = 180.0 / num.pi
 
 
 class DataStruct(dict):
-
     def __getattr__(self, attr):
         return self[attr]
 
@@ -35,64 +34,56 @@ class DataStruct(dict):
 def _get_file(dirname, fname):
     fns = glob.glob(op.join(dirname, fname))
     if len(fns) == 0:
-        raise ImportError('Cannot find %s file in %s' % (fname, dirname))
+        raise ImportError("Cannot find %s file in %s" % (fname, dirname))
     if len(fns) > 1:
-        raise ImportError('Found multiple files for %s: %s' %
-                          (fname, ', '.join(fns)))
+        raise ImportError("Found multiple files for %s: %s" % (fname, ", ".join(fns)))
     fn = fns[0]
 
-    log.debug('Found file %s', fn)
+    log.debug("Found file %s", fn)
     return fn
 
 
 def _read_mat(filename):
     try:
-        mat = h5py.File(filename, 'r')
+        mat = h5py.File(filename, "r")
     except OSError:
-        log.debug('using old scipy import for %s', filename)
+        log.debug("using old scipy import for %s", filename)
         mat = io.loadmat(filename)
     return mat
 
 
 def read_mat_data(dirname, import_mv2=False, **kwargs):
     # TODO: Add old matlab import
-    log.debug('Reading in StaMPS project...')
+    log.debug("Reading in StaMPS project...")
 
-    fn_ps2 = kwargs.get(
-        'fn_ps2', _get_file(dirname, 'ps2.mat'))
-    fn_ps_plot = kwargs.get(
-        'fn_ps_plot', _get_file(dirname, 'ps_plot*.mat'))
-    fn_parms = kwargs.get(
-        'fn_parms', _get_file(dirname, 'parms.mat'))
-    fn_width = kwargs.get(
-        'fn_width', _get_file(dirname, 'width.txt'))
-    fn_len = kwargs.get(
-        'fn_len', _get_file(dirname, 'len.txt'))
-    fn_look_angle = kwargs.get(
-        'fn_look_angle', _get_file(dirname, 'look_angle.1.in'))
+    fn_ps2 = kwargs.get("fn_ps2", _get_file(dirname, "ps2.mat"))
+    fn_ps_plot = kwargs.get("fn_ps_plot", _get_file(dirname, "ps_plot*.mat"))
+    fn_parms = kwargs.get("fn_parms", _get_file(dirname, "parms.mat"))
+    fn_width = kwargs.get("fn_width", _get_file(dirname, "width.txt"))
+    fn_len = kwargs.get("fn_len", _get_file(dirname, "len.txt"))
+    fn_look_angle = kwargs.get("fn_look_angle", _get_file(dirname, "look_angle.1.in"))
 
     ps2_mat = _read_mat(fn_ps2)
     ps_plot_mat = _read_mat(fn_ps_plot)
     params_mat = _read_mat(fn_parms)
 
     data = DataStruct()
-    data.ll_coords = num.asarray(ps2_mat['ll0'])
-    data.radar_coords = num.asarray(ps2_mat['ij'])
-    data.ps_mean_v = num.asarray(ps_plot_mat['ph_disp']).ravel()
+    data.ll_coords = num.asarray(ps2_mat["ll0"])
+    data.radar_coords = num.asarray(ps2_mat["ij"])
+    data.ps_mean_v = num.asarray(ps_plot_mat["ph_disp"]).ravel()
 
-    geo_coords = num.asarray(ps2_mat['lonlat'])
+    geo_coords = num.asarray(ps2_mat["lonlat"])
     data.lons = geo_coords[0, :]
     data.lats = geo_coords[1, :]
 
-    days = num.asarray(ps2_mat['day'])
+    days = num.asarray(ps2_mat["day"])
     data.tmin = timedelta(days=days.min() - 366.25) + datetime(1, 1, 1)
     data.tmax = timedelta(days=days.max() - 366.25) + datetime(1, 1, 1)
 
     if import_mv2:
-        fn_mv2 = kwargs.get(
-            'fn_mv2', _get_file(dirname, 'mv2.mat'))
-        mv2_mat = h5py.File(fn_mv2, 'r')
-        data.ps_mean_std = num.asarray(mv2_mat['mean_v_std']).ravel()
+        fn_mv2 = kwargs.get("fn_mv2", _get_file(dirname, "mv2.mat"))
+        mv2_mat = h5py.File(fn_mv2, "r")
+        data.ps_mean_std = num.asarray(mv2_mat["mean_v_std"]).ravel()
 
     with open(fn_len) as rl, open(fn_width) as rw:
         data.px_length = int(rl.readline())
@@ -100,9 +91,9 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
 
     data.look_angles = num.loadtxt(fn_look_angle)[::2]
 
-    heading = float(num.asarray(params_mat['heading']))
+    heading = float(num.asarray(params_mat["heading"]))
     if num.isnan(heading):
-        raise ValueError('Heading information in parms.mat is missing!')
+        raise ValueError("Heading information in parms.mat is missing!")
 
     data.heading = heading
 
@@ -110,25 +101,25 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
 
 
 def bin_ps_data(data, bins=(800, 800)):
-    log.debug('Binning StaMPS velocity data...')
+    log.debug("Binning StaMPS velocity data...")
     bin_vels, edg_lat, edg_lon, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.ps_mean_v,
-        statistic='mean', bins=bins)
+        data.lats, data.lons, data.ps_mean_v, statistic="mean", bins=bins
+    )
 
-    log.debug('Binning radar coordinates...')
+    log.debug("Binning radar coordinates...")
     bin_radar_i, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.radar_coords[1],
-        statistic='mean', bins=bins)
+        data.lats, data.lons, data.radar_coords[1], statistic="mean", bins=bins
+    )
     bin_radar_j, _, _, _ = stats.binned_statistic_2d(
-        data.lats, data.lons, data.radar_coords[2],
-        statistic='mean', bins=bins)
+        data.lats, data.lons, data.radar_coords[2], statistic="mean", bins=bins
+    )
 
-    if 'ps_mean_std' in data.keys():
-        log.debug('Binning mean velocity variance...')
+    if "ps_mean_std" in data.keys():
+        log.debug("Binning mean velocity variance...")
         bin_mean_std, _, _, _ = stats.binned_statistic_2d(
-            data.lats, data.lons, data.ps_mean_std,
-            statistic='mean', bins=bins)
-        data.bin_mean_var = bin_mean_std**2  # We want variance
+            data.lats, data.lons, data.ps_mean_std, statistic="mean", bins=bins
+        )
+        data.bin_mean_var = bin_mean_std ** 2  # We want variance
 
     data.bin_ps_mean_v = bin_vels
 
@@ -142,34 +133,45 @@ def bin_ps_data(data, bins=(800, 800)):
 
 
 def interpolate_look_angles(data):
-    log.info('Interpolating look angles from radar coordinates...')
-    log.debug('Radar coordinates extent width %d; length %d',
-              data.px_width, data.px_length)
-    log.debug('Radar coordinates data: length %d - %d; width %d - %d',
-              data.radar_coords[1].min(), data.radar_coords[1].max(),
-              data.radar_coords[0].min(), data.radar_coords[0].max())
-    log.debug('Binned radar coordinate ranges: length %d - %d; width %d - %d',
-              num.nanmin(data.bin_radar_i), num.nanmax(data.bin_radar_i),
-              num.nanmin(data.bin_radar_j), num.nanmax(data.bin_radar_j))
+    log.info("Interpolating look angles from radar coordinates...")
+    log.debug(
+        "Radar coordinates extent width %d; length %d", data.px_width, data.px_length
+    )
+    log.debug(
+        "Radar coordinates data: length %d - %d; width %d - %d",
+        data.radar_coords[1].min(),
+        data.radar_coords[1].max(),
+        data.radar_coords[0].min(),
+        data.radar_coords[0].max(),
+    )
+    log.debug(
+        "Binned radar coordinate ranges: length %d - %d; width %d - %d",
+        num.nanmin(data.bin_radar_i),
+        num.nanmax(data.bin_radar_i),
+        num.nanmin(data.bin_radar_j),
+        num.nanmax(data.bin_radar_j),
+    )
 
     width_coords = num.linspace(0, data.px_width, 50)
     len_coords = num.linspace(0, data.px_length, 50)
-    coords = num.asarray(num.meshgrid(width_coords, len_coords))\
-        .reshape(2, 2500)
+    coords = num.asarray(num.meshgrid(width_coords, len_coords)).reshape(2, 2500)
 
     radar_coords = num.vstack(
-        [data.bin_radar_j.ravel() - data.radar_coords[0].min(),
-         data.bin_radar_i.ravel() - data.radar_coords[1].min()])
+        [
+            data.bin_radar_j.ravel() - data.radar_coords[0].min(),
+            data.bin_radar_i.ravel() - data.radar_coords[1].min(),
+        ]
+    )
 
     interp = interpolate.LinearNDInterpolator(coords.T, data.look_angles)
-    data.bin_look_angles = interp(radar_coords.T).reshape(
-        *data.bin_ps_mean_v.shape)
+    data.bin_look_angles = interp(radar_coords.T).reshape(*data.bin_ps_mean_v.shape)
     return interp
 
 
-def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
-                import_var=False, **kwargs):
-    '''Convert StaMPS velocity data to a Kite Scene
+def stamps2kite(
+    dirname=".", px_size=(800, 800), convert_m=True, import_var=False, **kwargs
+):
+    """Convert StaMPS velocity data to a Kite Scene
 
     Loads the mean PS velocities (from e.g. ``ps_plot(..., -1)``) from a
     StaMPS project, and grids the data into mean velocity bins. The LOS
@@ -219,21 +221,15 @@ def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
 
     :returns: Kite Scene from the StaMPS data
     :rtype: :class:`kite.Scene`
-    '''
+    """
     data = read_mat_data(dirname, import_mv2=import_var, **kwargs)
-    log.info('Found a StaMPS project at %s', op.abspath(dirname))
+    log.info("Found a StaMPS project at %s", op.abspath(dirname))
 
-    bbox = (data.lons.min(), data.lats.min(),
-            data.lons.max(), data.lats.max())
+    bbox = (data.lons.min(), data.lats.min(), data.lons.max(), data.lats.max())
 
-    lengthN = od.distance_accurate50m(
-        bbox[1], bbox[0],
-        bbox[3], bbox[0])
-    lengthE = od.distance_accurate50m(
-        bbox[1], bbox[0],
-        bbox[1], bbox[2])
-    bins = (round(lengthE / px_size[0]),
-            round(lengthN / px_size[1]))
+    lengthN = od.distance_accurate50m(bbox[1], bbox[0], bbox[3], bbox[0])
+    lengthE = od.distance_accurate50m(bbox[1], bbox[0], bbox[1], bbox[2])
+    bins = (round(lengthE / px_size[0]), round(lengthN / px_size[1]))
 
     if convert_m:
         data.ps_mean_v /= 1e3
@@ -244,25 +240,25 @@ def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
     bin_ps_data(data, bins=bins)
     interpolate_look_angles(data)
 
-    log.debug('Processing of LOS angles')
+    log.debug("Processing of LOS angles")
     data.bin_theta = data.bin_look_angles * d2r
 
     phi_angle = -data.heading * d2r + num.pi
     if phi_angle > num.pi:
-        phi_angle -= 2*num.pi
+        phi_angle -= 2 * num.pi
     data.bin_phi = num.full_like(data.bin_theta, phi_angle)
     data.bin_phi[num.isnan(data.bin_theta)] = num.nan
 
-    log.debug('Setting up the Kite Scene')
+    log.debug("Setting up the Kite Scene")
     config = SceneConfig()
     config.frame.llLat = data.bin_edg_lat.min()
     config.frame.llLon = data.bin_edg_lon.min()
     config.frame.dE = data.bin_edg_lon[1] - data.bin_edg_lon[0]
     config.frame.dN = data.bin_edg_lat[1] - data.bin_edg_lat[0]
-    config.frame.spacing = 'degree'
+    config.frame.spacing = "degree"
 
     scene_name = op.basename(op.abspath(dirname))
-    config.meta.scene_title = '%s (StamPS import)' % scene_name
+    config.meta.scene_title = "%s (StamPS import)" % scene_name
     config.meta.scene_id = scene_name
     config.meta.time_master = data.tmin.timestamp()
     config.meta.time_slave = data.tmax.timestamp()
@@ -271,7 +267,8 @@ def stamps2kite(dirname='.', px_size=(800, 800), convert_m=True,
         theta=data.bin_theta,
         phi=data.bin_phi,
         displacement=data.bin_ps_mean_v,
-        config=config)
+        config=config,
+    )
 
     if import_var:
         scene.displacement_px_var = data.bin_mean_var
@@ -283,7 +280,7 @@ def plot_scatter_vel(lat, lon, vel):
     vmax = abs(max(vel.min(), vel.max()))
     norm = colors.Normalize(vmin=-vmax, vmax=vmax)
 
-    plt.scatter(lat, lon, s=5, c=vel, cmap='RdYlBu', norm=norm)
+    plt.scatter(lat, lon, s=5, c=vel, cmap="RdYlBu", norm=norm)
     plt.show()
 
 
@@ -291,7 +288,7 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='''Convert StaMPS data into a Kite scene.
+        description="""Convert StaMPS data into a Kite scene.
 
 Loads the PS velocities from a StaMPS project (i.e. from ps_plot(..., -1);),
 and grids the data into mean velocity bins. The mean LOS velocities will be
@@ -308,38 +305,59 @@ project or the processed small baseline pairs. Required files are:
  - look_angle.1.in  Look angles for the scene.
  - width.txt        Width dimensions of the interferogram and
  - len.txt          length.
- ''',
-        formatter_class=argparse.RawDescriptionHelpFormatter)
+ """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
 
+    parser.add_argument("folder", type=str, default=".", help="StaMPS project folder.")
     parser.add_argument(
-        'folder', type=str,
-        default='.',
-        help='StaMPS project folder.')
+        "--resolution",
+        "-r",
+        nargs=2,
+        metavar=("mN", "mE"),
+        dest="resolution",
+        type=int,
+        default=(500, 500),
+        help="pixel size of the output grid in North and East (meter)."
+        "Default is 500 m by 500 m.",
+    )
     parser.add_argument(
-        '--resolution', '-r', nargs=2, metavar=('mN', 'mE'),
-        dest='resolution', type=int, default=(500, 500),
-        help='pixel size of the output grid in North and East (meter).'
-             'Default is 500 m by 500 m.')
+        "--save",
+        "-s",
+        default=None,
+        type=str,
+        dest="save",
+        help="filename to save the Kite scene to. If not given, the scene"
+        " will be opened in spool GUI.",
+    )
     parser.add_argument(
-        '--save', '-s', default=None, type=str, dest='save',
-        help='filename to save the Kite scene to. If not given, the scene'
-             ' will be opened in spool GUI.')
-    parser.add_argument(
-        '--force', '-f', default=False, action='store_true', dest='force',
-        help='force overwrite of an existing scene.')
-    parser.add_argument(
-        '--keep-mm', action='store_true',
+        "--force",
+        "-f",
         default=False,
-        help='keep mm/a and do not convert to m/a.')
+        action="store_true",
+        dest="force",
+        help="force overwrite of an existing scene.",
+    )
     parser.add_argument(
-        '--import-var', action='store_true', dest='import_var',
+        "--keep-mm",
+        action="store_true",
         default=False,
-        help='import the variance from mv2.mat, which is added to Kite\'s'
-             ' scene covariance matrix.')
+        help="keep mm/a and do not convert to m/a.",
+    )
     parser.add_argument(
-        '-v', action='count',
+        "--import-var",
+        action="store_true",
+        dest="import_var",
+        default=False,
+        help="import the variance from mv2.mat, which is added to Kite's"
+        " scene covariance matrix.",
+    )
+    parser.add_argument(
+        "-v",
+        action="count",
         default=0,
-        help='verbosity, add mutliple to increase verbosity.')
+        help="verbosity, add mutliple to increase verbosity.",
+    )
 
     args = parser.parse_args()
 
@@ -348,25 +366,27 @@ project or the processed small baseline pairs. Required files are:
 
     fn_save = args.save
     if args.save:
-        for fn in (fn_save, fn_save + '.yml', fn_save + '.npz'):
+        for fn in (fn_save, fn_save + ".yml", fn_save + ".npz"):
             if op.exists(fn) and not args.force:
-                raise UserWarning(
-                    'File %s exists! Use --force to overwrite.' % fn_save)
+                raise UserWarning("File %s exists! Use --force to overwrite." % fn_save)
 
-    scene = stamps2kite(dirname=args.folder, px_size=args.resolution,
-                        convert_m=not args.keep_mm,
-                        import_var=args.import_var)
+    scene = stamps2kite(
+        dirname=args.folder,
+        px_size=args.resolution,
+        convert_m=not args.keep_mm,
+        import_var=args.import_var,
+    )
 
     if fn_save:
-        fn_save.rstrip('.yml')
-        fn_save.rstrip('.npz')
+        fn_save.rstrip(".yml")
+        fn_save.rstrip(".npz")
 
-        log.info('Saving StaMPS scene to file %s[.yml/.npz]...', fn_save)
+        log.info("Saving StaMPS scene to file %s[.yml/.npz]...", fn_save)
         scene.save(args.save)
 
     else:
         scene.spool()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -4,22 +4,26 @@ import tempfile
 import shutil
 
 from kite import SandboxScene, TestSandboxScene  # noqa
-from kite.sources import (PyrockoRectangularSource, PyrockoMomentTensor,
-                          PyrockoDoubleCouple, PyrockoRingfaultSource)
+from kite.sources import (
+    PyrockoRectangularSource,
+    PyrockoMomentTensor,
+    PyrockoDoubleCouple,
+    PyrockoRingfaultSource,
+)
 
 from . import common
 
 plot = False
-gf_store = '/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield'  # noqa
+gf_store = "/home/marius/Development/testing/leeds/aquila_example/insar/gf_abruzzo_nearfield"  # noqa
 
-common.setLogLevel('DEBUG')
+common.setLogLevel("DEBUG")
 
 
 class testSourcePyrocko(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.ms = SandboxScene()
-        cls.tmpdir = tempfile.mkdtemp(prefix='kite')
+        cls.tmpdir = tempfile.mkdtemp(prefix="kite")
 
     @classmethod
     def tearDownClass(cls):
@@ -35,16 +39,18 @@ class testSourcePyrocko(unittest.TestCase):
             length = r(5000, 15000)
             self.ms.addSource(
                 PyrockoRectangularSource(
-                    easting=r(0., self.ms.frame.E.max()),  # ok
-                    northing=r(0., self.ms.frame.N.max()),  # ok
+                    easting=r(0.0, self.ms.frame.E.max()),  # ok
+                    northing=r(0.0, self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
                     strike=r(0, 360),  # ok
                     dip=r(0, 170),
                     slip=r(1, 7),  # ok
                     rake=r(0, 180),
                     length=length,
-                    width=15. * length**.66,
-                    store_dir=gf_store))  # noqa
+                    width=15.0 * length ** 0.66,
+                    store_dir=gf_store,
+                )
+            )  # noqa
 
         self._plot_displacement(self.ms)
 
@@ -57,10 +63,12 @@ class testSourcePyrocko(unittest.TestCase):
         for s in xrange(nsources):
             self.ms.addSource(
                 PyrockoMomentTensor(
-                    easting=r(0., self.ms.frame.E.max()),  # ok
-                    northing=r(0., self.ms.frame.N.max()),  # ok
+                    easting=r(0.0, self.ms.frame.E.max()),  # ok
+                    northing=r(0.0, self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
-                    store_dir=gf_store))
+                    store_dir=gf_store,
+                )
+            )
 
         self._plot_displacement(self.ms)
 
@@ -73,10 +81,12 @@ class testSourcePyrocko(unittest.TestCase):
         for s in xrange(nsources):
             self.ms.addSource(
                 PyrockoDoubleCouple(
-                    easting=r(0., self.ms.frame.E.max()),  # ok
-                    northing=r(0., self.ms.frame.N.max()),  # ok
+                    easting=r(0.0, self.ms.frame.E.max()),  # ok
+                    northing=r(0.0, self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
-                    store_dir=gf_store))
+                    store_dir=gf_store,
+                )
+            )
 
         self._plot_displacement(self.ms)
 
@@ -90,14 +100,16 @@ class testSourcePyrocko(unittest.TestCase):
             diameter = r(5000, 15000)
             self.ms.addSource(
                 PyrockoRingfaultSource(
-                    easting=r(0., self.ms.frame.E.max()),  # ok
-                    northing=r(0., self.ms.frame.N.max()),  # ok
+                    easting=r(0.0, self.ms.frame.E.max()),  # ok
+                    northing=r(0.0, self.ms.frame.N.max()),  # ok
                     depth=r(0, 8000),  # ok
                     strike=r(0, 360),  # ok
                     dip=r(0, 170),
                     magnitude=r(2, 6),  # ok
                     diameter=diameter,
-                    store_dir=gf_store))  # noqa
+                    store_dir=gf_store,
+                )
+            )  # noqa
 
         self._plot_displacement(self.ms)
 
@@ -109,12 +121,16 @@ class testSourcePyrocko(unittest.TestCase):
 
         import matplotlib.pyplot as plt
         from matplotlib.patches import Polygon  # noqa
+
         fig = plt.figure()
         ax = fig.gca()
         ms.processSources()
 
-        ax.imshow(num.flipud(ms.north), aspect='equal',
-                  extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()])
+        ax.imshow(
+            num.flipud(ms.north),
+            aspect="equal",
+            extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()],
+        )
         # for src in ms.sources:
         #     for seg in src.segments:
         #         p = Polygon(seg.outline(), alpha=.8, fill=False)
@@ -123,6 +139,6 @@ class testSourcePyrocko(unittest.TestCase):
         fig.clear()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     plot = True
     unittest.main(exit=False)

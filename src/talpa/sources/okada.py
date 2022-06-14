@@ -3,34 +3,45 @@ import numpy as num
 from .base import RectangularSourceROI, SourceDelegate, SourceEditDialog
 from kite.sources import OkadaSource
 
-d2r = num.pi / 180.
-r2d = 180. / num.pi
+d2r = num.pi / 180.0
+r2d = 180.0 / num.pi
 
 
 class OkadaSourceDelegate(SourceDelegate):
 
-    __represents__ = 'OkadaSource'
+    __represents__ = "OkadaSource"
 
-    display_backend = 'Okada'
-    display_name = 'OkadaSource'
+    display_backend = "Okada"
+    display_name = "OkadaSource"
 
-    parameters = ['easting', 'northing', 'width', 'length', 'depth',
-                  'slip', 'opening', 'strike', 'dip', 'rake', 'nu']
-    ro_parameters = ['seismic_moment', 'moment_magnitude']
+    parameters = [
+        "easting",
+        "northing",
+        "width",
+        "length",
+        "depth",
+        "slip",
+        "opening",
+        "strike",
+        "dip",
+        "rake",
+        "nu",
+    ]
+    ro_parameters = ["seismic_moment", "moment_magnitude"]
 
     class OkadaDialog(SourceEditDialog):
-
         def __init__(self, delegate, *args, **kwargs):
-            super().__init__(delegate, ui_file='okada_source.ui',
-                             *args, **kwargs)
+            super().__init__(delegate, ui_file="okada_source.ui", *args, **kwargs)
 
-            def setLabel(method, fmt, value, suffix=''):
+            def setLabel(method, fmt, value, suffix=""):
                 method(fmt.format(value) + suffix)
 
             self.moment_magnitude.setValue = lambda v: setLabel(
-                self.moment_magnitude.setText, '{:.2f}', v)
+                self.moment_magnitude.setText, "{:.2f}", v
+            )
             self.seismic_moment.setValue = lambda v: setLabel(
-                self.seismic_moment.setText, '{:.2e}', v, ' Nm')
+                self.seismic_moment.setText, "{:.2e}", v, " Nm"
+            )
 
             self.getSourceParameters()
 
@@ -39,16 +50,13 @@ class OkadaSourceDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        length = 5000.
+        length = 5000.0
         return OkadaSource(
-            length=length,
-            width=15.*length**.66,
-            strike=45.,
-            rake=0,
-            slip=2)
+            length=length, width=15.0 * length ** 0.66, strike=45.0, rake=0, slip=2
+        )
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -76,7 +84,5 @@ class OkadaSourceDelegate(SourceDelegate):
     <td>Slip:</td><td>{source.slip:.2f} m</td>
 </tr>
 </table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)

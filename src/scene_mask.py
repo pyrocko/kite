@@ -13,13 +13,12 @@ class PolygonMaskConfig(PluginConfig):
 
 
 class PolygonMask(Plugin):
-
     def __init__(self, scene, config=None):
         self.scene = scene
         self.config = config or PolygonMaskConfig()
         self._points = None
 
-        self._log = scene._log.getChild('Mask')
+        self._log = scene._log.getChild("Mask")
 
     @property
     def polygons(self):
@@ -45,8 +44,8 @@ class PolygonMask(Plugin):
 
         fig = plt.figure()
         ax = fig.add_axes([0.05, 0.05, 0.9, 0.9])
-        ax.imshow(sc.displacement, origin='lower')
-        ax.set_title('Click to add vertex. Press ENTER to finish.')
+        ax.imshow(sc.displacement, origin="lower")
+        ax.set_title("Click to add vertex. Press ENTER to finish.")
 
         #  Click polygon to mask
         vertices = plt.ginput(-1)
@@ -78,8 +77,7 @@ class PolygonMask(Plugin):
         mask = num.full((sc.frame.rows, sc.frame.cols), False)
         for vertices in self.config.polygons.values():
             p = Path(vertices)
-            mask |= p.contains_points(points).reshape(
-                sc.frame.rows, sc.frame.cols)
+            mask |= p.contains_points(points).reshape(sc.frame.rows, sc.frame.cols)
 
         displacement[mask] = num.nan
         return displacement

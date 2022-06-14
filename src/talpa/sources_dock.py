@@ -7,9 +7,8 @@ km = 1e3
 
 
 class SourcesListDock(QtWidgets.QDockWidget):
-
     def __init__(self, sandbox, *args, **kwargs):
-        QtWidgets.QDockWidget.__init__(self, 'Sources', *args, **kwargs)
+        QtWidgets.QDockWidget.__init__(self, "Sources", *args, **kwargs)
         self.sandbox = sandbox
 
         layout = QtWidgets.QVBoxLayout()
@@ -17,8 +16,10 @@ class SourcesListDock(QtWidgets.QDockWidget):
         sources = SourcesList(sandbox)
         sources_add_menu = SourcesAddButton(sandbox)
 
-        self.setFeatures(QtWidgets.QDockWidget.DockWidgetFloatable |
-                         QtWidgets.QDockWidget.DockWidgetMovable)
+        self.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFloatable
+            | QtWidgets.QDockWidget.DockWidgetMovable
+        )
 
         self.widget = QtWidgets.QWidget()
         self.widget.setLayout(layout)
@@ -29,12 +30,10 @@ class SourcesListDock(QtWidgets.QDockWidget):
 
 
 class SourcesAddButton(QtWidgets.QToolButton):
-
     class SourcesAddMenu(QtWidgets.QMenu):
-
         def __init__(self, sandbox, *args, **kwargs):
             QtWidgets.QMenu.__init__(self)
-            self.setTitle('Add Source')
+            self.setTitle("Add Source")
             self.sandbox = sandbox
 
             backends = set(src.display_backend for src in __sources__)
@@ -42,29 +41,29 @@ class SourcesAddButton(QtWidgets.QToolButton):
             for ibe, be in enumerate(backends):
                 self.addSection(be)
 
-                for src in [s for s in __sources__
-                            if s.display_backend == be]:
+                for src in [s for s in __sources__ if s.display_backend == be]:
                     self.addSourceDelegate(src)
 
                 if ibe is not len(backends) - 1:
                     self.addSeparator()
 
         def addSourceDelegate(self, src):
-
             def addSource():
                 source = src.getRepresentedSource(self.sandbox)
                 source.lat = self.sandbox.frame.llLat
                 source.lon = self.sandbox.frame.llLon
                 source.easting = self.sandbox.frame.Emeter[-1] / 2
                 source.northing = self.sandbox.frame.Nmeter[-1] / 2
-                source.depth = 4*km
+                source.depth = 4 * km
 
                 if source:
                     self.sandbox.addSource(source)
 
             action = QtWidgets.QAction(src.display_name, self)
-            action.setToolTip('<span style="font-family: monospace;">'
-                              '%s</span>' % src.__represents__)
+            action.setToolTip(
+                '<span style="font-family: monospace;">'
+                "%s</span>" % src.__represents__
+            )
 
             action.triggered.connect(addSource)
             self.addAction(action)
@@ -84,27 +83,27 @@ class SourcesAddButton(QtWidgets.QToolButton):
     def __init__(self, sandbox, parent=None):
         QtWidgets.QToolButton.__init__(self, parent)
 
-        menu = self.SourcesAddMenu(sandbox, self, 'Availables sources')
+        menu = self.SourcesAddMenu(sandbox, self, "Availables sources")
 
-        self.setText('Add Source')
+        self.setText("Add Source")
         self.setMenu(menu)
 
-        self.setIcon(self.style().standardIcon(
-                     QtGui.QStyle.SP_FileDialogDetailedView))
+        self.setIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogDetailedView))
         self.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
 
 
 class SourcesList(QtGui.QListView):
-
     class SourceItemDelegate(QtGui.QStyledItemDelegate):
-
         def paint(self, painter, option, index):
             options = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(options, index)
 
-            style = QtGui.QApplication.style() if options.widget is None\
+            style = (
+                QtGui.QApplication.style()
+                if options.widget is None
                 else options.widget.style()
+            )
 
             doc = QtGui.QTextDocument()
             doc.setHtml(options.text)
@@ -115,7 +114,8 @@ class SourcesList(QtGui.QListView):
             ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
 
             textRect = style.subElementRect(
-                QtGui.QStyle.SE_ItemViewItemText, options, options.widget)
+                QtGui.QStyle.SE_ItemViewItemText, options, options.widget
+            )
             painter.save()
             painter.translate(textRect.topLeft())
             painter.setClipRect(textRect.translated(-textRect.topLeft()))
@@ -134,7 +134,6 @@ class SourcesList(QtGui.QListView):
             return QtCore.QSize(doc.idealWidth(), doc.size().height())
 
     class SourceContextMenu(QtGui.QMenu):
-
         def __init__(self, parent, idx, *args, **kwargs):
             QtGui.QMenu.__init__(self, *args, **kwargs)
             self.parent = parent
@@ -145,16 +144,17 @@ class SourcesList(QtGui.QListView):
                 self.sandbox.sources.removeSource(self.idx)
 
             editAction = self.addAction(
-                'Edit', lambda: self.parent.editSource(self.idx))
+                "Edit", lambda: self.parent.editSource(self.idx)
+            )
 
-            self.addMenu(
-                SourcesAddButton.SourcesAddMenu(self.sandbox, self))
+            self.addMenu(SourcesAddButton.SourcesAddMenu(self.sandbox, self))
             self.addSeparator()
 
             removeAction = self.addAction(
-                self.style().standardIcon(
-                    QtGui.QStyle.SP_DialogCloseButton),
-                'Remove', removeSource)
+                self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton),
+                "Remove",
+                removeSource,
+            )
 
             if self.sandbox.sources.rowCount(QtCore.QModelIndex()) == 0:
                 editAction.setEnabled(False)
@@ -169,8 +169,10 @@ class SourcesList(QtGui.QListView):
         sandbox.sources.setSelectionModel(self.selectionModel())
 
     def edit(self, idx, trigger, event):
-        if trigger == QtWidgets.QAbstractItemView.DoubleClicked or \
-          trigger == QtWidgets.QAbstractItemView.SelectedClicked:
+        if (
+            trigger == QtWidgets.QAbstractItemView.DoubleClicked
+            or trigger == QtWidgets.QAbstractItemView.SelectedClicked
+        ):
             self.editSource(idx)
         return False
 

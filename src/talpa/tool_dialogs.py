@@ -10,25 +10,27 @@ km = 1e3
 class ExtentDialog(QtWidgets.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        loadUi(get_resource('dialog_extent.ui'), self)
+        loadUi(get_resource("dialog_extent.ui"), self)
         self.setSizeGripEnabled(False)
 
         self.move(
-            self.parent().window().mapToGlobal(
-                self.parent().window().rect().center()) -
-            self.mapToGlobal(self.rect().center()))
+            self.parent().window().mapToGlobal(self.parent().window().rect().center())
+            - self.mapToGlobal(self.rect().center())
+        )
 
         self.sandbox = sandbox
         model = self.sandbox.model
         dE, dN = model.frame.dEmeter, model.frame.dNmeter
 
         def getKm(px, dp):
-            return '%.2f km ' % (dp * px / km)
+            return "%.2f km " % (dp * px / km)
 
         self.spinEastPx.valueChanged.connect(
-            lambda px: self.eastKm.setText(getKm(px, dE)))
+            lambda px: self.eastKm.setText(getKm(px, dE))
+        )
         self.spinNorthPx.valueChanged.connect(
-            lambda px: self.northKm.setText(getKm(px, dN)))
+            lambda px: self.northKm.setText(getKm(px, dN))
+        )
 
         self.applyButton.released.connect(self.updateValues)
         self.okButton.released.connect(self.updateValues)
@@ -47,25 +49,21 @@ class ExtentDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot()
     def updateValues(self):
-        self.sandbox.model.setExtent(
-            self.spinEastPx.value(),
-            self.spinNorthPx.value())
-        self.setValues(
-            self.spinEastPx.value(),
-            self.spinEastPx.value())
+        self.sandbox.model.setExtent(self.spinEastPx.value(), self.spinNorthPx.value())
+        self.setValues(self.spinEastPx.value(), self.spinEastPx.value())
         self.setValues()
 
 
 class LosDialog(QtWidgets.QDialog):
     def __init__(self, sandbox, *args, **kwargs):
         QtWidgets.QDialog.__init__(self, *args, **kwargs)
-        loadUi(get_resource('dialog_los.ui'), self)
+        loadUi(get_resource("dialog_los.ui"), self)
         self.setSizeGripEnabled(False)
 
         self.move(
-            self.parent().window().mapToGlobal(
-                self.parent().window().rect().center()) -
-            self.mapToGlobal(self.rect().center()))
+            self.parent().window().mapToGlobal(self.parent().window().rect().center())
+            - self.mapToGlobal(self.rect().center())
+        )
 
         self.sandbox = sandbox
         model = self.sandbox.model
@@ -82,8 +80,6 @@ class LosDialog(QtWidgets.QDialog):
 
     @QtCore.pyqtSlot()
     def updateValues(self):
-        print('updated los!')
-        self.sandbox.model.setLOS(
-            self.spinlos_phi.value(),
-            self.spinlos_theta.value())
+        print("updated los!")
+        self.sandbox.model.setLOS(self.spinlos_phi.value(), self.spinlos_theta.value())
         self.setValues()

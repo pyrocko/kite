@@ -5,4 +5,4 @@ SourceEditorDialog = 16
 
 
 def get_resource(filename):
-    return path.join(path.dirname(path.realpath(__file__)), 'res', filename)
+    return path.join(path.dirname(path.realpath(__file__)), "res", filename)

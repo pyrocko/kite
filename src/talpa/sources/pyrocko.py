@@ -2,20 +2,22 @@ from PyQt5 import QtCore, QtGui
 import numpy as num
 import os
 
-from .base import (RectangularSourceROI, PointSourceROI, SourceDelegate,
-                   SourceEditDialog)
-from kite.sources import (PyrockoRectangularSource,
-                          PyrockoMomentTensor, PyrockoDoubleCouple,
-                          PyrockoRingfaultSource, PyrockoVLVDSource)
+from .base import RectangularSourceROI, PointSourceROI, SourceDelegate, SourceEditDialog
+from kite.sources import (
+    PyrockoRectangularSource,
+    PyrockoMomentTensor,
+    PyrockoDoubleCouple,
+    PyrockoRingfaultSource,
+    PyrockoVLVDSource,
+)
 
 from ..config import getConfig
 
-d2r = num.pi / 180.
-r2d = 180. / num.pi
+d2r = num.pi / 180.0
+r2d = 180.0 / num.pi
 
 
 class PyrockoSourceDialog(SourceEditDialog):
-
     def __init__(self, delegate, ui_file, *args, **kwargs):
         SourceEditDialog.__init__(self, delegate, ui_file, *args, **kwargs)
 
@@ -24,10 +26,9 @@ class PyrockoSourceDialog(SourceEditDialog):
         self.completer.setModel(self.completer_model)
         self.completer.setMaxVisibleItems(8)
 
-        self.chooseStoreDirButton.released.connect(
-            self.chooseStoreDir)
+        self.chooseStoreDirButton.released.connect(self.chooseStoreDir)
 
-        self.completer_model.setRootPath('')
+        self.completer_model.setRootPath("")
         self.completer.setParent(self.store_dir)
         self.store_dir.setCompleter(self.completer)
 
@@ -39,46 +40,58 @@ class PyrockoSourceDialog(SourceEditDialog):
     @QtCore.pyqtSlot()
     def chooseStoreDir(self):
         folder = QtGui.QFileDialog.getExistingDirectory(
-            self, 'Open Pyrocko GF Store', os.getcwd())
-        if folder != '':
+            self, "Open Pyrocko GF Store", os.getcwd()
+        )
+        if folder != "":
             self.store_dir.setText(folder)
 
 
 class PyrockoRectangularSourceDelegate(SourceDelegate):
 
-    __represents__ = 'PyrockoRectangularSource'
+    __represents__ = "PyrockoRectangularSource"
 
-    display_backend = 'pyrocko'
-    display_name = 'RectangularSource'
+    display_backend = "pyrocko"
+    display_name = "RectangularSource"
 
-    parameters = ['easting', 'northing', 'width', 'length', 'depth',
-                  'slip', 'strike', 'dip', 'rake', 'store_dir',
-                  'decimation_factor']
+    parameters = [
+        "easting",
+        "northing",
+        "width",
+        "length",
+        "depth",
+        "slip",
+        "strike",
+        "dip",
+        "rake",
+        "store_dir",
+        "decimation_factor",
+    ]
     ro_parameters = []
 
     class RectangularSourceDialog(PyrockoSourceDialog):
-
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_rectangular_source.ui', *args, **kwargs)
+                self, ui_file="pyrocko_rectangular_source.ui", *args, **kwargs
+            )
 
     ROIWidget = RectangularSourceROI
     EditDialog = RectangularSourceDialog
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        length = 5000.
+        length = 5000.0
         return PyrockoRectangularSource(
             depth=4000,
             length=length,
-            width=15. * length**.66,
-            strike=45.,
+            width=15.0 * length ** 0.66,
+            strike=45.0,
             rake=0,
             slip=2,
-            store_dir=getConfig().default_gf_dir or '')
+            store_dir=getConfig().default_gf_dir or "",
+        )
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -101,35 +114,44 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
 </tr><tr style="font-weight: bold;">
     <td>Slip:</td><td>{source.slip:.2f} m</td>
 </tr></table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)
 
 
 class PyrockoMomentTensorDelegate(SourceDelegate):
 
-    __represents__ = 'PyrockoMomentTensor'
+    __represents__ = "PyrockoMomentTensor"
 
-    display_backend = 'pyrocko'
-    display_name = 'MomentTensor'
+    display_backend = "pyrocko"
+    display_name = "MomentTensor"
 
-    parameters = ['easting', 'northing', 'depth', 'store_dir',
-                  'mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
+    parameters = [
+        "easting",
+        "northing",
+        "depth",
+        "store_dir",
+        "mnn",
+        "mee",
+        "mdd",
+        "mne",
+        "mnd",
+        "med",
+    ]
     ro_parameters = []
 
     class MomentTensorDialog(PyrockoSourceDialog):
 
-        scaling_params = ['mnn', 'mee', 'mdd', 'mne', 'mnd', 'med']
+        scaling_params = ["mnn", "mee", "mdd", "mne", "mnd", "med"]
 
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_moment_tensor.ui', *args, **kwargs)
+                self, ui_file="pyrocko_moment_tensor.ui", *args, **kwargs
+            )
 
         @QtCore.pyqtSlot()
         def setSourceParameters(self):
             params = {}
-            scale = float('1e%d' % self.exponent.value())
+            scale = float("1e%d" % self.exponent.value())
             for param in self.delegate.parameters:
                 params[param] = self.__getattribute__(param).value()
                 if param in self.scaling_params:
@@ -140,9 +162,9 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
             exponent = num.log10(
-                num.max([v for k, v in params.items()
-                         if k in self.scaling_params]))
-            scale = float('1e%d' % int(exponent))
+                num.max([v for k, v in params.items() if k in self.scaling_params])
+            )
+            scale = float("1e%d" % int(exponent))
 
             for param, value in params.items():
                 if param in self.scaling_params:
@@ -155,11 +177,10 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        return PyrockoMomentTensor(
-            store_dir=getConfig().default_gf_dir or '')
+        return PyrockoMomentTensor(store_dir=getConfig().default_gf_dir or "")
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -183,34 +204,39 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
     <td>med:</td><td style="align: justify;">{source.med:.3e}</td><td>Nm</td>
 </tr>
 </table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)
 
 
 class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
-    __represents__ = 'PyrockoDoubleCouple'
+    __represents__ = "PyrockoDoubleCouple"
 
-    display_backend = 'pyrocko'
-    display_name = 'DoubleCouple'
+    display_backend = "pyrocko"
+    display_name = "DoubleCouple"
 
-    parameters = ['easting', 'northing', 'depth', 'store_dir',
-                  'strike', 'dip', 'rake', 'magnitude']
+    parameters = [
+        "easting",
+        "northing",
+        "depth",
+        "store_dir",
+        "strike",
+        "dip",
+        "rake",
+        "magnitude",
+    ]
     ro_parameters = []
 
     class DoubleCoupleDialog(PyrockoSourceDialog):
-
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_double_couple.ui', *args, **kwargs)
+                self, ui_file="pyrocko_double_couple.ui", *args, **kwargs
+            )
 
     class DoubleCoupleROI(PointSourceROI):
-
         def __init__(self, *args, **kwargs):
             PointSourceROI.__init__(self, *args, **kwargs)
-            self.addRotateHandle([.5, 1.], [0.5, 0.5])
+            self.addRotateHandle([0.5, 1.0], [0.5, 0.5])
             self.updateROIPosition()
 
         @QtCore.pyqtSlot()
@@ -220,10 +246,10 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             vec_x, vec_y = self._vectorToCenter(strike)
 
             parameters = {
-                'easting': float(self.pos().x() + vec_x),
-                'northing': float(self.pos().y() + vec_y),
-                'strike': strike
-                }
+                "easting": float(self.pos().x() + vec_x),
+                "northing": float(self.pos().y() + vec_y),
+                "strike": strike,
+            }
 
             self.newSourceParameters.emit(parameters)
 
@@ -234,20 +260,22 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
             self.setAngle(-source.strike, finish=False)
             self.setPos(
-                QtCore.QPointF(source.easting - vec_x,
-                               source.northing - vec_y),
-                finish=False)
+                QtCore.QPointF(source.easting - vec_x, source.northing - vec_y),
+                finish=False,
+            )
             # self.setPos(QtCore.QPointF(source.easting, source.northing),
             #             finish=False)
 
         def _vectorToCenter(self, angle):
             rangle = angle * d2r
 
-            sdx = self.size().x()/2
-            sdy = self.size().y()/2
+            sdx = self.size().x() / 2
+            sdy = self.size().y() / 2
 
-            return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
-                    sdx*num.cos(rangle) - sdy*num.sin(rangle))
+            return (
+                sdx * num.sin(rangle) + sdy * num.cos(rangle),
+                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+            )
 
     ROIWidget = DoubleCoupleROI
     EditDialog = DoubleCoupleDialog
@@ -268,11 +296,10 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
 
     @staticmethod
     def getRepresentedSource(sandbox):
-        return PyrockoDoubleCouple(
-            store_dir=getConfig().default_gf_dir or '')
+        return PyrockoDoubleCouple(store_dir=getConfig().default_gf_dir or "")
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -294,33 +321,39 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
     <td>M<sub>W</sub>:</td><td>{source.magnitude:.2f}</td>
 </tr>
 </table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)
 
 
 class PyrockoRingfaultDelegate(SourceDelegate):
-    __represents__ = 'PyrockoRingfaultSource'
+    __represents__ = "PyrockoRingfaultSource"
 
-    display_backend = 'pyrocko'
-    display_name = 'Ringfault'
+    display_backend = "pyrocko"
+    display_name = "Ringfault"
 
-    parameters = ['store_dir', 'easting', 'northing', 'depth', 'diameter',
-                  'strike', 'dip', 'magnitude', 'npointsources']
+    parameters = [
+        "store_dir",
+        "easting",
+        "northing",
+        "depth",
+        "diameter",
+        "strike",
+        "dip",
+        "magnitude",
+        "npointsources",
+    ]
     ro_parameters = []
 
     class RingfaultDialog(PyrockoSourceDialog):
-
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_ringfault.ui', *args, **kwargs)
+                self, ui_file="pyrocko_ringfault.ui", *args, **kwargs
+            )
 
     class RingfaultROI(PointSourceROI):
-
         def __init__(self, *args, **kwargs):
             PointSourceROI.__init__(self, *args, **kwargs)
-            self.addScaleRotateHandle([.5, 1.], [.5, .5])
+            self.addScaleRotateHandle([0.5, 1.0], [0.5, 0.5])
             self.updateROIPosition()
 
         @QtCore.pyqtSlot()
@@ -330,11 +363,11 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             vec_x, vec_y = self._vectorToCenter(strike)
 
             parameters = {
-                'easting': float(self.pos().x() + vec_x),
-                'northing': float(self.pos().y() + vec_y),
-                'diameter': self.size().y(),
-                'strike': strike,
-                }
+                "easting": float(self.pos().x() + vec_x),
+                "northing": float(self.pos().y() + vec_y),
+                "diameter": self.size().y(),
+                "strike": strike,
+            }
 
             self.newSourceParameters.emit(parameters)
 
@@ -346,19 +379,22 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             self.setSize(source.diameter, finish=False)
             vec_x, vec_y = self._vectorToCenter(source.strike)
             self.setPos(
-                QtCore.QPointF(source.easting - vec_x,
-                               source.northing - vec_y), finish=False)
+                QtCore.QPointF(source.easting - vec_x, source.northing - vec_y),
+                finish=False,
+            )
             # self.setPos(QtCore.QPointF(source.easting, source.northing),
             #             finish=False)
 
         def _vectorToCenter(self, angle):
             rangle = angle * d2r
 
-            sdx = self.size().x()/2
-            sdy = self.size().y()/2
+            sdx = self.size().x() / 2
+            sdy = self.size().y() / 2
 
-            return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
-                    sdx*num.cos(rangle) - sdy*num.sin(rangle),)
+            return (
+                sdx * num.sin(rangle) + sdy * num.cos(rangle),
+                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+            )
 
     EditDialog = RingfaultDialog
     ROIWidget = RingfaultROI
@@ -380,12 +416,12 @@ class PyrockoRingfaultDelegate(SourceDelegate):
     @staticmethod
     def getRepresentedSource(sandbox):
         return PyrockoRingfaultSource(
-            diameter=10000.,
-            store_dir=getConfig().default_gf_dir or '',
-            )
+            diameter=10000.0,
+            store_dir=getConfig().default_gf_dir or "",
+        )
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -405,35 +441,42 @@ class PyrockoRingfaultDelegate(SourceDelegate):
     <td>M<sub>W</sub>:</td><td>{source.magnitude:.2f}</td>
 </tr>
 </table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)
 
 
 class PyrockoVLVDSourceDelegate(SourceDelegate):
 
-    __represents__ = 'PyrockoVLVDSource'
+    __represents__ = "PyrockoVLVDSource"
 
-    display_backend = 'pyrocko'
-    display_name = 'VLVDSource'
+    display_backend = "pyrocko"
+    display_name = "VLVDSource"
 
-    parameters = ['easting', 'northing', 'depth', 'store_dir',
-                  'volume_change', 'azimuth', 'dip', 'clvd_moment']
+    parameters = [
+        "easting",
+        "northing",
+        "depth",
+        "store_dir",
+        "volume_change",
+        "azimuth",
+        "dip",
+        "clvd_moment",
+    ]
     ro_parameters = []
 
     class VLVDSourceDialog(PyrockoSourceDialog):
 
-        scaling_params = ['clvd_moment']
+        scaling_params = ["clvd_moment"]
 
         def __init__(self, *args, **kwargs):
             PyrockoSourceDialog.__init__(
-                self, ui_file='pyrocko_vlvd_source.ui', *args, **kwargs)
+                self, ui_file="pyrocko_vlvd_source.ui", *args, **kwargs
+            )
 
         @QtCore.pyqtSlot()
         def setSourceParameters(self):
             params = {}
-            scale = float('1e%d' % self.clvd_moment_exponent.value())
+            scale = float("1e%d" % self.clvd_moment_exponent.value())
             for param in self.delegate.parameters:
                 params[param] = self.__getattribute__(param).value()
                 if param in self.scaling_params:
@@ -444,9 +487,9 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
             exponent = num.log10(
-                num.max([abs(v) for k, v in params.items()
-                         if k in self.scaling_params]))
-            scale = float('1e%d' % int(exponent))
+                num.max([abs(v) for k, v in params.items() if k in self.scaling_params])
+            )
+            scale = float("1e%d" % int(exponent))
             self.clvd_moment_exponent.setValue(int(exponent))
 
             for param, value in params.items():
@@ -456,10 +499,9 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
                     self.__getattribute__(param).setValue(value)
 
     class VLVDSourceROI(PointSourceROI):
-
         def __init__(self, *args, **kwargs):
             PointSourceROI.__init__(self, *args, **kwargs)
-            self.addRotateHandle([.5, 1.], [0.5, 0.5])
+            self.addRotateHandle([0.5, 1.0], [0.5, 0.5])
             self.updateROIPosition()
 
         @QtCore.pyqtSlot()
@@ -469,10 +511,10 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
             vec_x, vec_y = self._vectorToCenter(azimuth)
 
             parameters = {
-                'easting': float(self.pos().x() + vec_x),
-                'northing': float(self.pos().y() + vec_y),
-                'azimuth': azimuth
-                }
+                "easting": float(self.pos().x() + vec_x),
+                "northing": float(self.pos().y() + vec_y),
+                "azimuth": azimuth,
+            }
 
             self.newSourceParameters.emit(parameters)
 
@@ -483,20 +525,22 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
 
             self.setAngle(-source.azimuth, finish=False)
             self.setPos(
-                QtCore.QPointF(source.easting - vec_x,
-                               source.northing - vec_y),
-                finish=False)
+                QtCore.QPointF(source.easting - vec_x, source.northing - vec_y),
+                finish=False,
+            )
             # self.setPos(QtCore.QPointF(source.easting, source.northing),
             #             finish=False)
 
         def _vectorToCenter(self, angle):
             rangle = angle * d2r
 
-            sdx = self.size().x()/2
-            sdy = self.size().y()/2
+            sdx = self.size().x() / 2
+            sdy = self.size().y() / 2
 
-            return (sdx*num.sin(rangle) + sdy*num.cos(rangle),
-                    sdx*num.cos(rangle) - sdy*num.sin(rangle))
+            return (
+                sdx * num.sin(rangle) + sdy * num.cos(rangle),
+                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+            )
 
     ROIWidget = VLVDSourceROI
     EditDialog = VLVDSourceDialog
@@ -518,11 +562,11 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
     @staticmethod
     def getRepresentedSource(sandbox):
         return PyrockoVLVDSource(
-            volume_change=.25,
-            store_dir=getConfig().default_gf_dir or '')
+            volume_change=0.25, store_dir=getConfig().default_gf_dir or ""
+        )
 
     def formatListItem(self):
-        item = '''
+        item = """
 <span style="font-weight: bold; font-style: oblique">
     {idx}. {delegate.display_name}
     <span style="color: #616161;">
@@ -542,7 +586,5 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
     <td>CLVD M<sub>W</sub>:</td><td>{source.clvd_moment:.2e}</td>
 </tr>
 </table>
-'''
-        return item.format(idx=self.index.row()+1,
-                           delegate=self,
-                           source=self.source)
+"""
+        return item.format(idx=self.index.row() + 1, delegate=self, source=self.source)

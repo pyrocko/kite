@@ -17,44 +17,39 @@ def squareMatrix(mat):
         padding = ((width, 0), (0, 0))
     elif min_a == 1:
         padding = ((0, 0), (0, width))
-    return num.pad(mat,
-                   pad_width=padding,
-                   mode='constant',
-                   constant_values=0.)
+    return num.pad(mat, pad_width=padding, mode="constant", constant_values=0.0)
 
 
 def derampMatrix(displ):
-    """ Deramp through fitting a bilinear plane
+    """Deramp through fitting a bilinear plane
     Data is also de-meaned
     """
     if displ.ndim != 2:
-        raise TypeError('Displacement has to be 2-dim array')
+        raise TypeError("Displacement has to be 2-dim array")
     mx = num.nanmedian(displ, axis=0)
     my = num.nanmedian(displ, axis=1)
 
     ix = num.arange(mx.size)
     iy = num.arange(my.size)
-    dx, cx, _, _, _ = sp.stats.linregress(ix[~num.isnan(mx)],
-                                          mx[~num.isnan(mx)])
-    dy, cy, _, _, _ = sp.stats.linregress(iy[~num.isnan(my)],
-                                          my[~num.isnan(my)])
+    dx, cx, _, _, _ = sp.stats.linregress(ix[~num.isnan(mx)], mx[~num.isnan(mx)])
+    dy, cy, _, _, _ = sp.stats.linregress(iy[~num.isnan(my)], my[~num.isnan(my)])
 
-    rx = (ix * dx)
-    ry = (iy * dy)
+    rx = ix * dx
+    ry = iy * dy
     data = displ - (rx[num.newaxis, :] + ry[:, num.newaxis])
     data -= num.nanmean(data)
     return data
 
 
 def derampGMatrix(displ):
-    """ Deramp through lsq a bilinear plane
+    """Deramp through lsq a bilinear plane
     Data is also de-meaned
     """
     if displ.ndim != 2:
-        raise TypeError('Displacement has to be 2-dim array')
+        raise TypeError("Displacement has to be 2-dim array")
 
     # form a relative coordinate grid
-    c_grid = num.mgrid[0:displ.shape[0], 0:displ.shape[1]]
+    c_grid = num.mgrid[0 : displ.shape[0], 0 : displ.shape[1]]
 
     # separate and flatten coordinate grid into x and y vectors for each !point
     ix = c_grid[0].flat
@@ -80,7 +75,7 @@ def derampGMatrix(displ):
 
     # ramp values
     ramp_nonan = ramp_paras * GT
-    ramp_f = num.multiply(displ_f, 0.)
+    ramp_f = num.multiply(displ_f, 0.0)
 
     # insert ramp values in full vectors
     num.place(ramp_f, num.isfinite(displ_f), num.array(ramp_nonan).flatten())
@@ -90,13 +85,12 @@ def derampGMatrix(displ):
 
 
 def trimMatrix(displ, data=None):
-    """Trim displacement matrix from all NaN rows and columns
-    """
+    """Trim displacement matrix from all NaN rows and columns"""
     if displ.ndim != 2:
-        raise ValueError('Displacement has to be 2-dim array')
+        raise ValueError("Displacement has to be 2-dim array")
 
     if num.all(num.isnan(displ)):
-        raise ValueError('Displacement is all NaN.')
+        raise ValueError("Displacement is all NaN.")
 
     r1 = r2 = False
     c1 = c2 = False
@@ -112,29 +106,31 @@ def trimMatrix(displ, data=None):
             c2 = c
 
     if data is not None:
-        return data[r1:(r2+1), c1:(c2+1)]
+        return data[r1 : (r2 + 1), c1 : (c2 + 1)]
 
-    return displ[r1:(r2+1), c1:(c2+1)]
+    return displ[r1 : (r2 + 1), c1 : (c2 + 1)]
 
 
 def greatCircleDistance(alat, alon, blat, blon):
-    R1 = 6371009.
+    R1 = 6371009.0
     d2r = num.deg2rad
     sin = num.sin
     cos = num.cos
-    a = sin(d2r(alat-blat)/2)**2 + cos(d2r(alat)) * cos(d2r(blat))\
-        * sin(d2r(alon-blon)/2)**2
-    c = 2. * num.arctan2(num.sqrt(a), num.sqrt(1.-a))
+    a = (
+        sin(d2r(alat - blat) / 2) ** 2
+        + cos(d2r(alat)) * cos(d2r(blat)) * sin(d2r(alon - blon) / 2) ** 2
+    )
+    c = 2.0 * num.arctan2(num.sqrt(a), num.sqrt(1.0 - a))
     return R1 * c
 
 
 def property_cached(func):
-    var_name = '_cached_' + func.__name__
-    func_doc = ':getter: *(Cached)*'
+    var_name = "_cached_" + func.__name__
+    func_doc = ":getter: *(Cached)*"
     if func.__doc__ is not None:
         func_doc += func.__doc__
     else:
-        func_doc += ' Undocumented'
+        func_doc += " Undocumented"
 
     def cache_return(instance, *args, **kwargs):
         cache_return.__doc__ = func.__doc__
@@ -145,9 +141,7 @@ def property_cached(func):
     def cache_return_setter(instance, value):
         instance.__dict__[var_name] = value
 
-    return property(fget=cache_return,
-                    fset=cache_return_setter,
-                    doc=func_doc)
+    return property(fget=cache_return, fset=cache_return_setter, doc=func_doc)
 
 
 def calcPrecission(data):
@@ -156,7 +150,7 @@ def calcPrecission(data):
     mx = num.nanmax(data)
     if not num.isfinite(mx) or num.isfinite(mn):
         return 3, 6
-    precission = int(round(num.log10((100. / (mx-mn)))))
+    precission = int(round(num.log10((100.0 / (mx - mn)))))
     if precission < 0:
         precission = 0
     # length of the number in the label:
@@ -166,30 +160,31 @@ def calcPrecission(data):
 
 def formatScalar(v, ndigits=7):
     if num.isinf(v):
-        return 'inf'
+        return "inf"
     elif num.isnan(v):
-        return 'nan'
+        return "nan"
 
-    if v % 1 == 0.:
-        return '{value:d}'.format(value=v)
+    if v % 1 == 0.0:
+        return "{value:d}".format(value=v)
 
-    if abs(v) < (10.**-(ndigits-2)):
-        return '{value:e}'.format(value=v)
+    if abs(v) < (10.0 ** -(ndigits - 2)):
+        return "{value:e}".format(value=v)
 
     p = num.ceil(num.log10(num.abs(v)))
-    if p <= 0.:
-        f = {'d': 1, 'f': ndigits - 1}
+    if p <= 0.0:
+        f = {"d": 1, "f": ndigits - 1}
     else:
         p = int(p)
-        f = {'d': p, 'f': ndigits - p}
+        f = {"d": p, "f": ndigits - p}
 
-    return '{value:{d}.{f}f}'.format(value=v, **f)
+    return "{value:{d}.{f}f}".format(value=v, **f)
 
 
 class Subject(object):
     """
     Subject - Obsever model realization
     """
+
     def __init__(self):
         self._listeners = list()
         self._mute = False
@@ -219,7 +214,7 @@ class Subject(object):
         try:
             self._listeners.remove(listener)
         except Exception:
-            raise AttributeError('%s was not subscribed!', listener.__name__)
+            raise AttributeError("%s was not subscribed!", listener.__name__)
 
     def unsubscribeAll(self):
         for l in self._listeners:
@@ -251,6 +246,6 @@ class ADict(dict):
         self[attr] = value
 
 
-__all__ = '''
+__all__ = """
 Subject
-'''.split()
+""".split()

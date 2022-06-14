@@ -9,70 +9,72 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 
 SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
 
-_viridis_data = [[68, 1, 84],
-                 [69, 6, 90],
-                 [70, 12, 95],
-                 [71, 18, 101],
-                 [71, 24, 106],
-                 [72, 29, 111],
-                 [72, 34, 115],
-                 [71, 39, 119],
-                 [71, 44, 123],
-                 [70, 49, 126],
-                 [69, 54, 129],
-                 [67, 59, 131],
-                 [66, 64, 133],
-                 [64, 68, 135],
-                 [62, 73, 137],
-                 [60, 77, 138],
-                 [58, 82, 139],
-                 [56, 86, 139],
-                 [54, 90, 140],
-                 [52, 94, 141],
-                 [50, 98, 141],
-                 [49, 102, 141],
-                 [47, 106, 141],
-                 [45, 110, 142],
-                 [44, 114, 142],
-                 [42, 118, 142],
-                 [40, 122, 142],
-                 [39, 125, 142],
-                 [38, 129, 142],
-                 [36, 133, 141],
-                 [35, 137, 141],
-                 [33, 140, 141],
-                 [32, 144, 140],
-                 [31, 148, 139],
-                 [30, 152, 138],
-                 [30, 155, 137],
-                 [30, 159, 136],
-                 [31, 163, 134],
-                 [33, 167, 132],
-                 [36, 170, 130],
-                 [40, 174, 127],
-                 [44, 177, 125],
-                 [50, 181, 122],
-                 [56, 185, 118],
-                 [62, 188, 115],
-                 [69, 191, 111],
-                 [77, 194, 107],
-                 [85, 198, 102],
-                 [94, 201, 97],
-                 [103, 204, 92],
-                 [112, 206, 86],
-                 [121, 209, 81],
-                 [131, 211, 75],
-                 [141, 214, 68],
-                 [151, 216, 62],
-                 [162, 218, 55],
-                 [173, 220, 48],
-                 [183, 221, 41],
-                 [194, 223, 34],
-                 [205, 224, 29],
-                 [215, 226, 25],
-                 [225, 227, 24],
-                 [236, 228, 26],
-                 [246, 230, 31]]
+_viridis_data = [
+    [68, 1, 84],
+    [69, 6, 90],
+    [70, 12, 95],
+    [71, 18, 101],
+    [71, 24, 106],
+    [72, 29, 111],
+    [72, 34, 115],
+    [71, 39, 119],
+    [71, 44, 123],
+    [70, 49, 126],
+    [69, 54, 129],
+    [67, 59, 131],
+    [66, 64, 133],
+    [64, 68, 135],
+    [62, 73, 137],
+    [60, 77, 138],
+    [58, 82, 139],
+    [56, 86, 139],
+    [54, 90, 140],
+    [52, 94, 141],
+    [50, 98, 141],
+    [49, 102, 141],
+    [47, 106, 141],
+    [45, 110, 142],
+    [44, 114, 142],
+    [42, 118, 142],
+    [40, 122, 142],
+    [39, 125, 142],
+    [38, 129, 142],
+    [36, 133, 141],
+    [35, 137, 141],
+    [33, 140, 141],
+    [32, 144, 140],
+    [31, 148, 139],
+    [30, 152, 138],
+    [30, 155, 137],
+    [30, 159, 136],
+    [31, 163, 134],
+    [33, 167, 132],
+    [36, 170, 130],
+    [40, 174, 127],
+    [44, 177, 125],
+    [50, 181, 122],
+    [56, 185, 118],
+    [62, 188, 115],
+    [69, 191, 111],
+    [77, 194, 107],
+    [85, 198, 102],
+    [94, 201, 97],
+    [103, 204, 92],
+    [112, 206, 86],
+    [121, 209, 81],
+    [131, 211, 75],
+    [141, 214, 68],
+    [151, 216, 62],
+    [162, 218, 55],
+    [173, 220, 48],
+    [183, 221, 41],
+    [194, 223, 34],
+    [205, 224, 29],
+    [215, 226, 25],
+    [225, 227, 24],
+    [236, 228, 26],
+    [246, 230, 31],
+]
 _viridis_data.reverse()
 
 
@@ -81,12 +83,12 @@ def validateFilename(filename):
         return False
     filename = op.abspath(filename)
     filedir = op.dirname(filename)
-    if filename == '' or filedir == '':
+    if filename == "" or filedir == "":
         return False
     if op.isdir(filename) or not os.access(filedir, os.W_OK):
-        QtGui.QMessageBox.critical(None, 'Path Error',
-                                   'Could not access file <b>%s</b>'
-                                   % filename)
+        QtGui.QMessageBox.critical(
+            None, "Path Error", "Could not access file <b>%s</b>" % filename
+        )
         return False
     return True
 
@@ -99,10 +101,12 @@ class SliderWidget(QtGui.QWidget):
     """
     shows a horizontal/vertical slider with a label showing its value
     """
+
     sigValueChanged = QtCore.Signal(object)  # value
 
-    def __init__(self, horizontal=True, parent=None, decimals=3, step=.005,
-                 slider_exponent=1):
+    def __init__(
+        self, horizontal=True, parent=None, decimals=3, step=0.005, slider_exponent=1
+    ):
         QtGui.QWidget.__init__(self, parent)
         self.vmin = None
         self.vmax = None
@@ -120,10 +124,11 @@ class SliderWidget(QtGui.QWidget):
         self.spin.setFrame(False)
 
         self.slider = QtGui.QSlider(
-            QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1 = hor.
+            QtCore.Qt.Orientation(1 if horizontal else 0), self
+        )  # 1 = hor.
         self.slider.setTickPosition(
-            QtGui.QSlider.TicksAbove if horizontal
-            else QtGui.QSlider.TicksLeft)
+            QtGui.QSlider.TicksAbove if horizontal else QtGui.QSlider.TicksLeft
+        )
         self.slider.setRange(0, 99)
         self.slider.sliderMoved.connect(self._slider_updated)
 
@@ -147,9 +152,9 @@ class SliderWidget(QtGui.QWidget):
         elif self.vmin is not None and self.vmax is not None:
             if val <= self.vmin:
                 val = self.vmin
-            val = (val-self.vmin) / (self.vmax-self.vmin)
+            val = (val - self.vmin) / (self.vmax - self.vmin)
 
-            val **= 1./self.slider_exponent
+            val **= 1.0 / self.slider_exponent
             val *= 99
             val = int(round(val))
 
@@ -160,7 +165,7 @@ class SliderWidget(QtGui.QWidget):
         vmin, vmax -> arbitrary values that are not equal
         """
         if vmin == vmax:
-            raise ValueError('limits must be different values')
+            raise ValueError("limits must be different values")
         self.vmin = float(min(vmin, vmax))
         self.vmax = float(max(vmin, vmax))
 
@@ -180,7 +185,7 @@ class SliderWidget(QtGui.QWidget):
         val **= self.slider_exponent
 
         if self.vmin is not None and self.vmax is not None:
-            val = val * (self.vmax-self.vmin) + self.vmin
+            val = val * (self.vmax - self.vmin) + self.vmin
 
         val = round(val, self.decimals)
 
@@ -200,28 +205,26 @@ class SliderWidget(QtGui.QWidget):
 
 
 class SliderWidgetParameterItem(WidgetParameterItem):
-    """ Enabling Slider widget for Parameter
-    """
+    """Enabling Slider widget for Parameter"""
+
     def makeWidget(self):
         opts = self.param.opts
 
-        step = opts.get('step', .1)
-        decimals = opts.get('decimals', 2)
-        slider_exponent = opts.get('slider_exponent', 1)
+        step = opts.get("step", 0.1)
+        decimals = opts.get("decimals", 2)
+        slider_exponent = opts.get("slider_exponent", 1)
 
-        w = SliderWidget(
-            decimals=decimals, step=step,
-            slider_exponent=slider_exponent)
+        w = SliderWidget(decimals=decimals, step=step, slider_exponent=slider_exponent)
 
-        limits = opts.get('limits', None)
+        limits = opts.get("limits", None)
         if limits is not None:
             w.setRange(*limits)
 
-        value = opts.get('value', None)
+        value = opts.get("value", None)
         if value is not None:
             w.setValue(value)
 
-        suffix = opts.get('suffix', None)
+        suffix = opts.get("suffix", None)
         w.setSuffix(suffix)
 
         self.hideWidget = False
@@ -232,7 +235,6 @@ class SliderWidgetParameterItem(WidgetParameterItem):
 
 
 class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
-
     def __init__(self, model, *args, **kwargs):
         QtCore.QAbstractTableModel.__init__(self, *args, **kwargs)
         logging.Handler.__init__(self)
@@ -249,7 +251,7 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
             if idx.column() == 0:
                 return int(rec.levelno)
             elif idx.column() == 1:
-                return '%s:%s' % (rec.levelname, rec.name)
+                return "%s:%s" % (rec.levelname, rec.name)
             elif idx.column() == 2:
                 return rec.getMessage()
 
@@ -260,9 +262,9 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
             if idx.column() == 0:
                 return rec.levelname
             elif idx.column() == 1:
-                return '%s.%s' % (rec.module, rec.funcName)
+                return "%s.%s" % (rec.module, rec.funcName)
             elif idx.column() == 2:
-                return 'Line %d' % rec.lineno
+                return "Line %d" % rec.lineno
 
     @property
     def nlogs(self):
@@ -284,12 +286,12 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
 class SceneLog(QtGui.QDialog):
 
     levels = {
-        50: 'Critical',
-        40: 'Error',
-        30: 'Warning',
-        20: 'Info',
-        10: 'Debug',
-        0: 'All'
+        50: "Critical",
+        40: "Error",
+        30: "Warning",
+        20: "Info",
+        10: "Debug",
+        0: "All",
     }
 
     class LogEntryDelegate(QtGui.QStyledItemDelegate):
@@ -324,17 +326,18 @@ class SceneLog(QtGui.QDialog):
     def __init__(self, app, model):
         QtGui.QDialog.__init__(self, app)
         logging_ui = op.join(
-            op.dirname(
-                op.realpath(__file__)), 'spool', 'res', 'logging.ui')
+            op.dirname(op.realpath(__file__)), "spool", "res", "logging.ui"
+        )
         loadUi(logging_ui, baseinstance=self)
 
         self.move(
-            self.parent().window().mapToGlobal(
-                self.parent().window().rect().center()) -
-            self.mapToGlobal(self.rect().center()))
+            self.parent().window().mapToGlobal(self.parent().window().rect().center())
+            - self.mapToGlobal(self.rect().center())
+        )
 
         self.closeButton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton)
+        )
 
         self.table_filter = self.LogFilter()
         self.table_filter.setFilterKeyColumn(0)
@@ -349,8 +352,7 @@ class SceneLog(QtGui.QDialog):
         self.tableView.setColumnWidth(0, 30)
         self.tableView.setColumnWidth(1, 200)
 
-        self.filterBox.addItems(
-            [lvl_name for lvl_name in self.levels.values()])
+        self.filterBox.addItems([lvl_name for lvl_name in self.levels.values()])
 
         def changeFilter():
             for lvl, lvl_name in self.levels.items():
@@ -361,7 +363,7 @@ class SceneLog(QtGui.QDialog):
             self.tableView.update()
 
         self.filterBox.currentIndexChanged.connect(changeFilter)
-        self.filterBox.setCurrentText('Warning')
+        self.filterBox.setCurrentText("Warning")
 
     @QtCore.pyqtSlot(QtCore.QModelIndex, int, int)
     def newLogRecord(self, idx, first, last):
@@ -406,7 +408,7 @@ def scale(val, src, dst):
     """
     Scale the given value from the scale of src to the scale of dst.
     """
-    return int(((val - src[0]) / float(src[1]-src[0])) * (dst[1]-dst[0]) + dst[0])
+    return int(((val - src[0]) / float(src[1] - src[0])) * (dst[1] - dst[0]) + dst[0])
 
 
 class Ui_Form(object):
@@ -444,12 +446,14 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         encoding = QtWidgets.QApplication.UnicodeUTF8
-        Form.setWindowTitle(QtWidgets.QApplication.translate(
-            "QRangeSlider", "QRangeSlider", None, encoding))
+        Form.setWindowTitle(
+            QtWidgets.QApplication.translate(
+                "QRangeSlider", "QRangeSlider", None, encoding
+            )
+        )
 
 
 class Element(QtWidgets.QGroupBox):
-
     def __init__(self, parent, main):
         super().__init__(parent)
         self.main = main
@@ -460,7 +464,7 @@ class Element(QtWidgets.QGroupBox):
 
     def textColor(self):
         """text paint color"""
-        return getattr(self, '__textColor', QtGui.QColor(125, 125, 125))
+        return getattr(self, "__textColor", QtGui.QColor(125, 125, 125))
 
     def format(self, value):
         if self.main._formatter is None:
@@ -473,7 +477,7 @@ class Element(QtWidgets.QGroupBox):
             color = QtGui.QColor(color[0], color[1], color[2])
         elif type(color) == int:
             color = QtGui.QColor(color, color, color)
-        setattr(self, '__textColor', color)
+        setattr(self, "__textColor", color)
 
     def paintEvent(self, event):
         """overrides paint event to handle text"""
@@ -492,9 +496,8 @@ class Head(Element):
 
     def drawText(self, event, qp):
         qp.setPen(self.textColor())
-        qp.setFont(QtGui.QFont('Arial', 10))
-        qp.drawText(event.rect(), QtCore.Qt.AlignLeft,
-                    self.format(self.main.min()))
+        qp.setFont(QtGui.QFont("Arial", 10))
+        qp.drawText(event.rect(), QtCore.Qt.AlignLeft, self.format(self.main.min()))
 
 
 class Tail(Element):
@@ -505,9 +508,8 @@ class Tail(Element):
 
     def drawText(self, event, qp):
         qp.setPen(self.textColor())
-        qp.setFont(QtGui.QFont('Arial', 10))
-        qp.drawText(event.rect(), QtCore.Qt.AlignRight,
-                    self.format(self.main.max()))
+        qp.setFont(QtGui.QFont("Arial", 10))
+        qp.drawText(event.rect(), QtCore.Qt.AlignRight, self.format(self.main.max()))
 
 
 class Handle(Element):
@@ -518,24 +520,22 @@ class Handle(Element):
 
     def drawText(self, event, qp):
         qp.setPen(self.textColor())
-        qp.setFont(QtGui.QFont('Arial', 10))
-        qp.drawText(event.rect(), QtCore.Qt.AlignLeft,
-                    self.format(self.main.start()))
-        qp.drawText(event.rect(), QtCore.Qt.AlignRight,
-                    self.format(self.main.end()))
+        qp.setFont(QtGui.QFont("Arial", 10))
+        qp.drawText(event.rect(), QtCore.Qt.AlignLeft, self.format(self.main.start()))
+        qp.drawText(event.rect(), QtCore.Qt.AlignRight, self.format(self.main.end()))
 
     def mouseMoveEvent(self, event):
         event.accept()
         mx = event.globalX()
-        _mx = getattr(self, '__mx', None)
+        _mx = getattr(self, "__mx", None)
 
         if not _mx:
-            setattr(self, '__mx', mx)
+            setattr(self, "__mx", mx)
             dx = 0
         else:
             dx = mx - _mx
 
-        setattr(self, '__mx', mx)
+        setattr(self, "__mx", mx)
 
         if dx == 0:
             event.ignore()
@@ -613,6 +613,7 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
             background: #ca5;
         }
     """
+
     endValueChanged = QtCore.pyqtSignal(int)
     maxValueChanged = QtCore.pyqtSignal(int)
     minValueChanged = QtCore.pyqtSignal(int)
@@ -631,8 +632,8 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
     def __init__(self, parent=None):
         """Create a new QRangeSlider instance.
 
-            :param parent: QWidget parent
-            :return: New QRangeSlider instance.
+        :param parent: QWidget parent
+        :return: New QRangeSlider instance.
 
         """
         super().__init__(parent)
@@ -678,35 +679,35 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
 
     def min(self):
         """:return: minimum value"""
-        return getattr(self, '__min', None)
+        return getattr(self, "__min", None)
 
     def max(self):
         """:return: maximum value"""
-        return getattr(self, '__max', None)
+        return getattr(self, "__max", None)
 
     def setMin(self, value):
         """sets minimum value"""
         assert type(value) is int
-        setattr(self, '__min', value)
+        setattr(self, "__min", value)
         self.minValueChanged.emit(value)
 
     def setMax(self, value):
         """sets maximum value"""
         assert type(value) is int
-        setattr(self, '__max', value)
+        setattr(self, "__max", value)
         self.maxValueChanged.emit(value)
 
     def start(self):
         """:return: range slider start value"""
-        return getattr(self, '__start', None)
+        return getattr(self, "__start", None)
 
     def end(self):
         """:return: range slider end value"""
-        return getattr(self, '__end', None)
+        return getattr(self, "__end", None)
 
     def _setStart(self, value):
         """stores the start value only"""
-        setattr(self, '__start', value)
+        setattr(self, "__start", value)
         self.startValueChanged.emit(value)
 
     def setFormatter(self, func):
@@ -723,7 +724,7 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
 
     def _setEnd(self, value):
         """stores the end value only"""
-        setattr(self, '__end', value)
+        setattr(self, "__end", value)
         self.endValueChanged.emit(value)
 
     def setEnd(self, value):
@@ -737,12 +738,12 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
 
     def drawValues(self):
         """:return: True if slider values will be drawn"""
-        return getattr(self, '__drawValues', None)
+        return getattr(self, "__drawValues", None)
 
     def setDrawValues(self, draw):
         """sets draw values boolean to draw slider values"""
         assert type(draw) is bool
-        setattr(self, '__drawValues', draw)
+        setattr(self, "__drawValues", draw)
 
     def getRange(self):
         """:return: the start and end values as a tuple"""
@@ -757,11 +758,11 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
         """overrides key press event to move range left and right"""
         key = event.key()
         if key == QtCore.Qt.Key_Left:
-            s = self.start()-1
-            e = self.end()-1
+            s = self.start() - 1
+            e = self.end() - 1
         elif key == QtCore.Qt.Key_Right:
-            s = self.start()+1
-            e = self.end()+1
+            s = self.start() + 1
+            e = self.end() + 1
         else:
             event.ignore()
             return

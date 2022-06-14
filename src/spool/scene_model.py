@@ -4,8 +4,7 @@ import logging
 from datetime import datetime
 
 try:
-    from pyrocko.dataset.util import set_download_callback as\
-        pyrocko_download_callback
+    from pyrocko.dataset.util import set_download_callback as pyrocko_download_callback
 except ImportError:
     pyrocko_download_callback = None
 
@@ -14,7 +13,8 @@ from kite.qt_utils import SceneLogModel
 
 
 class SceneModel(QtCore.QObject):
-    ''' Proxy for :class:`kite.Scene` so we can change the scene '''
+    """Proxy for :class:`kite.Scene` so we can change the scene"""
+
     sigSceneModelChanged = QtCore.pyqtSignal(object)
 
     sigSceneChanged = QtCore.pyqtSignal()
@@ -50,7 +50,8 @@ class SceneModel(QtCore.QObject):
             self._sigQuadtreeChanged,
             rateLimit=10,
             delay=0,
-            slot=lambda: self.sigQuadtreeChanged.emit())
+            slot=lambda: self.sigQuadtreeChanged.emit(),
+        )
 
         self._log_handler = logging.Handler()
         self._log_handler.setLevel(logging.DEBUG)
@@ -87,45 +88,32 @@ class SceneModel(QtCore.QObject):
         if self.scene is None:
             return
 
-        self.scene.evChanged.unsubscribe(
-            self.sigSceneChanged.emit)
-        self.scene.evConfigChanged.unsubscribe(
-            self.sigConfigChanged.emit)
+        self.scene.evChanged.unsubscribe(self.sigSceneChanged.emit)
+        self.scene.evConfigChanged.unsubscribe(self.sigConfigChanged.emit)
 
-        self.scene.frame.evChanged.unsubscribe(
-            self.sigFrameChanged.emit)
+        self.scene.frame.evChanged.unsubscribe(self.sigFrameChanged.emit)
 
-        self.quadtree.evChanged.unsubscribe(
-            self._sigQuadtreeChanged.emit)
-        self.quadtree.evConfigChanged.unsubscribe(
-            self.sigQuadtreeConfigChanged.emit)
+        self.quadtree.evChanged.unsubscribe(self._sigQuadtreeChanged.emit)
+        self.quadtree.evConfigChanged.unsubscribe(self.sigQuadtreeConfigChanged.emit)
 
-        self.covariance.evChanged.unsubscribe(
-            self.sigCovarianceChanged.emit)
+        self.covariance.evChanged.unsubscribe(self.sigCovarianceChanged.emit)
         self.covariance.evConfigChanged.unsubscribe(
-            self.sigCovarianceConfigChanged.emit)
+            self.sigCovarianceConfigChanged.emit
+        )
 
-        self.aps.evChanged.unsubscribe(
-            self.sigAPSChanged.emit)
+        self.aps.evChanged.unsubscribe(self.sigAPSChanged.emit)
 
     def connectSlots(self):
-        self.scene.evChanged.subscribe(
-            self.sigSceneChanged.emit)
-        self.scene.evConfigChanged.subscribe(
-            self.sigCovarianceConfigChanged.emit)
+        self.scene.evChanged.subscribe(self.sigSceneChanged.emit)
+        self.scene.evConfigChanged.subscribe(self.sigCovarianceConfigChanged.emit)
 
-        self.scene.frame.evChanged.subscribe(
-            self.sigFrameChanged.emit)
+        self.scene.frame.evChanged.subscribe(self.sigFrameChanged.emit)
 
-        self.quadtree.evChanged.subscribe(
-            self._sigQuadtreeChanged.emit)
-        self.quadtree.evConfigChanged.subscribe(
-            self.sigQuadtreeConfigChanged.emit)
+        self.quadtree.evChanged.subscribe(self._sigQuadtreeChanged.emit)
+        self.quadtree.evConfigChanged.subscribe(self.sigQuadtreeConfigChanged.emit)
 
-        self.covariance.evChanged.subscribe(
-            self.sigCovarianceChanged.emit)
-        self.covariance.evConfigChanged.subscribe(
-            self.sigCovarianceConfigChanged.emit)
+        self.covariance.evChanged.subscribe(self.sigCovarianceChanged.emit)
+        self.covariance.evConfigChanged.subscribe(self.sigCovarianceConfigChanged.emit)
 
     @QtCore.pyqtSlot(str)
     def exportWeightMatrix(self, filename):
@@ -136,16 +124,20 @@ class SceneModel(QtCore.QObject):
         def progress_func():
             return covariance.finished_combinations
 
-        ncombinations = quadtree.nleaves*(quadtree.nleaves+1)/2
+        ncombinations = quadtree.nleaves * (quadtree.nleaves + 1) / 2
 
-        self.sigProgressStarted.emit((
-            'Calculating <span style="font-family: monospace">'
-            'Covariance.weight_matrix</span>, this can take a few minutes...',
-            ncombinations, progress_func))
+        self.sigProgressStarted.emit(
+            (
+                'Calculating <span style="font-family: monospace">'
+                "Covariance.weight_matrix</span>, this can take a few minutes...",
+                ncombinations,
+                progress_func,
+            )
+        )
 
         self.scene.covariance.export_weight_matrix(filename)
         self.sigProgressFinished.emit()
-        self.sigCalculateWeightMatrixFinished.emit(datetime.now()-t0)
+        self.sigCalculateWeightMatrixFinished.emit(datetime.now() - t0)
 
     @QtCore.pyqtSlot()
     def calculateWeightMatrix(self):
@@ -156,27 +148,31 @@ class SceneModel(QtCore.QObject):
         def progress_func():
             return covariance.finished_combinations
 
-        ncombinations = quadtree.nleaves*(quadtree.nleaves+1)/2
+        ncombinations = quadtree.nleaves * (quadtree.nleaves + 1) / 2
 
-        self.sigProgressStarted.emit((
-            'Calculating <span style="font-family: monospace">'
-            'Covariance.weight_matrix</span>,'
-            ' this can take a few minutes...',
-            ncombinations, progress_func))
+        self.sigProgressStarted.emit(
+            (
+                'Calculating <span style="font-family: monospace">'
+                "Covariance.weight_matrix</span>,"
+                " this can take a few minutes...",
+                ncombinations,
+                progress_func,
+            )
+        )
 
         self.scene.covariance.weight_matrix
         self.sigProgressFinished.emit()
-        self.sigCalculateWeightMatrixFinished.emit(datetime.now()-t0)
+        self.sigCalculateWeightMatrixFinished.emit(datetime.now() - t0)
 
     @QtCore.pyqtSlot(str)
     def importFile(self, filename):
-        self.sigProgressStarted.emit(('Importing scene...', ))
+        self.sigProgressStarted.emit(("Importing scene...",))
         self.setScene(Scene.import_data(filename))
         self.sigProgressFinished.emit()
 
     @QtCore.pyqtSlot(str)
     def loadFile(self, filename):
-        self.sigProgressStarted.emit(('Loading scene...', ))
+        self.sigProgressStarted.emit(("Loading scene...",))
         self.setScene(Scene.load(filename))
         self.sigProgressFinished.emit()
 
@@ -187,22 +183,21 @@ class SceneModel(QtCore.QObject):
     def download_progress(self, context_str, status):
         progress = self.spool.progress
 
-        progress.setWindowTitle('Downloading...')
+        progress.setWindowTitle("Downloading...")
         progress.setLabelText(context_str)
-        progress.setMaximum(status.get('ntotal_bytes_all_files', 0))
-        progress.setValue(status.get('nread_bytes_all_files', 0))
+        progress.setMaximum(status.get("ntotal_bytes_all_files", 0))
+        progress.setValue(status.get("nread_bytes_all_files", 0))
         QtCore.QCoreApplication.processEvents()
 
         if progress.isHidden():
             progress.show()
             QtCore.QCoreApplication.processEvents()
 
-        if status['finished']:
+        if status["finished"]:
             progress.reset()
 
 
 class QSceneQuadtreeProxy(QtCore.QObject):
-
     def __init__(self, scene_proxy):
         QtCore.QObject.__init__(self, scene_proxy)
         self.scene_proxy = scene_proxy

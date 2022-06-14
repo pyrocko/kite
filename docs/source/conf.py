@@ -31,31 +31,30 @@ import kite
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.todo',
-    'sphinx.ext.mathjax',
-    'sphinx.ext.githubpages',
-    'sphinx.ext.coverage',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx'
+    "sphinx.ext.autodoc",
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.githubpages",
+    "sphinx.ext.coverage",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
 ]
 
 
-intersphinx_mapping = {'numpy': ('https://docs.scipy.org/doc/numpy/',
-                                 None),
-                       'scipy': ('https://docs.scipy.org/doc/scipy/reference/',
-                                 None),
-                       'pyrocko': ('https://pyrocko.org/docs/current/',
-                                   None)}
+intersphinx_mapping = {
+    "numpy": ("https://docs.scipy.org/doc/numpy/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/reference/", None),
+    "pyrocko": ("https://pyrocko.org/docs/current/", None),
+}
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
-imgmath_image_format = 'svg'
+source_suffix = ".rst"
+imgmath_image_format = "svg"
 
 
 # The encoding of source files.
@@ -63,13 +62,13 @@ imgmath_image_format = 'svg'
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 
 # General information about the project.
-project = u'Kite'
-copyright = u'2018 The kite developers'
-author = u'Marius Isken'
+project = u"Kite"
+copyright = u"2018 The kite developers"
+author = u"Marius Isken"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -121,10 +120,10 @@ exclude_patterns = []
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ['kite.', 'src.']
+modindex_common_prefix = ["kite.", "src."]
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 # keep_warnings = False
@@ -136,23 +135,23 @@ todo_include_todos = True
 # -- Options for HTML output ----------------------------------------------
 html_theme_options = {
     # 'githuburl': 'https://github.com/ionelmc/sphinx-py3doc-enhanced-theme/',
-    'bodyfont': '"Roboto Slab",Arial,sans-serif',
-    'headfont': '"Lucida Grande",Arial,sans-serif',
-    'codefont': 'monospace,sans-serif',
-    'linkcolor': '#204a87',
-    'visitedlinkcolor': '#204a87',
-    'nosidebar': True,
+    "bodyfont": '"Roboto Slab",Arial,sans-serif',
+    "headfont": '"Lucida Grande",Arial,sans-serif',
+    "codefont": "monospace,sans-serif",
+    "linkcolor": "#204a87",
+    "visitedlinkcolor": "#204a87",
+    "nosidebar": True,
     # 'sidebarcollapse': False,
     # 'googlewebfonturl': 'https://fonts.googleapis.com/css?family=Roboto+Slab',
 }
 
-pygments_style = 'friendly'
+pygments_style = "friendly"
 
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_sleekcat_theme'
+html_theme = "sphinx_sleekcat_theme"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -186,7 +185,7 @@ html_title = u"%s v%s Manual" % (project, release)
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -266,34 +265,36 @@ html_show_sphinx = False
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Kite-doc'
+htmlhelp_basename = "Kite-doc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-     # The paper size ('letterpaper' or 'a4paper').
-     #
-     # 'papersize': 'letterpaper',
-
-     # The font size ('10pt', '11pt' or '12pt').
-     #
-     # 'pointsize': '10pt',
-
-     # Additional stuff for the LaTeX preamble.
-     #
-     # 'preamble': '',
-
-     # Latex figure (float) alignment
-     #
-     # 'figure_align': 'htbp',
+    # The paper size ('letterpaper' or 'a4paper').
+    #
+    # 'papersize': 'letterpaper',
+    # The font size ('10pt', '11pt' or '12pt').
+    #
+    # 'pointsize': '10pt',
+    # Additional stuff for the LaTeX preamble.
+    #
+    # 'preamble': '',
+    # Latex figure (float) alignment
+    #
+    # 'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Kite.tex', u'Kite Documentation',
-     u'The Pyrocko Development Team.', 'manual'),
+    (
+        master_doc,
+        "Kite.tex",
+        u"Kite Documentation",
+        u"The Pyrocko Development Team.",
+        "manual",
+    ),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -333,10 +334,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'kite', u'Kite Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, "kite", u"Kite Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 #
@@ -349,10 +347,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Kite', u'Kite Documentation',
-     author, 'Kite', 'InSAR displacement processing towards '
-                     'earthquake parametrization.',
-     'Science,Geology,Earthquake'),
+    (
+        master_doc,
+        "Kite",
+        u"Kite Documentation",
+        author,
+        "Kite",
+        "InSAR displacement processing towards " "earthquake parametrization.",
+        "Science,Geology,Earthquake",
+    ),
 ]
 
 # Documents to append as an appendix to all manuals.
@@ -372,14 +375,14 @@ texinfo_documents = [
 # texinfo_no_detailmenu = False
 
 
-def process_signature(app, what, name, obj, options, signature,
-                      return_annotation):
+def process_signature(app, what, name, obj, options, signature, return_annotation):
     from pyrocko import guts
-    if what == 'attribute' and isinstance(obj, guts.TBase):
-            return '', str(obj)
 
-    if what == 'class' and issubclass(obj, guts.Object):
+    if what == "attribute" and isinstance(obj, guts.TBase):
+        return "", str(obj)
+
+    if what == "class" and issubclass(obj, guts.Object):
         if obj.dummy_for is not None:
-            return ('(dummy)', '%s' % obj.dummy_for.__name__)
+            return ("(dummy)", "%s" % obj.dummy_for.__name__)
 
     return

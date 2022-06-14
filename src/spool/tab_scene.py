@@ -11,17 +11,14 @@ from kite.qt_utils import loadUi
 from .base import KiteView, KitePlot, KiteParameterGroup, get_resource
 
 
-__all__ = ['KiteScene']
+__all__ = ["KiteScene"]
 
 km = 1e3
-pen_roi = pg.mkPen(
-    (255, 23, 68), width=2)
-pen_roi_highlight = pg.mkPen(
-    (115, 210, 22), width=2, style=QtCore.Qt.DashLine)
+pen_roi = pg.mkPen((255, 23, 68), width=2)
+pen_roi_highlight = pg.mkPen((115, 210, 22), width=2, style=QtCore.Qt.DashLine)
 
 
 class PolygonMaskROI(pg.PolyLineROI):
-
     def _makePen(self):
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
@@ -31,7 +28,7 @@ class PolygonMaskROI(pg.PolyLineROI):
 
 
 class KiteScene(KiteView):
-    title = 'Scene'
+    title = "Scene"
 
     def __init__(self, spool):
         model = spool.model
@@ -63,7 +60,8 @@ class KiteScene(KiteView):
 
         spool.actionAddPolygonMask.triggered.connect(scene_plot.newMaskPolygon)
         spool.actionTogglePolygonMask.setChecked(
-            model.getScene().polygon_mask.is_enabled())
+            model.getScene().polygon_mask.is_enabled()
+        )
         spool.actionTogglePolygonMask.toggled.connect(self.togglePolygonMask)
 
         KiteView.__init__(self)
@@ -86,33 +84,25 @@ class KiteScene(KiteView):
 
 
 class KiteScenePlot(KitePlot):
-
     def __init__(self, model):
         self.components_available = {
-            'displacement':
-                ['Scene.displacement', lambda sp: sp.scene.displacement],
-            'theta':
-                ['Scene.theta', lambda sp: sp.scene.theta],
-            'phi':
-                ['Scene.phi', lambda sp: sp.scene.phi],
-            'thetaDeg':
-                ['Scene.thetaDeg', lambda sp: sp.scene.thetaDeg],
-            'phiDeg':
-                ['Scene.phiDeg', lambda sp: sp.scene.phiDeg],
-            'unitE':
-                ['Scene.los.unitE', lambda sp: sp.scene.los.unitE],
-            'unitN':
-                ['Scene.los.unitN', lambda sp: sp.scene.los.unitN],
-            'unitU':
-                ['Scene.los.unitU', lambda sp: sp.scene.los.unitU],
+            "displacement": ["Scene.displacement", lambda sp: sp.scene.displacement],
+            "theta": ["Scene.theta", lambda sp: sp.scene.theta],
+            "phi": ["Scene.phi", lambda sp: sp.scene.phi],
+            "thetaDeg": ["Scene.thetaDeg", lambda sp: sp.scene.thetaDeg],
+            "phiDeg": ["Scene.phiDeg", lambda sp: sp.scene.phiDeg],
+            "unitE": ["Scene.los.unitE", lambda sp: sp.scene.los.unitE],
+            "unitN": ["Scene.los.unitN", lambda sp: sp.scene.los.unitN],
+            "unitU": ["Scene.los.unitU", lambda sp: sp.scene.los.unitU],
         }
 
         if model.scene.displacement_px_var is not None:
-            self.components_available['displacement_px_var'] = \
-                ['Scene.displacement_px_var',
-                 lambda sp: sp.scene.displacement_px_var]
+            self.components_available["displacement_px_var"] = [
+                "Scene.displacement_px_var",
+                lambda sp: sp.scene.displacement_px_var,
+            ]
 
-        self._component = 'displacement'
+        self._component = "displacement"
 
         KitePlot.__init__(self, model=model, los_arrow=True)
 
@@ -126,15 +116,16 @@ class KiteScenePlot(KitePlot):
 
     def roiToVertices(self, roi):
         frame = self.model.scene.frame
-        return [(h.pos().x() / frame.dE,
-                 h.pos().y() / frame.dN)
-                for h in roi.getHandles()]
+        return [
+            (h.pos().x() / frame.dE, h.pos().y() / frame.dN) for h in roi.getHandles()
+        ]
 
     def verticesToRoi(self, vertices):
         frame = self.model.scene.frame
-        return [((v[0] / frame.cols) * frame.lengthE,
-                 (v[1] / frame.rows) * frame.lengthN)
-                for v in vertices]
+        return [
+            ((v[0] / frame.cols) * frame.lengthE, (v[1] / frame.rows) * frame.lengthN)
+            for v in vertices
+        ]
 
     def loadMaskPolygons(self):
         scene = self.model.scene
@@ -145,9 +136,7 @@ class KiteScenePlot(KitePlot):
         scene = self.model.scene
         frame = self.model.scene.frame
 
-        vertices = num.array([
-            (0., 0.), (0., 1.),
-            (1., 1.), (1., 0.)])
+        vertices = num.array([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)])
         vertices[:, 0] *= frame.cols / 6
         vertices[:, 1] *= frame.rows / 6
         vertices[:, 0] += frame.cols / 2
@@ -162,7 +151,8 @@ class KiteScenePlot(KitePlot):
             pen=pen_roi,
             movable=False,
             removable=True,
-            closed=True)
+            closed=True,
+        )
         roi.pid = pid
 
         roi.sigRegionChangeFinished.connect(self.updatePolygonMask)
@@ -183,35 +173,28 @@ class KiteScenePlot(KitePlot):
 
 
 class KiteToolTransect(QtGui.QDialog):
-
     def __init__(self, plot, parent=None):
         QtGui.QDialog.__init__(self, parent)
 
-        loadUi(get_resource('transect.ui'), baseinstance=self)
+        loadUi(get_resource("transect.ui"), baseinstance=self)
 
         icon = self.style().standardIcon
 
-        self.closeButton.setIcon(
-            icon(QtGui.QStyle.SP_DialogCloseButton))
-        self.createButton.setIcon(
-            icon(QtGui.QStyle.SP_ArrowUp))
-        self.removeButton.setIcon(
-            icon(QtGui.QStyle.SP_DialogDiscardButton))
+        self.closeButton.setIcon(icon(QtGui.QStyle.SP_DialogCloseButton))
+        self.createButton.setIcon(icon(QtGui.QStyle.SP_ArrowUp))
+        self.removeButton.setIcon(icon(QtGui.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None
 
         self.trans_plot = pg.PlotDataItem(
-            antialias=True,
-            fillLevel=0.,
-            fillBrush=pg.mkBrush(0, 127, 0, 150))
+            antialias=True, fillLevel=0.0, fillBrush=pg.mkBrush(0, 127, 0, 150)
+        )
 
         self.plt_wdgt = pg.PlotWidget()
-        self.plt_wdgt.setLabels(
-            bottom={'Distance', ' m'},
-            left='Displacement [m]')
+        self.plt_wdgt.setLabels(bottom={"Distance", " m"}, left="Displacement [m]")
 
-        self.plt_wdgt.showGrid(True, True, alpha=.5)
+        self.plt_wdgt.showGrid(True, True, alpha=0.5)
         self.plt_wdgt.enableAutoRange()
         self.plt_wdgt.addItem(self.trans_plot)
 
@@ -225,16 +208,16 @@ class KiteToolTransect(QtGui.QDialog):
     def addPolyLine(self):
         [[xmin, xmax], [ymin, ymax]] = self.plot.viewRange()
         self.poly_line = pg.PolyLineROI(
-            positions=[(xmin+(xmax-xmin)*.4,
-                        ymin+(ymax-ymin)*.4),
-                       (xmin+(xmax-xmin)*.6,
-                        ymin+(ymax-ymin)*.6)],
-            pen=pg.mkPen('g', width=2))
+            positions=[
+                (xmin + (xmax - xmin) * 0.4, ymin + (ymax - ymin) * 0.4),
+                (xmin + (xmax - xmin) * 0.6, ymin + (ymax - ymin) * 0.6),
+            ],
+            pen=pg.mkPen("g", width=2),
+        )
         self.plot.addItem(self.poly_line)
         self.updateTransPlot()
 
-        self.poly_line.sigRegionChangeFinished.connect(
-            self.updateTransPlot)
+        self.poly_line.sigRegionChangeFinished.connect(self.updateTransPlot)
 
     def removePolyLine(self):
         if self.poly_line is None:
@@ -255,60 +238,62 @@ class KiteToolTransect(QtGui.QDialog):
         length = 0
         for line in self.poly_line.segments:
             transect = num.append(
-                transect,
-                line.getArrayRegion(self.plot.image.image, self.plot.image))
+                transect, line.getArrayRegion(self.plot.image.image, self.plot.image)
+            )
             p1, p2 = line.listPoints()
-            length += (p2-p1).length()
+            length += (p2 - p1).length()
         # interpolate over NaNs
         nans, x = num.isnan(transect), lambda z: z.nonzero()[0]
         transect[nans] = num.interp(x(nans), x(~nans), transect[~nans])
         length = num.linspace(0, length, transect.size)
 
         self.trans_plot.setData(length, transect)
-        self.plt_wdgt.setLimits(xMin=length.min(), xMax=length.max(),
-                                yMin=transect.min(), yMax=transect.max()*1.1)
+        self.plt_wdgt.setLimits(
+            xMin=length.min(),
+            xMax=length.max(),
+            yMin=transect.min(),
+            yMax=transect.max() * 1.1,
+        )
         return
 
 
 class ParamScene(KiteParameterGroup):
     def __init__(self, model, plot, **kwargs):
-        kwargs['type'] = 'group'
-        kwargs['name'] = 'Scene'
+        kwargs["type"] = "group"
+        kwargs["name"] = "Scene"
         self.plot = plot
 
         self.parameters = {
-            'min value': lambda plot: num.nanmin(plot.data),
-            'max value': lambda plot: num.nanmax(plot.data),
-            'mean value': lambda plot: num.nanmean(plot.data),
+            "min value": lambda plot: num.nanmin(plot.data),
+            "max value": lambda plot: num.nanmax(plot.data),
+            "mean value": lambda plot: num.nanmean(plot.data),
         }
 
         self.plot.image.sigImageChanged.connect(self.updateValues)
 
-        KiteParameterGroup.__init__(self,
-                                    model=self.plot,
-                                    model_attr=None,
-                                    **kwargs)
+        KiteParameterGroup.__init__(self, model=self.plot, model_attr=None, **kwargs)
 
         def changeComponent(parameter):
             self.plot.component = parameter.value()
 
-        p = {'name': 'display',
-             'values': {
-                 'displacement': 'displacement',
-                 'theta': 'theta',
-                 'phi': 'phi',
-                 'thetaDeg': 'thetaDeg',
-                 'phiDeg': 'phiDeg',
-                 'los.unitE': 'unitE',
-                 'los.unitN': 'unitN',
-                 'los.unitU': 'unitU',
-                 },
-             'value': 'displacement',
-             'tip': 'Change the displayed component of the displacement field.'
-             }
+        p = {
+            "name": "display",
+            "values": {
+                "displacement": "displacement",
+                "theta": "theta",
+                "phi": "phi",
+                "thetaDeg": "thetaDeg",
+                "phiDeg": "phiDeg",
+                "los.unitE": "unitE",
+                "los.unitN": "unitN",
+                "los.unitU": "unitU",
+            },
+            "value": "displacement",
+            "tip": "Change the displayed component of the displacement field.",
+        }
 
         if model.scene.displacement_px_var is not None:
-            p['values']['displacement_px_var'] = 'displacement_px_var'
+            p["values"]["displacement_px_var"] = "displacement_px_var"
 
         component = pTypes.ListParameter(**p)
         component.sigValueChanged.connect(changeComponent)
@@ -317,100 +302,100 @@ class ParamScene(KiteParameterGroup):
 
 class ParamSceneFrame(KiteParameterGroup):
     def __init__(self, model, **kwargs):
-        kwargs['type'] = 'group'
-        kwargs['name'] = '.frame'
+        kwargs["type"] = "group"
+        kwargs["name"] = ".frame"
 
-        self.parameters = OrderedDict([
-            ('cols', None),
-            ('rows', None),
-            ('dN', None),
-            ('dE', None),
-            ('spacing', None),
-            ('llLat', None),
-            ('llLon', None),
-            ('llNutm', None),
-            ('llEutm', None),
-            ('utm_zone', None),
-            ('utm_zone_letter', None),
-            ])
+        self.parameters = OrderedDict(
+            [
+                ("cols", None),
+                ("rows", None),
+                ("dN", None),
+                ("dE", None),
+                ("spacing", None),
+                ("llLat", None),
+                ("llLon", None),
+                ("llNutm", None),
+                ("llEutm", None),
+                ("utm_zone", None),
+                ("utm_zone_letter", None),
+            ]
+        )
 
         model.sigFrameChanged.connect(self.updateValues)
 
-        KiteParameterGroup.__init__(self,
-                                    model=model,
-                                    model_attr='frame',
-                                    **kwargs)
+        KiteParameterGroup.__init__(self, model=model, model_attr="frame", **kwargs)
 
 
 class ParamSceneMeta(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         from datetime import datetime as dt
-        kwargs['type'] = 'group'
-        kwargs['name'] = '.meta'
 
-        def str_to_time(d, fmt='%Y-%m-%d %H:%M:%S'):
+        kwargs["type"] = "group"
+        kwargs["name"] = ".meta"
+
+        def str_to_time(d, fmt="%Y-%m-%d %H:%M:%S"):
             return dt.strftime(dt.fromtimestamp(d), fmt)
 
-        self.parameters = OrderedDict([
-            ('time_master',
-             lambda sc: str_to_time(sc.meta.time_master)),
-            ('time_slave',
-             lambda sc: str_to_time(sc.meta.time_slave)),
-            ('time_separation',
-             lambda sc: '%s' % sc.meta.time_separation),
-            ])
+        self.parameters = OrderedDict(
+            [
+                ("time_master", lambda sc: str_to_time(sc.meta.time_master)),
+                ("time_slave", lambda sc: str_to_time(sc.meta.time_slave)),
+                ("time_separation", lambda sc: "%s" % sc.meta.time_separation),
+            ]
+        )
 
         model.sigConfigChanged.connect(self.updateValues)
 
-        KiteParameterGroup.__init__(self,
-                                    model=model,
-                                    model_attr='scene',
-                                    **kwargs)
+        KiteParameterGroup.__init__(self, model=model, model_attr="scene", **kwargs)
 
         def update_meta_info(key, value):
             self.model.scene.meta.__setattr__(key, value)
 
-        p = {'name': 'scene_title',
-             'value': self.model.scene.meta.scene_title,
-             'type': 'str',
-             'tip': 'Title of the displacement scene'
-             }
+        p = {
+            "name": "scene_title",
+            "value": self.model.scene.meta.scene_title,
+            "type": "str",
+            "tip": "Title of the displacement scene",
+        }
 
         self.scene_title = pTypes.SimpleParameter(**p)
         self.scene_title.sigValueChanged.connect(
-            lambda v: update_meta_info('scene_title', v.value()))
+            lambda v: update_meta_info("scene_title", v.value())
+        )
 
-        p = {'name': 'scene_id',
-             'value': self.model.scene.meta.scene_id,
-             'type': 'str'
-             }
+        p = {"name": "scene_id", "value": self.model.scene.meta.scene_id, "type": "str"}
 
         self.scene_id = pTypes.SimpleParameter(**p)
         self.scene_id.sigValueChanged.connect(
-            lambda v: update_meta_info('scene_id', v.value()))
+            lambda v: update_meta_info("scene_id", v.value())
+        )
 
-        p = {'name': 'satellite_name',
-             'value': self.model.scene.meta.satellite_name,
-             'type': 'str',
-             'tip': 'Name of the satellite'
-             }
+        p = {
+            "name": "satellite_name",
+            "value": self.model.scene.meta.satellite_name,
+            "type": "str",
+            "tip": "Name of the satellite",
+        }
 
         self.satellite_name = pTypes.SimpleParameter(**p)
         self.satellite_name.sigValueChanged.connect(
-            lambda v: update_meta_info('satellite_name', v.value()))
+            lambda v: update_meta_info("satellite_name", v.value())
+        )
 
-        p = {'name': 'orbital_node',
-             'values': {
-                'Ascending': 'Ascending',
-                'Descending': 'Descending',
-                'Undefined': 'Undefined',
-             },
-             'value': self.model.scene.meta.orbital_node,
-             'tip': 'Satellite orbit direction'
-             }
+        p = {
+            "name": "orbital_node",
+            "values": {
+                "Ascending": "Ascending",
+                "Descending": "Descending",
+                "Undefined": "Undefined",
+            },
+            "value": self.model.scene.meta.orbital_node,
+            "tip": "Satellite orbit direction",
+        }
         self.orbital_node = pTypes.ListParameter(**p)
         self.orbital_node.sigValueChanged.connect(
-            lambda v: update_meta_info('orbital_node', v.value()))
+            lambda v: update_meta_info("orbital_node", v.value())
+        )
 
         self.pushChild(self.orbital_node)
         self.pushChild(self.satellite_name)
@@ -421,17 +406,16 @@ class ParamSceneMeta(KiteParameterGroup):
 class DerampParams(KiteParameterGroup):
     def __init__(self, model, **kwargs):
         scene = model.getScene()
-        kwargs['type'] = 'group'
-        kwargs['name'] = 'Scene.detrend'
+        kwargs["type"] = "group"
+        kwargs["name"] = "Scene.detrend"
 
-        KiteParameterGroup.__init__(
-            self, model=model, model_attr='scene', **kwargs)
+        KiteParameterGroup.__init__(self, model=model, model_attr="scene", **kwargs)
 
         p = {
-            'name': 'demean',
-            'type': 'bool',
-            'value': scene.deramp.config.demean,
-            'tip': 'substract mean of displacement'
+            "name": "demean",
+            "type": "bool",
+            "value": scene.deramp.config.demean,
+            "tip": "substract mean of displacement",
         }
         self.demean = pTypes.SimpleParameter(**p)
 
@@ -441,10 +425,10 @@ class DerampParams(KiteParameterGroup):
         self.demean.sigValueChanged.connect(toggle_demean)
 
         p = {
-            'name': 'applied',
-            'type': 'bool',
-            'value': scene.deramp.config.applied,
-            'tip': 'detrend the scene'
+            "name": "applied",
+            "type": "bool",
+            "value": scene.deramp.config.applied,
+            "tip": "detrend the scene",
         }
         self.applied = pTypes.SimpleParameter(**p)
 

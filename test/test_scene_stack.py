@@ -12,11 +12,10 @@ logging.basicConfig(level=logging.DEBUG)
 QuadNode.MIN_PIXEL_LENGTH_NODE = 32
 
 t0 = time.time()
-dt = 60*60*24*365.25 / 2
+dt = 60 * 60 * 24 * 365.25 / 2
 
 
 class TSTestScene(TestScene, TSScene):
-
     @classmethod
     def createSine(cls, *args, **kwargs):
         return super().createSine(*args, **kwargs)
@@ -40,7 +39,7 @@ scenes = {}
 for isc in range(nscenes):
     t = t0 - isc * dt
     sc = TSTestScene.createRandom(256, 256)
-    sc.addNoise(1.)
+    sc.addNoise(1.0)
 
     scenes[t] = sc
 

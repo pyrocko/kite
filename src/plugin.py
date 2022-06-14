@@ -13,7 +13,6 @@ class PluginConfig(Object):
 
 
 class Plugin(object):
-
     def __init__(self, scene, config=None):
         self.scene = scene
         self.config = config or PluginConfig()

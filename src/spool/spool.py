@@ -20,15 +20,16 @@ from .base import get_resource
 
 
 class Spool(QtWidgets.QApplication):
-
     def __init__(self, scene=None, import_file=None, load_file=None):
-        QtWidgets.QApplication.__init__(self, ['Spool'])
+        QtWidgets.QApplication.__init__(self, ["Spool"])
         # self.setStyle('plastique')
-        splash_img = QtGui.QPixmap(get_resource('spool_splash.png'))\
-            .scaled(QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio)
+        splash_img = QtGui.QPixmap(get_resource("spool_splash.png")).scaled(
+            QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio
+        )
         self.splash = QtWidgets.QSplashScreen(
-            splash_img, QtCore.Qt.WindowStaysOnTopHint)
-        self.updateSplashMessage('Scene')
+            splash_img, QtCore.Qt.WindowStaysOnTopHint
+        )
+        self.updateSplashMessage("Scene")
         self.splash.show()
         self.processEvents()
 
@@ -36,8 +37,9 @@ class Spool(QtWidgets.QApplication):
         self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
-        self.aboutToQuit.connect(self.spool_win.model.worker_thread.quit,
-                                 type=QtCore.Qt.QueuedConnection)
+        self.aboutToQuit.connect(
+            self.spool_win.model.worker_thread.quit, type=QtCore.Qt.QueuedConnection
+        )
         self.aboutToQuit.connect(self.spool_win.model.deleteLater)
         self.aboutToQuit.connect(self.splash.deleteLater)
         self.aboutToQuit.connect(self.deleteLater)
@@ -53,9 +55,8 @@ class Spool(QtWidgets.QApplication):
         self.splash.finish(self.spool_win)
 
     @QtCore.pyqtSlot(str)
-    def updateSplashMessage(self, msg=''):
-        self.splash.showMessage(
-            'Loading %s ...' % msg.title(), QtCore.Qt.AlignBottom)
+    def updateSplashMessage(self, msg=""):
+        self.splash.showMessage("Loading %s ..." % msg.title(), QtCore.Qt.AlignBottom)
 
     def addScene(self, scene):
         self.spool_win.addScene(scene)
@@ -78,20 +79,20 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, *args, **kwargs):
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
-        loadUi(get_resource('spool.ui'), baseinstance=self)
+        loadUi(get_resource("spool.ui"), baseinstance=self)
 
         self.views = []
         self.active_view = None
 
         self.ptree = KiteParameterTree(showHeader=False)
         self.ptree.setMinimumWidth(400)
-        self.dock_ptree = QtWidgets.QDockWidget('Parameters', self)
+        self.dock_ptree = QtWidgets.QDockWidget("Parameters", self)
         self.dock_ptree.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetMovable |
-            QtWidgets.QDockWidget.DockWidgetFloatable)
+            QtWidgets.QDockWidget.DockWidgetMovable
+            | QtWidgets.QDockWidget.DockWidgetFloatable
+        )
         self.dock_ptree.setWidget(self.ptree)
-        self.addDockWidget(
-            QtCore.Qt.LeftDockWidgetArea, self.dock_ptree)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dock_ptree)
 
         self.tabs = QtGui.QTabWidget(self)
         self.dock_tabs = QtWidgets.QDockWidget(self)
@@ -99,52 +100,37 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.dock_tabs.setWidget(self.tabs)
         self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
 
-        self.addDockWidget(
-            QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
         self.setCentralWidget(self.dock_tabs)
 
         self.model = SceneModel(self)
-        self.model.sigSceneModelChanged.connect(
-            self.buildViews)
+        self.model.sigSceneModelChanged.connect(self.buildViews)
 
         # Connecting signals
-        self.sigLoadFile.connect(
-            self.model.loadFile)
-        self.sigImportFile.connect(
-            self.model.importFile)
-        self.sigLoadConfig.connect(
-            self.model.loadConfig)
-        self.sigExportWeightMatrix.connect(
-            self.model.exportWeightMatrix)
+        self.sigLoadFile.connect(self.model.loadFile)
+        self.sigImportFile.connect(self.model.importFile)
+        self.sigLoadConfig.connect(self.model.loadConfig)
+        self.sigExportWeightMatrix.connect(self.model.exportWeightMatrix)
 
-        self.actionSave_config.triggered.connect(
-            self.onSaveConfig)
-        self.actionSave_scene.triggered.connect(
-            self.onSaveScene)
-        self.actionLoad_config.triggered.connect(
-            self.onLoadConfig)
-        self.actionLoad_scene.triggered.connect(
-            self.onOpenScene)
+        self.actionSave_config.triggered.connect(self.onSaveConfig)
+        self.actionSave_scene.triggered.connect(self.onSaveScene)
+        self.actionLoad_config.triggered.connect(self.onLoadConfig)
+        self.actionLoad_scene.triggered.connect(self.onOpenScene)
 
-        self.actionImport_scene.triggered.connect(
-            self.onImportScene)
-        self.actionExport_quadtree.triggered.connect(
-            self.onExportQuadtree)
-        self.actionExport_weights.triggered.connect(
-            self.onExportWeightMatrix)
+        self.actionImport_scene.triggered.connect(self.onImportScene)
+        self.actionExport_quadtree.triggered.connect(self.onExportQuadtree)
+        self.actionExport_weights.triggered.connect(self.onExportWeightMatrix)
 
-        self.actionAbout_Spool.triggered.connect(
-            self.aboutDialog().show)
-        self.actionAbout_Qt5.triggered.connect(
-            lambda: QtGui.QMessageBox.aboutQt(self))
+        self.actionAbout_Spool.triggered.connect(self.aboutDialog().show)
+        self.actionAbout_Qt5.triggered.connect(lambda: QtGui.QMessageBox.aboutQt(self))
         self.actionHelp.triggered.connect(
-            lambda: QtGui.QDesktopServices.openUrl('https://pyrocko.org'))
+            lambda: QtGui.QDesktopServices.openUrl("https://pyrocko.org")
+        )
 
         self.log = SceneLog(self, self.model)
-        self.actionLog.triggered.connect(
-            self.log.show)
+        self.actionLog.triggered.connect(self.log.show)
 
-        self.progress = QtWidgets.QProgressDialog('', None, 0, 0, self)
+        self.progress = QtWidgets.QProgressDialog("", None, 0, 0, self)
         self.progress.setValue(0)
         self.progress.closeEvent = lambda ev: ev.ignore()
         self.progress.setMinimumWidth(400)
@@ -155,7 +141,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
     def aboutDialog(self):
         self._about = QtGui.QDialog(self)
-        loadUi(get_resource('about.ui'), baseinstance=self._about)
+        loadUi(get_resource("about.ui"), baseinstance=self._about)
         return self._about
 
     def addScene(self, scene):
@@ -166,18 +152,18 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def buildViews(self):
         scene = self.model.getScene()
 
-        title = scene.meta.filename or 'Untitled'
-        self.setWindowTitle('Spool - %s' % title)
+        title = scene.meta.filename or "Untitled"
+        self.setWindowTitle("Spool - %s" % title)
         if scene is None or self.tabs.count() != 0:
             return
         for v in self.VIEWS:
             self.addView(v)
         self.model.sigProgressStarted.connect(
-            self.progressStarted,
-            type=QtCore.Qt.QueuedConnection)
+            self.progressStarted, type=QtCore.Qt.QueuedConnection
+        )
         self.model.sigProgressFinished.connect(
-            self.progressFinished,
-            type=QtCore.Qt.QueuedConnection)
+            self.progressFinished, type=QtCore.Qt.QueuedConnection
+        )
 
         self.tabs.currentChanged.connect(self.activateView)
 
@@ -194,7 +180,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.tabs.addTab(view, view.title)
         QtCore.QCoreApplication.processEvents()
 
-        if hasattr(view, 'parameters'):
+        if hasattr(view, "parameters"):
             for parameter in view.parameters:
                 self.ptree.addParameters(parameter)
 
@@ -219,7 +205,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         maximum = 0 if nargs < 2 else args[1]
         progress_func = None if nargs < 3 else args[2]
 
-        self.progress.setWindowTitle('Processing...')
+        self.progress.setWindowTitle("Processing...")
         self.progress.setLabelText(text)
         self.progress.setMaximum(maximum)
         self.progress.setValue(0)
@@ -251,38 +237,44 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             parent=self,
             directory=self.getSceneDirname(),
-            filter='YAML file *.yml (*.yml)',
-            caption='Save scene YAML config')
+            filter="YAML file *.yml (*.yml)",
+            caption="Save scene YAML config",
+        )
         if not validateFilename(filename):
             return
         self.model.scene.saveConfig(filename)
         QtWidgets.QMessageBox.information(
-            self, 'Scene config saved',
-            'Scene config successfuly saved!'
+            self,
+            "Scene config saved",
+            "Scene config successfuly saved!"
             '<p style="font-family: monospace;">%s'
-            '</p>' % filename)
+            "</p>" % filename,
+        )
         self.state_hash = self.model.scene.get_state_hash()
 
     def onSaveScene(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             parent=self,
             directory=self.getSceneDirname(),
-            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
-            caption='Save scene')
+            filter="YAML *.yml and NumPy container *.npz (*.yml *.npz)",
+            caption="Save scene",
+        )
         if not validateFilename(filename):
             return
         self.model.scene.save(filename)
         QtWidgets.QMessageBox.information(
-            self, 'Scene saved',
-            'Scene successfuly saved!'
+            self,
+            "Scene saved",
+            "Scene successfuly saved!"
             '<p style="font-family: monospace;">%s'
-            '</p>' % filename)
+            "</p>" % filename,
+        )
         self.state_hash = self.model.scene.get_state_hash()
 
     def onLoadConfig(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
-            filter='YAML file *.yml (*.yml)',
-            caption='Load scene YAML config')
+            filter="YAML file *.yml (*.yml)", caption="Load scene YAML config"
+        )
         if not validateFilename(filename):
             return
         self.sigLoadConfig.emit(filename)
@@ -290,8 +282,9 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def onOpenScene(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             parent=self,
-            filter='YAML *.yml and NumPy container *.npz (*.yml *.npz)',
-            caption='Load kite scene')
+            filter="YAML *.yml and NumPy container *.npz (*.yml *.npz)",
+            caption="Load kite scene",
+        )
         if not validateFilename(filename):
             return
         self.model.loadFile(filename)
@@ -299,12 +292,13 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def onImportScene(self):
         filename, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            filter='Supported Formats, *.grd, *.geo, *unw*, *.mat '
-                   '(*.grd,*.geo,*unw*,*.mat);;'
-                   'GMT5SAR Scene, *.grd (*.grd);;'
-                   'ISCE Scene, *unw* (*unw*);;Gamma Scene *.geo (*.geo);;'
-                   'Matlab Container, *.mat (*.mat);;Any File * (*)',
-            caption='Import scene to spool')
+            filter="Supported Formats, *.grd, *.geo, *unw*, *.mat "
+            "(*.grd,*.geo,*unw*,*.mat);;"
+            "GMT5SAR Scene, *.grd (*.grd);;"
+            "ISCE Scene, *unw* (*unw*);;Gamma Scene *.geo (*.geo);;"
+            "Matlab Container, *.mat (*.mat);;Any File * (*)",
+            caption="Import scene to spool",
+        )
         if not validateFilename(filename):
             return
         self.sigImportFile.emit(filename)
@@ -312,29 +306,30 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def onExportQuadtree(self):
         filename, flt = QtWidgets.QFileDialog.getSaveFileName(
             parent=self,
-            filter='GeoJSON (*.geojson *.json);;CSV File *.csv (*.csv)',
-            caption='Export Quadtree')
+            filter="GeoJSON (*.geojson *.json);;CSV File *.csv (*.csv)",
+            caption="Export Quadtree",
+        )
 
         if not validateFilename(filename):
             return
 
-        if flt == 'GeoJSON (*.geojson *.json)':
-            if not filename.endswith('.geojson') and \
-                    not filename.endswith('.json'):
-                filename += '.geojson'
+        if flt == "GeoJSON (*.geojson *.json)":
+            if not filename.endswith(".geojson") and not filename.endswith(".json"):
+                filename += ".geojson"
             self.model.quadtree.export_geojson(filename)
 
-        elif flt == 'CSV File *.csv (*.csv)':
-            if not filename.endswith('.csv'):
-                filename += '.geojson'
+        elif flt == "CSV File *.csv (*.csv)":
+            if not filename.endswith(".csv"):
+                filename += ".geojson"
             self.model.quadtree.export_csv(filename)
         else:
-            raise ValueError('unknown filter')
+            raise ValueError("unknown filter")
 
     def onExportWeightMatrix(self):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            filter='Text File *.txt (*.txt)',
-            caption='Export Covariance Weights',)
+            filter="Text File *.txt (*.txt)",
+            caption="Export Covariance Weights",
+        )
         if not validateFilename(filename):
             return
         self.sigExportWeightMatrix.emit(filename)
@@ -349,7 +344,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         slider_tmax = math.floor(stack.tmax)
 
         def datetime_formatter(value):
-            return datetime.fromtimestamp(value).strftime('%Y-%m-%d')
+            return datetime.fromtimestamp(value).strftime("%Y-%m-%d")
 
         self.time_slider.setMin(slider_tmin)
         self.time_slider.setMax(slider_tmax)
@@ -365,29 +360,27 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.time_slider.endValueChanged.connect(changeTimeRange)
 
         self.dock_time_slider = QtGui.QDockWidget(
-            'Displacement time series - range control', self)
+            "Displacement time series - range control", self
+        )
         self.dock_time_slider.setWidget(self.time_slider)
-        self.dock_time_slider.setFeatures(
-            QtWidgets.QDockWidget.DockWidgetMovable)
+        self.dock_time_slider.setFeatures(QtWidgets.QDockWidget.DockWidgetMovable)
         self.dock_time_slider.setAllowedAreas(
-            QtCore.Qt.BottomDockWidgetArea |
-            QtCore.Qt.TopDockWidgetArea)
+            QtCore.Qt.BottomDockWidgetArea | QtCore.Qt.TopDockWidgetArea
+        )
 
-        self.addDockWidget(
-            QtCore.Qt.BottomDockWidgetArea, self.dock_time_slider)
+        self.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.dock_time_slider)
 
     def closeEvent(self, ev):
         if self.state_hash == self.model.scene.get_state_hash():
             return
 
-        msg_box = QtGui.QMessageBox(
-            parent=self,
-            text='The scene has been modified')
+        msg_box = QtGui.QMessageBox(parent=self, text="The scene has been modified")
         msg_box.setStandardButtons(
-            QtGui.QMessageBox.Save |
-            QtGui.QMessageBox.Discard |
-            QtGui.QMessageBox.Cancel)
-        msg_box.setInformativeText('Do you want to save your changes?')
+            QtGui.QMessageBox.Save
+            | QtGui.QMessageBox.Discard
+            | QtGui.QMessageBox.Cancel
+        )
+        msg_box.setInformativeText("Do you want to save your changes?")
         msg_box.setDefaultButton(QtGui.QMessageBox.Save)
         ret = msg_box.exec()
 
@@ -407,10 +400,11 @@ def spool(*args, **kwargs):
     spool_app.quit()
 
 
-__all__ = ['Spool', 'spool']
+__all__ = ["Spool", "spool"]
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from kite.scene import SceneSynTest
+
     if len(sys.argv) > 1:
         sc = Scene.load(sys.argv[1])
     else:

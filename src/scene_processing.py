@@ -29,9 +29,7 @@ class SceneProcess(Object):
 
 
 class StaticOffset(SceneProcess):
-    offset = Float.T(
-        default=0.,
-        help='Static offset')
+    offset = Float.T(default=0.0, help="Static offset")
 
     def apply(self):
         self.scene.displacement += self.offset
@@ -43,20 +41,21 @@ class StaticOffset(SceneProcess):
 class Downsample(SceneProcess):
     from scipy import ndimage
 
-    factor = Int.T(
-        help='Downsample factor.')
+    factor = Int.T(help="Downsample factor.")
 
     def __init__(self, *args, **kwargs):
         SceneProcess.__init__(self, *args, **kwargs)
         sc = self.scene
         self.original = ADict()
-        self.original.update({
-            'displacement': sc.displacement.copy(),
-            'theta': sc.theta.copy(),
-            'phi': sc.phi.copy(),
-            'frame.dLat': sc.frame.dLat,
-            'frame.dLon': sc.frame.dLon,
-        })
+        self.original.update(
+            {
+                "displacement": sc.displacement.copy(),
+                "theta": sc.theta.copy(),
+                "phi": sc.phi.copy(),
+                "frame.dLat": sc.frame.dLat,
+                "frame.dLon": sc.frame.dLon,
+            }
+        )
 
     def apply(self):
         sc = self.scene
@@ -65,22 +64,19 @@ class Downsample(SceneProcess):
 
         sx, sy = sc.displacement.shape
         gx, gy = num.ogrid[0:sx, 0:sy]
-        regions = sy/factor * (gx/factor) + gy/factor
+        regions = sy / factor * (gx / factor) + gy / factor
         indices = num.arange(regions.max() + 1)
 
         def block_downsample(arr):
-            res = ndimage.mean(
-                arr,
-                labels=regions,
-                index=indices)
-            res.shape = (sx/factor, sy/factor)
+            res = ndimage.mean(arr, labels=regions, index=indices)
+            res.shape = (sx / factor, sy / factor)
             return res
 
         sc.displacement = block_downsample(sc.displacement)
         sc.theta = block_downsample(sc.theta)
         sc.phi = block_downsample(sc.phi)
-        sc.frame.dLat = org['frame.dLat'] * self.factor
-        sc.frame.dLon = org['frame.dLat'] * self.factor
+        sc.frame.dLat = org["frame.dLat"] * self.factor
+        sc.frame.dLon = org["frame.dLat"] * self.factor
 
     def remove(self):
         for prop, value in self.original.items():

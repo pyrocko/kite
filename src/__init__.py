@@ -6,4 +6,4 @@ from .quadtree import Quadtree  # noqa
 from .covariance import Covariance  # noqa
 from .sandbox_scene import SandboxScene, TestSandboxScene  # noqa
 
-__version__ = pkg_resources.get_distribution('kite').version
+__version__ = pkg_resources.get_distribution("kite").version

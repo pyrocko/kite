@@ -10,10 +10,10 @@ from .plugin import PluginConfig, Plugin
 
 
 def load_params(filename):
-    rc = re.compile(r'([\w]*)\s*([\w.+-]*)')
+    rc = re.compile(r"([\w]*)\s*([\w.+-]*)")
     params = {}
 
-    with open(filename, mode='r') as par:
+    with open(filename, mode="r") as par:
         for line in par:
             parsed = rc.match(line)
             if parsed is None:
@@ -26,9 +26,7 @@ def load_params(filename):
 
 
 class GACOSGrid(object):
-
-    def __init__(self, filename, time, data,
-                 ulLat, ulLon, dLat, dLon):
+    def __init__(self, filename, time, data, ulLat, ulLon, dLat, dLon):
         self.filename = filename
         self.time = time
 
@@ -51,14 +49,23 @@ class GACOSGrid(object):
         urLon = llLon + dLon * cols
 
         boundary_exception = AssertionError(
-            'GACOS Grid does not contain scene!\n'
-            ' llLat: %.4f urLat: %.4f\n'
-            ' llLon: %.4f urLon: %.4f\n'
-            'Scene:\n'
-            ' llLat: %.4f urLat: %.4f\n'
-            ' llLon: %.4f urLon: %.4f'
-            % (self.llLat, self.ulLat, self.llLon, self.urLon,
-               llLat, ulLat, llLon, urLon))
+            "GACOS Grid does not contain scene!\n"
+            " llLat: %.4f urLat: %.4f\n"
+            " llLon: %.4f urLon: %.4f\n"
+            "Scene:\n"
+            " llLat: %.4f urLat: %.4f\n"
+            " llLon: %.4f urLon: %.4f"
+            % (
+                self.llLat,
+                self.ulLat,
+                self.llLon,
+                self.urLon,
+                llLat,
+                ulLat,
+                llLon,
+                urLon,
+            )
+        )
 
         assert llLat >= self.llLat, boundary_exception
         assert llLon >= self.llLon, boundary_exception
@@ -86,51 +93,46 @@ class GACOSGrid(object):
 
     @classmethod
     def load(cls, filename):
-        rsc_file = filename + '.rsc'
+        rsc_file = filename + ".rsc"
         if not op.exists(filename) and not op.exists(rsc_file):
-            raise FileNotFoundError('Could not find %s or .rsc file %s'
-                                    % (filename, rsc_file))
+            raise FileNotFoundError(
+                "Could not find %s or .rsc file %s" % (filename, rsc_file)
+            )
 
         params = load_params(rsc_file)
 
-        time = datetime.strptime(op.basename(filename)[:8], '%Y%m%d')
-        hour = timedelta(hours=float(params['TIME_OF_DAY'].rstrip('UTC')))
+        time = datetime.strptime(op.basename(filename)[:8], "%Y%m%d")
+        hour = timedelta(hours=float(params["TIME_OF_DAY"].rstrip("UTC")))
         time += hour
 
-        rows = int(params['FILE_LENGTH'])
-        cols = int(params['WIDTH'])
+        rows = int(params["FILE_LENGTH"])
+        cols = int(params["WIDTH"])
 
-        ulLat = float(params['Y_FIRST'])
-        ulLon = float(params['X_FIRST'])
+        ulLat = float(params["Y_FIRST"])
+        ulLon = float(params["X_FIRST"])
 
-        dLat = float(params['Y_STEP'])
-        dLon = float(params['X_STEP'])
+        dLat = float(params["Y_STEP"])
+        dLon = float(params["X_STEP"])
 
-        data = num.memmap(
-            filename, dtype=num.float32, mode='r', shape=(rows, cols))
+        data = num.memmap(filename, dtype=num.float32, mode="r", shape=(rows, cols))
 
         return cls(filename, time, data, ulLat, ulLon, dLat, dLon)
 
 
 class GACOSConfig(PluginConfig):
-    grd_filenames = List.T(
-        default=[],
-        help='List of *two* GACOS gridfiles.')
-    applied = Bool.T(
-        default=False,
-        help='Is the correction applied.')
+    grd_filenames = List.T(default=[], help="List of *two* GACOS gridfiles.")
+    applied = Bool.T(default=False, help="Is the correction applied.")
 
 
 class GACOSCorrection(Plugin):
-
     def __init__(self, scene=None, config=None):
         self.config = config or GACOSConfig()
         self.scene = scene
 
         if scene:
-            self._log = scene._log.getChild('GACOSCorrection')
+            self._log = scene._log.getChild("GACOSCorrection")
         else:
-            self._log = logging.getLogger('GACOSCorrection')
+            self._log = logging.getLogger("GACOSCorrection")
 
         self.grids = []
 
@@ -146,26 +148,26 @@ class GACOSCorrection(Plugin):
     def _scene_extent(self):
         frame = self.scene.frame
         return {
-            'llLat': frame.llLat,
-            'llLon': frame.llLon,
-            'dLat': frame.dNdegree,
-            'dLon': frame.dEdegree,
-            'cols': frame.cols,
-            'rows': frame.rows
+            "llLat": frame.llLat,
+            "llLon": frame.llLon,
+            "dLat": frame.dNdegree,
+            "dLon": frame.dEdegree,
+            "cols": frame.cols,
+            "rows": frame.rows,
         }
 
     def load(self, filename):
         if len(self.grids) == 2:
-            raise AttributeError('already loaded two GACOS grids!')
+            raise AttributeError("already loaded two GACOS grids!")
 
-        if filename.startswith('./'):
+        if filename.startswith("./"):
             abs_path = op.join(op.dirname(self.scene.meta.filename), filename)
         else:
             abs_path = filename
         if not op.exists(abs_path):
-            raise OSError('cannot find GACOS grid %s' % abs_path)
+            raise OSError("cannot find GACOS grid %s" % abs_path)
 
-        self._log.info('Loading %s', filename)
+        self._log.info("Loading %s", filename)
 
         grd = GACOSGrid.load(abs_path)
         grd.contains(**self._scene_extent())
@@ -182,22 +184,21 @@ class GACOSCorrection(Plugin):
 
     def save(self, dirname):
         for grd_file in self.config.grd_filenames:
-            self._log.info('copying GACOS grid %s', grd_file)
+            self._log.info("copying GACOS grid %s", grd_file)
             grd_file = op.join(op.dirname(self.scene.meta.filename), grd_file)
             try:
                 shutil.copy(grd_file, dirname)
-                shutil.copy(grd_file + '.rsc', dirname)
+                shutil.copy(grd_file + ".rsc", dirname)
             except shutil.SameFileError:
                 pass
 
         self.config.grd_filenames = [
-            './%s' % op.basename(grd_file)
-            for grd_file in self.config.grd_filenames]
+            "./%s" % op.basename(grd_file) for grd_file in self.config.grd_filenames
+        ]
 
     def get_correction(self):
         if len(self.grids) != 2:
-            raise AttributeError(
-                'need two GACOS grids to calculate the corrections!')
+            raise AttributeError("need two GACOS grids to calculate the corrections!")
 
         extent = self._scene_extent()
 
@@ -207,9 +208,9 @@ class GACOSCorrection(Plugin):
         return corr_date2 - corr_date1
 
     def apply(self, displacement):
-        self._log.info('Applying GACOS model to displacement')
+        self._log.info("Applying GACOS model to displacement")
         correction = self.get_correction()
-        correction *= 1./num.sin(self.scene.phi)
+        correction *= 1.0 / num.sin(self.scene.phi)
 
         displacement -= correction
         return displacement

@@ -82,13 +82,14 @@ class SandboxModel(QtCore.QObject):
 
     @QtCore.pyqtSlot()
     def optimizeSource(self):
-        self.sigProcessingStarted.emit('Optimizing source, stay tuned!')
+        self.sigProcessingStarted.emit("Optimizing source, stay tuned!")
         self.model.reference.optimizeSource()
         self.sigProcessingFinished.emit()
 
     @classmethod
     def randomOkada(cls, nsources=1):
         from ..sandbox_scene import TestSandboxScene
+
         model = TestSandboxScene.randomOkada(nsources)
         sandbox = cls(model)
         return sandbox
@@ -96,6 +97,7 @@ class SandboxModel(QtCore.QObject):
     @classmethod
     def simpleOkada(cls, **kwargs):
         from ..sandbox_scene import TestSandboxScene
+
         model = TestSandboxScene.simpleOkada(**kwargs)
         sandbox = cls(model)
         return sandbox
@@ -103,6 +105,7 @@ class SandboxModel(QtCore.QObject):
     @classmethod
     def empty(cls):
         from ..sandbox_scene import SandboxScene
+
         sandbox = cls()
         sandbox.setModel(SandboxScene())
         return sandbox
@@ -119,10 +122,8 @@ class SourceModel(QtCore.QAbstractTableModel):
         self.selection_model = None
         self._createSources()
 
-        self.sandbox.sigModelUpdated.connect(
-            self.modelUpdated)
-        self.sandbox.sigModelChanged.connect(
-            self.modelChanged)
+        self.sandbox.sigModelUpdated.connect(self.modelUpdated)
+        self.sandbox.sigModelChanged.connect(self.modelChanged)
 
     def _createSources(self):
         self._sources = []
@@ -147,8 +148,11 @@ class SourceModel(QtCore.QAbstractTableModel):
         return 1
 
     def flags(self, idx):
-        return QtCore.Qt.ItemIsSelectable | QtCore.Qt.ItemIsEditable |\
-            QtCore.Qt.ItemIsEnabled
+        return (
+            QtCore.Qt.ItemIsSelectable
+            | QtCore.Qt.ItemIsEditable
+            | QtCore.Qt.ItemIsEnabled
+        )
 
     def setSelectionModel(self, selection_model):
         self.selection_model = selection_model
@@ -174,7 +178,7 @@ class SourceModel(QtCore.QAbstractTableModel):
         return True
 
     def setData(self, idx, value, role):
-        print('Set %s with role %s to value %s' % (idx, value, role))
+        print("Set %s with role %s to value %s" % (idx, value, role))
 
     def removeSource(self, idx):
         src = self._sources[idx.row()]
