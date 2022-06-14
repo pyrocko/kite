@@ -99,7 +99,7 @@ def modelPowerspec(k, beta, D):
     :param b: Fractional model factor
     :type b: float
     """
-    return (k ** beta) / D
+    return (k**beta) / D
 
 
 class CovarianceConfig(guts.Object):

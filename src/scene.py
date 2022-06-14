@@ -1202,7 +1202,7 @@ class TestScene(Scene):
         X, Y = num.meshgrid(x, y)
 
         gauss_anomaly = amplitude * num.exp(
-            -(((X - x0) ** 2 / 2 * sigma_x ** 2) + (Y - y0) ** 2 / 2 * sigma_y ** 2)
+            -(((X - x0) ** 2 / 2 * sigma_x**2) + (Y - y0) ** 2 / 2 * sigma_y**2)
         )
 
         return gauss_anomaly

@@ -114,9 +114,9 @@ class PointCompoundSource(SandboxSource):
             "rotx": self.rotation_x,
             "roty": self.rotation_y,
             "rotz": self.rotation_z,
-            "dVx": self.dVx ** 3,
-            "dVy": self.dVy ** 3,
-            "dVz": self.dVz ** 3,
+            "dVx": self.dVx**3,
+            "dVy": self.dVy**3,
+            "dVz": self.dVz**3,
             "nu": self.nu,
         }
         return params

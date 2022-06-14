@@ -18,7 +18,7 @@ class testSourceOkada(unittest.TestCase):
     def setUp(self):
         self.ms = SandboxScene()
         self.tmpdir = tempfile.mkdtemp(prefix="kite")
-        print self.tmpdir
+        print(self.tmpdir)
 
     def tearDown(self):
         return
@@ -42,7 +42,7 @@ class testSourceOkada(unittest.TestCase):
                     slip=r(1, 5),  # ok
                     rake=r(0, 180),
                     length=length,
-                    width=15.0 * length ** 0.66,
+                    width=15.0 * length**0.66,
                 )
             )
 

@@ -147,7 +147,7 @@ class SandboxScene(BaseScene):
     @property_cached
     def max_horizontal_displacement(self):
         """Maximum horizontal displacement"""
-        return num.sqrt(self._north ** 2 + self._east ** 2).max()
+        return num.sqrt(self._north**2 + self._east**2).max()
 
     def addSource(self, source):
         """Add displacement source to sandbox
@@ -447,7 +447,7 @@ class TestSandboxScene(SandboxScene):
                     slip=r(1, 5),
                     rake=r(-180, 180),
                     length=length,
-                    width=15.0 * length ** 0.66,
+                    width=15.0 * length**0.66,
                 )
             )
         return sandbox_scene
@@ -467,7 +467,7 @@ class TestSandboxScene(SandboxScene):
             "slip": 2,
             "rake": 90,
             "length": 10000,
-            "width": 15.0 * 10000 ** 0.66,
+            "width": 15.0 * 10000**0.66,
         }
         parameters.update(kwargs)
 

@@ -119,7 +119,7 @@ def bin_ps_data(data, bins=(800, 800)):
         bin_mean_std, _, _, _ = stats.binned_statistic_2d(
             data.lats, data.lons, data.ps_mean_std, statistic="mean", bins=bins
         )
-        data.bin_mean_var = bin_mean_std ** 2  # We want variance
+        data.bin_mean_var = bin_mean_std**2  # We want variance
 
     data.bin_ps_mean_v = bin_vels
 

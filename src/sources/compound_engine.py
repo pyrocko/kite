@@ -230,45 +230,45 @@ def shapeTensor(a1, a2, a3, nu):
     # General case: triaxial ellipsoid
     if a1 > a2 and a2 > a3 and a3 > 0:
         logger.debug("General case: triaxial ellipsoid")
-        sin_theta = sqrt(1 - a3 ** 2 / a1 ** 2)
-        k = sqrt((a1 ** 2 - a2 ** 2) / (a1 ** 2 - a3 ** 2))
+        sin_theta = sqrt(1 - a3**2 / a1**2)
+        k = sqrt((a1**2 - a2**2) / (a1**2 - a3**2))
 
         # Calculate Legendre's incomplete elliptic integrals of the first and
         # second kind using Carlson (1995) method (see Numerical computation of
         # real or complex elliptic integrals. Carlson, B.C. Numerical
         # Algorithms (1995) 10: 13. doi:10.1007/BF02198293)
         tol = 1e-16
-        c = 1 / sin_theta ** 2
-        F = RF(c - 1, c - k ** 2, c, tol)
-        E = F - k ** 2 / 3 * RD(c - 1, c - k ** 2, c, tol)
+        c = 1 / sin_theta**2
+        F = RF(c - 1, c - k**2, c, tol)
+        E = F - k**2 / 3 * RD(c - 1, c - k**2, c, tol)
 
         I1 = (
             (4 * pi * a1 * a2)
             * a3
-            / (a1 ** 2 - a2 ** 2)
-            / sqrt(a1 ** 2 - a3 ** 2)
+            / (a1**2 - a2**2)
+            / sqrt(a1**2 - a3**2)
             * (F - E)
         )
         I3 = (
             (4 * pi * a1 * a2)
             * a3
-            / (a2 ** 2 - a3 ** 2)
-            / sqrt(a1 ** 2 - a3 ** 2)
-            * (a2 * sqrt(a1 ** 2 - a3 ** 2) / a1 / a3 - E)
+            / (a2**2 - a3**2)
+            / sqrt(a1**2 - a3**2)
+            * (a2 * sqrt(a1**2 - a3**2) / a1 / a3 - E)
         )
         I2 = 4 * pi - I1 - I3
 
-        I12 = (I2 - I1) / (a1 ** 2 - a2 ** 2)
-        I13 = (I3 - I1) / (a1 ** 2 - a3 ** 2)
-        I11 = (4 * pi / a1 ** 2 - I12 - I13) / 3
+        I12 = (I2 - I1) / (a1**2 - a2**2)
+        I13 = (I3 - I1) / (a1**2 - a3**2)
+        I11 = (4 * pi / a1**2 - I12 - I13) / 3
 
-        I23 = (I3 - I2) / (a2 ** 2 - a3 ** 2)
+        I23 = (I3 - I2) / (a2**2 - a3**2)
         I21 = I12
-        I22 = (4 * pi / a2 ** 2 - I23 - I21) / 3
+        I22 = (4 * pi / a2**2 - I23 - I21) / 3
 
         I31 = I13
         I32 = I23
-        I33 = (4 * pi / a3 ** 2 - I31 - I32) / 3
+        I33 = (4 * pi / a3**2 - I31 - I32) / 3
 
     # Special case-1: Oblate ellipsoid
     elif a1 == a2 and a2 > a3 and a3 > 0:
@@ -276,23 +276,23 @@ def shapeTensor(a1, a2, a3, nu):
         I1 = (
             (2.0 * pi * a1 * a2)
             * a3
-            / (a1 ** 2 - a3 ** 2) ** 1.5
-            * (num.arccos(a3 / a1) - a3 / a1 * sqrt(1.0 - a3 ** 2 / a1 ** 2))
+            / (a1**2 - a3**2) ** 1.5
+            * (num.arccos(a3 / a1) - a3 / a1 * sqrt(1.0 - a3**2 / a1**2))
         )
         I2 = I1
         I3 = 4 * pi - 2 * I1
 
-        I13 = (I3 - I1) / (a1 ** 2 - a3 ** 2)
-        I11 = pi / a1 ** 2 - I13 / 4
+        I13 = (I3 - I1) / (a1**2 - a3**2)
+        I11 = pi / a1**2 - I13 / 4
         I12 = I11
 
         I23 = I13
-        I22 = pi / a2 ** 2 - I23 / 4
+        I22 = pi / a2**2 - I23 / 4
         I21 = I12
 
         I31 = I13
         I32 = I23
-        I33 = (4 * pi / a3 ** 2 - 2 * I31) / 3
+        I33 = (4 * pi / a3**2 - 2 * I31) / 3
 
     # Special case-2: Prolate ellipsoid
     elif a1 > a2 and a2 == a3 and a3 > 0:
@@ -300,23 +300,23 @@ def shapeTensor(a1, a2, a3, nu):
         I2 = (
             (2 * pi * a1 * a2)
             * a3
-            / (a1 ** 2 - a3 ** 2) ** 1.5
-            * (a1 / a3 * sqrt(a1 ** 2 / a3 ** 2 - 1) - num.arccosh(a1 / a3))
+            / (a1**2 - a3**2) ** 1.5
+            * (a1 / a3 * sqrt(a1**2 / a3**2 - 1) - num.arccosh(a1 / a3))
         )
         I3 = I2
         I1 = 4 * pi - 2 * I2
 
-        I12 = (I2 - I1) / (a1 ** 2 - a2 ** 2)
+        I12 = (I2 - I1) / (a1**2 - a2**2)
         I13 = I12
-        I11 = (4 * pi / a1 ** 2 - 2 * I12) / 3
+        I11 = (4 * pi / a1**2 - 2 * I12) / 3
 
         I21 = I12
-        I22 = pi / a2 ** 2 - I21 / 4
+        I22 = pi / a2**2 - I21 / 4
         I23 = I22
 
         I32 = I23
         I31 = I13
-        I33 = (4 * pi / a3 ** 2 - I31 - I32) / 3
+        I33 = (4 * pi / a3**2 - I31 - I32) / 3
 
     # Special case-3: Sphere
     if a1 == a2 and a2 == a3:
@@ -333,31 +333,31 @@ def shapeTensor(a1, a2, a3, nu):
     # General triaxial, oblate and prolate ellipsoids
     else:
         logger.debug("General case: triaxial, oblate and prolate ellipsoid")
-        S1111 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a1 ** 2 * I11) + (
+        S1111 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a1**2 * I11) + (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I1
-        S1122 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a2 ** 2 * I12) - (
+        S1122 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a2**2 * I12) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I1
-        S1133 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a3 ** 2 * I13) - (
+        S1133 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a3**2 * I13) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I1
-        S2211 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a1 ** 2 * I21) - (
+        S2211 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a1**2 * I21) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I2
-        S2222 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a2 ** 2 * I22) + (
+        S2222 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a2**2 * I22) + (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I2
-        S2233 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a3 ** 2 * I23) - (
+        S2233 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a3**2 * I23) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I2
-        S3311 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a1 ** 2 * I31) - (
+        S3311 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a1**2 * I31) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I3
-        S3322 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a2 ** 2 * I32) - (
+        S3322 = (1.0 / 8.0 / pi) / (1.0 - nu) * (a2**2 * I32) - (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I3
-        S3333 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a3 ** 2 * I33) + (
+        S3333 = (3.0 / 8.0 / pi) / (1.0 - nu) * (a3**2 * I33) + (
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I3
 
@@ -384,19 +384,19 @@ def RF(x, y, z, r):
     Q = max([abs(A0 - x), abs(A0 - y), abs(A0 - z)]) / (3.0 * r) ** (1.0 / 6)
     n = 0
     Am = A0
-    while abs(Am) <= Q / (4.0 ** n):
+    while abs(Am) <= Q / (4.0**n):
         lambdam = sqrt(xm * ym) + sqrt(xm * zm) + sqrt(ym * zm)
         Am = (Am + lambdam) / 4.0
         xm = (xm + lambdam) / 4.0
         ym = (ym + lambdam) / 4.0
         zm = (zm + lambdam) / 4.0
         n += 1
-    X = (A0 - x) / 4 ** n / Am
-    Y = (A0 - y) / 4 ** n / Am
+    X = (A0 - x) / 4**n / Am
+    Y = (A0 - y) / 4**n / Am
     Z = -X - Y
-    E2 = X * Y - Z ** 2
+    E2 = X * Y - Z**2
     E3 = X * Y * Z
-    rf = (1.0 - E2 / 10 + E3 / 14 + E2 ** 2.0 / 24 - 3.0 * E2 * E3 / 44.0) / sqrt(Am)
+    rf = (1.0 - E2 / 10 + E3 / 14 + E2**2.0 / 24 - 3.0 * E2 * E3 / 44.0) / sqrt(Am)
     return rf
 
 
@@ -415,31 +415,31 @@ def RD(x, y, z, r):
     n = 0
     Am = A0
     S = 0
-    while abs(Am) <= Q / (4 ** n):
+    while abs(Am) <= Q / (4**n):
         lambdam = sqrt(xm * ym) + sqrt(xm * zm) + sqrt(ym * zm)
-        S = S + (1.0 / 4 ** n) / sqrt(zm) / (zm + lambdam)
+        S = S + (1.0 / 4**n) / sqrt(zm) / (zm + lambdam)
         Am = (Am + lambdam) / 4
         xm = (xm + lambdam) / 4
         ym = (ym + lambdam) / 4
         zm = (zm + lambdam) / 4
         n += 1
 
-    X = (A0 - x) / 4.0 ** n / Am
-    Y = (A0 - y) / 4.0 ** n / Am
+    X = (A0 - x) / 4.0**n / Am
+    Y = (A0 - y) / 4.0**n / Am
     Z = -(X + Y) / 3.0
-    E2 = X * Y - 6 * Z ** 2
-    E3 = (3 * X * Y - 8 * Z ** 2) * Z
-    E4 = 3 * (X * Y - Z ** 2) * Z ** 2
-    E5 = X * Y * Z ** 3
+    E2 = X * Y - 6 * Z**2
+    E3 = (3 * X * Y - 8 * Z**2) * Z
+    E4 = 3 * (X * Y - Z**2) * Z**2
+    E5 = X * Y * Z**3
     rd = (
         1.0
         - 3 * E2 / 14
         + E3 / 6
-        + 9 * E2 ** 2 / 88
+        + 9 * E2**2 / 88
         - 3 * E4 / 22
         - 9 * E2 * E3 / 52
         + 3 * E5 / 26
-    ) / 4 ** n / Am ** 1.5 + 3.0 * S
+    ) / 4**n / Am**1.5 + 3.0 * S
     return rd
 
 
@@ -455,18 +455,18 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     x = r_beta[0, :].view(num.ndarray).ravel()
     y = r_beta[1, :].view(num.ndarray).ravel()
 
-    r = (x ** 2 + y ** 2 + z0 ** 2) ** 0.5
+    r = (x**2 + y**2 + z0**2) ** 0.5
     d = z0
     q = y * sind(dip) - d * cosd(dip)
 
-    r3 = r ** 3
+    r3 = r**3
     rpd = r + d
-    rpd2 = rpd ** 2
-    a = (3 * r + d) / r3 / rpd ** 3
+    rpd2 = rpd**2
+    a = (3 * r + d) / r3 / rpd**3
 
-    I1 = (1.0 - 2 * nu) * y * (1.0 / r / rpd2 - x ** 2 * a)
-    I3 = (1.0 - 2 * nu) * x / r3 - ((1.0 - 2 * nu) * x * (1.0 / r / rpd2 - y ** 2 * a))
-    I5 = (1.0 - 2 * nu) * (1.0 / r / rpd - x ** 2 * (2 * r + d) / r3 / rpd2)
+    I1 = (1.0 - 2 * nu) * y * (1.0 / r / rpd2 - x**2 * a)
+    I3 = (1.0 - 2 * nu) * x / r3 - ((1.0 - 2 * nu) * x * (1.0 / r / rpd2 - y**2 * a))
+    I5 = (1.0 - 2 * nu) * (1.0 / r / rpd - x**2 * (2 * r + d) / r3 / rpd2)
 
     # Note: For a PTD M0 = dV*mu!
     u = num.empty((ncoords, 3))
@@ -475,7 +475,7 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     u[:, 1] = y
     u[:, 2] = d
 
-    u *= (3.0 * q ** 2 / r ** 5)[:, num.newaxis]
+    u *= (3.0 * q**2 / r**5)[:, num.newaxis]
     u[:, 0] -= I3 * sind(dip) ** 2
     u[:, 1] -= I1 * sind(dip) ** 2
     u[:, 2] -= I5 * sind(dip) ** 2

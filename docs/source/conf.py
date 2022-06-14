@@ -66,9 +66,9 @@ master_doc = "index"
 
 
 # General information about the project.
-project = u"Kite"
-copyright = u"2018 The kite developers"
-author = u"Marius Isken"
+project = "Kite"
+copyright = "2018 The kite developers"
+author = "Marius Isken"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -165,7 +165,7 @@ html_theme_path = [sphinx_sleekcat_theme.get_html_theme_path()]
 # The name for this set of Sphinx documents.
 # "<project> v<release> documentation" by default.
 #
-html_title = u"%s v%s Manual" % (project, release)
+html_title = "%s v%s Manual" % (project, release)
 
 # A shorter title for the navigation bar.  Default is the same as html_title.
 #
@@ -291,8 +291,8 @@ latex_documents = [
     (
         master_doc,
         "Kite.tex",
-        u"Kite Documentation",
-        u"The Pyrocko Development Team.",
+        "Kite Documentation",
+        "The Pyrocko Development Team.",
         "manual",
     ),
 ]
@@ -334,7 +334,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "kite", u"Kite Documentation", [author], 1)]
+man_pages = [(master_doc, "kite", "Kite Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 #
@@ -350,7 +350,7 @@ texinfo_documents = [
     (
         master_doc,
         "Kite",
-        u"Kite Documentation",
+        "Kite Documentation",
         author,
         "Kite",
         "InSAR displacement processing towards " "earthquake parametrization.",

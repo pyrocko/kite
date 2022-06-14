@@ -35,7 +35,7 @@ class testSourcePyrocko(unittest.TestCase):
         def r(lo, hi):
             return num.random.randint(lo, high=hi, size=1).astype(num.float)
 
-        for s in xrange(nsources):
+        for s in range(nsources):
             length = r(5000, 15000)
             self.ms.addSource(
                 PyrockoRectangularSource(
@@ -47,7 +47,7 @@ class testSourcePyrocko(unittest.TestCase):
                     slip=r(1, 7),  # ok
                     rake=r(0, 180),
                     length=length,
-                    width=15.0 * length ** 0.66,
+                    width=15.0 * length**0.66,
                     store_dir=gf_store,
                 )
             )  # noqa

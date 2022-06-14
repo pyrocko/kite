@@ -52,7 +52,7 @@ class OkadaSourceDelegate(SourceDelegate):
     def getRepresentedSource(sandbox):
         length = 5000.0
         return OkadaSource(
-            length=length, width=15.0 * length ** 0.66, strike=45.0, rake=0, slip=2
+            length=length, width=15.0 * length**0.66, strike=45.0, rake=0, slip=2
         )
 
     def formatListItem(self):

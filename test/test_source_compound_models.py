@@ -107,7 +107,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         for pym, comp in zip([ue, un, uv], ["ue", "un", "uv"]):
             m = mat[comp]
-            # print [pym.min(), pym.max()], [m.min(), m.max()]
+            # print([pym.min(), pym.max()], [m.min(), m.max()])
             num.testing.assert_allclose(pym, m, rtol=1e-11)
 
         self._plot_displacement(uv)
@@ -173,7 +173,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         for pym, comp in zip([ue, un, uv], ["ue", "un", "uv"]):
             m = mat[comp]
-            # print [pym.min(), pym.max()], [m.min(), m.max()]
+            # print([pym.min(), pym.max()], [m.min(), m.max()])
             num.testing.assert_allclose(pym, m, rtol=1e-9)
 
         self._plot_displacement(mat["uv"])
@@ -231,4 +231,4 @@ class CompoundModelsTest(unittest.TestCase):
 if __name__ == "__main__":
     plot = True
     unittest.main(exit=False)
-    print benchmark
+    print(benchmark)

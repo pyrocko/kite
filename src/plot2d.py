@@ -532,7 +532,7 @@ class CovariancePlot(object):
         import scipy as sp
 
         def behaviour(k, a, b):
-            return (k ** a) / b
+            return (k**a) / b
 
         def selectRegime(k, d1, d2):
             return num.logical_and(((1.0) / k) > d1, ((1.0) / k) < d2)

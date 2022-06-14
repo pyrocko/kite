@@ -83,7 +83,7 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
         return PyrockoRectangularSource(
             depth=4000,
             length=length,
-            width=15.0 * length ** 0.66,
+            width=15.0 * length**0.66,
             strike=45.0,
             rake=0,
             slip=2,

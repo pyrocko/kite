@@ -136,7 +136,7 @@ class OkadaPath(SandboxSource):
     def _newSegment(e1, n1, e2, n2, **kwargs):
         dE = e2 - e1
         dN = n2 - n1
-        length = (dN ** 2 + dE ** 2) ** 0.5
+        length = (dN**2 + dE**2) ** 0.5
         """Width Scaling relation after
 
         Leonard, M. (2010). Earthquake fault scaling: Relating rupture length,
@@ -148,7 +148,7 @@ class OkadaPath(SandboxSource):
             "easting": e1 + dE / 2,
             "depth": 0.0,
             "length": length,
-            "width": 15.0 * length ** 0.66,
+            "width": 15.0 * length**0.66,
             "strike": num.arccos(dN / length) * r2d,
             "slip": 45.0,
             "rake": 90.0,
@@ -159,13 +159,13 @@ class OkadaPath(SandboxSource):
     def _moveSegment(self, pos, e1, n1, e2, n2):
         dE = e2 - e1
         dN = n2 - n1
-        length = (dN ** 2 + dE ** 2) ** 0.5
+        length = (dN**2 + dE**2) ** 0.5
 
         segment_update = {
             "northing": n1 + dN / 2,
             "easting": e1 + dE / 2,
             "length": length,
-            "width": 15.0 * length ** 0.66,
+            "width": 15.0 * length**0.66,
             "strike": num.arccos(dN / length) * r2d,
         }
 
