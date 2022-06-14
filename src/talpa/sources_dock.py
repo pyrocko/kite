@@ -90,32 +90,32 @@ class SourcesAddButton(QtWidgets.QToolButton):
         self.setMenu(menu)
 
         self.setIcon(self.style().standardIcon(
-                     QtGui.QStyle.SP_FileDialogDetailedView))
-        self.setPopupMode(QtGui.QToolButton.InstantPopup)
+                     QtWidgets.QStyle.SP_FileDialogDetailedView))
+        self.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
 
 
-class SourcesList(QtGui.QListView):
+class SourcesList(QtWidgets.QListView):
 
-    class SourceItemDelegate(QtGui.QStyledItemDelegate):
+    class SourceItemDelegate(QtWidgets.QStyledItemDelegate):
 
         def paint(self, painter, option, index):
             options = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(options, index)
 
-            style = QtGui.QApplication.style() if options.widget is None\
+            style = QtWidgets.QApplication.style() if options.widget is None\
                 else options.widget.style()
 
             doc = QtGui.QTextDocument()
             doc.setHtml(options.text)
 
             options.text = ""
-            style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter)
+            style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter)
 
             ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
 
             textRect = style.subElementRect(
-                QtGui.QStyle.SE_ItemViewItemText, options, options.widget)
+                QtWidgets.QStyle.SE_ItemViewItemText, options, options.widget)
             painter.save()
             painter.translate(textRect.topLeft())
             painter.setClipRect(textRect.translated(-textRect.topLeft()))
@@ -133,10 +133,10 @@ class SourcesList(QtGui.QListView):
 
             return QtCore.QSize(doc.idealWidth(), doc.size().height())
 
-    class SourceContextMenu(QtGui.QMenu):
+    class SourceContextMenu(QtWidgets.QMenu):
 
         def __init__(self, parent, idx, *args, **kwargs):
-            QtGui.QMenu.__init__(self, *args, **kwargs)
+            QtWidgets.QMenu.__init__(self, *args, **kwargs)
             self.parent = parent
             self.sandbox = parent.sandbox
             self.idx = idx
@@ -153,7 +153,7 @@ class SourcesList(QtGui.QListView):
 
             removeAction = self.addAction(
                 self.style().standardIcon(
-                    QtGui.QStyle.SP_DialogCloseButton),
+                    QtWidgets.QStyle.SP_DialogCloseButton),
                 'Remove', removeSource)
 
             if self.sandbox.sources.rowCount(QtCore.QModelIndex()) == 0:
@@ -161,7 +161,7 @@ class SourcesList(QtGui.QListView):
                 removeAction.setEnabled(False)
 
     def __init__(self, sandbox, *args, **kwargs):
-        QtGui.QListView.__init__(self, *args, **kwargs)
+        QtWidgets.QListView.__init__(self, *args, **kwargs)
         self.sandbox = sandbox
         self.setModel(sandbox.sources)
         self.setItemDelegate(self.SourceItemDelegate())

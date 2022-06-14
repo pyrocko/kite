@@ -4,7 +4,7 @@ import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from collections import OrderedDict
 
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtGui, QtCore, QtWidgets
 from pyqtgraph import dockarea
 
 from kite.qt_utils import loadUi
@@ -115,10 +115,10 @@ class KiteCovariance(KiteView):
         self.covariogram.deactivatePlot()
 
 
-class CovarianceNotPosDefWarning(QtGui.QMessageBox):
+class CovarianceNotPosDefWarning(QtWidgets.QMessageBox):
     def __init__(self, model, *args, **kwargs):
-        QtGui.QMessageBox.__init__(self, *args, **kwargs)
-        self.setIcon(QtGui.QMessageBox.Warning)
+        QtWidgets.QMessageBox.__init__(self, *args, **kwargs)
+        self.setIcon(QtWidgets.QMessageBox.Warning)
 
         self.setWindowTitle('Covariance Warning')
         self.setText('<b><span style="font-family: monospace;">'
@@ -199,9 +199,9 @@ class KiteNoisePlot(KitePlot):
         self.model.covariance.noise_data = data
 
 
-class KiteSubplot(QtGui.QWidget):
+class KiteSubplot(QtWidgets.QWidget):
     def __init__(self, parent_plot):
-        QtGui.QWidget.__init__(self)
+        QtWidgets.QWidget.__init__(self)
         self.parent_plot = parent_plot
         self.model = parent_plot.model
 
@@ -210,7 +210,7 @@ class KiteSubplot(QtGui.QWidget):
         self.plot.setMenuEnabled(True)
         self.plot.enableAutoRange()
 
-        self.layout = QtGui.QVBoxLayout(self)
+        self.layout = QtWidgets.QVBoxLayout(self)
         self.layout.addWidget(self.plot)
 
     def addItem(self, *args, **kwargs):
@@ -406,7 +406,7 @@ class KiteStructureFunction(KiteSubplot):
         self.model.sigCovarianceChanged.disconnect(self.update)
 
 
-class KiteToolNoise(QtGui.QDialog):
+class KiteToolNoise(QtWidgets.QDialog):
 
     class NoisePlot(KitePlot):
         def __init__(self, model):
@@ -516,11 +516,11 @@ class KiteToolNoise(QtGui.QDialog):
             self.model.sigCovarianceChanged.disconnect(self.update)
 
     def __init__(self, model, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
 
         loadUi(get_resource('noise_dialog.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton))
         self.setWindowFlags(QtCore.Qt.Window)
 
         self.noise_patch = self.NoisePlot(model)
@@ -573,7 +573,7 @@ class KiteToolNoise(QtGui.QDialog):
         ev.accept()
 
 
-class KiteToolWeightMatrix(QtGui.QDialog):
+class KiteToolWeightMatrix(QtWidgets.QDialog):
 
     class MatrixPlot(KitePlot):
         def __init__(self, model, parent):
@@ -659,12 +659,12 @@ class KiteToolWeightMatrix(QtGui.QDialog):
             self.parent.matrixButtonGroup.buttonClicked.disconnect(self.update)
 
     def __init__(self, model, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.model = model
 
         loadUi(get_resource('weight_matrix.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton))
 
         self.weight_matrix = self.MatrixPlot(model, self)
         self.dockarea = dockarea.DockArea(self)
@@ -712,7 +712,7 @@ class QCalculateWeightMatrix(QtCore.QObject):
         self.sigCalculateWeightMatrix.connect(
             model.calculateWeightMatrix)
 
-        diag = QtGui.QMessageBox.information(
+        diag = QtWidgets.QMessageBox.information(
             parent,
             'Calculate Full Weight Matrix',
             '''<html><head/><body><p>
@@ -721,24 +721,24 @@ This will calculate the quadtree's full weight matrix
 for this noise/covariance configuration.</p><p>
 The calculation is expensive and may take several minutes.
 </p></body></html>
-''', buttons=(QtGui.QMessageBox.Ok | QtGui.QMessageBox.Cancel))
+''', buttons=(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel))
 
-        if diag == QtGui.QMessageBox.Ok:
+        if diag == QtWidgets.QMessageBox.Ok:
             meta = model.metaObject()
             meta.invokeMethod(
                 model, 'calculateWeightMatrix',
                 QtCore.Qt.QueuedConnection)
 
 
-class CovarianceCalcResultDialog(QtGui.QMessageBox):
+class CovarianceCalcResultDialog(QtWidgets.QMessageBox):
 
     text_tmpl = ('<span style="font-family: monospace;">'
                  'Covariance.covariance_matrix</span>')
 
     def __init__(self, model, *args, **kwargs):
-        QtGui.QMessageBox.__init__(self, *args, **kwargs)
+        QtWidgets.QMessageBox.__init__(self, *args, **kwargs)
 
-        self.setIcon(QtGui.QMessageBox.Information)
+        self.setIcon(QtWidgets.QMessageBox.Information)
         self.model = model
         self.setWindowTitle('Covariance Calculation')
         self.setTextFormat(QtCore.Qt.RichText)
@@ -747,11 +747,11 @@ class CovarianceCalcResultDialog(QtGui.QMessageBox):
     def show(self, elapsed_time, *args, **kwargs):
 
         if self.model.covariance.isMatrixPosDefinite(full=True):
-            self.setIcon(QtGui.QMessageBox.Information)
+            self.setIcon(QtWidgets.QMessageBox.Information)
             self.setText('Finished, %s is positiv definit!' % self.text_tmpl)
             self.setInformativeText('')
         else:
-            self.setIcon(QtGui.QMessageBox.Warning)
+            self.setIcon(QtWidgets.QMessageBox.Warning)
             self.setText('<b>%s is not positiv definit!</b>' % self.text_tmpl)
             self.setInformativeText(
                 'Change the <span style="font-family: monospace;">'
@@ -759,7 +759,7 @@ class CovarianceCalcResultDialog(QtGui.QMessageBox):
                 ' or moving the noise patch.')
 
         self.setDetailedText('Elapsed time: %s' % elapsed_time)
-        QtGui.QMessageBox.show(self, *args, **kwargs)
+        QtWidgets.QMessageBox.show(self, *args, **kwargs)
 
 
 class KiteParamCovariance(KiteParameterGroup):

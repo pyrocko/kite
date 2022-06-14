@@ -834,7 +834,7 @@ class GMTSAR(SceneIO):
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
 
-            phi = num.arctan(n/e)
+            phi = num.arctan2(n,e)
             theta = num.arcsin(u)
             # phi[n < 0] += num.pi
 

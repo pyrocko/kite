@@ -80,7 +80,7 @@ class KiteAPS(KiteView):
 
 class KiteAPSPlot(KitePlot):
 
-    region_changed = QtCore.Signal()
+    region_changed = QtCore.pyqtSignal()
 
     class TopoPatchROI(pg.RectROI):
         def _makePen(self):
@@ -189,7 +189,7 @@ class KiteAPSCorrelation(KiteSubplot):
         self.model.sigSceneChanged.disconnect(self.update)
 
 
-class GACOSCorrectionDialog(QtGui.QDialog):
+class GACOSCorrectionDialog(QtWidgets.QDialog):
 
     class GACOSPlot(KitePlot):
 
@@ -212,12 +212,12 @@ class GACOSCorrectionDialog(QtGui.QDialog):
             self.transFromFrame()
 
     def __init__(self, model, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
         self.model = model
 
         loadUi(get_resource('gacos_correction.ui'), baseinstance=self)
         self.closeButton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton))
 
         self.gacos_plot = self.GACOSPlot(model, self)
         self.dockarea = dockarea.DockArea(self)

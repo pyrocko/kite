@@ -95,15 +95,15 @@ def loadUi(uifile, baseinstance=None):
     return uic.loadUi(uifile, baseinstance)
 
 
-class SliderWidget(QtGui.QWidget):
+class SliderWidget(QtWidgets.QWidget):
     """
     shows a horizontal/vertical slider with a label showing its value
     """
-    sigValueChanged = QtCore.Signal(object)  # value
+    sigValueChanged = QtCore.pyqtSignal(object)  # value
 
     def __init__(self, horizontal=True, parent=None, decimals=3, step=.005,
                  slider_exponent=1):
-        QtGui.QWidget.__init__(self, parent)
+        QtWidgets.QWidget.__init__(self, parent)
         self.vmin = None
         self.vmax = None
         self.slider_exponent = slider_exponent
@@ -113,21 +113,21 @@ class SliderWidget(QtGui.QWidget):
         self.suffix = None
         self._value = None
 
-        self.spin = QtGui.QDoubleSpinBox()
+        self.spin = QtWidgets.QDoubleSpinBox()
         self.spin.setDecimals(decimals)
         self.spin.setSingleStep(step)
         self.spin.valueChanged.connect(self._spin_updated)
         self.spin.setFrame(False)
 
-        self.slider = QtGui.QSlider(
+        self.slider = QtWidgets.QSlider(
             QtCore.Qt.Orientation(1 if horizontal else 0), self)  # 1 = hor.
         self.slider.setTickPosition(
-            QtGui.QSlider.TicksAbove if horizontal
-            else QtGui.QSlider.TicksLeft)
+            QtWidgets.QSlider.TicksAbove if horizontal
+            else QtWidgets.QSlider.TicksLeft)
         self.slider.setRange(0, 99)
         self.slider.sliderMoved.connect(self._slider_updated)
 
-        layout = QtGui.QHBoxLayout() if horizontal else QtGui.QVBoxLayout()
+        layout = QtWidgets.QHBoxLayout() if horizontal else QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addWidget(self.slider)
         layout.addWidget(self.spin)
@@ -281,7 +281,7 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
         self.endInsertRows()
 
 
-class SceneLog(QtGui.QDialog):
+class SceneLog(QtWidgets.QDialog):
 
     levels = {
         50: 'Critical',
@@ -292,24 +292,24 @@ class SceneLog(QtGui.QDialog):
         0: 'All'
     }
 
-    class LogEntryDelegate(QtGui.QStyledItemDelegate):
+    class LogEntryDelegate(QtWidgets.QStyledItemDelegate):
 
         levels = {
-            50: QtGui.QStyle.SP_MessageBoxCritical,
-            40: QtGui.QStyle.SP_MessageBoxCritical,
-            30: QtGui.QStyle.SP_MessageBoxWarning,
-            20: QtGui.QStyle.SP_MessageBoxInformation,
-            10: QtGui.QStyle.SP_FileIcon,
+            50: QtWidgets.QStyle.SP_MessageBoxCritical,
+            40: QtWidgets.QStyle.SP_MessageBoxCritical,
+            30: QtWidgets.QStyle.SP_MessageBoxWarning,
+            20: QtWidgets.QStyle.SP_MessageBoxInformation,
+            10: QtWidgets.QStyle.SP_FileIcon,
         }
 
         def paint(self, painter, option, idx):
             # paint icon instead of log_lvl
             if idx.column() == 0:
-                getIcon = QtGui.QApplication.style().standardIcon
+                getIcon = QtWidgets.QApplication.style().standardIcon
                 icon = getIcon(self.levels[idx.data()])
                 icon.paint(painter, option.rect)
             else:
-                QtGui.QStyledItemDelegate.paint(self, painter, option, idx)
+                QtWidgets.QStyledItemDelegate.paint(self, painter, option, idx)
 
     class LogFilter(QtCore.QSortFilterProxyModel):
         def __init__(self, *args, **kwargs):
@@ -322,7 +322,7 @@ class SceneLog(QtGui.QDialog):
             self.invalidate()
 
     def __init__(self, app, model):
-        QtGui.QDialog.__init__(self, app)
+        QtWidgets.QDialog.__init__(self, app)
         logging_ui = op.join(
             op.dirname(
                 op.realpath(__file__)), 'spool', 'res', 'logging.ui')
@@ -334,7 +334,7 @@ class SceneLog(QtGui.QDialog):
             self.mapToGlobal(self.rect().center()))
 
         self.closeButton.setIcon(
-            self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton))
+            self.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton))
 
         self.table_filter = self.LogFilter()
         self.table_filter.setFilterKeyColumn(0)

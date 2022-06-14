@@ -93,11 +93,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.addDockWidget(
             QtCore.Qt.LeftDockWidgetArea, self.dock_ptree)
 
-        self.tabs = QtGui.QTabWidget(self)
+        self.tabs = QtWidgets.QTabWidget(self)
         self.dock_tabs = QtWidgets.QDockWidget(self)
-        self.dock_tabs.setTitleBarWidget(QtGui.QWidget())
+        self.dock_tabs.setTitleBarWidget(QtWidgets.QWidget())
         self.dock_tabs.setWidget(self.tabs)
-        self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+        self.dock_tabs.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)
 
         self.addDockWidget(
             QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
@@ -136,7 +136,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.actionAbout_Spool.triggered.connect(
             self.aboutDialog().show)
         self.actionAbout_Qt5.triggered.connect(
-            lambda: QtGui.QMessageBox.aboutQt(self))
+            lambda: QtWidgets.QMessageBox.aboutQt(self))
         self.actionHelp.triggered.connect(
             lambda: QtGui.QDesktopServices.openUrl('https://pyrocko.org'))
 
@@ -154,7 +154,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.state_hash = None
 
     def aboutDialog(self):
-        self._about = QtGui.QDialog(self)
+        self._about = QtWidgets.QDialog(self)
         loadUi(get_resource('about.ui'), baseinstance=self._about)
         return self._about
 
