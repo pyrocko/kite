@@ -2,7 +2,7 @@ import time
 import math
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 
@@ -61,7 +61,7 @@ class QQuadLeaf(QtCore.QRectF):
         )
 
     def getRectItem(self):
-        item = QtGui.QGraphicsRectItem(self)
+        item = QtWidgets.QGraphicsRectItem(self)
         item.setPen(self.leaf_outline)
         item.setBrush(self.leaf_fill)
         item.setZValue(1e8)
@@ -110,7 +110,7 @@ class KiteQuadtreePlot(KitePlot):
         self.selected_leaves = []
         self.outlined_leaves = None
 
-        self.eraseBox = QtGui.QGraphicsRectItem(0, 0, 1, 1)
+        self.eraseBox = QtWidgets.QGraphicsRectItem(0, 0, 1, 1)
         self.eraseBox.setPen(pg.mkPen((202, 60, 60), width=1, style=QtCore.Qt.DotLine))
         self.eraseBox.setBrush(pg.mkBrush(202, 60, 60, 40))
         self.eraseBox.setZValue(1e9)
@@ -220,7 +220,7 @@ class KiteQuadtreePlot(KitePlot):
 
     @QtCore.pyqtSlot()
     def updateLeavesOutline(self):
-        group = QtGui.QGraphicsItemGroup()
+        group = QtWidgets.QGraphicsItemGroup()
         for lf in self.model.quadtree.leaves:
             group.addToGroup(QQuadLeaf(lf).getRectItem())
         group.setOpacity(0.4)

@@ -57,7 +57,7 @@ class KiteView(dockarea.DockArea):
 
 
 class KitePlotThread(QtCore.QThread):
-    completeSignal = QtCore.Signal()
+    completeSignal = QtCore.pyqtSignal()
 
     def __init__(self, plot):
         super().__init__()

@@ -88,19 +88,21 @@ class SourcesAddButton(QtWidgets.QToolButton):
         self.setText("Add Source")
         self.setMenu(menu)
 
-        self.setIcon(self.style().standardIcon(QtGui.QStyle.SP_FileDialogDetailedView))
+        self.setIcon(
+            self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogDetailedView)
+        )
         self.setPopupMode(QtGui.QToolButton.InstantPopup)
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
 
 
 class SourcesList(QtGui.QListView):
-    class SourceItemDelegate(QtGui.QStyledItemDelegate):
+    class SourceItemDelegate(QtWidgets.QStyledItemDelegate):
         def paint(self, painter, option, index):
             options = QtWidgets.QStyleOptionViewItem(option)
             self.initStyleOption(options, index)
 
             style = (
-                QtGui.QApplication.style()
+                QtWidgets.QApplication.style()
                 if options.widget is None
                 else options.widget.style()
             )
@@ -109,12 +111,12 @@ class SourcesList(QtGui.QListView):
             doc.setHtml(options.text)
 
             options.text = ""
-            style.drawControl(QtGui.QStyle.CE_ItemViewItem, options, painter)
+            style.drawControl(QtWidgets.QStyle.CE_ItemViewItem, options, painter)
 
             ctx = QtGui.QAbstractTextDocumentLayout.PaintContext()
 
             textRect = style.subElementRect(
-                QtGui.QStyle.SE_ItemViewItemText, options, options.widget
+                QtWidgets.QStyle.SE_ItemViewItemText, options, options.widget
             )
             painter.save()
             painter.translate(textRect.topLeft())
@@ -151,7 +153,7 @@ class SourcesList(QtGui.QListView):
             self.addSeparator()
 
             removeAction = self.addAction(
-                self.style().standardIcon(QtGui.QStyle.SP_DialogCloseButton),
+                self.style().standardIcon(QtWidgets.QStyle.SP_DialogCloseButton),
                 "Remove",
                 removeSource,
             )

@@ -21,7 +21,7 @@ from .base import get_resource
 
 class Spool(QtWidgets.QApplication):
     def __init__(self, scene=None, import_file=None, load_file=None):
-        QtWidgets.QApplication.__init__(self, ["Spool"])
+        super().__init__(["Spool"])
         # self.setStyle('plastique')
         splash_img = QtGui.QPixmap(get_resource("spool_splash.png")).scaled(
             QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio
@@ -37,12 +37,7 @@ class Spool(QtWidgets.QApplication):
         self.spool_win.sigLoadingModule.connect(self.updateSplashMessage)
 
         self.spool_win.actionExit.triggered.connect(self.exit)
-        self.aboutToQuit.connect(
-            self.spool_win.model.worker_thread.quit, type=QtCore.Qt.QueuedConnection
-        )
-        self.aboutToQuit.connect(self.spool_win.model.deleteLater)
-        self.aboutToQuit.connect(self.splash.deleteLater)
-        self.aboutToQuit.connect(self.deleteLater)
+        self.aboutToQuit.connect(self.spool_win.model.worker_thread.quit)
 
         if scene is not None:
             self.addScene(scene)
@@ -56,7 +51,7 @@ class Spool(QtWidgets.QApplication):
 
     @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=""):
-        self.splash.showMessage("Loading %s ..." % msg.title(), QtCore.Qt.AlignBottom)
+        self.splash.showMessage(f"Loading {msg.title()} ...", QtCore.Qt.AlignBottom)
 
     def addScene(self, scene):
         self.spool_win.addScene(scene)
@@ -94,11 +89,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.dock_ptree.setWidget(self.ptree)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dock_ptree)
 
-        self.tabs = QtGui.QTabWidget(self)
+        self.tabs = QtWidgets.QTabWidget(self)
         self.dock_tabs = QtWidgets.QDockWidget(self)
-        self.dock_tabs.setTitleBarWidget(QtGui.QWidget())
+        self.dock_tabs.setTitleBarWidget(QtWidgets.QWidget())
         self.dock_tabs.setWidget(self.tabs)
-        self.dock_tabs.setFeatures(QtGui.QDockWidget.NoDockWidgetFeatures)
+        self.dock_tabs.setFeatures(QtWidgets.QDockWidget.NoDockWidgetFeatures)
 
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock_tabs)
         self.setCentralWidget(self.dock_tabs)
@@ -122,9 +117,11 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.actionExport_weights.triggered.connect(self.onExportWeightMatrix)
 
         self.actionAbout_Spool.triggered.connect(self.aboutDialog().show)
-        self.actionAbout_Qt5.triggered.connect(lambda: QtGui.QMessageBox.aboutQt(self))
+        self.actionAbout_Qt5.triggered.connect(
+            lambda: QtWidgets.QMessageBox.aboutQt(self)
+        )
         self.actionHelp.triggered.connect(
-            lambda: QtGui.QDesktopServices.openUrl("https://pyrocko.org")
+            lambda: QtGui.QDesktopServices.openUrl(QtCore.QUrl("https://pyrocko.org"))
         )
 
         self.log = SceneLog(self, self.model)
@@ -140,7 +137,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.state_hash = None
 
     def aboutDialog(self):
-        self._about = QtGui.QDialog(self)
+        self._about = QtWidgets.QDialog(self)
         loadUi(get_resource("about.ui"), baseinstance=self._about)
         return self._about
 
@@ -153,7 +150,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         scene = self.model.getScene()
 
         title = scene.meta.filename or "Untitled"
-        self.setWindowTitle("Spool - %s" % title)
+        self.setWindowTitle(f"Spool - {title}")
         if scene is None or self.tabs.count() != 0:
             return
         for v in self.VIEWS:
@@ -175,10 +172,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
     def addView(self, view):
         self.sigLoadingModule.emit(view.title)
         view = view(self)
-
-        QtCore.QCoreApplication.processEvents()
         self.tabs.addTab(view, view.title)
-        QtCore.QCoreApplication.processEvents()
 
         if hasattr(view, "parameters"):
             for parameter in view.parameters:
@@ -247,8 +241,8 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
             self,
             "Scene config saved",
             "Scene config successfuly saved!"
-            '<p style="font-family: monospace;">%s'
-            "</p>" % filename,
+            f'<p style="font-family: monospace;">{filename}'
+            "</p>",
         )
         self.state_hash = self.model.scene.get_state_hash()
 
@@ -359,7 +353,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         self.time_slider.startValueChanged.connect(changeTimeRange)
         self.time_slider.endValueChanged.connect(changeTimeRange)
 
-        self.dock_time_slider = QtGui.QDockWidget(
+        self.dock_time_slider = QtWidgets.QDockWidget(
             "Displacement time series - range control", self
         )
         self.dock_time_slider.setWidget(self.time_slider)
@@ -374,19 +368,19 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         if self.state_hash == self.model.scene.get_state_hash():
             return
 
-        msg_box = QtGui.QMessageBox(parent=self, text="The scene has been modified")
+        msg_box = QtWidgets.QMessageBox(parent=self, text="The scene has been modified")
         msg_box.setStandardButtons(
-            QtGui.QMessageBox.Save
-            | QtGui.QMessageBox.Discard
-            | QtGui.QMessageBox.Cancel
+            QtWidgets.QMessageBox.Save
+            | QtWidgets.QMessageBox.Discard
+            | QtWidgets.QMessageBox.Cancel
         )
         msg_box.setInformativeText("Do you want to save your changes?")
-        msg_box.setDefaultButton(QtGui.QMessageBox.Save)
+        msg_box.setDefaultButton(QtWidgets.QMessageBox.Save)
         ret = msg_box.exec()
 
-        if ret == QtGui.QMessageBox.Save:
+        if ret == QtWidgets.QMessageBox.Save:
             self.onSaveScene()
-        elif ret == QtGui.QMessageBox.Cancel:
+        elif ret == QtWidgets.QMessageBox.Cancel:
             ev.ignore()
 
 
