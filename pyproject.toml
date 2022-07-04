@@ -45,7 +45,8 @@ GitHub = "https://github.com/pyrocko/kite"
 Issues = "https://github.com/pyrocko/kite/issues"
 
 [project.optional-dependencies]
-import = ["gdal>=3.5.0"]
+formating = ["flake8", "black"]
+gdal = ["gdal>=3.5.0"]
 
 [project.scripts]
 stamps2kite = "kite.util.stamps2kite:main"
