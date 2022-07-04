@@ -5,7 +5,6 @@
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/kite)
 [![CI](https://github.com/pyrocko/kite/actions/workflows/build-wheels.yaml/badge.svg)](https://github.com/pyrocko/kite/actions/workflows/build-wheels.yaml)
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
-[![DOI - Kite](https://img.shields.io/badge/DOI-10.5880%2FGFZ.2.1.2017.002-blue)](https://doi.org/10.5880/GFZ.2.1.2017.002)
 
 _Preparation of InSAR surface displacement maps for geophysical modelling_
 
