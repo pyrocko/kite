@@ -1,11 +1,11 @@
 [build-system]
-requires = ["setuptools ~= 61.0.0"]
+requires = ["setuptools >= 61.0.0", "oldest-supported-numpy"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kite"
 version = "1.5.0"
-requires-python = ">=3.6"
+requires-python = ">=3.7"
 license = {text = "GPLv3"}
 description = "InSAR unwrapped surface displacement processing for earthquake modelling."
 readme = "README.md"

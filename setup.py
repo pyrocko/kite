@@ -3,6 +3,8 @@ import os
 import platform
 import tempfile
 
+from distutils.sysconfig import get_python_inc
+
 from setuptools import setup, Extension
 from os.path import join as pjoin
 
@@ -122,17 +124,17 @@ setup(
         Extension(
             "kite.covariance_ext",
             sources=[pjoin("kite/ext", "covariance.c")],
-            include_dirs=[numpy.get_include()],
-            extra_compile_args=[] + omp_arg,
-            extra_link_args=[] + omp_lib,
+            include_dirs=[numpy.get_include(), get_python_inc()],
+            extra_compile_args=omp_arg,
+            extra_link_args=omp_lib,
             language="c",
         ),
         Extension(
             "kite.sources.disloc_ext",
             sources=[pjoin("kite/sources/ext", "disloc.c")],
-            include_dirs=[numpy.get_include()],
-            extra_compile_args=[] + omp_arg,
-            extra_link_args=[] + omp_lib,
+            include_dirs=[numpy.get_include(), get_python_inc()],
+            extra_compile_args=omp_arg,
+            extra_link_args=omp_lib,
             language="c",
         ),
     ]
