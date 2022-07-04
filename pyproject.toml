@@ -42,6 +42,7 @@ dependencies = [
 [project.urls]
 Home = "https://pyrocko.org"
 GitHub = "https://github.com/pyrocko/kite"
+Issues = "https://github.com/pyrocko/kite/issues"
 
 [project.optional-dependencies]
 import = ["gdal>=3.5.0"]
