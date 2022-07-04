@@ -48,35 +48,3 @@ scene.spool()  # start the GUI for data inspection and Quadtree parametrisation
 Visual parametrisation of the quadtree and spatial covariance for SLC and InSAR time-series.
 
 ![L'Aquila earthquake unwrapped displacement data](https://pyrocko.org/grond/docs/current/_images/example_spool-quadtree.png)
-
-## Installation and Requirement
-
-### Requires libraries
-
-* PyQt5 with OpenGL support
-* PyQtGraph
-* NumPy
-* SciPy
-
-Installation on Debian based distributions through `apt`
-
-```sh
-sudo apt-get install python-pyside python-pyside.qtcore python-pyside.qtopengl\
-  python-yaml python-scipy python-numpy
-```
-
-### Installation through pip
-
-```sh
-sudo pip install git+https://github.com/pyqtgraph/pyqtgraph.git
-sudo pip install git+https://github.com/pyrocko/kite.git
-```
-
-### Native installation
-
-```sh
-git clone https://github.com/pyqtgraph/pyqtgraph.git
-cd pyqtgraph; sudo python setup.py install
-git clone https://github.com/pyrocko/kite.git
-cd kite; sudo python setup.py install
-```
