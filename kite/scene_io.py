@@ -118,7 +118,6 @@ class SceneIO(object):
         :returns: Validation
         :rtype: {bool}
         """
-        pass
         raise NotImplementedError("validate not implemented")
 
 
@@ -158,7 +157,7 @@ class Matlab(SceneIO):
             return False
 
     def read(self, filename, **kwargs):
-        c = self.container
+        container = self.container
 
         mat = scipy.io.loadmat(filename)
         utm_e = None
@@ -168,12 +167,12 @@ class Matlab(SceneIO):
         phi0 = None
         theta0 = None
 
-        for mat_k, v in mat.items():
-            for io_k in c.keys():
+        for mat_k, _ in mat.items():
+            for io_k in container.keys():
                 if io_k in mat_k:
-                    c[io_k] = num.rot90(mat[mat_k])
+                    container[io_k] = num.rot90(mat[mat_k])
                 elif "ig_" in mat_k:
-                    c.displacement = num.rot90(mat[mat_k])
+                    container.displacement = num.rot90(mat[mat_k])
                 elif "xx" in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif "yy" in mat_k:
@@ -187,10 +186,10 @@ class Matlab(SceneIO):
                     theta0 = mat[mat_k].flatten()
 
         if len(theta0) == 1:
-            c.theta = num.ones(num.shape(c.displacement)) * theta0
+            container.theta = num.ones(num.shape(container.displacement)) * theta0
 
         if len(theta0) == 1:
-            c.phi = num.ones(num.shape(c.displacement)) * phi0
+            container.phi = num.ones(num.shape(container.displacement)) * phi0
 
         if utm_zone is None:
             utm_zone = 33
@@ -202,17 +201,17 @@ class Matlab(SceneIO):
 
         if not (num.all(utm_e) or num.all(utm_n)):
             self._log.warning("Could not find referencing UTM vectors in .mat file!")
-            utm_e = num.linspace(100000, 110000, c.displacement.shape[0])
-            utm_n = num.linspace(1100000, 1110000, c.displacement.shape[1])
+            utm_e = num.linspace(100000, 110000, container.displacement.shape[0])
+            utm_n = num.linspace(1100000, 1110000, container.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= km
             utm_n *= km
 
-        c.frame.dE = num.abs(utm_e[1] - utm_e[0])
-        c.frame.dN = num.abs(utm_n[1] - utm_n[0])
+        container.frame.dE = num.abs(utm_e[1] - utm_e[0])
+        container.frame.dN = num.abs(utm_n[1] - utm_n[0])
         try:
-            c.frame.llLat, c.frame.llLon = utm.to_latlon(
+            container.frame.llLat, container.frame.llLon = utm.to_latlon(
                 utm_e.min(), utm_n.min(), utm_zone, utm_zone_letter
             )
 
@@ -220,8 +219,8 @@ class Matlab(SceneIO):
             self._log.warning(
                 "Could not interpret spatial vectors," " referencing to 0, 0 (lat, lon)"
             )
-            c.frame.llLat, c.frame.llLon = (0.0, 0.0)
-        return c
+            container.frame.llLat, container.frame.llLon = (0.0, 0.0)
+        return container
 
 
 class Gamma(SceneIO):
@@ -409,17 +408,17 @@ class Gamma(SceneIO):
             theta = num.append(theta, fill)
             phi = num.append(phi, fill)
 
-        c = self.container
+        container = self.container
 
-        c.displacement = displ
-        c.theta = theta
-        c.phi = phi
+        container.displacement = displ
+        container.theta = theta
+        container.phi = phi
 
-        c.meta.wavelength = wavelength
-        c.meta.title = params.get("title", "None")
+        container.meta.wavelength = wavelength
+        container.meta.title = params.get("title", "None")
 
-        c.bin_file = filename
-        c.par_file = par_file
+        container.bin_file = filename
+        container.par_file = par_file
 
         if params["DEM_projection"] == "UTM":
             utm_zone = params["projection_zone"]
@@ -451,21 +450,21 @@ class Gamma(SceneIO):
                 utm_e.min(), utm_n.min(), utm_zone, utm_zone_letter
             )
 
-            c.frame.llLat = llLat
-            c.frame.llLon = llLon
+            container.frame.llLat = llLat
+            container.frame.llLon = llLon
 
-            c.frame.dE = abs(dE)
-            c.frame.dN = abs(dN)
+            container.frame.dE = abs(dE)
+            container.frame.dN = abs(dN)
 
         else:
             self._log.info("Using Lat/Lon reference")
-            c.frame.spacing = "degree"
-            c.frame.llLat = params["corner_lat"] + params["post_lat"] * nlines
-            c.frame.llLon = params["corner_lon"]
-            c.frame.dE = abs(params["post_lon"])
-            c.frame.dN = abs(params["post_lat"])
+            container.frame.spacing = "degree"
+            container.frame.llLat = params["corner_lat"] + params["post_lat"] * nlines
+            container.frame.llLon = params["corner_lon"]
+            container.frame.dE = abs(params["post_lon"])
+            container.frame.dN = abs(params["post_lat"])
 
-        return c
+        return container
 
 
 class ROI_PAC(SceneIO):
@@ -589,33 +588,33 @@ class ROI_PAC(SceneIO):
         displ += z_offset
         displ *= z_scale
 
-        c = self.container
+        container = self.container
 
-        c.displacement = displ
-        c.theta = num.deg2rad(90.0 - look)
-        c.phi = num.deg2rad(-heading + 180.0)
+        container.displacement = displ
+        container.theta = num.deg2rad(90.0 - look)
+        container.phi = num.deg2rad(-heading + 180.0)
 
-        c.meta.title = par.get("TITLE", "None")
-        c.meta.wavelength = par["WAVELENGTH"]
-        c.bin_file = filename
-        c.par_file = par_file
+        container.meta.title = par.get("TITLE", "None")
+        container.meta.wavelength = par["WAVELENGTH"]
+        container.bin_file = filename
+        container.par_file = par_file
 
         if geo_ref == "all":
             if par["X_UNIT"] == "meters":
-                c.frame.spacing = "meter"
-                c.frame.dE = par["X_STEP"]
-                c.frame.dN = -par["Y_STEP"]
+                container.frame.spacing = "meter"
+                container.frame.dE = par["X_STEP"]
+                container.frame.dN = -par["Y_STEP"]
                 geo_ref = "utm"
 
             elif par["X_UNIT"] == "degree":
-                c.frame.spacing = "degree"
+                container.frame.spacing = "degree"
                 geo_ref = "latlon"
 
         elif geo_ref == "latlon":
             self._log.info("Georeferencing is in Lat-Lon [degrees].")
-            c.frame.spacing = "degree"
-            c.frame.llLat = par["Y_FIRST"] + par["Y_STEP"] * nlines
-            c.frame.llLon = par["X_FIRST"]
+            container.frame.spacing = "degree"
+            container.frame.llLat = par["Y_FIRST"] + par["Y_STEP"] * nlines
+            container.frame.llLon = par["X_FIRST"]
 
             # c_utm_0 = utm.from_latlon(lat_ref, lon_ref)
             # c_utm_1 = utm.from_latlon(lat_ref + par['Y_STEP'],
@@ -623,15 +622,15 @@ class ROI_PAC(SceneIO):
 
             # c.frame.dE = c_utm_1[0] - c_utm_0[0]
             # c.frame.dN = abs(c_utm_1[1] - c_utm_0[1])
-            c.frame.dE = par["X_STEP"]
-            c.frame.dN = -par["Y_STEP"]
+            container.frame.dE = par["X_STEP"]
+            container.frame.dN = -par["Y_STEP"]
 
         elif geo_ref == "utm":
             self._log.info(
                 "Georeferencing is in UTM (zone %d%s)", utm_zone, utm_zone_letter
             )
             y_ll = par["Y_FIRST"] + par["Y_STEP"] * nlines
-            c.frame.llLat, c.frame.llLon = utm.to_latlon(
+            container.frame.llLat, container.frame.llLon = utm.to_latlon(
                 par["X_FIRST"], y_ll, utm_zone, zone_letter=utm_zone_letter
             )
 
@@ -737,7 +736,7 @@ class ISCE(SceneIO):
 
     def read(self, path, **kwargs):
         path = op.abspath(path)
-        c = self.container
+        container = self.container
 
         xml_file = self._getDisplacementFile(path) + ".xml"
         self._log.info("Parsing ISCE XML file %s" % xml_file)
@@ -745,15 +744,15 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty("coordinate1")
         coord_lat = isce_xml.getProperty("coordinate2")
-        c.frame.dN = num.abs(coord_lat["delta"])
-        c.frame.dE = num.abs(coord_lon["delta"])
+        container.frame.dN = num.abs(coord_lat["delta"])
+        container.frame.dE = num.abs(coord_lon["delta"])
 
         nlon = int(coord_lon["size"])
         nlat = int(coord_lat["size"])
 
-        c.frame.spacing = "degree"
-        c.frame.llLat = coord_lat["startingvalue"] + (nlat * coord_lat["delta"])
-        c.frame.llLon = coord_lon["startingvalue"]
+        container.frame.spacing = "degree"
+        container.frame.llLat = coord_lat["startingvalue"] + (nlat * coord_lat["delta"])
+        container.frame.llLon = coord_lon["startingvalue"]
 
         displ = num.memmap(self._getDisplacementFile(path), dtype="<f4").reshape(
             nlat, nlon * 2
@@ -761,7 +760,7 @@ class ISCE(SceneIO):
 
         displ = num.flipud(displ)
         displ[displ == 0.0] = num.nan
-        c.displacement = displ
+        container.displacement = displ
 
         los_file = self._getLOSFile(path)
         los_data = num.fromfile(los_file, dtype="<f4").reshape(nlat * 2, nlon)
@@ -787,10 +786,10 @@ class ISCE(SceneIO):
         phi = num.pi / 2 + phi
         theta = num.pi / 2 - theta
 
-        c.phi = phi
-        c.theta = theta
+        container.phi = phi
+        container.theta = theta
 
-        return c
+        return container
 
 
 class GMTSAR(SceneIO):
@@ -850,19 +849,23 @@ class GMTSAR(SceneIO):
         from scipy.io import netcdf
 
         path = op.abspath(path)
-        c = self.container
+        container = self.container
 
         grd = netcdf.netcdf_file(self._getDisplacementFile(path), mode="r", version=2)
         displ = grd.variables["z"][:].copy()
-        c.displacement = displ
-        shape = c.displacement.shape
+        container.displacement = displ
+        shape = container.displacement.shape
         # LatLon
-        c.frame.spacing = "degree"
-        c.frame.llLat = grd.variables["lat"][:].min()
-        c.frame.llLon = grd.variables["lon"][:].min()
+        container.frame.spacing = "degree"
+        container.frame.llLat = grd.variables["lat"][:].min()
+        container.frame.llLon = grd.variables["lon"][:].min()
 
-        c.frame.dN = (grd.variables["lat"][:].max() - c.frame.llLat) / shape[0]
-        c.frame.dE = (grd.variables["lon"][:].max() - c.frame.llLon) / shape[1]
+        container.frame.dN = (
+            grd.variables["lat"][:].max() - container.frame.llLat
+        ) / shape[0]
+        container.frame.dE = (
+            grd.variables["lon"][:].max() - container.frame.llLon
+        ) / shape[1]
 
         # Theta and Phi
         try:
@@ -875,14 +878,14 @@ class GMTSAR(SceneIO):
             theta = num.arcsin(u)
             # phi[n < 0] += num.pi
 
-            c.phi = phi
-            c.theta = theta
+            container.phi = phi
+            container.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
             self._log.warning("Defaulting theta to pi/2 and phi to 0.")
-            c.theta = num.pi / 2
-            c.phi = 0.0
-        return c
+            container.theta = num.pi / 2
+            container.phi = 0.0
+        return container
 
 
 class SARscape(SceneIO):
