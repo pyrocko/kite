@@ -1,9 +1,19 @@
 # Kite
-![Python3](https://img.shields.io/badge/Python-3.x-brightgreen.svg)
+
 [![Docs](https://img.shields.io/badge/kite-Documentation-blue.svg)](https://pyrocko.org/kite/docs/current/)
+[![Build](https://github.com/pyrocko/kite/actions/workflows/build-wheels.yaml/badge.svg)](https://github.com/pyrocko/kite/actions/workflows/build-wheels.yaml)
+<a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+![Python3](https://img.shields.io/badge/Python-3.7-brightgreen.svg)
 
 _Preparation of InSAR surface displacement maps for geophysical modelling_
 
+## Installation
+
+Install from pip:
+
+```sh
+pip install kite
+```
 ## Introduction
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [Pyrocko](https://www.pyrocko.org) and Grond.
 
