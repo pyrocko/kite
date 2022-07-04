@@ -2,7 +2,7 @@
 import numpy as num
 from collections import OrderedDict
 
-from PyQt5 import QtGui, QtCore
+from PyQt5 import QtWidgets, QtCore
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
@@ -172,17 +172,17 @@ class KiteScenePlot(KitePlot):
         self.transFromFrame()
 
 
-class KiteToolTransect(QtGui.QDialog):
+class KiteToolTransect(QtWidgets.QDialog):
     def __init__(self, plot, parent=None):
-        QtGui.QDialog.__init__(self, parent)
+        QtWidgets.QDialog.__init__(self, parent)
 
         loadUi(get_resource("transect.ui"), baseinstance=self)
 
         icon = self.style().standardIcon
 
-        self.closeButton.setIcon(icon(QtGui.QStyle.SP_DialogCloseButton))
-        self.createButton.setIcon(icon(QtGui.QStyle.SP_ArrowUp))
-        self.removeButton.setIcon(icon(QtGui.QStyle.SP_DialogDiscardButton))
+        self.closeButton.setIcon(icon(QtWidgets.QStyle.SP_DialogCloseButton))
+        self.createButton.setIcon(icon(QtWidgets.QStyle.SP_ArrowUp))
+        self.removeButton.setIcon(icon(QtWidgets.QStyle.SP_DialogDiscardButton))
 
         self.plot = plot
         self.poly_line = None
