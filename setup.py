@@ -12,14 +12,11 @@ except ImportError:
 
     class numpy:
         def __init__(self):
-            pass
+            ...
 
         @classmethod
-        def get_include(self):
+        def get_include(cls):
             return ""
-
-
-version = "1.4.0"
 
 
 def _have_openmp():
@@ -121,82 +118,22 @@ else:
 
 
 setup(
-    name="kite",
-    version=version,
-    description="Handle SAR displacement data towards pyrocko",
-    author="Marius P. Isken, Henriette Sudhaus;"
-    "BriDGes Emmily Noether-Programm (DFG)",
-    author_email="misken@geophysik.uni-kiel.de",
-    long_description=open("README.md", "r").read(),
-    long_description_content_type="text/markdown",
-    license="GPLv3",
-    classifiers=[
-        "Intended Audience :: Science/Research",
-        "Topic :: Scientific/Engineering",
-        "Topic :: Scientific/Engineering :: Atmospheric Science",
-        "Topic :: Scientific/Engineering :: Image Recognition",
-        "Topic :: Scientific/Engineering :: Physics",
-        "Topic :: Scientific/Engineering :: Visualization",
-        "Programming Language :: Python :: 3.5",
-        "Programming Language :: C",
-        "Operating System :: POSIX",
-        "Operating System :: MacOS",
-    ],
-    keywords=["InSAR satellite radar earthquake optimization"],
-    python_requires=">=3.5",
-    packages=[
-        "kite",
-        "kite.util",
-        "kite.sources",
-        "kite.spool",
-        "kite.talpa",
-        "kite.talpa.sources",
-    ],
-    package_dir={"kite": "src"},
-    package_data={"kite": ["spool/res/*", "talpa/res/*"]},
-    entry_points={
-        "console_scripts": [
-            "spool = kite.spool.__main__:main",
-            "talpa = kite.talpa.__main__:main",
-            "stamps2kite = kite.util.stamps2kite:main",
-            "bbd2kite = kite.util.bbd2kite:main",
-        ]
-    },
-    ext_package="kite",
     ext_modules=[
         Extension(
-            "covariance_ext",
-            sources=[pjoin("src/ext", "covariance.c")],
+            "kite.covariance_ext",
+            sources=[pjoin("kite/ext", "covariance.c")],
             include_dirs=[numpy.get_include()],
-            define_macros=None,
-            undef_macros=None,
-            library_dirs=None,
-            libraries=None,
-            runtime_library_dirs=None,
-            extra_objects=None,
             extra_compile_args=[] + omp_arg,
             extra_link_args=[] + omp_lib,
-            export_symbols=None,
-            swig_opts=None,
-            depends=None,
-            language=None,
+            language="c",
         ),
         Extension(
-            "sources.disloc_ext",
-            sources=[pjoin("src/sources/ext", "disloc.c")],
+            "kite.sources.disloc_ext",
+            sources=[pjoin("kite/sources/ext", "disloc.c")],
             include_dirs=[numpy.get_include()],
-            define_macros=None,
-            undef_macros=None,
-            library_dirs=None,
-            libraries=None,
-            runtime_library_dirs=None,
-            extra_objects=None,
             extra_compile_args=[] + omp_arg,
             extra_link_args=[] + omp_lib,
-            export_symbols=None,
-            swig_opts=None,
-            depends=None,
-            language=None,
+            language="c",
         ),
-    ],
+    ]
 )

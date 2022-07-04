@@ -130,3 +130,4 @@ gh-pages
 test/data/
 kite.git/
 .idea
+.vscode

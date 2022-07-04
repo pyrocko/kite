@@ -1,7 +1,0 @@
-numpy==1.22.0
-scipy==1.8.0
-PyQt5==5.15.7
-pyqtgraph==0.12.4
-pyrocko==2022.06.10
-utm==0.7.0
-geojson==2.5.0
