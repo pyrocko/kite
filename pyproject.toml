@@ -67,5 +67,6 @@ packages=[
     "kite.spool",
     "kite.spool.res",
     "kite.talpa",
-    "kite.talpa.sources"
+    "kite.talpa.sources",
+    "kite.talpa.res"
 ]
