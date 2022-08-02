@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "kite"
-version = "1.5.0"
+version = "1.5.1"
 requires-python = ">=3.7"
 license = {text = "GPLv3"}
 description = "InSAR unwrapped surface displacement processing for earthquake modelling."
