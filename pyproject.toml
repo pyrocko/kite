@@ -56,9 +56,6 @@ bbd2kite = "kite.util.bbd2kite:main"
 spool = "kite.spool.__main__:main"
 talpa = "kite.talpa.__main__:main"
 
-[tool.setuptools.package-data]
-kite = ["*.ui", "*.jpg", "*.png"]
-
 [tool.setuptools]
 packages=[
     "kite",
@@ -67,6 +64,10 @@ packages=[
     "kite.spool",
     "kite.spool.res",
     "kite.talpa",
-    "kite.talpa.sources",
-    "kite.talpa.res"
+    "kite.talpa.res",
+    "kite.talpa.sources"
 ]
+
+[tool.setuptools.package-data]
+"kite.spool.res" = ["*.ui", "*.jpg", "*.png"]
+"kite.talpa.res" = ["*.ui", "*.jpg", "*.png"]
