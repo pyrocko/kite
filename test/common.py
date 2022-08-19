@@ -1,8 +1,9 @@
-import time
+import logging
 import os
 import re
+import time
+
 import requests
-import logging
 from requests.compat import urljoin
 
 op = os.path

@@ -25,7 +25,7 @@ Manual covariance configuration
 The covariance can be manipulated by editing the ``.yml`` file. Or by changing the covariance parameters during runtime:
 
 .. code-block:: python
-    
+
     scene.covariance.a = 1.412e-4
     scene.covariance.b = 1.2521
 

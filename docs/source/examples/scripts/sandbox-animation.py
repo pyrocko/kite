@@ -1,11 +1,9 @@
-import numpy as num
-
-import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import matplotlib.pyplot as plt
+import numpy as num
 
 from kite import SandboxScene
 from kite.sources import OkadaSource
-
 
 km = 1e3
 

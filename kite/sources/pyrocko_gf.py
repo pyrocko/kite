@@ -1,8 +1,8 @@
 import numpy as num
-from pyrocko.guts import String, Float, Int
 from pyrocko import gf
+from pyrocko.guts import Float, Int, String
 
-from .base import SandboxSourceRectangular, SandboxSource, SourceProcessor
+from .base import SandboxSource, SandboxSourceRectangular, SourceProcessor
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi

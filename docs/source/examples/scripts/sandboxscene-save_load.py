@@ -1,7 +1,6 @@
 from kite import SandboxScene
 from kite.sources import EllipsoidSource
 
-
 km = 1e3
 
 sandbox = SandboxScene()

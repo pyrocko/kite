@@ -6,7 +6,7 @@ The :class:`~kite.Quadtree` reduces the amount of displacement data by sub-sampl
 .. figure :: ../../_images/quadtree-myanmar-quadtree.gif
     :width: 100%
 
-    Figure 1: Quadtree data reduction of an InSAR displacement scene. (Left) the origin full resolution ALOS displacement map, (right) the adaptive quadtree reduction.
+    Figure 1: Quadtree data reduction of an InSAR displacement scene. (Left) the origin full resolution ALSO displacement map, (right) the adaptive quadtree reduction.
 
 The quadtree is made from hierarchically organized :class:`~kite.quadtree.QuadNode`, a slice through of the tree's nodes is then called :attr:`~kite.Quadtree.leaves`.
 
@@ -43,7 +43,7 @@ The quadtree can also be parametrised by a python script. This example modifies 
 
 .. code-block :: python
     :caption: Scripted parametrisation of the quadtree.
-    
+
     import logging
     from kite import Scene
 
@@ -115,5 +115,3 @@ We can also use Matplotlib to plot the Quadtree's current leaves.
 .. rubric:: Footnotes
 
 .. [#f1]  Jónsson, Sigurjón, Howard Zebker, Paul Segall, and Falk Amelung. 2002. “Fault Slip Distribution of the 1999 Mw 7.1 Hector Mine, California, Earthquake, Estimated from Satellite Radar and GPS Measurements.” Bulletin of the Seismological Society of America 92 (4): 1377–89. doi:10.1785/0120000922.
-
-

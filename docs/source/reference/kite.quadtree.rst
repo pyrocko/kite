@@ -5,7 +5,7 @@ The quadtree reduces the amount of displacement information contained in a full 
 
 * epsilon/std threshold (:attr:`~kite.Quadtree.epsilon`)
 * Fraction of NaN values within (:attr:`~kite.Quadtree.nan_allowed`)
-* Maximum and minium dimension of the tile
+* Maximum and minimum dimension of the tile
   (:attr:`~kite.Quadtree.tile_size_max` and :attr:`~kite.Quadtree.tile_size_min`)
 
 Programming example of the quadtree can be found here :doc:`../examples/quadtree` and here :doc:`../tools/spool`.

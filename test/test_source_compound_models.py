@@ -1,11 +1,11 @@
 import unittest
+
 import numpy as num
-from kite.sources import (
-    compound_engine as cm,
-    EllipsoidSource,
-    PointCompoundSource,
-)  # noqa
+
 from kite import SandboxScene
+from kite.sources import EllipsoidSource, PointCompoundSource
+from kite.sources import compound_engine as cm  # noqa
+
 from . import common
 
 km = 1e3
@@ -62,8 +62,9 @@ class CompoundModelsTest(unittest.TestCase):
 
     def _test_ECM_against_Octave(self):
         # Lost reference file
-        from scipy import io
         from os import path as p
+
+        from scipy import io
 
         X, Y = num.meshgrid(num.linspace(-7.0, 7.0, 701), num.linspace(-5.0, 5.0, 501))
         x0 = 0.5
@@ -130,8 +131,9 @@ class CompoundModelsTest(unittest.TestCase):
         self._plot_modelScene(ms)
 
     def _test_pointCDM_against_Octave(self):
-        from scipy import io
         from os import path as p
+
+        from scipy import io
 
         X, Y = num.meshgrid(num.linspace(-7.0, 7.0, 701), num.linspace(-5.0, 5.0, 501))
         x0 = 0.5

@@ -1,15 +1,14 @@
-import shapefile
 import logging
-import numpy as num
-import utm
-import re
 import os.path as op
-import pyrocko.orthodrome as od
+import re
 
+import numpy as num
+import pyrocko.orthodrome as od
+import shapefile
+import utm
 from scipy import stats
 
 from kite.scene import Scene, SceneConfig
-
 
 log = logging.getLogger("bbd2kite")
 
@@ -252,7 +251,7 @@ The data is delivered in ESRI shapefile format.
         "-v",
         action="count",
         default=0,
-        help="verbosity, add mutliple to increase verbosity.",
+        help="verbosity, add multiple to increase verbosity.",
     )
 
     args = parser.parse_args()

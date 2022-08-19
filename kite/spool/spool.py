@@ -1,22 +1,23 @@
 #!/usr/bin/python
-from PyQt5 import QtGui, QtCore, QtWidgets
-import sys
-import time  # noqa
 import math
 import os.path as op
-import pyqtgraph as pg
+import sys
+import time  # noqa
 from datetime import datetime
 
-from kite.qt_utils import loadUi, validateFilename, SceneLog, QRangeSlider
+import pyqtgraph as pg
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+from kite.qt_utils import QRangeSlider, SceneLog, loadUi, validateFilename
 from kite.scene import Scene
 from kite.scene_stack import SceneStack
 
-from .scene_model import SceneModel
-from .tab_scene import KiteScene
-from .tab_quadtree import KiteQuadtree  # noqa
-from .tab_covariance import KiteCovariance  # noqa
-from .tab_aps import KiteAPS  # noqa
 from .base import get_resource
+from .scene_model import SceneModel
+from .tab_aps import KiteAPS  # noqa
+from .tab_covariance import KiteCovariance  # noqa
+from .tab_quadtree import KiteQuadtree  # noqa
+from .tab_scene import KiteScene
 
 
 class Spool(QtWidgets.QApplication):
@@ -240,7 +241,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.information(
             self,
             "Scene config saved",
-            "Scene config successfuly saved!"
+            "Scene config successfully saved!"
             f'<p style="font-family: monospace;">{filename}'
             "</p>",
         )
@@ -259,7 +260,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
         QtWidgets.QMessageBox.information(
             self,
             "Scene saved",
-            "Scene successfuly saved!"
+            "Scene successfully saved!"
             '<p style="font-family: monospace;">%s'
             "</p>" % filename,
         )

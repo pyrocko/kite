@@ -1,16 +1,16 @@
 import sys
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from .util import get_resource
+from kite.qt_utils import SceneLog, loadUi, validateFilename
+from kite.sandbox_scene import SandboxScene
 
-from .multiplot import SandboxSceneDockarea, ModelReferenceDockarea
+from .config import ConfigDialog
+from .multiplot import ModelReferenceDockarea, SandboxSceneDockarea
+from .sandbox_model import SandboxModel
 from .sources_dock import SourcesListDock
 from .tool_dialogs import ExtentDialog, LosDialog
-from .config import ConfigDialog
-from .sandbox_model import SandboxModel
-
-from kite.sandbox_scene import SandboxScene
-from kite.qt_utils import loadUi, SceneLog, validateFilename
+from .util import get_resource
 
 
 class Talpa(QtWidgets.QApplication):

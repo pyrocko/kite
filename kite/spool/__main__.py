@@ -1,10 +1,10 @@
 #!/bin/python
+import argparse as ap
 import logging
 import sys
-import argparse as ap
 
-from kite.spool import spool
 from kite import Scene, TestScene
+from kite.spool import spool
 
 
 def main(args=None):
@@ -57,7 +57,7 @@ Supported formats are:
              connectedComponents
  - LiCSAR   *.unw.tif and LOS data, see client.download_licsar
 
- For more informatio see the online documentation at https://pyrocko.org""",
+ For more information see the online documentation at https://pyrocko.org""",
     )
     parser.add_argument(
         "--synthetic",
@@ -77,7 +77,7 @@ Available Synthetic Displacement:
         "-v",
         action="count",
         default=1,
-        help="Verbosity, add mutliple to increase verbosity.",
+        help="Verbosity, add multiple to increase verbosity.",
     )
 
     ns = parser.parse_args(args)

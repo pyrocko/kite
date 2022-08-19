@@ -1,13 +1,14 @@
-import unittest
-import numpy as num
-import tempfile
 import shutil
+import tempfile
+import unittest
+
+import numpy as num
 
 from kite import SandboxScene, TestSandboxScene  # noqa
 from kite.sources import (
-    PyrockoRectangularSource,
-    PyrockoMomentTensor,
     PyrockoDoubleCouple,
+    PyrockoMomentTensor,
+    PyrockoRectangularSource,
     PyrockoRingfaultSource,
 )
 

@@ -1,8 +1,9 @@
-from PyQt5 import QtWidgets, QtCore
+import numpy as num
+from PyQt5 import QtCore, QtWidgets
 
 from kite.qt_utils import loadUi
+
 from .util import get_resource
-import numpy as num
 
 km = 1e3
 

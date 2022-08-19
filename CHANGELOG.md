@@ -45,7 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Fixed displayed coordinates
   - Improvement slider responsiveness
 - Gamma: Fixed ncols/nrows import
-- Quadtree: focal point calculation to accomodate small quadtree nodes.
+- Quadtree: focal point calculation to accommodate small quadtree nodes.
 - Quadtree: Export UTM GeoJSON
 
 ## [1.2.4] 29. October 2019

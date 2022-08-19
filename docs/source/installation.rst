@@ -6,7 +6,7 @@ Kite is written for `Python 3 <https://python.org>`_, the installation has been 
 Debian / Ubuntu
 ---------------
 
-As a mandatory prerequisit you have to install Pyrocko, visit `Pyrocko installation instructions <https://pyrocko.org/docs/current/install/index.html>`_ for details.
+As a mandatory prerequisite you have to install Pyrocko, visit `Pyrocko installation instructions <https://pyrocko.org/docs/current/install/index.html>`_ for details.
 
 .. code-block :: sh
     :caption: Installation from source and ``apt-get``
@@ -55,7 +55,7 @@ Kite installation instructions with `MacPorts <https://www.macports.org/>`_, alt
     sudo port install py35-setuptools
     sudo pip3 install git+https://github.com/Turbo87/utm
     sudo pip3 install git+https://github.com/pyqtgraph/pyqtgraph
-	 
+
     git clone https://github.com/pyrocko/kite
     cd kite
     python3 setup.py install --user --install-scripts=/usr/local/bin
@@ -71,5 +71,3 @@ Use ``pip`` on Anaconda to install the software:
 
     pip install git+https://github.com/Turbo87/utm
     pip install git+https://github.com/pyrocko/kite
-
-    

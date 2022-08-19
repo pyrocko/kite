@@ -1,7 +1,8 @@
 import numpy as num
 
-from .base import PointSourceROI, SourceDelegate, SourceEditDialog
 from kite.sources import EllipsoidSource, PointCompoundSource
+
+from .base import PointSourceROI, SourceDelegate, SourceEditDialog
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi

@@ -1,7 +1,8 @@
 #!/usr/bin/python2
-import sys
-import logging
 import argparse as ap
+import logging
+import sys
+
 from kite.talpa import Talpa
 
 
@@ -47,7 +48,7 @@ BriDGes DFG Project, University of Kiel
         "-v",
         action="count",
         default=1,
-        help="Verbosity, add mutliple to increase verbosity.",
+        help="Verbosity, add multiple to increase verbosity.",
     )
 
     ns = parser.parse_args(args)

@@ -1,8 +1,8 @@
-import numpy as num
 import logging
 import time
 
 import matplotlib.pyplot as plt
+import numpy as num
 from matplotlib.image import AxesImage
 
 from kite.util import Subject

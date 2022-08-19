@@ -618,7 +618,7 @@ Shear modulus, 2. Lame parameter.</string>
 Pressure on the cavity walls.</string>
           </property>
           <property name="text">
-           <string>Cavity Pres.</string>
+           <string>Cavity Press.</string>
           </property>
           <property name="buddy">
            <cstring>cavity_pressure</cstring>

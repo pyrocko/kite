@@ -42,4 +42,3 @@ A ``Scene`` holds several configuration objects:
 
 .. autoclass:: kite.scene.LOSUnitVectors
     :members:
-

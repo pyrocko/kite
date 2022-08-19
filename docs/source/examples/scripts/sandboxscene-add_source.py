@@ -1,9 +1,8 @@
-from kite import SandboxScene
-from kite.sources import OkadaSource, PyrockoRectangularSource
-
 import matplotlib.pyplot as plt
 import numpy as num
 
+from kite import SandboxScene
+from kite.sources import OkadaSource, PyrockoRectangularSource
 
 km = 1e3
 

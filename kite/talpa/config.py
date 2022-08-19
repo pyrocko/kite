@@ -1,13 +1,13 @@
-import os
 import logging
-
-from PyQt5 import QtCore, QtWidgets, QtGui
-from .util import get_resource
-
-from kite.qt_utils import loadUi
-from pyrocko.guts import Object, Bool, String, Int, Float, Tuple, List, load
+import os
 from os import path
 
+from PyQt5 import QtCore, QtGui, QtWidgets
+from pyrocko.guts import Bool, Float, Int, List, Object, String, Tuple, load
+
+from kite.qt_utils import loadUi
+
+from .util import get_resource
 
 config_file = path.expanduser("~/.config/kite/talpa_config.yml")
 logger = logging.getLogger("TalpaConfig")

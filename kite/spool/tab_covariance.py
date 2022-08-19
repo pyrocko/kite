@@ -1,16 +1,15 @@
+from collections import OrderedDict
+
 import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-
-from collections import OrderedDict
-
-from PyQt5 import QtGui, QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
 
-from kite.qt_utils import loadUi
 from kite.covariance import CovarianceConfig
+from kite.qt_utils import loadUi
 
-from .base import KiteView, KitePlot, KiteParameterGroup, KiteToolColormap, get_resource
+from .base import KiteParameterGroup, KitePlot, KiteToolColormap, KiteView, get_resource
 
 pen_covariance_model = pg.mkPen((204, 0, 0), width=2, style=QtCore.Qt.DotLine)
 
@@ -107,7 +106,7 @@ class CovarianceNotPosDefWarning(QtWidgets.QMessageBox):
         self.setText(
             '<b><span style="font-family: monospace;">'
             "Covariance.covariance_matrix_focal</span>"
-            " is not positiv definit!</b>"
+            " is not positive definite!</b>"
         )
         self.setInformativeText(
             'Change the <span style="font-family: monospace;">'
@@ -366,8 +365,8 @@ class KiteStructureFunction(KiteSubplot):
     @QtCore.pyqtSlot()
     def update(self):
         covariance = self.model.covariance
-        struc, dist = covariance.getStructure()
-        self.structure.setData(dist[num.isfinite(struc)], struc[num.isfinite(struc)])
+        struct, dist = covariance.getStructure()
+        self.structure.setData(dist[num.isfinite(struct)], struct[num.isfinite(struct)])
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
@@ -736,11 +735,11 @@ class CovarianceCalcResultDialog(QtWidgets.QMessageBox):
 
         if self.model.covariance.isMatrixPosDefinite(full=True):
             self.setIcon(QtWidgets.QMessageBox.Information)
-            self.setText("Finished, %s is positiv definit!" % self.text_tmpl)
+            self.setText("Finished, %s is positive definite!" % self.text_tmpl)
             self.setInformativeText("")
         else:
             self.setIcon(QtWidgets.QMessageBox.Warning)
-            self.setText("<b>%s is not positiv definit!</b>" % self.text_tmpl)
+            self.setText("<b>%s is not positive definite!</b>" % self.text_tmpl)
             self.setInformativeText(
                 'Change the <span style="font-family: monospace;">'
                 "Covariance.model_function</span> to exponential"
@@ -807,7 +806,7 @@ class KiteParamCovariance(KiteParameterGroup):
             "type": "int",
             "limits": (1, 500),
             "step": 5,
-            "edditable": True,
+            "editable": True,
             "tip": CovarianceConfig.spatial_bins.help,
         }
 
@@ -823,7 +822,7 @@ class KiteParamCovariance(KiteParameterGroup):
             "type": "int",
             "limits": (1, 1000000),
             "step": 50000,
-            "edditable": True,
+            "editable": True,
             "tip": CovarianceConfig.spatial_pairs.help,
         }
 

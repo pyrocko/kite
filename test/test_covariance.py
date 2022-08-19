@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 import unittest
-import numpy as num
+
 import matplotlib.pyplot as plt
+import numpy as num
 
 from kite import Scene
+
 from . import common
 
 benchmark = common.Benchmark()

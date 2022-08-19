@@ -1,11 +1,10 @@
-import os
 import logging
+import os
 from os import path as op
 
-from PyQt5 import QtGui, QtCore, uic, QtWidgets
-from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 import pyqtgraph.parametertree.parameterTypes as pTypes
-
+from PyQt5 import QtCore, QtGui, QtWidgets, uic
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
 SCRIPT_DIRECTORY = op.dirname(op.abspath(__file__))
 

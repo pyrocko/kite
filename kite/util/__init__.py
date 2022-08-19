@@ -144,18 +144,18 @@ def property_cached(func):
     return property(fget=cache_return, fset=cache_return_setter, doc=func_doc)
 
 
-def calcPrecission(data):
+def calcPrecision(data):
     # number of floating points:
     mn = num.nanmin(data)
     mx = num.nanmax(data)
     if not num.isfinite(mx) or num.isfinite(mn):
         return 3, 6
-    precission = int(round(num.log10((100.0 / (mx - mn)))))
-    if precission < 0:
-        precission = 0
+    precision = int(round(num.log10((100.0 / (mx - mn)))))
+    if precision < 0:
+        precision = 0
     # length of the number in the label:
-    length = max(len(str(int(mn))), len(str(int(mx)))) + precission
-    return precission, length
+    length = max(len(str(int(mn))), len(str(int(mx)))) + precision
+    return precision, length
 
 
 def formatScalar(v, ndigits=7):

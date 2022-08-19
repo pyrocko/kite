@@ -1,6 +1,6 @@
+from .compound_sources import *  # noqa
 from .okada import *  # noqa
 from .pyrocko_gf import *  # noqa
-from .compound_sources import *  # noqa
 
 __sources__ = [
     OkadaSource,

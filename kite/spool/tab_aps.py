@@ -1,14 +1,13 @@
 import numpy as num
 import pyqtgraph as pg
-
+import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
-import pyqtgraph.parametertree.parameterTypes as pTypes
 
 from kite.qt_utils import loadUi
-from .base import KiteView, KitePlot, get_resource, KiteParameterGroup
-from .tab_covariance import KiteSubplot
 
+from .base import KiteParameterGroup, KitePlot, KiteView, get_resource
+from .tab_covariance import KiteSubplot
 
 km = 1e3
 pen_roi = pg.mkPen((78, 154, 6), width=2)

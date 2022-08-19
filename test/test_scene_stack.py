@@ -1,11 +1,11 @@
-import numpy as num
 import logging
 import time
 
-from kite.scene import TestScene
-from kite.scene_stack import TSScene, SceneStack
-from kite.quadtree import QuadNode
+import numpy as num
 
+from kite.quadtree import QuadNode
+from kite.scene import TestScene
+from kite.scene_stack import SceneStack, TSScene
 from kite.spool import spool
 
 logging.basicConfig(level=logging.DEBUG)

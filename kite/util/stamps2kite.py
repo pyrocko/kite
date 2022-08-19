@@ -1,11 +1,11 @@
-import logging
 import glob
-from os import path as op
+import logging
 from datetime import datetime, timedelta
-import pyrocko.orthodrome as od
+from os import path as op
 
 import numpy as num
-from scipy import stats, interpolate, io
+import pyrocko.orthodrome as od
+from scipy import interpolate, io, stats
 
 try:
     import h5py
@@ -356,7 +356,7 @@ project or the processed small baseline pairs. Required files are:
         "-v",
         action="count",
         default=0,
-        help="verbosity, add mutliple to increase verbosity.",
+        help="verbosity, add multiple to increase verbosity.",
     )
 
     args = parser.parse_args()
