@@ -1,15 +1,14 @@
 #!/usr/bin/python2
-import numpy as num
 from collections import OrderedDict
 
-from PyQt5 import QtWidgets, QtCore
-
+import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
+from PyQt5 import QtCore, QtWidgets
 
 from kite.qt_utils import loadUi
-from .base import KiteView, KitePlot, KiteParameterGroup, get_resource
 
+from .base import KiteParameterGroup, KitePlot, KiteView, get_resource
 
 __all__ = ["KiteScene"]
 
@@ -415,7 +414,7 @@ class DerampParams(KiteParameterGroup):
             "name": "demean",
             "type": "bool",
             "value": scene.deramp.config.demean,
-            "tip": "substract mean of displacement",
+            "tip": "subtract mean of displacement",
         }
         self.demean = pTypes.SimpleParameter(**p)
 

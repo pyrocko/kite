@@ -1,7 +1,8 @@
-from PyQt5 import QtCore
-from pyqtgraph import SignalProxy
 import logging
 from datetime import datetime
+
+from PyQt5 import QtCore
+from pyqtgraph import SignalProxy
 
 try:
     from pyrocko.dataset.util import set_download_callback as pyrocko_download_callback

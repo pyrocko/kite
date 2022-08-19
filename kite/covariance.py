@@ -1,25 +1,23 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+from hashlib import sha1
+
 import numpy as num
 import scipy as sp
-from hashlib import sha1
 
 try:
     from scipy import fftpack as fft
 except ImportError:
     from scipy import fft
+
 import time
 
-from kite import covariance_ext
 from pyrocko import guts
 from pyrocko.guts_array import Array
-from kite.util import (
-    Subject,
-    property_cached,  # noqa
-    trimMatrix,
-    derampMatrix,
-    squareMatrix,
-)
+
+from kite import covariance_ext
+from kite.util import property_cached  # noqa
+from kite.util import Subject, derampMatrix, squareMatrix, trimMatrix
 
 __all__ = ["Covariance", "CovarianceConfig"]
 
@@ -590,7 +588,7 @@ class Covariance(object):
             pos_def = ~num.all(num.iscomplex(chol_decomp))
         finally:
             if not pos_def:
-                self._log.warning("Covariance matrix is not positiv definite!")
+                self._log.warning("Covariance matrix is not positive definite!")
             return pos_def
 
     @staticmethod
@@ -652,7 +650,7 @@ class Covariance(object):
 
         This function uses the power spectrum of the data noise
         (:attr:`noise_data`) (:func:`powerspecNoise`) to create synthetic
-        noise, e.g. to use it for data pertubation in optinmizations.
+        noise, e.g. to use it for data perturbation in optinmizations.
         The default sampling distances are taken from
         :attr:`kite.scene.Frame.dE` and :attr:`kite.scene.Frame.dN`. They can
         be overwritten.
@@ -710,12 +708,12 @@ class Covariance(object):
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
             kE = num.fft.fftshift(kE)
             kN = num.fft.fftshift(kN)
-            mkE = num.logical_and(kE >= skE.min(), kE <= skE.max())
+            make = num.logical_and(kE >= skE.min(), kE <= skE.max())
             mkN = num.logical_and(kN >= skN.min(), kN <= skN.max())
             mkRad = num.where(  # noqa
-                k_rad < num.sqrt(kN[mkN].max() ** 2 + kE[mkE].max() ** 2)
+                k_rad < num.sqrt(kN[mkN].max() ** 2 + kE[make].max() ** 2)
             )
-            res = interp_pspec(kN[mkN, num.newaxis], kE[num.newaxis, mkE], grid=True)
+            res = interp_pspec(kN[mkN, num.newaxis], kE[num.newaxis, make], grid=True)
             amp = res
             amp = num.fft.fftshift(amp)
 

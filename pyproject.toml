@@ -45,7 +45,7 @@ GitHub = "https://github.com/pyrocko/kite"
 Issues = "https://github.com/pyrocko/kite/issues"
 
 [project.optional-dependencies]
-formating = ["flake8", "black"]
+formatting = ["flake8", "black"]
 gdal = ["gdal>=3.5.0"]
 
 [project.scripts]

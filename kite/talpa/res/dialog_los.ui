@@ -38,7 +38,7 @@
    <item>
     <widget class="QLabel" name="label_5">
      <property name="text">
-      <string>Change the LOS vectors for the scene (if refrence scene not active)</string>
+      <string>Change the LOS vectors for the scene (if reference scene not active)</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>

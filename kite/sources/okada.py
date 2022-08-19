@@ -1,9 +1,10 @@
 import numpy as num
 from pyrocko import orthodrome as od
-from pyrocko.guts import List, Bool, Float
+from pyrocko.guts import Bool, Float, List
 
 from kite.sources import disloc_ext
-from .base import SandboxSourceRectangular, SandboxSource, SourceProcessor
+
+from .base import SandboxSource, SandboxSourceRectangular, SourceProcessor
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi
@@ -14,7 +15,7 @@ __all__ = ["OkadaSource", "OkadaPath", "DislocProcessor"]
 
 
 class OkadaSource(SandboxSourceRectangular):
-    """Rectangular Okada source modell."""
+    """Rectangular Okada source model."""
 
     __implements__ = "disloc"
 

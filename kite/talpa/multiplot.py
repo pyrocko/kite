@@ -1,11 +1,10 @@
-from PyQt5 import QtGui, QtCore, QtWidgets
-from pyqtgraph import dockarea
+import numpy as num
 import pyqtgraph as pg
+from PyQt5 import QtCore, QtGui, QtWidgets
+from pyqtgraph import dockarea
 
 from .config import getConfig
 from .util import SourceROI
-
-import numpy as num
 
 d2r = num.pi / 180.0
 

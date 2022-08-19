@@ -1,10 +1,9 @@
 import matplotlib.pyplot as plt
-from matplotlib.path import Path
 import numpy as num
+from matplotlib.path import Path
+from pyrocko.guts import Bool, Dict
 
-from pyrocko.guts import Dict, Bool
-
-from .plugin import PluginConfig, Plugin
+from .plugin import Plugin, PluginConfig
 
 
 class PolygonMaskConfig(PluginConfig):

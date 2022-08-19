@@ -1,6 +1,8 @@
 from datetime import datetime
-from .scene import BaseScene, Scene
+
 import numpy as num
+
+from .scene import BaseScene, Scene
 
 
 def dtime(timestamp):

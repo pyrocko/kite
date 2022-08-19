@@ -1,29 +1,26 @@
 #!/usr/bin/env python3
-import logging
-import numpy as num
-import utm
-import os.path as op
 import copy
 import hashlib
+import logging
+import os.path as op
 import time
 from datetime import datetime as dt
+
+import numpy as num
+import utm
+from pyrocko.dataset.topo import srtmgl3
+from pyrocko.guts import Dict, Float, Object, String, StringChoice, Timestamp, load
+from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
 from scipy import interpolate
 
-from pyrocko.guts import Object, Float, StringChoice, String, Timestamp, Dict, load
-from pyrocko.dataset.topo import srtmgl3
-from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
-
-from kite.quadtree import QuadtreeConfig
-from kite.covariance import CovarianceConfig
-
-from kite.aps import APSConfig, APS
-from kite.gacos import GACOSConfig, GACOSCorrection
-from kite.deramp import Deramp, DerampConfig
-
-from kite.util import Subject, property_cached
 from kite import scene_io
-
+from kite.aps import APS, APSConfig
+from kite.covariance import CovarianceConfig
+from kite.deramp import Deramp, DerampConfig
+from kite.gacos import GACOSConfig, GACOSCorrection
+from kite.quadtree import QuadtreeConfig
 from kite.scene_mask import PolygonMask, PolygonMaskConfig
+from kite.util import Subject, property_cached
 
 
 def read(filename):

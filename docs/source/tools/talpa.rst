@@ -83,4 +83,3 @@ Saving and Loading a Sandbox
 ----------------------------
 
 The scene can be saved and loaded through the :menuselection:`File` menu.
-

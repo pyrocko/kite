@@ -1,16 +1,15 @@
-import numpy as num
 import time
 from os import path as op
 
-from pyrocko.guts import Object, List, Int, String
+import numpy as num
 from pyrocko import guts
+from pyrocko.guts import Int, List, Object, String
 
-from kite.util import Subject, property_cached
 from kite.scene import BaseScene, FrameConfig
 
 # Import the modeling backends
-from kite.sources import DislocProcessor, PyrockoProcessor, CompoundModelProcessor
-
+from kite.sources import CompoundModelProcessor, DislocProcessor, PyrockoProcessor
+from kite.util import Subject, property_cached
 
 __processors__ = [DislocProcessor, PyrockoProcessor, CompoundModelProcessor]
 km = 1e3

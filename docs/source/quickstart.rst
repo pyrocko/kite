@@ -89,7 +89,7 @@ Initialisation of a custom scene through a Python script. Here we will import ar
 
     sc = Scene()
     sc.displacement = num.empty((2048, 2048))
-    
+
     # Dummy line-of-sight vectors in radians
     # Theta is the elevation angle towards satellite from horizon in radians.
     sc.theta = num.full((2048, 2048), fill=num.pi/2)
@@ -181,7 +181,7 @@ To import the data into spool use a regular ``load``:
 
 
 .. note ::
-    
+
     ARIA scenes are provided at a high resolution and calculation of the covariance matrix can take a long time!
 
 

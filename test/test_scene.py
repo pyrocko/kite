@@ -1,8 +1,10 @@
 #!/bin/python
 import logging
 import unittest
+
 import numpy as num
-from kite import TestScene, Scene
+
+from kite import Scene, TestScene
 
 # from . import common
 

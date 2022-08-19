@@ -1,5 +1,6 @@
 from hashlib import sha1
-from pyrocko.guts import Object, Bool
+
+from pyrocko.guts import Bool, Object
 
 
 class PluginConfig(Object):

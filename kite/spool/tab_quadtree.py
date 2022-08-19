@@ -1,15 +1,15 @@
-import time
 import math
+import time
 from collections import OrderedDict
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from kite.qt_utils import SliderWidgetParameterItem
 from kite.quadtree import QuadtreeConfig
 
-from .base import KiteView, KitePlot, KiteParameterGroup
+from .base import KiteParameterGroup, KitePlot, KiteView
 
 
 class KiteQuadtree(KiteView):

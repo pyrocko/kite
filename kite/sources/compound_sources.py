@@ -1,11 +1,9 @@
 import numpy as num
-
-from pyrocko.guts import Float
 import pyrocko.orthodrome as od
+from pyrocko.guts import Float
 
 from . import compound_engine as ce
 from .base import SandboxSource, SourceProcessor
-
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi

@@ -1,7 +1,7 @@
 import numpy as num
 from pyrocko.guts import Bool
 
-from .plugin import PluginConfig, Plugin
+from .plugin import Plugin, PluginConfig
 
 
 class DerampConfig(PluginConfig):
@@ -43,7 +43,7 @@ class Deramp(Plugin):
         self.update()
 
     def apply(self, displacement):
-        """Fit a plane onto the displacement data and substract it
+        """Fit a plane onto the displacement data and subtract it
 
         :param demean: Demean the displacement
         :type demean: bool

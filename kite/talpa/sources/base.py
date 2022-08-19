@@ -1,9 +1,10 @@
-from PyQt5 import QtCore, QtWidgets
-import pyqtgraph as pg
 import numpy as num
+import pyqtgraph as pg
+from PyQt5 import QtCore, QtWidgets
+
+from kite.qt_utils import loadUi
 
 from ..util import get_resource
-from kite.qt_utils import loadUi
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi

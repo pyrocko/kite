@@ -1,10 +1,11 @@
-import numpy as num
 import time
 from hashlib import sha1
+
+import numpy as num
 from pyrocko import guts
 from pyrocko import orthodrome as od
 
-from .util import Subject, property_cached, derampMatrix
+from .util import Subject, derampMatrix, property_cached
 
 
 class QuadNode(object):
@@ -303,7 +304,7 @@ class QuadNode(object):
         """Iterator over the leaves, evaluating parameters from
         :class:`~kite.Quadtree` instance.
 
-        :yields: Leafs fullfilling the tree's parameters.
+        :yields: Leafs fulfilling the tree's parameters.
         :type: :class:`~kite.quadtree.QuadNode`
         """
         if (
@@ -391,14 +392,14 @@ class Quadtree(object):
     without significant loss of displacement information. Quadtree subsampling
     keeps a high spatial resolution where displacement gradients are high and
     efficiently reduces data point density in regions with small displacement
-    variations. The product is a managable dataset size with good
+    variations. The product is a manageable dataset size with good
     representation of the original data.
 
     The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
     is evaluated against different corrections:
 
-        * ``mean``: Mean is substracted
-        * ``median``: Median is substracted
+        * ``mean``: Mean is subtracted
+        * ``median``: Median is subtracted
         * ``bilinear``: A 2D detrend is applied to the node
         * ``std``:  Pure standard deviation without correction
 
@@ -495,8 +496,8 @@ class Quadtree(object):
         The standard deviation from :attr:`kite.quadtree.QuadNode.displacement`
         is evaluated against different corrections:
 
-        * ``mean``: Mean is substracted
-        * ``median``: Median is substracted
+        * ``mean``: Mean is subtracted
+        * ``median``: Median is subtracted
         * ``bilinear``: A 2D detrend is applied to the node
         * ``std``:  Pure standard deviation without correction
 

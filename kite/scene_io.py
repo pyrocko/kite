@@ -1,12 +1,12 @@
-import re
 import glob
 import os
+import re
 import time
 from datetime import datetime
 
-import utm
-import scipy.io
 import numpy as num
+import scipy.io
+import utm
 
 from kite import util
 
@@ -674,7 +674,7 @@ class ISCEXMLParser(object):
 
 class ISCE(SceneIO):
     """
-    Reading geocoded, unwraped displacement maps
+    Reading geocoded, unwrapped displacement maps
     processed with ISCE software (https://winsar.unavco.org/isce.html).
 
     .. note :: Expects:
@@ -984,7 +984,7 @@ class SARscape(SceneIO):
 
         alos_file = op.abspath(filename + "_ALOS")
         if not op.exists(alos_file):
-            self._log.warning("Could not find ALOS file! (%s)" % alos_file)
+            self._log.warning("Could not find ALSO file! (%s)" % alos_file)
             alos_file = False
         return ilos_file, alos_file
 

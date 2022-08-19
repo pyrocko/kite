@@ -1,14 +1,15 @@
 from __future__ import absolute_import
 
-import unittest
-import tempfile
 import shutil
-import numpy as num
+import tempfile
+import unittest
 from os import path as op
 
-from . import common
+import numpy as num
+
 from kite import Scene
 
+from . import common
 
 # format (dl_dir, load_file)
 filenames = {

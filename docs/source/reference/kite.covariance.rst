@@ -18,5 +18,3 @@ Model assumptions
 .. autofunction:: kite.covariance.modelCovarianceExponentialCosine
 
 .. autofunction:: kite.covariance.modelPowerspec
-
-

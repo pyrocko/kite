@@ -1,5 +1,6 @@
-from kite import Scene
 import matplotlib.pyplot as plt
+
+from kite import Scene
 
 # Assume we have a existing kite.Scene with defined quadtree parametrized
 scene = Scene.load("acquila_2016.yml")

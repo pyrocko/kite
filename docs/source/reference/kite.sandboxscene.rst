@@ -7,4 +7,3 @@
 .. autoclass:: kite.SandboxScene
     :show-inheritance:
     :members:
-

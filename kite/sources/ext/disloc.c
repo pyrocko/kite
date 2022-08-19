@@ -1,6 +1,6 @@
 /* disloc.c -- Computes surface displacements for dislocations in an elastic half-space.
    Based on code by Y. Okada.
-   
+
    Version 1.2, 10/28/2000
 
    Record of revisions:
@@ -299,7 +299,7 @@ static PyObject* w_disloc(PyObject *m, PyObject *args) {
   npy_intp output_dims[2];
   int nthreads;
   npy_float64 *output, *coords, *models, nu;
-  
+
   struct module_state *st = GETSTATE(m);
 
   if (! PyArg_ParseTuple(args, "OOfI", &models_arr, &coords_arr, &nu, &nthreads)) {
@@ -365,7 +365,7 @@ PyInit_disloc_ext(void)
   if (module == NULL)
     INITERROR;
   import_array();
-  
+
   struct module_state *st = GETSTATE(module);
   st->error = PyErr_NewException("disloc_ext.error", NULL, NULL);
   if (st->error == NULL) {

@@ -2,11 +2,10 @@
 import os
 import platform
 import tempfile
-
 from distutils.sysconfig import get_python_inc
-
-from setuptools import setup, Extension
 from os.path import join as pjoin
+
+from setuptools import Extension, setup
 
 try:
     import numpy
@@ -27,8 +26,8 @@ def _have_openmp():
     Thanks to Nathan Goldbaum and Andrew Pontzen.
     """
     import distutils.sysconfig
-    import subprocess
     import shutil
+    import subprocess
 
     tmpdir = tempfile.mkdtemp(prefix="kite")
     compiler = os.environ.get("CC", distutils.sysconfig.get_config_var("CC")).split()[0]

@@ -1,10 +1,9 @@
 #!/bin/python
 import numpy as num
+from pyrocko.guts import Float, Int, Object
 from scipy import ndimage
 
-from pyrocko.guts import Object, Float, Int
-
-from kite.meta import Subject, ADict
+from kite.meta import ADict, Subject
 
 
 class SceneProcess(Object):

@@ -1,17 +1,18 @@
-from PyQt5 import QtCore, QtGui
-import numpy as num
 import os
 
-from .base import RectangularSourceROI, PointSourceROI, SourceDelegate, SourceEditDialog
+import numpy as num
+from PyQt5 import QtCore, QtGui
+
 from kite.sources import (
-    PyrockoRectangularSource,
-    PyrockoMomentTensor,
     PyrockoDoubleCouple,
+    PyrockoMomentTensor,
+    PyrockoRectangularSource,
     PyrockoRingfaultSource,
     PyrockoVLVDSource,
 )
 
 from ..config import getConfig
+from .base import PointSourceROI, RectangularSourceROI, SourceDelegate, SourceEditDialog
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi

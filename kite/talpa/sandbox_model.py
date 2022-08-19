@@ -1,12 +1,12 @@
+import logging
+
 from PyQt5 import QtCore
 
 # Importing available models
 from kite.qt_utils import SceneLogModel
+
 from . import sources
-from .util import SourceROI, SourceEditorDialog
-
-import logging
-
+from .util import SourceEditorDialog, SourceROI
 
 available_delegates = {}
 for module in sources.__sources__:

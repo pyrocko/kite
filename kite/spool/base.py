@@ -1,14 +1,13 @@
-import numpy as num
 from os import path
 
-from PyQt5 import QtCore
+import numpy as num
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-
+from PyQt5 import QtCore
 from pyqtgraph import dockarea
 
 from kite.qt_utils import _viridis_data
-from kite.util import calcPrecission, formatScalar
+from kite.util import calcPrecision, formatScalar
 
 __all__ = ["KiteView", "KitePlot", "KiteToolColormap", "KiteParameterGroup"]
 
@@ -225,7 +224,7 @@ class KitePlot(pg.PlotWidget):
         shad = fftconvolve(elevation, ramp, mode="valid")
         shad = -1.0 * shad
 
-        # if there are strong artifical edges in the data, shades get
+        # if there are strong artificial edges in the data, shades get
         # dominated by them. Cutting off the largest and smallest 2% of
         # shades helps
 
@@ -307,7 +306,7 @@ class KitePlot(pg.PlotWidget):
     def _updateImageFromData(self):
         self.image.updateImage(self.data.T, opacity=0.7 if self.hillshade else 1.0)
 
-        self.hint["precision"], self.hint["vlength"] = calcPrecission(self.data)
+        self.hint["precision"], self.hint["vlength"] = calcPrecision(self.data)
         self.mouseMoved()
 
     @QtCore.pyqtSlot(object)

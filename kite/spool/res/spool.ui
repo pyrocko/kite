@@ -324,7 +324,7 @@
     <string>Calculate covariance/weight matrix</string>
    </property>
    <property name="toolTip">
-    <string>Calculate comlete covariance and weight matrix (Covaraince.weight_matrix)</string>
+    <string>Calculate complete covariance and weight matrix (Covaraince.weight_matrix)</string>
    </property>
   </action>
   <action name="actionAbout_Qt5">

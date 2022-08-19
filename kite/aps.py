@@ -1,9 +1,8 @@
 import numpy as num
+from pyrocko.guts import Tuple
 from scipy import stats
 
-from pyrocko.guts import Tuple
-
-from .plugin import PluginConfig, Plugin
+from .plugin import Plugin, PluginConfig
 
 
 class APSConfig(PluginConfig):

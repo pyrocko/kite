@@ -1,12 +1,13 @@
 import logging
-import re
 import os.path as op
+import re
 import shutil
-import numpy as num
 from datetime import datetime, timedelta
 
+import numpy as num
 from pyrocko.guts import Bool, List
-from .plugin import PluginConfig, Plugin
+
+from .plugin import Plugin, PluginConfig
 
 
 def load_params(filename):

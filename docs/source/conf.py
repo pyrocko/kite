@@ -17,6 +17,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import sphinx_sleekcat_theme
+
 import kite
 
 # sys.path.insert(0, os.path.abspath(os.path.join(__file__, '../../')))

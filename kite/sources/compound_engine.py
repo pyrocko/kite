@@ -1,6 +1,7 @@
-import numpy as num
 import logging
 import time
+
+import numpy as num
 
 """Ellispoidal Cavity Model (ECM), triaxial elipsoidal deformation source.
 
@@ -63,7 +64,7 @@ def rotation_matrix(rotx, roty, rotz):
 
 
 def pointCDM(coords, x0, y0, z0, rotx, roty, rotz, dVx, dVy, dVz, nu):
-    """Point Compund Dislocation Model for surface displacements
+    """Point Compound Dislocation Model for surface displacements
 
     :param coords: Coordinates upon displacement is calculated
     :type coords: :class:`numpy.ndarray` of shape Nx2
@@ -445,7 +446,7 @@ def RD(x, y, z, r):
 
 def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     """calculates surface displacements associated with a tensile
-    point dislocation (PTD) in an elastic half-space (Okada, 1985).
+    point dislocation (PDF) in an elastic half-space (Okada, 1985).
     """
     ncoords = coords_shifted.shape[0]
 
@@ -468,7 +469,7 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     I3 = (1.0 - 2 * nu) * x / r3 - ((1.0 - 2 * nu) * x * (1.0 / r / rpd2 - y**2 * a))
     I5 = (1.0 - 2 * nu) * (1.0 / r / rpd - x**2 * (2 * r + d) / r3 / rpd2)
 
-    # Note: For a PTD M0 = dV*mu!
+    # Note: For a PDF M0 = dV*mu!
     u = num.empty((ncoords, 3))
 
     u[:, 0] = x

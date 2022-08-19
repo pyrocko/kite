@@ -1,10 +1,11 @@
-import unittest
-import numpy as num
-import tempfile
 import shutil
+import tempfile
+import unittest
+
+import numpy as num
 
 from kite import SandboxScene, TestSandboxScene
-from kite.sources import OkadaSource, OkadaPath
+from kite.sources import OkadaPath, OkadaSource
 
 from . import common
 

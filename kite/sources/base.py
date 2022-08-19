@@ -1,8 +1,8 @@
 import numpy as num
+from pyrocko import orthodrome as od
+from pyrocko.guts import Float, Object
 
 from kite.util import Subject
-from pyrocko import orthodrome as od
-from pyrocko.guts import Object, Float
 
 d2r = num.pi / 180.0
 r2d = 180.0 / num.pi
