@@ -1,10 +1,8 @@
 name: Build Wheels
 
 on:
-  workflow_run:
-    workflows: ["Lint"]
-    types:
-      - completed
+  pull_request:
+
 
 jobs:
   build_wheels:
