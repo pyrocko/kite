@@ -1,12 +1,12 @@
 [build-system]
-requires = ["setuptools >= 61.0.0", "oldest-supported-numpy"]
+requires = ["setuptools >= 61.0.0", "oldest-supported-numpy", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kite"
-version = "1.5.2"
 requires-python = ">=3.7"
 license = {text = "GPLv3"}
+dynamic = ["version"]
 description = "InSAR unwrapped surface displacement processing for earthquake modelling."
 readme = "README.md"
 authors = [
@@ -71,3 +71,5 @@ packages=[
 [tool.setuptools.package-data]
 "kite.spool.res" = ["*.ui", "*.jpg", "*.png"]
 "kite.talpa.res" = ["*.ui", "*.jpg", "*.png"]
+
+[tool.setuptools_scm]
