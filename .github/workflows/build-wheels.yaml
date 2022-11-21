@@ -2,6 +2,9 @@ name: Build Wheels
 
 on:
   pull_request:
+  push:
+    tags:
+      - v*
 
 
 jobs:
