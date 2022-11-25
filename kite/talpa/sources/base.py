@@ -184,8 +184,8 @@ class SourceDelegate(QtCore.QObject):
     ROIWidget = None  # For use in pyqtgraph
     EditDialog = None  # QDialog to edit the source
 
-    def __init__(self, model, source, index):
-        super().__init__()
+    def __init__(self, model, source, index, parent=None):
+        super().__init__(parent)
         self.source = source
         self.model = model
         self.index = index

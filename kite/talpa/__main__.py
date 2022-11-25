@@ -3,7 +3,7 @@ import argparse as ap
 import logging
 import sys
 
-from kite.talpa import Talpa
+from kite.talpa.talpa import talpa
 
 
 def main(args=None):
@@ -59,7 +59,7 @@ BriDGes DFG Project, University of Kiel
     stream_handler = logging.root.handlers[0]
     stream_handler.setLevel(level=log_level if log_level > 0 else 0)
 
-    Talpa(filename=ns.file)
+    talpa(filename=ns.file)
 
 
 if __name__ == "__main__":

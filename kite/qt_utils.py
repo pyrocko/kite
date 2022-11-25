@@ -323,7 +323,7 @@ class SceneLog(QtWidgets.QDialog):
             self.invalidate()
 
     def __init__(self, app, model):
-        QtWidgets.QDialog.__init__(self, app)
+        QtWidgets.QDialog.__init__(self, parent=app)
         logging_ui = op.join(
             op.dirname(op.realpath(__file__)), "spool", "res", "logging.ui"
         )

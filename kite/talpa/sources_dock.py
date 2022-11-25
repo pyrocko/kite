@@ -13,7 +13,7 @@ class SourcesListDock(QtWidgets.QDockWidget):
 
         layout = QtWidgets.QVBoxLayout()
         layout.setContentsMargins(3, 3, 3, 3)
-        sources = SourcesList(sandbox)
+        sources = SourcesList(sandbox, parent=self)
         sources_add_menu = SourcesAddButton(sandbox)
 
         self.setFeatures(
@@ -91,11 +91,11 @@ class SourcesAddButton(QtWidgets.QToolButton):
         self.setIcon(
             self.style().standardIcon(QtWidgets.QStyle.SP_FileDialogDetailedView)
         )
-        self.setPopupMode(QtGui.QToolButton.InstantPopup)
+        self.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.setToolButtonStyle(QtCore.Qt.ToolButtonTextOnly)
 
 
-class SourcesList(QtGui.QListView):
+class SourcesList(QtWidgets.QListView):
     class SourceItemDelegate(QtWidgets.QStyledItemDelegate):
         def paint(self, painter, option, index):
             options = QtWidgets.QStyleOptionViewItem(option)
@@ -135,9 +135,9 @@ class SourcesList(QtGui.QListView):
 
             return QtCore.QSize(doc.idealWidth(), doc.size().height())
 
-    class SourceContextMenu(QtGui.QMenu):
+    class SourceContextMenu(QtWidgets.QMenu):
         def __init__(self, parent, idx, *args, **kwargs):
-            QtGui.QMenu.__init__(self, *args, **kwargs)
+            QtWidgets.QMenu.__init__(self, parent, *args, **kwargs)
             self.parent = parent
             self.sandbox = parent.sandbox
             self.idx = idx
@@ -163,7 +163,7 @@ class SourcesList(QtGui.QListView):
                 removeAction.setEnabled(False)
 
     def __init__(self, sandbox, *args, **kwargs):
-        QtGui.QListView.__init__(self, *args, **kwargs)
+        QtWidgets.QListView.__init__(self, *args, **kwargs)
         self.sandbox = sandbox
         self.setModel(sandbox.sources)
         self.setItemDelegate(self.SourceItemDelegate())
@@ -187,5 +187,5 @@ class SourcesList(QtGui.QListView):
     @QtCore.pyqtSlot(object)
     def contextMenuEvent(self, event):
         idx = self.indexAt(event.pos())
-        menu = self.SourceContextMenu(self, idx, self)
+        menu = self.SourceContextMenu(self, idx)
         menu.popup(event.globalPos())

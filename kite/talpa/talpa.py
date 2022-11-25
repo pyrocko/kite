@@ -15,7 +15,7 @@ from .util import get_resource
 
 class Talpa(QtWidgets.QApplication):
     def __init__(self, filename=None):
-        QtWidgets.QApplication.__init__(self, ["Talpa"])
+        super().__init__(["Talpa"])
 
         splash_img = QtGui.QPixmap(get_resource("talpa_splash.png")).scaled(
             QtCore.QSize(400, 250), QtCore.Qt.KeepAspectRatio
@@ -31,15 +31,9 @@ class Talpa(QtWidgets.QApplication):
 
         self.talpa_win.actionExit.triggered.connect(self.exit)
         self.aboutToQuit.connect(self.talpa_win.sandbox.worker_thread.quit)
-        self.aboutToQuit.connect(self.talpa_win.sandbox.deleteLater)
-        self.aboutToQuit.connect(self.splash.deleteLater)
-        self.aboutToQuit.connect(self.deleteLater)
 
         self.talpa_win.show()
-
         self.splash.finish(self.talpa_win)
-        rc = self.exec_()
-        sys.exit(rc)
 
     @QtCore.pyqtSlot(str)
     def updateSplashMessage(self, msg=""):
@@ -51,7 +45,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
         filename = kwargs.pop("filename", None)
         QtWidgets.QMainWindow.__init__(self, *args, **kwargs)
         loadUi(get_resource("talpa.ui"), baseinstance=self)
-        self.sandbox = SandboxModel.empty()
+        self.sandbox = SandboxModel.empty(self)
 
         self.log = SceneLog(self, self.sandbox)
 
@@ -77,13 +71,13 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
         self.createView(self.sandbox)
 
     def createView(self, sandbox):
-        plots = SandboxSceneDockarea(sandbox)
+        plots = SandboxSceneDockarea(sandbox, parent=self)
         sources = SourcesListDock(sandbox, parent=self)
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, sources)
         self.centralwidget.layout().addWidget(plots)
 
     def aboutDialog(self):
-        self._about = QtWidgets.QDialog(self)
+        self._about = QtWidgets.QDialog(parent=self)
         loadUi(get_resource("about.ui"), baseinstance=self._about)
         return self._about
 
@@ -98,11 +92,6 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot()
     def configDialog(self):
         ConfigDialog(self).show()
-
-    @QtCore.pyqtSlot(str)
-    def processingStarted(self, text):
-        self.progress.setLabelText(text)
-        self.progress.show()
 
     @QtCore.pyqtSlot()
     def onSaveModel(self):
@@ -139,7 +128,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
         if self.sandbox.model.reference is None:
             return
 
-        self.misfitWindow = MisfitWindow(self.sandbox, self)
+        self.misfitWindow = MisfitWindow(self.sandbox, parent=self)
 
         def toggleWindow(switch):
             if switch:
@@ -157,6 +146,7 @@ class TalpaMainWindow(QtWidgets.QMainWindow):
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
             filter="YAML *.yml and NumPy container *.npz (*.yml *.npz)",
             caption="Save scene",
+            parent=self,
         )
         if not validateFilename(filename):
             return
@@ -192,3 +182,9 @@ class MisfitWindow(QtWidgets.QMainWindow):
     def closeEvent(self, ev):
         self.windowClosed.emit()
         ev.accept()
+
+
+def talpa(*args, **kwargs):
+    talpa_app = Talpa(*args, **kwargs)
+    talpa_app.exec()
+    talpa_app.quit()

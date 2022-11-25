@@ -42,7 +42,7 @@ class SandboxModel(QtCore.QObject):
         logging.root.setLevel(logging.DEBUG)
         logging.root.addHandler(self._log_handler)
 
-        self.worker_thread = QtCore.QThread()
+        self.worker_thread = QtCore.QThread(self)
         self.moveToThread(self.worker_thread)
         self.worker_thread.start()
 
@@ -103,10 +103,10 @@ class SandboxModel(QtCore.QObject):
         return sandbox
 
     @classmethod
-    def empty(cls):
+    def empty(cls, parent=None):
         from ..sandbox_scene import SandboxScene
 
-        sandbox = cls()
+        sandbox = cls(parent=parent)
         sandbox.setModel(SandboxScene())
         return sandbox
 
@@ -130,7 +130,7 @@ class SourceModel(QtCore.QAbstractTableModel):
         for isrc, src in enumerate(self.model_sources):
             source_model = available_delegates[src.__class__.__name__]
             idx = self.createIndex(isrc, 0)
-            src = source_model(self, src, idx)
+            src = source_model(self, src, idx, parent=self)
 
             self._sources.append(src)
 
