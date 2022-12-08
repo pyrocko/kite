@@ -4,6 +4,7 @@ from hashlib import sha1
 import numpy as num
 from pyrocko import guts
 from pyrocko import orthodrome as od
+from .config import config
 
 from .util import Subject, derampMatrix, property_cached
 
@@ -549,7 +550,8 @@ class Quadtree(object):
     @property
     def min_node_length_px(self):
         npx = max(self.frame.cols, self.frame.rows)
-        return int(2 ** round(num.log(npx / 64)))
+        return int(2**round(num.log(
+            npx / (2 ** config().quadtree_min_tile_factor))))
 
     def _initTree(self):
         QuadNode.MIN_PIXEL_LENGTH_NODE = (
@@ -607,7 +609,7 @@ class Quadtree(object):
         """Lowest allowed epsilon
         :type: float
         """
-        return self._epsilon_init * 0.1
+        return self._epsilon_init * config().epsilon_min_factor
 
     @property
     def nan_allowed(self):
