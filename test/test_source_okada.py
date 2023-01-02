@@ -29,7 +29,7 @@ class testSourceOkada(unittest.TestCase):
         nsources = 2
 
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return num.random.randint(lo, high=hi, size=1).astype(float)
 
         for s in xrange(nsources):
             length = r(5000, 15000)

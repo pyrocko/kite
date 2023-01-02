@@ -116,7 +116,7 @@ class CompoundModelsTest(unittest.TestCase):
 
     def testEllipsoidSource(self):
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return num.random.randint(lo, high=hi, size=1).astype(float)
 
         ms = SandboxScene()
         src = EllipsoidSource(
@@ -183,7 +183,7 @@ class CompoundModelsTest(unittest.TestCase):
 
     def testPointCompoundSourceSource(self):
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return num.random.randint(lo, high=hi, size=1).astype(float)
 
         ms = SandboxScene()
         src = PointCompoundSource(

@@ -4,7 +4,7 @@ from kite import Scene
 
 
 def test_deramp():
-    c = num.arange(20, dtype=num.float)
+    c = num.arange(20, dtype=float)
     E, N = num.meshgrid(c, c)
 
     displ = (-3 + 5.4 * E) + (10 + 2.5 * N)

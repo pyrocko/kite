@@ -103,7 +103,7 @@ def modelPowerspec(k, beta, D):
 class CovarianceConfig(guts.Object):
     noise_coord = Array.T(
         shape=(None,),
-        dtype=num.float,
+        dtype=num.float64,
         serialize_as="list",
         optional=True,
         help="Noise patch coordinates and size,",
@@ -135,7 +135,7 @@ class CovarianceConfig(guts.Object):
         default=True, help="Adaptive subsampling flag for full covariance calculation."
     )
     covariance_matrix = Array.T(
-        dtype=num.float,
+        dtype=num.float64,
         optional=True,
         serialize_as="base64",
         help="Cached covariance matrix, "
