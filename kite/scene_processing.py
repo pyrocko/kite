@@ -1,5 +1,5 @@
 #!/bin/python
-import numpy as num
+import numpy as np
 from pyrocko.guts import Float, Int, Object
 from scipy import ndimage
 
@@ -62,9 +62,9 @@ class Downsample(SceneProcess):
         factor = self.factor
 
         sx, sy = sc.displacement.shape
-        gx, gy = num.ogrid[0:sx, 0:sy]
+        gx, gy = np.ogrid[0:sx, 0:sy]
         regions = sy / factor * (gx / factor) + gy / factor
-        indices = num.arange(regions.max() + 1)
+        indices = np.arange(regions.max() + 1)
 
         def block_downsample(arr):
             res = ndimage.mean(arr, labels=regions, index=indices)

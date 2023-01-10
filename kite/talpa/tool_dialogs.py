@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 from PyQt5 import QtCore, QtWidgets
 
 from kite.qt_utils import loadUi
@@ -76,8 +76,8 @@ class LosDialog(QtWidgets.QDialog):
 
     def setValues(self):
         model = self.sandbox.model
-        phi = num.deg2rad(self.spinlos_phi.value())
-        theta = num.deg2rad(self.spinlos_theta.value())
+        phi = np.deg2rad(self.spinlos_phi.value())
+        theta = np.deg2rad(self.spinlos_theta.value())
 
     @QtCore.pyqtSlot()
     def updateValues(self):

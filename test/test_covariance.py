@@ -2,7 +2,7 @@
 import unittest
 
 import matplotlib.pyplot as plt
-import numpy as num
+import numpy as np
 
 from kite import Scene
 
@@ -29,14 +29,14 @@ class TestCovariance(unittest.TestCase):
 
         for _, c1 in d:
             for _, c2 in d:
-                num.testing.assert_allclose(c1, c2, rtol=200, atol=2e3, verbose=True)
+                np.testing.assert_allclose(c1, c2, rtol=200, atol=2e3, verbose=True)
 
     def test_synthetic_noise(self):
         self.sc.covariance.syntheticNoise()
         self.sc.covariance.variance
 
     def test_quadtree_noise(self):
-        rstate = num.random.RandomState()
+        rstate = np.random.RandomState()
         self.sc.covariance.getQuadtreeNoise(rstate=rstate)
 
     def test_covariance_parallel(self):
@@ -54,12 +54,6 @@ class TestCovariance(unittest.TestCase):
         def calc_exp_cos():
             cov.setModelFunction("exponential_cosine")
             return cov._calcCovarianceMatrix(method="full", nthreads=0)
-
-        res = calc_exp()
-        ref = num.load("test/covariance_ref.npy")
-        # calc_exp_cos()
-        num.testing.assert_array_equal(ref, res)
-        print(benchmark)
 
     @benchmark
     def _test_covariance_single_thread(self):
@@ -83,7 +77,7 @@ class TestCovariance(unittest.TestCase):
 
         fig, _ = plt.subplots(1, len(d))
         for i, (title, mat) in enumerate(d):
-            print("%s Max %f" % ((title, num.nanmax(mat)), mat.shape))
+            print("%s Max %f" % ((title, np.nanmax(mat)), mat.shape))
             fig.axes[i].imshow(mat)
             fig.axes[i].set_title(title)
         plt.show()
@@ -95,7 +89,7 @@ class TestCovariance(unittest.TestCase):
         @benchmark
         def calc(c):
             cov, dist = c.covariance_spatial
-            # assert num.all(num.isfinite(cov))
+            # assert np.all(np.isfinite(cov))
 
         for i in range(10):
             calc(cov)

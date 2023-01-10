@@ -1,7 +1,7 @@
 import logging
 import time
 
-import numpy as num
+import numpy as np
 
 """Ellispoidal Cavity Model (ECM), triaxial elipsoidal deformation source.
 
@@ -25,38 +25,38 @@ After
 
 logger = logging.getLogger("ECM")
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
-sqrt = num.sqrt
-pi = num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
+sqrt = np.sqrt
+pi = np.pi
 
 
 def cosd(deg):
-    return num.cos(deg * d2r)
+    return np.cos(deg * d2r)
 
 
 def sind(deg):
-    return num.sin(deg * d2r)
+    return np.sin(deg * d2r)
 
 
 def strike_dip(rot_mat, idx):
-    Vstrike = num.array([-rot_mat[1, idx], rot_mat[0, idx], 0.0])
-    Vstrike = Vstrike / num.linalg.norm(Vstrike)
-    strike = num.arctan2(Vstrike[0], Vstrike[1]) * r2d
-    if num.isnan(strike):
+    Vstrike = np.array([-rot_mat[1, idx], rot_mat[0, idx], 0.0])
+    Vstrike = Vstrike / np.linalg.norm(Vstrike)
+    strike = np.arctan2(Vstrike[0], Vstrike[1]) * r2d
+    if np.isnan(strike):
         strike = 0.0
-    dip = num.arccos(rot_mat[2, idx]) * r2d
+    dip = np.arccos(rot_mat[2, idx]) * r2d
     return strike, dip
 
 
 def rotation_matrix(rotx, roty, rotz):
-    Rx = num.matrix(
+    Rx = np.matrix(
         [[1.0, 0.0, 0.0], [0.0, cosd(rotx), sind(rotx)], [0.0, -sind(rotx), cosd(rotx)]]
     )
-    Ry = num.matrix(
+    Ry = np.matrix(
         [[cosd(roty), 0.0, -sind(roty)], [0.0, 1.0, 0.0], [sind(roty), 0.0, cosd(roty)]]
     )
-    Rz = num.matrix(
+    Rz = np.matrix(
         [[cosd(rotz), sind(rotz), 0.0], [-sind(rotz), cosd(rotz), 0.0], [0.0, 0.0, 1.0]]
     )
 
@@ -94,9 +94,9 @@ def pointCDM(coords, x0, y0, z0, rotx, roty, rotz, dVx, dVy, dVz, nu):
     ncoords = coords.shape[0]
     rot_mat = rotation_matrix(rotx, roty, rotz)
 
-    Ue = num.zeros(ncoords)
-    Un = num.zeros(ncoords)
-    Uv = num.zeros(ncoords)
+    Ue = np.zeros(ncoords)
+    Un = np.zeros(ncoords)
+    Uv = np.zeros(ncoords)
 
     coords_shifted = coords.copy()
     coords_shifted[:, 0] -= x0
@@ -105,7 +105,7 @@ def pointCDM(coords, x0, y0, z0, rotx, roty, rotz, dVx, dVy, dVz, nu):
     component_names = ["dVx", "dVy", "dVz"]
 
     for icomp, comp in enumerate([dVx, dVy, dVz]):
-        if num.all(comp):
+        if np.all(comp):
             t0 = time.time()
             strike, dip = strike_dip(rot_mat, icomp)
             comp_ue, comp_un, comp_uv = PointDisplacementSurface(
@@ -174,11 +174,11 @@ def ECM(coords, x0, y0, z0, rotx, roty, rotz, ax, ay, az, P, mu, lamda):
     ay = ay if ay > r0 else r0
     az = az if az > r0 else r0
 
-    a_arr = num.array([ax, ay, az])
-    ia_sort = num.argsort(a_arr)[::-1]
+    a_arr = np.array([ax, ay, az])
+    ia_sort = np.argsort(a_arr)[::-1]
     shape_tensor = shapeTensor(*a_arr[ia_sort], nu=nu)
     # Transform strain
-    eT = -num.linalg.inv(shape_tensor) * P * num.ones((3, 1)) / 3.0 / K
+    eT = -np.linalg.inv(shape_tensor) * P * np.ones((3, 1)) / 3.0 / K
     sT = (2 * mu * eT) + lamda * eT.sum()
     V = 4.0 / 3 * pi * ax * ay * az
 
@@ -195,9 +195,9 @@ def ECM(coords, x0, y0, z0, rotx, roty, rotz, ax, ay, az, P, mu, lamda):
 
     rot_mat = rotation_matrix(rotx, roty, rotz)
 
-    Ue = num.zeros(ncoords)
-    Un = num.zeros(ncoords)
-    Uv = num.zeros(ncoords)
+    Ue = np.zeros(ncoords)
+    Un = np.zeros(ncoords)
+    Uv = np.zeros(ncoords)
 
     coords_shifted = coords.copy()
     coords_shifted[:, 0] -= x0
@@ -205,7 +205,7 @@ def ECM(coords, x0, y0, z0, rotx, roty, rotz, ax, ay, az, P, mu, lamda):
 
     component_names = ["dVx", "dVy", "dVz"]
     for icomp, comp in enumerate([dVx, dVy, dVz]):
-        if num.all(comp):
+        if np.all(comp):
             t0 = time.time()
             strike, dip = strike_dip(rot_mat, icomp)
             comp_ue, comp_un, comp_uv = PointDisplacementSurface(
@@ -226,7 +226,7 @@ def shapeTensor(a1, a2, a3, nu):
     """Calculates the Eshelby (1957) shape tensor components."""
 
     if a1 == 0.0 and a2 == 0.0 and a3 == 0:
-        return num.zeros((3, 3)).view(num.matrix)
+        return np.zeros((3, 3)).view(np.matrix)
 
     # General case: triaxial ellipsoid
     if a1 > a2 and a2 > a3 and a3 > 0:
@@ -278,7 +278,7 @@ def shapeTensor(a1, a2, a3, nu):
             (2.0 * pi * a1 * a2)
             * a3
             / (a1**2 - a3**2) ** 1.5
-            * (num.arccos(a3 / a1) - a3 / a1 * sqrt(1.0 - a3**2 / a1**2))
+            * (np.arccos(a3 / a1) - a3 / a1 * sqrt(1.0 - a3**2 / a1**2))
         )
         I2 = I1
         I3 = 4 * pi - 2 * I1
@@ -302,7 +302,7 @@ def shapeTensor(a1, a2, a3, nu):
             (2 * pi * a1 * a2)
             * a3
             / (a1**2 - a3**2) ** 1.5
-            * (a1 / a3 * sqrt(a1**2 / a3**2 - 1) - num.arccosh(a1 / a3))
+            * (a1 / a3 * sqrt(a1**2 / a3**2 - 1) - np.arccosh(a1 / a3))
         )
         I3 = I2
         I1 = 4 * pi - 2 * I2
@@ -362,7 +362,7 @@ def shapeTensor(a1, a2, a3, nu):
             1.0 - 2 * nu
         ) / 8.0 / pi / (1.0 - nu) * I3
 
-    return num.matrix(
+    return np.matrix(
         [
             [S1111 - 1, S1122, S1133],
             [S2211, S2222 - 1, S2233],
@@ -375,7 +375,7 @@ def RF(x, y, z, r):
     """Calculates the RF term, Carlson (1995) method for elliptic integrals"""
     if x < 0 or y < 0 or z < 0:
         raise ArithmeticError("x, y and z values must be positive!")
-    elif num.count_nonzero([x, y, z]) < 2:
+    elif np.count_nonzero([x, y, z]) < 2:
         raise ArithmeticError("At most one of the x, y and z values can be zero!")
 
     xm = x
@@ -451,10 +451,10 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     ncoords = coords_shifted.shape[0]
 
     beta = strike - 90.0
-    rot_mat = num.matrix([[cosd(beta), -sind(beta)], [sind(beta), cosd(beta)]])
+    rot_mat = np.matrix([[cosd(beta), -sind(beta)], [sind(beta), cosd(beta)]])
     r_beta = rot_mat * coords_shifted.conj().T
-    x = r_beta[0, :].view(num.ndarray).ravel()
-    y = r_beta[1, :].view(num.ndarray).ravel()
+    x = r_beta[0, :].view(np.ndarray).ravel()
+    y = r_beta[1, :].view(np.ndarray).ravel()
 
     r = (x**2 + y**2 + z0**2) ** 0.5
     d = z0
@@ -470,13 +470,13 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
     I5 = (1.0 - 2 * nu) * (1.0 / r / rpd - x**2 * (2 * r + d) / r3 / rpd2)
 
     # Note: For a PDF M0 = dV*mu!
-    u = num.empty((ncoords, 3))
+    u = np.empty((ncoords, 3))
 
     u[:, 0] = x
     u[:, 1] = y
     u[:, 2] = d
 
-    u *= (3.0 * q**2 / r**5)[:, num.newaxis]
+    u *= (3.0 * q**2 / r**5)[:, np.newaxis]
     u[:, 0] -= I3 * sind(dip) ** 2
     u[:, 1] -= I1 * sind(dip) ** 2
     u[:, 2] -= I5 * sind(dip) ** 2
@@ -484,8 +484,8 @@ def PointDisplacementSurface(coords_shifted, z0, strike, dip, dV, nu):
 
     r_beta = rot_mat.conj().T * u[:, :2].conj().T
     return (
-        r_beta[0, :].view(num.ndarray).ravel(),  # ue
-        r_beta[1, :].view(num.ndarray).ravel(),  # un
+        r_beta[0, :].view(np.ndarray).ravel(),  # ue
+        r_beta[1, :].view(np.ndarray).ravel(),  # un
         u[:, 2],
     )  # uv
 
@@ -514,9 +514,9 @@ if __name__ == "__main__":
     mu = 0.33e11
     lamda = 0.33e11
 
-    X, Y = num.meshgrid(num.arange(nrows), num.arange(ncols))
+    X, Y = np.meshgrid(np.arange(nrows), np.arange(ncols))
 
-    coords = num.empty((nrows * ncols, 2))
+    coords = np.empty((nrows * ncols, 2))
     coords[:, 0] = X.ravel()
     coords[:, 1] = Y.ravel()
 

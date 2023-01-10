@@ -1,6 +1,6 @@
 import unittest
 
-import numpy as num
+import numpy as np
 
 from kite import SandboxScene
 from kite.sources import EllipsoidSource, PointCompoundSource
@@ -40,9 +40,9 @@ class CompoundModelsTest(unittest.TestCase):
         mu = 0.33e11
         lamda = 0.33e11
 
-        X, Y = num.meshgrid(num.arange(nrows), num.arange(ncols))
+        X, Y = np.meshgrid(np.arange(nrows), np.arange(ncols))
 
-        coords = num.empty((nrows * ncols, 2))
+        coords = np.empty((nrows * ncols, 2))
         coords[:, 0] = X.ravel()
         coords[:, 1] = Y.ravel()
 
@@ -66,7 +66,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         from scipy import io
 
-        X, Y = num.meshgrid(num.linspace(-7.0, 7.0, 701), num.linspace(-5.0, 5.0, 501))
+        X, Y = np.meshgrid(np.linspace(-7.0, 7.0, 701), np.linspace(-5.0, 5.0, 501))
         x0 = 0.5
         y0 = -0.25
         depth = 2.75
@@ -83,7 +83,7 @@ class CompoundModelsTest(unittest.TestCase):
         mu = 0.33e11
         lamda = 0.33e11
 
-        coords = num.empty((X.size, 2))
+        coords = np.empty((X.size, 2))
         coords[:, 0] = X.ravel()
         coords[:, 1] = Y.ravel()
 
@@ -103,20 +103,20 @@ class CompoundModelsTest(unittest.TestCase):
             p.join(p.dirname(__file__), "data", "displacement_ellipsoid_octave.mat")
         )
 
-        num.testing.assert_equal(X, mat["X"])
-        num.testing.assert_equal(Y, mat["Y"])
+        np.testing.assert_equal(X, mat["X"])
+        np.testing.assert_equal(Y, mat["Y"])
 
         for pym, comp in zip([ue, un, uv], ["ue", "un", "uv"]):
             m = mat[comp]
             # print([pym.min(), pym.max()], [m.min(), m.max()])
-            num.testing.assert_allclose(pym, m, rtol=1e-11)
+            np.testing.assert_allclose(pym, m, rtol=1e-11)
 
         self._plot_displacement(uv)
         self._plot_displacement(mat["uv"])
 
     def testEllipsoidSource(self):
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
         ms = SandboxScene()
         src = EllipsoidSource(
@@ -135,7 +135,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         from scipy import io
 
-        X, Y = num.meshgrid(num.linspace(-7.0, 7.0, 701), num.linspace(-5.0, 5.0, 501))
+        X, Y = np.meshgrid(np.linspace(-7.0, 7.0, 701), np.linspace(-5.0, 5.0, 501))
         x0 = 0.5
         y0 = -0.25
         depth = 2.75
@@ -150,7 +150,7 @@ class CompoundModelsTest(unittest.TestCase):
 
         nu = 0.25
 
-        coords = num.empty((X.size, 2))
+        coords = np.empty((X.size, 2))
         coords[:, 0] = X.ravel()
         coords[:, 1] = Y.ravel()
 
@@ -170,20 +170,20 @@ class CompoundModelsTest(unittest.TestCase):
             p.join(p.dirname(__file__), "data", "displacement_pcdm_octave.mat")
         )
 
-        num.testing.assert_equal(X, mat["X"])
-        num.testing.assert_equal(Y, mat["Y"])
+        np.testing.assert_equal(X, mat["X"])
+        np.testing.assert_equal(Y, mat["Y"])
 
         for pym, comp in zip([ue, un, uv], ["ue", "un", "uv"]):
             m = mat[comp]
             # print([pym.min(), pym.max()], [m.min(), m.max()])
-            num.testing.assert_allclose(pym, m, rtol=1e-9)
+            np.testing.assert_allclose(pym, m, rtol=1e-9)
 
         self._plot_displacement(mat["uv"])
         self._plot_displacement(uv)
 
     def testPointCompoundSourceSource(self):
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
         ms = SandboxScene()
         src = PointCompoundSource(
@@ -209,7 +209,7 @@ class CompoundModelsTest(unittest.TestCase):
         ms.processSources()
 
         ax.imshow(
-            num.flipud(ms.down),
+            np.flipud(ms.down),
             aspect="equal",
             extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()],
         )

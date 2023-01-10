@@ -1,8 +1,10 @@
 import matplotlib.pyplot as plt
+import pytest
 
 from kite.gacos import GACOSCorrection
 
 
+@pytest.skip(reason="data is local")
 def test_gacos():
     corr = GACOSCorrection()
     corr.load("/home/marius/Development/testing/kite/GACOS/20180826.ztd")

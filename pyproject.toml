@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0.0", "oldest-supported-numpy", "setuptools_scm[toml]>=6.2"]
+requires = ["wheel", "setuptools >= 61.0.0", "oldest-supported-numpy", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -24,13 +24,13 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Recognition",
     "Topic :: Scientific/Engineering :: Physics",
     "Topic :: Scientific/Engineering :: Visualization",
-    "Programming Language :: Python :: 3.5",
+    "Programming Language :: Python :: 3.7",
     "Programming Language :: C",
     "Operating System :: POSIX",
     "Operating System :: MacOS"
 ]
 dependencies = [
-    "numpy>=1.22.0",
+    "numpy>=1.17.3",
     "scipy>=1.8.0",
     "PyQt5>=5.15.7",
     "pyqtgraph==0.12.4",

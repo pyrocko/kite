@@ -3,7 +3,7 @@ import logging
 from datetime import datetime, timedelta
 from os import path as op
 
-import numpy as num
+import numpy as np
 import pyrocko.orthodrome as od
 from scipy import interpolate, io, stats
 
@@ -19,8 +19,8 @@ from kite.scene import Scene, SceneConfig
 
 log = logging.getLogger("stamps2kite")
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class DataStruct(dict):
@@ -68,31 +68,31 @@ def read_mat_data(dirname, import_mv2=False, **kwargs):
     params_mat = _read_mat(fn_parms)
 
     data = DataStruct()
-    data.ll_coords = num.asarray(ps2_mat["ll0"])
-    data.radar_coords = num.asarray(ps2_mat["ij"])
-    data.ps_mean_v = num.asarray(ps_plot_mat["ph_disp"]).ravel()
+    data.ll_coords = np.asarray(ps2_mat["ll0"])
+    data.radar_coords = np.asarray(ps2_mat["ij"])
+    data.ps_mean_v = np.asarray(ps_plot_mat["ph_disp"]).ravel()
 
-    geo_coords = num.asarray(ps2_mat["lonlat"])
+    geo_coords = np.asarray(ps2_mat["lonlat"])
     data.lons = geo_coords[0, :]
     data.lats = geo_coords[1, :]
 
-    days = num.asarray(ps2_mat["day"])
+    days = np.asarray(ps2_mat["day"])
     data.tmin = timedelta(days=days.min() - 366.25) + datetime(1, 1, 1)
     data.tmax = timedelta(days=days.max() - 366.25) + datetime(1, 1, 1)
 
     if import_mv2:
         fn_mv2 = kwargs.get("fn_mv2", _get_file(dirname, "mv2.mat"))
         mv2_mat = h5py.File(fn_mv2, "r")
-        data.ps_mean_std = num.asarray(mv2_mat["mean_v_std"]).ravel()
+        data.ps_mean_std = np.asarray(mv2_mat["mean_v_std"]).ravel()
 
     with open(fn_len) as rl, open(fn_width) as rw:
         data.px_length = int(rl.readline())
         data.px_width = int(rw.readline())
 
-    data.look_angles = num.loadtxt(fn_look_angle)[::2]
+    data.look_angles = np.loadtxt(fn_look_angle)[::2]
 
-    heading = float(num.asarray(params_mat["heading"]))
-    if num.isnan(heading):
+    heading = float(np.asarray(params_mat["heading"]))
+    if np.isnan(heading):
         raise ValueError("Heading information in parms.mat is missing!")
 
     data.heading = heading
@@ -146,17 +146,17 @@ def interpolate_look_angles(data):
     )
     log.debug(
         "Binned radar coordinate ranges: length %d - %d; width %d - %d",
-        num.nanmin(data.bin_radar_i),
-        num.nanmax(data.bin_radar_i),
-        num.nanmin(data.bin_radar_j),
-        num.nanmax(data.bin_radar_j),
+        np.nanmin(data.bin_radar_i),
+        np.nanmax(data.bin_radar_i),
+        np.nanmin(data.bin_radar_j),
+        np.nanmax(data.bin_radar_j),
     )
 
-    width_coords = num.linspace(0, data.px_width, 50)
-    len_coords = num.linspace(0, data.px_length, 50)
-    coords = num.asarray(num.meshgrid(width_coords, len_coords)).reshape(2, 2500)
+    width_coords = np.linspace(0, data.px_width, 50)
+    len_coords = np.linspace(0, data.px_length, 50)
+    coords = np.asarray(np.meshgrid(width_coords, len_coords)).reshape(2, 2500)
 
-    radar_coords = num.vstack(
+    radar_coords = np.vstack(
         [
             data.bin_radar_j.ravel() - data.radar_coords[0].min(),
             data.bin_radar_i.ravel() - data.radar_coords[1].min(),
@@ -243,11 +243,11 @@ def stamps2kite(
     log.debug("Processing of LOS angles")
     data.bin_theta = data.bin_look_angles * d2r
 
-    phi_angle = -data.heading * d2r + num.pi
-    if phi_angle > num.pi:
-        phi_angle -= 2 * num.pi
-    data.bin_phi = num.full_like(data.bin_theta, phi_angle)
-    data.bin_phi[num.isnan(data.bin_theta)] = num.nan
+    phi_angle = -data.heading * d2r + np.pi
+    if phi_angle > np.pi:
+        phi_angle -= 2 * np.pi
+    data.bin_phi = np.full_like(data.bin_theta, phi_angle)
+    data.bin_phi[np.isnan(data.bin_theta)] = np.nan
 
     log.debug("Setting up the Kite Scene")
     config = SceneConfig()

@@ -2,7 +2,7 @@ import logging
 import os.path as op
 import re
 
-import numpy as num
+import numpy as np
 import pyrocko.orthodrome as od
 import shapefile
 import utm
@@ -12,8 +12,8 @@ from kite.scene import Scene, SceneConfig
 
 log = logging.getLogger("bbd2kite")
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class DataStruct(dict):
@@ -55,13 +55,13 @@ def read_shapefile(filename):
     data = DataStruct()
     data.bbox = shp.bbox
 
-    data.ps_mean_v = num.zeros(npoints)
-    data.ps_mean_var = num.zeros(npoints)
-    los_n = num.zeros(npoints)
-    los_e = num.zeros(npoints)
-    los_u = num.zeros(npoints)
+    data.ps_mean_v = np.zeros(npoints)
+    data.ps_mean_var = np.zeros(npoints)
+    los_n = np.zeros(npoints)
+    los_e = np.zeros(npoints)
+    los_u = np.zeros(npoints)
 
-    coords = num.zeros((npoints, 2))
+    coords = np.zeros((npoints, 2))
 
     for isr, sr in enumerate(shp.iterShapeRecords()):
         shape = sr.shape
@@ -77,8 +77,8 @@ def read_shapefile(filename):
 
         coords[isr] = shape.points[0]
 
-    data.phi = num.arctan2(los_n, los_e)
-    data.theta = num.arcsin(los_u)
+    data.phi = np.arctan2(los_n, los_e)
+    data.theta = np.arcsin(los_u)
 
     data.easts = coords[:, 0]
     data.norths = coords[:, 1]

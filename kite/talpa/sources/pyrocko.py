@@ -1,6 +1,6 @@
 import os
 
-import numpy as num
+import numpy as np
 from PyQt5 import QtCore, QtGui
 
 from kite.sources import (
@@ -14,8 +14,8 @@ from kite.sources import (
 from ..config import getConfig
 from .base import PointSourceROI, RectangularSourceROI, SourceDelegate, SourceEditDialog
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class PyrockoSourceDialog(SourceEditDialog):
@@ -162,8 +162,8 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
         @QtCore.pyqtSlot()
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
-            exponent = num.log10(
-                num.max([v for k, v in params.items() if k in self.scaling_params])
+            exponent = np.log10(
+                np.max([v for k, v in params.items() if k in self.scaling_params])
             )
             scale = float("1e%d" % int(exponent))
 
@@ -274,8 +274,8 @@ class PyrockoDoubleCoupleDelegate(SourceDelegate):
             sdy = self.size().y() / 2
 
             return (
-                sdx * num.sin(rangle) + sdy * num.cos(rangle),
-                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+                sdx * np.sin(rangle) + sdy * np.cos(rangle),
+                sdx * np.cos(rangle) - sdy * np.sin(rangle),
             )
 
     ROIWidget = DoubleCoupleROI
@@ -393,8 +393,8 @@ class PyrockoRingfaultDelegate(SourceDelegate):
             sdy = self.size().y() / 2
 
             return (
-                sdx * num.sin(rangle) + sdy * num.cos(rangle),
-                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+                sdx * np.sin(rangle) + sdy * np.cos(rangle),
+                sdx * np.cos(rangle) - sdy * np.sin(rangle),
             )
 
     EditDialog = RingfaultDialog
@@ -487,8 +487,8 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
         @QtCore.pyqtSlot()
         def getSourceParameters(self):
             params = self.delegate.getSourceParameters()
-            exponent = num.log10(
-                num.max([abs(v) for k, v in params.items() if k in self.scaling_params])
+            exponent = np.log10(
+                np.max([abs(v) for k, v in params.items() if k in self.scaling_params])
             )
             scale = float("1e%d" % int(exponent))
             self.clvd_moment_exponent.setValue(int(exponent))
@@ -539,8 +539,8 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
             sdy = self.size().y() / 2
 
             return (
-                sdx * num.sin(rangle) + sdy * num.cos(rangle),
-                sdx * num.cos(rangle) - sdy * num.sin(rangle),
+                sdx * np.sin(rangle) + sdy * np.cos(rangle),
+                sdx * np.cos(rangle) - sdy * np.sin(rangle),
             )
 
     ROIWidget = VLVDSourceROI

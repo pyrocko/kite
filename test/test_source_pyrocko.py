@@ -2,7 +2,7 @@ import shutil
 import tempfile
 import unittest
 
-import numpy as num
+import numpy as np
 
 from kite import SandboxScene, TestSandboxScene  # noqa
 from kite.sources import (
@@ -34,7 +34,7 @@ class testSourcePyrocko(unittest.TestCase):
         nsources = 2
 
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
         for s in range(nsources):
             length = r(5000, 15000)
@@ -59,9 +59,9 @@ class testSourcePyrocko(unittest.TestCase):
         nsources = 5
 
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
-        for s in xrange(nsources):
+        for s in range(nsources):
             self.ms.addSource(
                 PyrockoMomentTensor(
                     easting=r(0.0, self.ms.frame.E.max()),  # ok
@@ -77,9 +77,9 @@ class testSourcePyrocko(unittest.TestCase):
         nsources = 5
 
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
-        for s in xrange(nsources):
+        for s in range(nsources):
             self.ms.addSource(
                 PyrockoDoubleCouple(
                     easting=r(0.0, self.ms.frame.E.max()),  # ok
@@ -95,9 +95,9 @@ class testSourcePyrocko(unittest.TestCase):
         nsources = 1
 
         def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+            return np.random.randint(lo, high=hi, size=1).astype(float)
 
-        for s in xrange(nsources):
+        for s in range(nsources):
             diameter = r(5000, 15000)
             self.ms.addSource(
                 PyrockoRingfaultSource(
@@ -128,7 +128,7 @@ class testSourcePyrocko(unittest.TestCase):
         ms.processSources()
 
         ax.imshow(
-            num.flipud(ms.north),
+            np.flipud(ms.north),
             aspect="equal",
             extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()],
         )

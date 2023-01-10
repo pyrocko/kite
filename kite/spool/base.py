@@ -1,6 +1,6 @@
 from os import path
 
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore
@@ -12,7 +12,7 @@ from kite.util import calcPrecision, formatScalar
 __all__ = ["KiteView", "KitePlot", "KiteToolColormap", "KiteParameterGroup"]
 
 
-d2r = num.pi / 180.0
+d2r = np.pi / 180.0
 
 
 def get_resource(filename):
@@ -97,12 +97,12 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
 
     @QtCore.pyqtSlot()
     def orientArrow(self):
-        phi = num.nanmedian(self.model.scene.phi)
-        theta = num.nanmedian(self.model.scene.theta)
+        phi = np.nanmedian(self.model.scene.phi)
+        theta = np.nanmedian(self.model.scene.theta)
 
-        angle = 180.0 - num.rad2deg(phi)
+        angle = 180.0 - np.rad2deg(phi)
 
-        theta_f = theta / (num.pi / 2)
+        theta_f = theta / (np.pi / 2)
 
         tipAngle = 30.0 + theta_f * 20.0
         tailLen = 15 + theta_f * 15.0
@@ -148,7 +148,7 @@ class KitePlot(pg.PlotWidget):
         self.hint = {
             "east": 0.0,
             "north": 0.0,
-            "value": num.nan,
+            "value": np.nan,
             "measure": self.component.title(),
             "vlength": "03",
             "precision": "3",
@@ -211,14 +211,14 @@ class KitePlot(pg.PlotWidget):
         azimuth = 45.0
 
         size_ramp = 10
-        ramp = num.linspace(-1, 1, size_ramp)[::-1]
+        ramp = np.linspace(-1, 1, size_ramp)[::-1]
 
-        ramp_x = num.tile(ramp, size_ramp).reshape(size_ramp, size_ramp)
+        ramp_x = np.tile(ramp, size_ramp).reshape(size_ramp, size_ramp)
         ramp_y = ramp_x.T
         ramp = ramp_x + ramp_y
 
         ramp = ramp / ramp.max() * contrast
-        # ramp = num.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
+        # ramp = np.array([[-1, -.5, 0], [0, .5, 1.]]) * contrast
         # convolution of two 2-dimensional arrays
 
         shad = fftconvolve(elevation, ramp, mode="valid")
@@ -228,11 +228,11 @@ class KitePlot(pg.PlotWidget):
         # dominated by them. Cutting off the largest and smallest 2% of
         # shades helps
 
-        percentile2 = num.quantile(shad, 0.02)
-        percentile98 = num.quantile(shad, 0.98)
+        percentile2 = np.quantile(shad, 0.02)
+        percentile98 = np.quantile(shad, 0.98)
 
-        shad = num.where(shad > percentile98, percentile98, shad)
-        shad = num.where(shad < percentile2, percentile2, shad)
+        shad = np.where(shad > percentile98, percentile98, shad)
+        shad = np.where(shad < percentile2, percentile2, shad)
         shad -= shad.min()
         shad /= shad.max()
 
@@ -295,7 +295,7 @@ class KitePlot(pg.PlotWidget):
         if self._data is None:
             self._data = self.components_available[self.component][1](self.model)
         return self._data
-        # return self._data  # num.nan_to_num(_data)
+        # return self._data  # np.nan_to_num(_data)
 
     @QtCore.pyqtSlot()
     def update(self, obj=None):
@@ -329,7 +329,7 @@ class KitePlot(pg.PlotWidget):
                     self.hint["north"] += frame.llLat
 
         self.hint["length"] = (
-            "03" if num.isnan(self.hint["value"]) else self.hint["vlength"]
+            "03" if np.isnan(self.hint["value"]) else self.hint["vlength"]
         )
         self.hint_text.setText(self.hint_text.text_template.format(**self.hint))
 
@@ -366,8 +366,8 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         else:
             self.setSymColormap()
 
-        max_range = num.nanmax(num.abs(self._plot.data))
-        if max_range is not num.nan:
+        max_range = np.nanmax(np.abs(self._plot.data))
+        if max_range is not np.nan:
             self.vb.setYRange(-max_range, max_range)
 
     @QtCore.pyqtSlot(object)
@@ -406,9 +406,9 @@ class KiteToolColormap(pg.HistogramLUTWidget):
             "mode": "rgb",
         }
 
-        relevant_data = num.abs(self._plot.data[num.isfinite(self._plot.data)])
-        if num.any(relevant_data):
-            lvl_max = num.quantile(relevant_data, 0.999)
+        relevant_data = np.abs(self._plot.data[np.isfinite(self._plot.data)])
+        if np.any(relevant_data):
+            lvl_max = np.quantile(relevant_data, 0.999)
         else:
             lvl_max = 1.0
 
@@ -420,7 +420,7 @@ class KiteToolColormap(pg.HistogramLUTWidget):
         cmap = {"mode": "rgb"}
         cmap["ticks"] = [[float(i) / nc, c] for i, c in enumerate(_viridis_data)]
         self.gradient.restoreState(cmap)
-        self.setLevels(num.nanmin(self._plot.data), num.nanmax(self._plot.data))
+        self.setLevels(np.nanmin(self._plot.data), np.nanmax(self._plot.data))
 
     def isoCurveControl(self):
         iso_ctrl = pg.InfiniteLine(pos=0, angle=0, pen="g", movable=True)

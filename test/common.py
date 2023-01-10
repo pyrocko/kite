@@ -8,21 +8,21 @@ from requests.compat import urljoin
 
 op = os.path
 
-data_uri = "http://data.pyrocko.org/testing/kite/"
+data_uri = "https://data.pyrocko.org/testing/kite/"
 data_dir = op.join(op.dirname(op.abspath(__file__)), "data/")
 
 logger = logging.getLogger("kite.testing")
 
 
 class DownloadError(Exception):
-    pass
+    ...
 
 
 def _makedir(path):
     try:
         os.makedirs(path)
     except OSError:
-        pass
+        ...
 
 
 def get_test_data(fn):
@@ -59,7 +59,9 @@ def get_test_data(fn):
                 f.write(d)
 
         if dl_bytes != fsize:
-            raise DownloadError("Download incomplete!")
+            raise DownloadError(
+                f"Download {url} incomplete! Got {fsize} bytes, expected {dl_bytes}"
+            )
         logger.info("Download completed.")
         return fn_local
 
