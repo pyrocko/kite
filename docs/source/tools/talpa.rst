@@ -13,7 +13,7 @@ Examples for a programmatic interaction with the sandbox can be found :doc:`/exa
 Available Static Displacement Sources
 -------------------------------------
 
-The :mod:`~kite.SandboxScene` can hosts different types of displacement source by levering different processing engines, analytical and numerical. The different types of dispalcement source can be mixed within a single sandbox
+The :mod:`~kite.SandboxScene` can hosts different types of displacement source by levering different processing engines, analytical and numerical. The different types of displacement source can be mixed within a single sandbox
 
 1. Okada Source
 ~~~~~~~~~~~~~~~~

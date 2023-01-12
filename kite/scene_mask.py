@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-import numpy as num
+import numpy as np
 from matplotlib.path import Path
 from pyrocko.guts import Bool, Dict
 
@@ -30,8 +30,8 @@ class PolygonMask(Plugin):
     def get_points(self):
         if self._points is None:
             f = self.scene.frame
-            cols, rows = num.meshgrid(range(f.cols), range(f.rows))
-            self._points = num.vstack((cols.ravel(), rows.ravel())).T
+            cols, rows = np.meshgrid(range(f.cols), range(f.rows))
+            self._points = np.vstack((cols.ravel(), rows.ravel())).T
         return self._points
 
     def click_one_polygon(self):
@@ -73,10 +73,10 @@ class PolygonMask(Plugin):
         sc = self.scene
         points = self.get_points()
 
-        mask = num.full((sc.frame.rows, sc.frame.cols), False)
+        mask = np.full((sc.frame.rows, sc.frame.cols), False)
         for vertices in self.config.polygons.values():
             p = Path(vertices)
             mask |= p.contains_points(points).reshape(sc.frame.rows, sc.frame.cols)
 
-        displacement[mask] = num.nan
+        displacement[mask] = np.nan
         return displacement

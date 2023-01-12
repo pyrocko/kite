@@ -1,12 +1,12 @@
-import numpy as num
+import numpy as np
 import pyrocko.orthodrome as od
 from pyrocko.guts import Float
 
 from . import compound_engine as ce
 from .base import SandboxSource, SourceProcessor
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 km = 1e3
 
 
@@ -43,7 +43,7 @@ class EllipsoidSource(SandboxSource):
     @property
     def volume(self):
         K = self.lamda + 2 * self.mu / 3  # Bulk Modulus
-        V = 4.0 / 3 * num.pi * self.length_x * self.length_y * self.length_z
+        V = 4.0 / 3 * np.pi * self.length_x * self.length_y * self.length_z
         V = (self.cavity_pressure * V) / K
         return V
 
@@ -127,9 +127,9 @@ class CompoundModelProcessor(SourceProcessor):
     def process(self, sources, sandbox, nthreads=0):
         result = {
             "processor_profile": dict(),
-            "displacement.e": num.zeros(sandbox.frame.npixel),
-            "displacement.n": num.zeros(sandbox.frame.npixel),
-            "displacement.d": num.zeros(sandbox.frame.npixel),
+            "displacement.e": np.zeros(sandbox.frame.npixel),
+            "displacement.n": np.zeros(sandbox.frame.npixel),
+            "displacement.d": np.zeros(sandbox.frame.npixel),
         }
 
         coords = sandbox.frame.coordinatesMeter

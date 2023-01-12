@@ -1,7 +1,7 @@
 import time
 from hashlib import sha1
 
-import numpy as num
+import numpy as np
 from pyrocko import guts
 from pyrocko import orthodrome as od
 
@@ -48,7 +48,7 @@ class QuadNode(object):
         """Fraction of NaN values within the tile
         :type: float
         """
-        return float(num.sum(self.displacement_mask)) / self.displacement.size
+        return float(np.sum(self.displacement_mask)) / self.displacement.size
 
     @property_cached
     def npixel(self):
@@ -59,28 +59,28 @@ class QuadNode(object):
         """Mean displacement
         :type: float
         """
-        return float(num.nanmean(self.displacement))
+        return float(np.nanmean(self.displacement))
 
     @property_cached
     def median(self):
         """Median displacement
         :type: float
         """
-        return float(num.nanmedian(self.displacement))
+        return float(np.nanmedian(self.displacement))
 
     @property_cached
     def std(self):
         """Standard deviation of displacement
         :type: float
         """
-        return float(num.nanstd(self.displacement))
+        return float(np.nanstd(self.displacement))
 
     @property_cached
     def var(self):
         """Variance of displacement
         :type: float
         """
-        return float(num.nanvar(self.displacement))
+        return float(np.nanvar(self.displacement))
 
     @property_cached
     def mean_px_var(self):
@@ -88,7 +88,7 @@ class QuadNode(object):
         :type: float
         """
         if self.displacement_px_var is not None:
-            return float(num.nanmean(self.displacement_px_var))
+            return float(np.nanmean(self.displacement_px_var))
         return None
 
     @property_cached
@@ -96,14 +96,14 @@ class QuadNode(object):
         """Standard deviation of node's displacement corrected for median
         :type: float
         """
-        return float(num.nanstd(self.displacement - self.median))
+        return float(np.nanstd(self.displacement - self.median))
 
     @property_cached
     def corr_mean(self):
         """Standard deviation of node's displacement corrected for mean
         :type: float
         """
-        return float(num.nanstd(self.displacement - self.mean))
+        return float(np.nanstd(self.displacement - self.mean))
 
     @property_cached
     def corr_bilinear(self):
@@ -111,7 +111,7 @@ class QuadNode(object):
             trend (2D)
         :type: float
         """
-        return float(num.nanstd(derampMatrix(self.displacement)))
+        return float(np.nanstd(derampMatrix(self.displacement)))
 
     @property
     def weight(self):
@@ -127,8 +127,8 @@ class QuadNode(object):
         """Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.mean(self.gridE.compressed()) + self.frame.dE / 2)
-        N = float(num.mean(self.gridN.compressed()) + self.frame.dN / 2)
+        E = float(np.mean(self.gridE.compressed()) + self.frame.dE / 2)
+        N = float(np.mean(self.gridN.compressed()) + self.frame.dN / 2)
         return E, N
 
     @property_cached
@@ -136,8 +136,8 @@ class QuadNode(object):
         """Node focal point in local coordinates respecting NaN values
         :type: tuple, float - (easting, northing)
         """
-        E = float(num.mean(self.gridEmeter.compressed() + self.frame.dEmeter / 2))
-        N = float(num.mean(self.gridNmeter.compressed() + self.frame.dNmeter / 2))
+        E = float(np.mean(self.gridEmeter.compressed() + self.frame.dEmeter / 2))
+        N = float(np.mean(self.gridNmeter.compressed() + self.frame.dNmeter / 2))
         return E, N
 
     @property_cached
@@ -153,8 +153,8 @@ class QuadNode(object):
             see :attr:`~kite.quadtree.QuadNode.displacement`
         :type: :class:`numpy.ndarray`
         """
-        return num.ma.masked_array(
-            self.displacement, self.displacement_mask, fill_value=num.nan
+        return np.ma.masked_array(
+            self.displacement, self.displacement_mask, fill_value=np.nan
         )
 
     @property_cached
@@ -167,7 +167,7 @@ class QuadNode(object):
 
             Faster to slice Scene.displacement_mask?
         """
-        return num.isnan(self.displacement)
+        return np.isnan(self.displacement)
 
     @property_cached
     def displacement_px_var(self):
@@ -184,7 +184,7 @@ class QuadNode(object):
         :type: float
         """
         phi = self.scene.phi[self._slice_rows, self._slice_cols]
-        return num.nanmedian(phi[~self.displacement_mask])
+        return np.nanmedian(phi[~self.displacement_mask])
 
     @property_cached
     def theta(self):
@@ -192,22 +192,22 @@ class QuadNode(object):
         :type: float
         """
         theta = self.scene.theta[self._slice_rows, self._slice_cols]
-        return num.nanmedian(theta[~self.displacement_mask])
+        return np.nanmedian(theta[~self.displacement_mask])
 
     @property
     def unitE(self):
         unitE = self.scene.los_rotation_factors[self._slice_rows, self._slice_cols, 1]
-        return num.nanmedian(unitE[~self.displacement_mask])
+        return np.nanmedian(unitE[~self.displacement_mask])
 
     @property
     def unitN(self):
         unitN = self.scene.los_rotation_factors[self._slice_rows, self._slice_cols, 2]
-        return num.nanmedian(unitN[~self.displacement_mask])
+        return np.nanmedian(unitN[~self.displacement_mask])
 
     @property
     def unitU(self):
         unitU = self.scene.los_rotation_factors[self._slice_rows, self._slice_cols, 0]
-        return num.nanmedian(unitU[~self.displacement_mask])
+        return np.nanmedian(unitU[~self.displacement_mask])
 
     @property_cached
     def gridE(self):
@@ -331,7 +331,7 @@ class QuadNode(object):
                 self.llc + self.length / 2 * nc,
                 self.length / 2,
             )
-            if n.displacement.size == 0 or num.all(n.displacement_mask):
+            if n.displacement.size == 0 or np.all(n.displacement_mask):
                 continue
             yield n
 
@@ -450,9 +450,9 @@ class Quadtree(object):
         self._scene_state = None
 
         # Cached matrices
-        self._leaf_matrix_means = num.empty_like(self.displacement)
-        self._leaf_matrix_medians = num.empty_like(self.displacement)
-        self._leaf_matrix_weights = num.empty_like(self.displacement)
+        self._leaf_matrix_means = np.empty_like(self.displacement)
+        self._leaf_matrix_medians = np.empty_like(self.displacement)
+        self._leaf_matrix_weights = np.empty_like(self.displacement)
 
         self._log = scene._log.getChild("Quadtree")
         self.setConfig(config or QuadtreeConfig())
@@ -549,7 +549,7 @@ class Quadtree(object):
     @property
     def min_node_length_px(self):
         npx = max(self.frame.cols, self.frame.rows)
-        return int(2 ** round(num.log(npx / 64)))
+        return int(2 ** round(np.log(npx / 64)))
 
     def _initTree(self):
         QuadNode.MIN_PIXEL_LENGTH_NODE = (
@@ -600,7 +600,7 @@ class Quadtree(object):
     @property_cached
     def _epsilon_init(self):
         """Initial epsilon for virgin tree creation"""
-        return num.nanstd(self.displacement)
+        return np.nanstd(self.displacement)
 
     @property_cached
     def epsilon_min(self):
@@ -762,7 +762,7 @@ class Quadtree(object):
         :type: :class:`numpy.ndarray`, size ``N``.
         """
         if self.scene.displacement_px_var is not None:
-            return num.array([lf.mean_px_var for lf in self.leaves])
+            return np.array([lf.mean_px_var for lf in self.leaves])
         return None
 
     @property_cached
@@ -772,7 +772,7 @@ class Quadtree(object):
             :attr:`kite.quadtree.QuadNode.mean`.
         :type: :class:`numpy.ndarray`, size ``N``.
         """
-        return num.array([lf.mean for lf in self.leaves])
+        return np.array([lf.mean for lf in self.leaves])
 
     @property_cached
     def leaf_medians(self):
@@ -781,11 +781,11 @@ class Quadtree(object):
             :attr:`kite.quadtree.QuadNode.median`.
         :type: :class:`numpy.ndarray`, size ``N``.
         """
-        return num.array([lf.median for lf in self.leaves])
+        return np.array([lf.median for lf in self.leaves])
 
     @property
     def _leaf_focal_points(self):
-        return num.array([lf._focal_point for lf in self.leaves])
+        return np.array([lf._focal_point for lf in self.leaves])
 
     @property
     def leaf_focal_points(self):
@@ -793,7 +793,7 @@ class Quadtree(object):
         :getter: Leaf focal points in local coordinates.
         :type: :class:`numpy.ndarray`, size ``(N, 2)``
         """
-        return num.array([lf.focal_point for lf in self.leaves])
+        return np.array([lf.focal_point for lf in self.leaves])
 
     @property
     def leaf_focal_points_meter(self):
@@ -801,7 +801,7 @@ class Quadtree(object):
         :getter: Leaf focal points in meter.
         :type: :class:`numpy.ndarray`, size ``(N, 2)``
         """
-        return num.array([lf.focal_point_meter for lf in self.leaves])
+        return np.array([lf.focal_point_meter for lf in self.leaves])
 
     @property
     def leaf_coordinates(self):
@@ -815,11 +815,11 @@ class Quadtree(object):
         :getter: Leaf distance to center point of the quadtree
         :type: :class:`numpy.ndarray`, size ``(N, 3)``
         """
-        distances = num.empty((self.nleaves, 3))
+        distances = np.empty((self.nleaves, 3))
         center = self.center_point
         distances[:, 0] = self.leaf_focal_points[:, 0] - center[0]
         distances[:, 1] = self.leaf_focal_points[:, 1] - center[1]
-        distances[:, 2] = num.sqrt(distances[:, 1] ** 2 + distances[:, 1] ** 2)
+        distances[:, 2] = np.sqrt(distances[:, 1] ** 2 + distances[:, 1] ** 2)
         return distances
 
     @property
@@ -836,7 +836,7 @@ class Quadtree(object):
         :getter: Median leaf LOS phi angle. :attr:`kite.Scene.phi`
         :type: :class:`numpy.ndarray`, size ``(N)``
         """
-        return num.array([lf.phi for lf in self.leaves])
+        return np.array([lf.phi for lf in self.leaves])
 
     @property
     def leaf_thetas(self):
@@ -844,7 +844,7 @@ class Quadtree(object):
         :getter: Median leaf LOS theta angle. :attr:`kite.Scene.theta`
         :type: :class:`numpy.ndarray`, size ``(N)``
         """
-        return num.array([lf.theta for lf in self.leaves])
+        return np.array([lf.theta for lf in self.leaves])
 
     @property_cached
     def leaf_los_rotation_factors(self):
@@ -854,10 +854,10 @@ class Quadtree(object):
             See :attr:`kite.BaseScene.los_rotation_factors`
         :type: :class:`numpy.ndarray`, Nx3
         """
-        los_factors = num.empty((self.nleaves, 3))
-        los_factors[:, 0] = num.sin(self.leaf_thetas)
-        los_factors[:, 1] = num.cos(self.leaf_thetas) * num.cos(self.leaf_phis)
-        los_factors[:, 2] = num.cos(self.leaf_thetas) * num.sin(self.leaf_phis)
+        los_factors = np.empty((self.nleaves, 3))
+        los_factors[:, 0] = np.sin(self.leaf_thetas)
+        los_factors[:, 1] = np.cos(self.leaf_thetas) * np.cos(self.leaf_phis)
+        los_factors[:, 2] = np.cos(self.leaf_thetas) * np.sin(self.leaf_phis)
         return los_factors
 
     @property
@@ -892,15 +892,15 @@ class Quadtree(object):
                 "Method %s is not in %s" % (method, list(self._norm_methods.keys()))
             )
 
-        array.fill(num.nan)
+        array.fill(np.nan)
         for lf in self.leaves:
             array[lf._slice_rows, lf._slice_cols] = self._norm_methods[method](lf)
-        array[self.scene.displacement_mask] = num.nan
+        array[self.scene.displacement_mask] = np.nan
         return array
 
     @property
     def center_point(self):
-        return num.median(self.leaf_focal_points, axis=0)
+        return np.median(self.leaf_focal_points, axis=0)
 
     @property
     def reduction_efficiency(self):
@@ -923,19 +923,19 @@ class Quadtree(object):
         :getter: The reduction RMS error
         :type: float
         """
-        if num.all(num.isnan(self.leaf_matrix_means)):
-            return num.inf
-        return num.sqrt(
-            num.nanmean((self.scene.displacement - self.leaf_matrix_means) ** 2)
+        if np.all(np.isnan(self.leaf_matrix_means)):
+            return np.inf
+        return np.sqrt(
+            np.nanmean((self.scene.displacement - self.leaf_matrix_means) ** 2)
         )
 
     @property_cached
     def _base_nodes(self):
         self._base_nodes = []
-        init_length = num.power(
-            2, num.ceil(num.log(num.min(self.displacement.shape)) / num.log(2))
+        init_length = np.power(
+            2, np.ceil(np.log(np.min(self.displacement.shape)) / np.log(2))
         )
-        nx, ny = num.ceil(num.array(self.displacement.shape) / init_length)
+        nx, ny = np.ceil(np.array(self.displacement.shape) / init_length)
         self._log.debug("Creating %d base nodes", nx * ny)
 
         displacement = self.scene.displacement
@@ -1020,13 +1020,13 @@ class Quadtree(object):
                 urN += self.frame.llLat
                 urE += self.frame.llLon
 
-            coords = num.array(
+            coords = np.array(
                 [(llN, llE), (llN, urE), (urN, urE), (urN, llE), (llN, llE)]
             )
 
             if self.frame.isMeter():
                 coords = od.ne_to_latlon(self.frame.llLat, self.frame.llLon, *coords.T)
-                coords = num.array(coords).T
+                coords = np.array(coords).T
 
             coords = coords[:, [1, 0]].tolist()
 
@@ -1065,7 +1065,7 @@ if __name__ == "__main__":
 
     sc = SceneSynTest.createGauss(2000, 2000)
 
-    for e in num.linspace(0.1, 0.00005, num=30):
+    for e in np.linspace(0.1, 0.00005, num=30):
         sc.quadtree.epsilon = e
     # qp = Plot2DQuadTree(qt, cmap='spectral')
     # qp.plot()

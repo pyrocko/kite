@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 from collections import OrderedDict
 
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore, QtWidgets
@@ -135,7 +135,7 @@ class KiteScenePlot(KitePlot):
         scene = self.model.scene
         frame = self.model.scene.frame
 
-        vertices = num.array([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)])
+        vertices = np.array([(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0)])
         vertices[:, 0] *= frame.cols / 6
         vertices[:, 1] *= frame.rows / 6
         vertices[:, 0] += frame.cols / 2
@@ -233,18 +233,18 @@ class KiteToolTransect(QtWidgets.QDialog):
         if self.poly_line is None:
             return
 
-        transect = num.ndarray((0))
+        transect = np.ndarray((0))
         length = 0
         for line in self.poly_line.segments:
-            transect = num.append(
+            transect = np.append(
                 transect, line.getArrayRegion(self.plot.image.image, self.plot.image)
             )
             p1, p2 = line.listPoints()
             length += (p2 - p1).length()
         # interpolate over NaNs
-        nans, x = num.isnan(transect), lambda z: z.nonzero()[0]
-        transect[nans] = num.interp(x(nans), x(~nans), transect[~nans])
-        length = num.linspace(0, length, transect.size)
+        nans, x = np.isnan(transect), lambda z: z.nonzero()[0]
+        transect[nans] = np.interp(x(nans), x(~nans), transect[~nans])
+        length = np.linspace(0, length, transect.size)
 
         self.trans_plot.setData(length, transect)
         self.plt_wdgt.setLimits(
@@ -263,9 +263,9 @@ class ParamScene(KiteParameterGroup):
         self.plot = plot
 
         self.parameters = {
-            "min value": lambda plot: num.nanmin(plot.data),
-            "max value": lambda plot: num.nanmax(plot.data),
-            "mean value": lambda plot: num.nanmean(plot.data),
+            "min value": lambda plot: np.nanmin(plot.data),
+            "max value": lambda plot: np.nanmax(plot.data),
+            "mean value": lambda plot: np.nanmean(plot.data),
         }
 
         self.plot.image.sigImageChanged.connect(self.updateValues)

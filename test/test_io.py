@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from os import path as op
 
-import numpy as num
+import numpy as np
 
 from kite import Scene
 
@@ -50,14 +50,14 @@ def _create_test_func(fmt, dl_path, filename):
 
         sc2 = Scene.load(fn_save)
 
-        num.testing.assert_equal(sc1.displacement, sc2.displacement)
-        num.testing.assert_equal(sc1.phi, sc2.phi)
-        num.testing.assert_equal(sc1.theta, sc2.theta)
+        np.testing.assert_equal(sc1.displacement, sc2.displacement)
+        np.testing.assert_equal(sc1.phi, sc2.phi)
+        np.testing.assert_equal(sc1.theta, sc2.theta)
 
     f.__name__ = "test_import_%s" % fmt
 
     return f
 
 
-for fmt, fns in filenames.iteritems():
+for fmt, fns in filenames.items():
     setattr(SceneIOTest, "test_import_%s" % fmt, _create_test_func(fmt, *fns))

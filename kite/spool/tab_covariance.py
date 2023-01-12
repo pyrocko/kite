@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -171,8 +171,8 @@ class KiteNoisePlot(KitePlot):
         slice_N = slice(llNpx, llNpx + sNpx)
 
         data = scene.displacement[slice_N, slice_E]
-        data[data == 0.0] = num.nan
-        if num.all(num.isnan(data)):
+        data[data == 0.0] = np.nan
+        if np.all(np.isnan(data)):
             return
 
         self.model.covariance.noise_coord = (llE, llN, sizeE, sizeN)
@@ -366,7 +366,7 @@ class KiteStructureFunction(KiteSubplot):
     def update(self):
         covariance = self.model.covariance
         struct, dist = covariance.getStructure()
-        self.structure.setData(dist[num.isfinite(struct)], struct[num.isfinite(struct)])
+        self.structure.setData(dist[np.isfinite(struct)], struct[np.isfinite(struct)])
         self.variance.setValue(covariance.variance)
 
     def changeVariance(self, inf_line):
@@ -397,7 +397,7 @@ class KiteToolNoise(QtWidgets.QDialog):
         @staticmethod
         def noise_data_masked(covariance):
             data = covariance.noise_data.copy()
-            data[data == 0.0] = num.nan
+            data[data == 0.0] = np.nan
             return data
 
         def proxy_connect(self):
@@ -584,7 +584,7 @@ class KiteToolWeightMatrix(QtWidgets.QDialog):
             self.setAspectLocked(True)
             self.setMouseEnabled(x=False, y=False)
 
-            self.hint = {"leaf1": 0, "leaf2": 0, "weight": num.nan}
+            self.hint = {"leaf1": 0, "leaf2": 0, "weight": np.nan}
 
             self.hint_text.template = (
                 '<span style="font-family: monospace; color: #fff;'

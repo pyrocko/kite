@@ -1,11 +1,11 @@
-import numpy as num
+import numpy as np
 from pyrocko import orthodrome as od
 from pyrocko.guts import Float, Object
 
 from kite.util import Subject
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 km = 1e3
 
 
@@ -58,11 +58,11 @@ class SandboxSourceRectangular(SandboxSource):
     slip = Float.T(default=1.5, help="Slip in [m]", optional=True)
 
     def outline(self):
-        coords = num.empty((4, 2))
+        coords = np.empty((4, 2))
 
-        c_strike = num.cos(self.strike * d2r)
-        s_strike = num.sin(self.strike * d2r)
-        c_dip = num.cos(self.dip * d2r)
+        c_strike = np.cos(self.strike * d2r)
+        s_strike = np.sin(self.strike * d2r)
+        c_dip = np.cos(self.dip * d2r)
 
         coords[0, 0] = s_strike * self.length / 2
         coords[0, 1] = c_strike * self.length / 2
@@ -126,9 +126,9 @@ class SourceProcessor(object):
         raise NotImplementedError()
 
         result = {
-            "displacement.n": num.array(),
-            "displacement.e": num.array(),
-            "displacement.d": num.array(),
+            "displacement.n": np.array(),
+            "displacement.e": np.array(),
+            "displacement.d": np.array(),
             "processor_profile": ProcessorProfile(),
         }
         return result

@@ -2,7 +2,7 @@
 import logging
 import unittest
 
-import numpy as num
+import numpy as np
 
 from kite import Scene, TestScene
 
@@ -18,7 +18,7 @@ def get_scene():
     sc.frame.dE = 0.001
     sc.frame.dN = 0.001
     sc.frame.spacing = "degree"
-    sc.displacement = num.zeros((500, 500))
+    sc.displacement = np.zeros((500, 500))
 
     return sc
 
@@ -37,23 +37,22 @@ class TestSyntheticsGenerators(unittest.TestCase):
 class TestSyntheticScene(unittest.TestCase):
     def setUp(self):
         self.sc = TestScene.createGauss()
-        self.sc.setLogLevel("ERROR")
         self.sc.quadtree.epsilon = 0.02
         self.sc.covariance.subsampling = 24
 
     def testQuadtree(self):
         qt = self.sc.quadtree
-        for e in num.linspace(0.118, 0.2, num=30):
+        for e in np.linspace(0.118, 0.2, num=30):
             qt.epsilon = e
 
-        for nan in num.linspace(0.1, 1.0, num=30):
+        for nan in np.linspace(0.1, 1.0, num=30):
             qt.nan_allowed = nan
 
-        for s in num.linspace(100, 4000, num=30):
+        for s in np.linspace(100, 4000, num=30):
             qt.tile_size_min = s
             qt.tile_size_max = 5000
 
-        for s in num.linspace(200, 4000, num=30):
+        for s in np.linspace(200, 4000, num=30):
             qt.tile_size_min = 20
             qt.tile_size_max = s
 

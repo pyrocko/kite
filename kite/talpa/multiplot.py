@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
@@ -6,7 +6,7 @@ from pyqtgraph import dockarea
 from .config import getConfig
 from .util import SourceROI
 
-d2r = num.pi / 180.0
+d2r = np.pi / 180.0
 
 
 class SandboxSceneLayout(pg.GraphicsLayoutWidget):
@@ -319,8 +319,8 @@ class DisplacementVectors(QtWidgets.QGraphicsItemGroup):
 
         nvectors = getConfig().nvectors
 
-        nx = int(num.sqrt(nvectors) * float(w) / h)
-        ny = int(num.sqrt(nvectors) * float(h) / w)
+        nx = int(np.sqrt(nvectors) * float(w) / h)
+        ny = int(np.sqrt(nvectors) * float(h) / w)
         dx = float(w) / nx
         dy = float(h) / ny
         d = dx if dx < dy else dy
@@ -350,8 +350,8 @@ class DisplacementVectors(QtWidgets.QGraphicsItemGroup):
                 if (
                     (pE >= img_shape[0] or pN >= img_shape[1])
                     or (pE < 0 or pN < 0)
-                    or num.isnan(mat_E[pE, pN])
-                    or num.isnan(mat_N[pE, pN])
+                    or np.isnan(mat_E[pE, pN])
+                    or np.isnan(mat_N[pE, pN])
                 ):
                     dE = 0.0
                     dN = 0.0
@@ -416,13 +416,13 @@ class Vector(QtWidgets.QGraphicsItem):
         arrow_length = self.line.length() * 0.3 * (self.relative_length / 100.0)
         d = self.line.angle()
         head_p1 = self.p2 - QtCore.QPointF(
-            num.sin(d * d2r + num.pi / 3) * arrow_length,
-            num.cos(d * d2r + num.pi / 3) * arrow_length,
+            np.sin(d * d2r + np.pi / 3) * arrow_length,
+            np.cos(d * d2r + np.pi / 3) * arrow_length,
         )
 
         head_p2 = self.p2 - QtCore.QPointF(
-            num.sin(d * d2r + num.pi - num.pi / 3) * arrow_length,
-            num.cos(d * d2r + num.pi - num.pi / 3) * arrow_length,
+            np.sin(d * d2r + np.pi - np.pi / 3) * arrow_length,
+            np.cos(d * d2r + np.pi - np.pi / 3) * arrow_length,
         )
 
         painter.drawLine(self.line)
@@ -467,8 +467,8 @@ class ColormapPlots(pg.HistogramLUTWidget):
 
         lvl_min = lvl_max = 0.0
         for plot in self.plots:
-            plt_min = num.nanmin(plot.data)
-            plt_max = num.nanmax(plot.data)
+            plt_min = np.nanmin(plot.data)
+            plt_max = np.nanmax(plot.data)
             lvl_max = lvl_max if plt_max < lvl_max else plt_max
             lvl_min = lvl_min if plt_min > lvl_min else plt_min
 

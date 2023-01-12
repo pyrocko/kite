@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 from pyrocko.guts import Bool
 
 from .plugin import Plugin, PluginConfig
@@ -25,15 +25,15 @@ class Deramp(Plugin):
         :rtype: :class:`numpy.ndarray`
         """
         scene = self.scene
-        msk = num.isfinite(displacement)
+        msk = np.isfinite(displacement)
         displacement = displacement[msk]
 
         coords = scene.frame.coordinates[msk.flatten()]
 
         # Add ones for the offset
-        coords = num.hstack((num.ones_like(coords), coords))
+        coords = np.hstack((np.ones_like(coords), coords))
 
-        coeffs, res, _, _ = num.linalg.lstsq(coords, displacement, rcond=None)
+        coeffs, res, _, _ = np.linalg.lstsq(coords, displacement, rcond=None)
 
         return coeffs
 

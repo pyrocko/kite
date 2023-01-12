@@ -1,11 +1,11 @@
-import numpy as num
+import numpy as np
 
 from kite.sources import EllipsoidSource, PointCompoundSource
 
 from .base import PointSourceROI, SourceDelegate, SourceEditDialog
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class EllipsoidSourceDelegate(SourceDelegate):

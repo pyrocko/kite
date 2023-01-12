@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 from pyrocko import orthodrome as od
 from pyrocko.guts import Bool, Float, List
 
@@ -6,8 +6,8 @@ from kite.sources import disloc_ext
 
 from .base import SandboxSource, SandboxSourceRectangular, SourceProcessor
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 km = 1e3
 
 
@@ -54,11 +54,11 @@ class OkadaSource(SandboxSourceRectangular):
         :returns: Moment magnitude
         :rtype: float
         """
-        return 2.0 / 3 * num.log10(self.seismic_moment * 1e7) - 10.7
+        return 2.0 / 3 * np.log10(self.seismic_moment * 1e7) - 10.7
 
     def dislocSource(self, dsrc=None):
         if dsrc is None:
-            dsrc = num.empty(10)
+            dsrc = np.empty(10)
 
         dip = self.dip
         if self.dip == 90.0:
@@ -72,8 +72,8 @@ class OkadaSource(SandboxSourceRectangular):
         dsrc[5] = self.easting
         dsrc[6] = self.northing
 
-        ss_slip = num.cos(self.rake * d2r) * self.slip
-        ds_slip = num.sin(self.rake * d2r) * self.slip
+        ss_slip = np.cos(self.rake * d2r) * self.slip
+        ds_slip = np.sin(self.rake * d2r) * self.slip
         # print '{:<13}{}\n{:<13}{}'.format(
         #     'strike_slip', ss_slip, 'dip_slip', ds_slip)
         dsrc[7] = -ss_slip  # SS Strike-Slip
@@ -87,7 +87,7 @@ class OkadaSource(SandboxSourceRectangular):
     # return self.T.propnames
 
     def getParametersArray(self):
-        return num.array([self.__getattribute__(p) for p in self.parameters])
+        return np.array([self.__getattribute__(p) for p in self.parameters])
 
     def setParametersArray(self, parameter_arr):
         if parameter_arr.size != len(self.parameters):
@@ -150,7 +150,7 @@ class OkadaPath(SandboxSource):
             "depth": 0.0,
             "length": length,
             "width": 15.0 * length**0.66,
-            "strike": num.arccos(dN / length) * r2d,
+            "strike": np.arccos(dN / length) * r2d,
             "slip": 45.0,
             "rake": 90.0,
         }
@@ -167,7 +167,7 @@ class OkadaPath(SandboxSource):
             "easting": e1 + dE / 2,
             "length": length,
             "width": 15.0 * length**0.66,
-            "strike": num.arccos(dN / length) * r2d,
+            "strike": np.arccos(dN / length) * r2d,
         }
 
         segment = self.segments[pos]
@@ -226,7 +226,7 @@ class OkadaPath(SandboxSource):
         return len(self.segments)
 
     def dislocSource(self):
-        return num.array([seg.dislocSource() for seg in self.segments if seg.enabled])
+        return np.array([seg.dislocSource() for seg in self.segments if seg.enabled])
 
 
 class DislocProcessor(SourceProcessor):
@@ -236,9 +236,9 @@ class DislocProcessor(SourceProcessor):
     def process(sources, sandbox, nthreads=0):
         result = {
             "processor_profile": dict(),
-            "displacement.n": num.zeros(sandbox.frame.npixel),
-            "displacement.e": num.zeros(sandbox.frame.npixel),
-            "displacement.d": num.zeros(sandbox.frame.npixel),
+            "displacement.n": np.zeros(sandbox.frame.npixel),
+            "displacement.e": np.zeros(sandbox.frame.npixel),
+            "displacement.d": np.zeros(sandbox.frame.npixel),
         }
 
         src_nu = set(src.nu for src in sources)
@@ -246,13 +246,13 @@ class DislocProcessor(SourceProcessor):
         for nu in src_nu:
             nu_sources = [src for src in sources if src.nu == nu]
             nsources = len(nu_sources)
-            src_arr = num.vstack([src.dislocSource() for src in nu_sources])
+            src_arr = np.vstack([src.dislocSource() for src in nu_sources])
 
             north_shifts, east_shifts = od.latlon_to_ne_numpy(
-                num.repeat(sandbox.frame.llLat, nsources),
-                num.repeat(sandbox.frame.llLon, nsources),
-                num.array([src.lat for src in nu_sources]),
-                num.array([src.lon for src in nu_sources]),
+                np.repeat(sandbox.frame.llLat, nsources),
+                np.repeat(sandbox.frame.llLon, nsources),
+                np.array([src.lat for src in nu_sources]),
+                np.array([src.lon for src in nu_sources]),
             )
 
             src_arr[:, 5] += east_shifts

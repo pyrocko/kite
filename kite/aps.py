@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 from pyrocko.guts import Tuple
 from scipy import stats
 
@@ -26,7 +26,7 @@ class APS(Plugin):
         if self.config.patch_coords is None:
             frame = self.scene.frame
             scene = self.scene
-            rstate = num.random.RandomState(123)
+            rstate = np.random.RandomState(123)
 
             while True:
                 llE = rstate.uniform(0, frame.lengthE * (4 / 5))
@@ -38,7 +38,7 @@ class APS(Plugin):
                 rowmin, rowmax = frame.mapENMatrix(llN, llN + urN)
 
                 displacement = scene._displacement[rowmin:rowmax, colmin:colmax]
-                if num.any(displacement):
+                if np.any(displacement):
                     return llE, llN, urE, urN
 
         return self.config.patch_coords
@@ -55,7 +55,7 @@ class APS(Plugin):
         displacement = scene._displacement[rowmin:rowmax, colmin:colmax]
         elevation = self.get_elevation()[rowmin:rowmax, colmin:colmax]
 
-        mask = num.isfinite(displacement)
+        mask = np.isfinite(displacement)
         elevation = elevation[mask]
         displacement = displacement[mask]
 

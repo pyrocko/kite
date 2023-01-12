@@ -2,7 +2,7 @@ import shutil
 import tempfile
 import unittest
 
-import numpy as num
+import numpy as np
 
 from kite import SandboxScene, TestSandboxScene
 from kite.sources import OkadaPath, OkadaSource
@@ -19,29 +19,31 @@ class testSourceOkada(unittest.TestCase):
     def setUp(self):
         self.ms = SandboxScene()
         self.tmpdir = tempfile.mkdtemp(prefix="kite")
-        print(self.tmpdir)
 
     def tearDown(self):
-        return
         shutil.rmtree(self.tmpdir)
 
     def test_okada_source(self):
         nsources = 2
 
-        def r(lo, hi):
-            return num.random.randint(lo, high=hi, size=1).astype(num.float)
+        def random_int(low, high):
+            return np.random.randint(low, high, size=1).astype(float)
 
-        for s in xrange(nsources):
-            length = r(5000, 15000)
+        for s in range(nsources):
+            length = random_int(5000, 15000)
             self.ms.addSource(
                 OkadaSource(
-                    easting=r(0.0, self.ms.frame.E.max()),  # ok
-                    northing=r(0.0, self.ms.frame.N.max()),  # ok
-                    depth=r(0, 8000),  # ok
-                    strike=r(0, 360),  # ok
-                    dip=r(0, 170),
-                    slip=r(1, 5),  # ok
-                    rake=r(0, 180),
+                    easting=random_int(
+                        self.ms.frame.E.min(), self.ms.frame.E.max()
+                    ),  # ok
+                    northing=random_int(
+                        self.ms.frame.N.min(), self.ms.frame.N.max()
+                    ),  # ok
+                    depth=random_int(0, 8000),  # ok
+                    strike=random_int(0, 360),  # ok
+                    dip=random_int(0, 170),
+                    slip=random_int(1, 5),  # ok
+                    rake=random_int(0, 180),
                     length=length,
                     width=15.0 * length**0.66,
                 )
@@ -76,7 +78,7 @@ class testSourceOkada(unittest.TestCase):
         ms.processSources()
 
         ax.imshow(
-            num.flipud(ms.down),
+            np.flipud(ms.down),
             aspect="equal",
             extent=[0, ms.frame.E.max(), 0, ms.frame.N.max()],
         )
@@ -85,7 +87,7 @@ class testSourceOkada(unittest.TestCase):
                 p = Polygon(seg.outline(), alpha=0.8, fill=False)
                 ax.add_artist(p)
             if isinstance(src, OkadaPath):
-                nodes = num.array(src.nodes)
+                nodes = np.array(src.nodes)
                 ax.scatter(nodes[:, 0], nodes[:, 1], color="r")
         plt.show()
         fig.clear()

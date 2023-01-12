@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtWidgets
 
@@ -6,8 +6,8 @@ from kite.qt_utils import loadUi
 
 from ..util import get_resource
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class RectangularSourceROI(pg.ROI):
@@ -53,8 +53,8 @@ class RectangularSourceROI(pg.ROI):
         width = float(self.size().x())
         length = float(self.size().y())
 
-        northing = float(self.pos().y() + num.cos(strike * d2r) * length / 2)
-        easting = float(self.pos().x() + num.sin(strike * d2r) * length / 2)
+        northing = float(self.pos().y() + np.cos(strike * d2r) * length / 2)
+        easting = float(self.pos().x() + np.sin(strike * d2r) * length / 2)
 
         north_shift, east_shift = self.source.getSandboxOffset()
         easting -= east_shift

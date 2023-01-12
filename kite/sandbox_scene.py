@@ -1,7 +1,7 @@
 import time
 from os import path as op
 
-import numpy as num
+import numpy as np
 from pyrocko import guts
 from pyrocko.guts import Int, List, Object, String
 
@@ -13,8 +13,8 @@ from kite.util import Subject, property_cached
 
 __processors__ = [DislocProcessor, PyrockoProcessor, CompoundModelProcessor]
 km = 1e3
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 
 
 class SandboxSceneConfig(Object):
@@ -73,13 +73,13 @@ class SandboxScene(BaseScene):
         self.cols = east
         self.rows = north
 
-        self._north = num.zeros((self.rows, self.cols))
-        self._east = num.zeros_like(self._north)
-        self._down = num.zeros_like(self._north)
+        self._north = np.zeros((self.rows, self.cols))
+        self._east = np.zeros_like(self._north)
+        self._down = np.zeros_like(self._north)
 
-        self.theta = num.zeros_like(self._north)
-        self.phi = num.zeros_like(self._north)
-        self.theta.fill(num.pi / 2)
+        self.theta = np.zeros_like(self._north)
+        self.phi = np.zeros_like(self._north)
+        self.theta.fill(np.pi / 2)
         self.phi.fill(0.0)
 
         self.config.extent_east = east
@@ -105,8 +105,8 @@ class SandboxScene(BaseScene):
 
         self._log.debug("Changing model LOS to %d phi and %d theta", phi, theta)
 
-        self.theta = num.full_like(self.theta, theta * r2d)
-        self.phi = num.full_like(self.phi, phi * r2d)
+        self.theta = np.full_like(self.theta, theta * r2d)
+        self.phi = np.full_like(self.phi, phi * r2d)
         self.frame.updateExtent()
 
         self._clearModel()
@@ -146,7 +146,7 @@ class SandboxScene(BaseScene):
     @property_cached
     def max_horizontal_displacement(self):
         """Maximum horizontal displacement"""
-        return num.sqrt(self._north**2 + self._east**2).max()
+        return np.sqrt(self._north**2 + self._east**2).max()
 
     def addSource(self, source):
         """Add displacement source to sandbox
@@ -190,12 +190,12 @@ class SandboxScene(BaseScene):
 
     def _process(self, sources, result=None):
         if result is None:
-            result = num.zeros(
+            result = np.zeros(
                 self.frame.npixel,
                 dtype=[
-                    ("north", num.float64),
-                    ("east", num.float64),
-                    ("down", num.float64),
+                    ("north", float),
+                    ("east", float),
+                    ("down", float),
                 ],
             )
 
@@ -302,7 +302,7 @@ class SandboxScene(BaseScene):
         for arr in (self._north, self._east, self._down):
             arr.fill(0.0)
             if self.reference:
-                arr[self.reference.scene.displacement_mask] = num.nan
+                arr[self.reference.scene.displacement_mask] = np.nan
 
         self.displacement = None
         self._los_factors = None
@@ -365,12 +365,12 @@ class Reference(object):
         coordinates = quadtree.leaf_coordinates
         sources = self.model.sources
 
-        model_result = num.zeros(
+        model_result = np.zeros(
             coordinates.shape[0],
             dtype=[
-                ("north", num.float64),
-                ("east", num.float64),
-                ("down", num.float64),
+                ("north", float),
+                ("east", float),
+                ("down", float),
             ],
         )
 
@@ -383,7 +383,7 @@ class Reference(object):
         def misfit(model_displacement, lp_norm=2):
             p = lp_norm
             mf = (
-                num.sum(num.abs(quadtree.leaf_medians - model_displacement) ** p) ** 1.0
+                np.sum(np.abs(quadtree.leaf_medians - model_displacement) ** p) ** 1.0
                 / p
             )
             return mf
@@ -432,14 +432,16 @@ class TestSandboxScene(SandboxScene):
         sandbox_scene = cls()
 
         def r(lo, hi):
-            return float(num.random.randint(lo, high=hi, size=1))
+            return float(np.random.randint(lo, high=hi, size=1))
 
-        for s in range(nsources):
+        for isrc in range(nsources):
             length = r(5000, 15000)
             sandbox_scene.addSource(
                 OkadaSource(
-                    easting=r(length, sandbox_scene.frame.E.max() - length),
-                    northing=r(length, sandbox_scene.frame.N.max() - length),
+                    easting=r(sandbox_scene.frame.E.min(), sandbox_scene.frame.E.max()),
+                    northing=r(
+                        sandbox_scene.frame.N.min(), sandbox_scene.frame.N.max()
+                    ),
                     depth=r(0, 8000),
                     strike=r(0, 360),
                     dip=r(0, 90),

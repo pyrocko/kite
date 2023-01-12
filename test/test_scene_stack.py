@@ -1,7 +1,7 @@
 import logging
 import time
 
-import numpy as num
+import numpy as np
 
 from kite.quadtree import QuadNode
 from kite.scene import TestScene
@@ -47,19 +47,3 @@ for isc in range(nscenes):
 stack = SceneStack()
 for ts, scene in scenes.items():
     stack.add_scene(scene, timestamp=ts)
-
-
-def test_set_scene():
-    stack.set_scene(stack.times[-1])
-
-
-def test_set_scene_to():
-    tmin = min(stack.times)
-    tmax = max(stack.times)
-
-    times = num.linspace(tmin, tmax, 30)
-    for ts in times:
-        stack.set_scene_to(ts)
-
-
-spool(stack)

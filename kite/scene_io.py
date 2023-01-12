@@ -4,7 +4,7 @@ import re
 import time
 from datetime import datetime
 
-import numpy as num
+import numpy as np
 import scipy.io
 import utm
 
@@ -21,7 +21,7 @@ except ImportError:
     pass
 
 
-d2r = num.pi / 180.0
+d2r = np.pi / 180.0
 km = 1e3
 op = os.path
 
@@ -170,9 +170,9 @@ class Matlab(SceneIO):
         for mat_k, _ in mat.items():
             for io_k in container.keys():
                 if io_k in mat_k:
-                    container[io_k] = num.rot90(mat[mat_k])
+                    container[io_k] = np.rot90(mat[mat_k])
                 elif "ig_" in mat_k:
-                    container.displacement = num.rot90(mat[mat_k])
+                    container.displacement = np.rot90(mat[mat_k])
                 elif "xx" in mat_k:
                     utm_e = mat[mat_k].flatten()
                 elif "yy" in mat_k:
@@ -186,10 +186,10 @@ class Matlab(SceneIO):
                     theta0 = mat[mat_k].flatten()
 
         if len(theta0) == 1:
-            container.theta = num.ones(num.shape(container.displacement)) * theta0
+            container.theta = np.ones(np.shape(container.displacement)) * theta0
 
         if len(theta0) == 1:
-            container.phi = num.ones(num.shape(container.displacement)) * phi0
+            container.phi = np.ones(np.shape(container.displacement)) * phi0
 
         if utm_zone is None:
             utm_zone = 33
@@ -199,17 +199,17 @@ class Matlab(SceneIO):
                 % (utm_zone, utm_zone_letter)
             )
 
-        if not (num.all(utm_e) or num.all(utm_n)):
+        if not (np.all(utm_e) or np.all(utm_n)):
             self._log.warning("Could not find referencing UTM vectors in .mat file!")
-            utm_e = num.linspace(100000, 110000, container.displacement.shape[0])
-            utm_n = num.linspace(1100000, 1110000, container.displacement.shape[1])
+            utm_e = np.linspace(100000, 110000, container.displacement.shape[0])
+            utm_n = np.linspace(1100000, 1110000, container.displacement.shape[1])
 
         if utm_e.min() < 1e4 or utm_n.min() < 1e4:
             utm_e *= km
             utm_n *= km
 
-        container.frame.dE = num.abs(utm_e[1] - utm_e[0])
-        container.frame.dN = num.abs(utm_n[1] - utm_n[0])
+        container.frame.dE = np.abs(utm_e[1] - utm_e[0])
+        container.frame.dN = np.abs(utm_n[1] - utm_n[0])
         try:
             container.frame.llLat, container.frame.llLon = utm.to_latlon(
                 utm_e.min(), utm_n.min(), utm_zone, utm_zone_letter
@@ -291,26 +291,26 @@ class Gamma(SceneIO):
                 required_lat_lon, params
             ):
                 if not log:
-                    self._log.info("Found parameter file %s" % file)
+                    self._log.info("Found parameter file %s", file)
                 return params
 
         raise ImportError("Parameter file does not hold required parameters")
 
     def _getSLCParameters(self, path):
-        required_params = ["radar_frequency"]
+        required_params = ("nlines",)
         path = op.dirname(op.realpath(path))
-        par_files = glob.glob("%s/*slc.par" % path)
+        par_files = glob.glob(f"{path}/*par")
 
         for file in par_files:
             params = self._parseParameterFile(file)
 
             if check_required(required_params, params):
-                self._log.info("Found SLC parameter file %s" % file)
+                self._log.info("Found SLC parameter file %s", file)
                 return params
 
         raise ImportError(
-            "Could not find SLC parameter file *.slc.par"
-            " with parameters %s" % required_params
+            "Could not find SLC parameter file *.par"
+            f" with parameters {required_params}"
         )
 
     def validate(self, filename, **kwargs):
@@ -337,7 +337,7 @@ class Gamma(SceneIO):
 
         filename = phi_files[0]
         self._log.info("Loading LOS %s from %s" % (pattern, filename))
-        return num.memmap(filename, mode="r", dtype=">f4")
+        return np.memmap(filename, mode="r", dtype=">f4")
 
     def read(self, filename, **kwargs):
         """
@@ -356,25 +356,25 @@ class Gamma(SceneIO):
 
         try:
             params_slc = self._getSLCParameters(par_file)
-        except ImportError as e:
-            raise e
+        except ImportError as exc:
+            raise exc
 
         fill = None
 
         ncols = int(params["width"])
         nlines = int(params["nlines"])
-        radar_frequency = float(params_slc.get("radar_frequency", None))
+        radar_frequency = float(params_slc.get("radar_frequency", 5.405e9))  # Sentinel1
 
-        displ = num.fromfile(filename, dtype=">f4")
+        displ = np.fromfile(filename, dtype=">f4")
         # Resize array if last line is not scanned completely
         if (displ.size % ncols) != 0:
-            fill = num.empty(ncols - displ.size % ncols)
-            fill.fill(num.nan)
-            displ = num.append(displ, fill)
+            fill = np.empty(ncols - displ.size % ncols)
+            fill.fill(np.nan)
+            displ = np.append(displ, fill)
 
         displ = displ.reshape(nlines, ncols)
-        displ[displ == -0.0] = num.nan
-        displ = num.flipud(displ)
+        displ[displ == -0.0] = np.nan
+        displ = np.flipud(displ)
 
         if radar_frequency is not None:
             radar_frequency = float(radar_frequency)
@@ -383,7 +383,7 @@ class Gamma(SceneIO):
                 % (radar_frequency / 1e9)
             )
             wavelength = util.C / radar_frequency
-            displ /= -4 * num.pi
+            displ /= -4 * np.pi
             displ *= wavelength
 
         else:
@@ -397,16 +397,16 @@ class Gamma(SceneIO):
         theta = self._getLOSAngles(filename, "*theta*")
         theta = theta
 
-        if isinstance(phi, num.ndarray):
+        if isinstance(phi, np.ndarray):
             phi = phi.reshape(nlines, ncols)
-            phi = num.flipud(phi)
-        if isinstance(theta, num.ndarray):
+            phi = np.flipud(phi)
+        if isinstance(theta, np.ndarray):
             theta = theta.reshape(nlines, ncols)
-            theta = num.flipud(theta)
+            theta = np.flipud(theta)
 
         if fill is not None:
-            theta = num.append(theta, fill)
-            phi = num.append(phi, fill)
+            theta = np.append(theta, fill)
+            phi = np.append(phi, fill)
 
         container = self.container
 
@@ -443,8 +443,8 @@ class Gamma(SceneIO):
             utm_corn_eo = utm_corn_e + dE * displ.shape[1]
             utm_corn_no = utm_corn_n + dN * displ.shape[0]
 
-            utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
-            utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
+            utm_e = np.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
+            utm_n = np.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
 
             llLat, llLon = utm.to_latlon(
                 utm_e.min(), utm_n.min(), utm_zone, utm_zone_letter
@@ -573,15 +573,15 @@ class ROI_PAC(SceneIO):
         utm_zone_letter = utm.latitude_to_zone_letter(lat_ref)
         utm_zone = utm.latlon_to_zone_number(lat_ref, lon_ref)
 
-        look = num.mean(num.array([look_ref1, look_ref2, look_ref3, look_ref4]))
+        look = np.mean(np.array([look_ref1, look_ref2, look_ref3, look_ref4]))
 
-        data = num.memmap(filename, dtype="<f4")
+        data = np.memmap(filename, dtype="<f4")
         data = data.reshape(nlines, ncols * 2)
 
         displ = data[:, ncols:]
-        displ = num.flipud(displ)
-        displ[displ == -0.0] = num.nan
-        displ = displ / (4.0 * num.pi) * wavelength
+        displ = np.flipud(displ)
+        displ[displ == -0.0] = np.nan
+        displ = displ / (4.0 * np.pi) * wavelength
 
         z_scale = par.get("Z_SCALE", 1.0)
         z_offset = par.get("Z_OFFSET", 0.0)
@@ -591,8 +591,8 @@ class ROI_PAC(SceneIO):
         container = self.container
 
         container.displacement = displ
-        container.theta = num.deg2rad(90.0 - look)
-        container.phi = num.deg2rad(-heading + 180.0)
+        container.theta = np.deg2rad(90.0 - look)
+        container.phi = np.deg2rad(-heading + 180.0)
 
         container.meta.title = par.get("TITLE", "None")
         container.meta.wavelength = par["WAVELENGTH"]
@@ -744,8 +744,8 @@ class ISCE(SceneIO):
 
         coord_lon = isce_xml.getProperty("coordinate1")
         coord_lat = isce_xml.getProperty("coordinate2")
-        container.frame.dN = num.abs(coord_lat["delta"])
-        container.frame.dE = num.abs(coord_lon["delta"])
+        container.frame.dN = np.abs(coord_lat["delta"])
+        container.frame.dE = np.abs(coord_lon["delta"])
 
         nlon = int(coord_lon["size"])
         nlat = int(coord_lat["size"])
@@ -754,22 +754,22 @@ class ISCE(SceneIO):
         container.frame.llLat = coord_lat["startingvalue"] + (nlat * coord_lat["delta"])
         container.frame.llLon = coord_lon["startingvalue"]
 
-        displ = num.memmap(self._getDisplacementFile(path), dtype="<f4").reshape(
+        displ = np.memmap(self._getDisplacementFile(path), dtype="<f4").reshape(
             nlat, nlon * 2
         )[:, nlon:]
 
-        displ = num.flipud(displ)
-        displ[displ == 0.0] = num.nan
+        displ = np.flipud(displ)
+        displ[displ == 0.0] = np.nan
         container.displacement = displ
 
         los_file = self._getLOSFile(path)
-        los_data = num.fromfile(los_file, dtype="<f4").reshape(nlat * 2, nlon)
+        los_data = np.fromfile(los_file, dtype="<f4").reshape(nlat * 2, nlon)
 
-        theta = num.flipud(los_data[0::2, :])
-        phi = num.flipud(los_data[1::2, :])
+        theta = np.flipud(los_data[0::2, :])
+        phi = np.flipud(los_data[1::2, :])
 
         def los_is_degree():
-            return num.abs(theta).max() > num.pi or num.abs(phi).max() > num.pi
+            return np.abs(theta).max() > np.pi or np.abs(phi).max() > np.pi
 
         if not los_is_degree():
             raise ImportError(
@@ -777,14 +777,14 @@ class ISCE(SceneIO):
                 "Change it to degree!" % op.basename(los_file)
             )
 
-        phi[phi == 0.0] = num.nan
-        theta[theta == 0.0] = num.nan
+        phi[phi == 0.0] = np.nan
+        theta[theta == 0.0] = np.nan
 
         phi *= d2r
         theta *= d2r
 
-        phi = num.pi / 2 + phi
-        theta = num.pi / 2 - theta
+        phi = np.pi / 2 + phi
+        theta = np.pi / 2 - theta
 
         container.phi = phi
         container.theta = theta
@@ -846,12 +846,12 @@ class GMTSAR(SceneIO):
         return disp_file
 
     def read(self, path, **kwargs):
-        from scipy.io import netcdf
+        from scipy.io import netcdf_file
 
         path = op.abspath(path)
         container = self.container
 
-        grd = netcdf.netcdf_file(self._getDisplacementFile(path), mode="r", version=2)
+        grd = netcdf_file(self._getDisplacementFile(path), mode="r", version=2)
         displ = grd.variables["z"][:].copy()
         container.displacement = displ
         shape = container.displacement.shape
@@ -869,21 +869,21 @@ class GMTSAR(SceneIO):
 
         # Theta and Phi
         try:
-            los = num.memmap(self._getLOSFile(path), dtype="<f4")
+            los = np.memmap(self._getLOSFile(path), dtype="<f4")
             e = los[3::6].copy().reshape(shape)
             n = los[4::6].copy().reshape(shape)
             u = los[5::6].copy().reshape(shape)
 
-            phi = num.arctan(n / e)
-            theta = num.arcsin(u)
-            # phi[n < 0] += num.pi
+            phi = np.arctan(n / e)
+            theta = np.arcsin(u)
+            # phi[n < 0] += np.pi
 
             container.phi = phi
             container.theta = theta
         except ImportError:
             self._log.warning(self.__doc__)
             self._log.warning("Defaulting theta to pi/2 and phi to 0.")
-            container.theta = num.pi / 2
+            container.theta = np.pi / 2
             container.phi = 0.0
         return container
 
@@ -906,8 +906,8 @@ class SARscape(SceneIO):
 
         def load_data(filename):
             self._log.debug("Loading %s" % filename)
-            return num.flipud(
-                num.fromfile(filename, dtype=num.float32).reshape(
+            return np.flipud(
+                np.fromfile(filename, dtype=np.float32).reshape(
                     (header.lines, header.samples)
                 )
             )
@@ -916,16 +916,16 @@ class SARscape(SceneIO):
         theta_file, phi_file = self.getLOSFiles(filename)
 
         if not theta_file:
-            theta = num.full_like(displacement, 0.0)
+            theta = np.full_like(displacement, 0.0)
         else:
             theta = load_data(theta_file)
-            theta = num.deg2rad(theta)
+            theta = np.deg2rad(theta)
 
         if not phi_file:
-            phi = num.full_like(displacement, num.pi / 2)
+            phi = np.full_like(displacement, np.pi / 2)
         else:
             phi = load_data(phi_file)
-            phi = num.pi / 2 - num.rad2deg(phi)
+            phi = np.pi / 2 - np.rad2deg(phi)
 
         container = self.container
         container.displacement = displacement
@@ -1039,9 +1039,9 @@ class LiCSAR(SceneIO):
     def _readBandData(dataset, band=1):
         band = dataset.GetRasterBand(band)
         array = band.ReadAsArray()
-        array[array == band.GetNoDataValue()] = num.nan
+        array[array == band.GetNoDataValue()] = np.nan
 
-        return num.flipud(array)
+        return np.flipud(array)
 
     def read(self, filename, **kwargs):
         dataset = gdal.Open(filename, gdal.GA_ReadOnly)
@@ -1059,7 +1059,7 @@ class LiCSAR(SceneIO):
         c.frame.dN = abs(georef[5])
 
         displacement = self._readBandData(dataset)
-        c.displacement = -displacement / (4 * num.pi) * LAMBDA_SENTINEL
+        c.displacement = -displacement / (4 * np.pi) * LAMBDA_SENTINEL
 
         try:
             los_n = self._getLOS(filename, "*.geo.N.tif")
@@ -1074,16 +1074,16 @@ class LiCSAR(SceneIO):
             heading = 83.0
             incident = 50.0
 
-            un = num.sin(d2r * incident) * num.cos(d2r * heading)
-            ue = num.sin(d2r * incident) * num.sin(d2r * heading)
-            uz = num.cos(d2r * incident)
+            un = np.sin(d2r * incident) * np.cos(d2r * heading)
+            ue = np.sin(d2r * incident) * np.sin(d2r * heading)
+            uz = np.cos(d2r * incident)
 
-            los_n = num.full_like(c.displacement, un)
-            los_e = num.full_like(c.displacement, ue)
-            los_u = num.full_like(c.displacement, uz)
+            los_n = np.full_like(c.displacement, un)
+            los_e = np.full_like(c.displacement, ue)
+            los_u = np.full_like(c.displacement, uz)
 
-        c.phi = num.arctan2(los_n, los_e)
-        c.theta = num.arcsin(los_u)
+        c.phi = np.arctan2(los_n, los_e)
+        c.theta = np.arcsin(los_u)
 
         c.meta.title = dataset.GetDescription()
 
@@ -1123,10 +1123,10 @@ class ARIA(SceneIO):
     def _readBandData(dataset, band=1):
         band = dataset.GetRasterBand(band)
         array = band.ReadAsArray()
-        if array.dtype != num.int16 and array.dtype != num.int:
-            array[array == band.GetNoDataValue()] = num.nan
+        if array.dtype != np.int16 and array.dtype != np.int:
+            array[array == band.GetNoDataValue()] = np.nan
 
-        return num.flipud(array)
+        return np.flipud(array)
 
     @staticmethod
     def _dataset_from_dir(folder):
@@ -1158,14 +1158,14 @@ class ARIA(SceneIO):
 
         displacement = self._readBandData(unw_phase)
         conn_mask = self._readBandData(conn_comp)  # Mask from snaphu
-        displacement *= num.where(conn_mask, 1.0, num.nan)
+        displacement *= np.where(conn_mask, 1.0, np.nan)
 
-        c.displacement = displacement / (4 * num.pi) * LAMBDA_SENTINEL
+        c.displacement = displacement / (4 * np.pi) * LAMBDA_SENTINEL
 
         inc_angle = self._dataset_from_dir(op.join(folder, "incidenceAngle"))
         azi_angle = self._dataset_from_dir(op.join(folder, "azimuthAngle"))
 
-        c.theta = num.pi / 2 - self._readBandData(inc_angle) * d2r
+        c.theta = np.pi / 2 - self._readBandData(inc_angle) * d2r
         c.phi = self._readBandData(azi_angle) * d2r
 
         c.meta.scene_id = op.basename(unw_phase.GetDescription())
@@ -1302,7 +1302,7 @@ class SNAP_Gamma(SceneIO):
 
         filename = phi_files[0]
         self._log.info("Loading LOS %s from %s" % (pattern, filename))
-        return num.memmap(filename, mode="r", dtype=">f4")
+        return np.memmap(filename, mode="r", dtype=">f4")
 
     def read(self, filename, **kwargs):
         """
@@ -1323,18 +1323,18 @@ class SNAP_Gamma(SceneIO):
         nlines = int(params["num_output_lines"])
         radar_frequency = params.get("radar_frequency", None)
         heading_par = float(params.get("centre_heading", None))
-        displ = num.fromfile(filename, dtype=">f4")
+        displ = np.fromfile(filename, dtype=">f4")
 
         # Resize array if last line is not scanned completely
         fill = 0
         if (displ.size % ncols) != 0:
-            fill = num.empty(ncols - displ.size % ncols)
-            fill.fill(num.nan)
-            displ = num.append(displ, fill)
+            fill = np.empty(ncols - displ.size % ncols)
+            fill.fill(np.nan)
+            displ = np.append(displ, fill)
 
         displ = displ.reshape(nlines, ncols)
-        displ[displ == -0.0] = num.nan
-        displ = num.flipud(displ)
+        displ[displ == -0.0] = np.nan
+        displ = np.flipud(displ)
 
         if radar_frequency and "_dsp_" not in par_file:
             radar_frequency = float(radar_frequency)
@@ -1343,7 +1343,7 @@ class SNAP_Gamma(SceneIO):
                 "Scaling displacement by radar_frequency %f GHz", radar_frequency / 1e9
             )
             wavelength = util.C / radar_frequency
-            displ /= -4 * num.pi
+            displ /= -4 * np.pi
             displ *= wavelength
 
         elif not radar_frequency and "_dsp_" not in par_file:
@@ -1357,12 +1357,12 @@ class SNAP_Gamma(SceneIO):
             filename, "incidenceAngleFromEllipsoid.rslc"
         ).copy()
         if fill:
-            inc_angle = num.append(inc_angle, fill)
-        inc_angle[inc_angle == 0.0] = num.nan
+            inc_angle = np.append(inc_angle, fill)
+        inc_angle[inc_angle == 0.0] = np.nan
 
-        phi = num.full_like(displ, (180.0 - heading_par))
+        phi = np.full_like(displ, (180.0 - heading_par))
         theta = 90.0 - inc_angle.reshape(displ.shape)
-        theta = num.flipud(theta)
+        theta = np.flipud(theta)
 
         c = self.container
 
@@ -1402,8 +1402,8 @@ class SNAP_Gamma(SceneIO):
             utm_corn_eo = utm_corn_e + dE * displ.shape[1]
             utm_corn_no = utm_corn_n + dN * displ.shape[0]
 
-            utm_e = num.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
-            utm_n = num.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
+            utm_e = np.linspace(utm_corn_e, utm_corn_eo, displ.shape[1])
+            utm_n = np.linspace(utm_corn_n, utm_corn_no, displ.shape[0])
 
             llLat, llLon = utm.to_latlon(
                 utm_e.min(), utm_n.min(), utm_zone, utm_zone_letter

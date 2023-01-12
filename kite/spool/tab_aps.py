@@ -1,4 +1,4 @@
-import numpy as num
+import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -102,8 +102,8 @@ class KiteAPSPlot(KitePlot):
     @QtCore.pyqtSlot()
     def updateTopoRegion(self):
         # data = self.roi.getArrayRegion(self.image.image, self.image)
-        # data[data == 0.] = num.nan
-        # if num.all(num.isnan(data)):
+        # data[data == 0.] = np.nan
+        # if np.all(np.isnan(data)):
         #     return
 
         llE, llN = self.roi.pos()
@@ -153,7 +153,7 @@ class KiteAPSCorrelation(KiteSubplot):
         self.aps_correlation.setData(elevation[::step], displacement[::step])
 
         slope, intercept = aps.get_correlation()
-        elev = num.array([elevation.min(), elevation.max()])
+        elev = np.array([elevation.min(), elevation.max()])
         model = elev * slope + intercept
 
         self.aps_model.setData(elev, model)

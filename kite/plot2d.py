@@ -2,7 +2,7 @@ import logging
 import time
 
 import matplotlib.pyplot as plt
-import numpy as num
+import numpy as np
 from matplotlib.image import AxesImage
 
 from kite.util import Subject
@@ -84,7 +84,7 @@ class Plot2D(object):
     @data.getter
     def data(self):
         if self._data is None:
-            return num.zeros((50, 50))
+            return np.zeros((50, 50))
         return self._data
 
     def _initImagePlot(self, **kwargs):
@@ -150,8 +150,8 @@ class Plot2D(object):
         :param symmetric: symmetric colormap around 0, defaults to True
         :type symmetric: bool, optional
         """
-        vmax = num.nanmax(self.data)
-        vmin = num.nanmin(self.data)
+        vmax = np.nanmax(self.data)
+        vmin = np.nanmin(self.data)
         self.colormap_limits = (vmin, vmax)
 
     @property
@@ -250,7 +250,7 @@ class ScenePlot(Plot2D):
         self._component = "displacement"
 
     def plot(self, component="displacement", **kwargs):
-        """Plots any component fom Scene
+        """Plots any component from Scene
                 The following components are recognizes
 
                 - 'cartesian.dE'
@@ -451,11 +451,11 @@ class CovariancePlot(object):
 
     def plotCovariance(self, ax):
         cov, d = self._covariance.getCovariance()
-        var = num.empty_like(d)
+        var = np.empty_like(d)
         var.fill(self.variance)
         ax.plot(d, cov)
 
-        # d_interp = num.linspace(d.min(), d.max()+10000., num=50)
+        # d_interp = np.linspace(d.min(), d.max()+10000., num=50)
         # ax.plot(d_interp, self._covariance.covariance(d_interp),
         #        label='Interpolated', ls='--')
         model = self._covariance.getModelFunction(d, *self._covariance.covariance_model)
@@ -473,7 +473,7 @@ class CovariancePlot(object):
         noise_coord = self._covariance.noise_coord
 
         ax.imshow(
-            num.flipud(noise_data),
+            np.flipud(noise_data),
             aspect="equal",
             extent=(0, noise_coord[2], 0, noise_coord[3]),
         )
@@ -484,7 +484,7 @@ class CovariancePlot(object):
 
     def plotSemivariogram(self, ax):
         svar, d = self._covariance.structure_spatial
-        var = num.empty_like(d)
+        var = np.empty_like(d)
         var.fill(self.variance)
         ax.plot(d, svar)
         ax.plot(d, var, label="variance", ls="--")
@@ -505,8 +505,8 @@ class CovariancePlot(object):
             k_y,
         ) = self._covariance.powerspecNoise1D()  # noiseSpectrum()
 
-        # power_spec_x = num.mean(f_spec, axis=1)
-        # power_spec_y = num.mean(f_spec, axis=0)
+        # power_spec_x = np.mean(f_spec, axis=1)
+        # power_spec_y = np.mean(f_spec, axis=0)
 
         # ax.plot(k_x[k_x > 0], power_spec_x[k_x > 0], label='$k_x$')
         # ax.plot(k_y[k_y > 0], power_spec_y[k_y > 0], label='$k_y$')
@@ -535,7 +535,7 @@ class CovariancePlot(object):
             return (k**a) / b
 
         def selectRegime(k, d1, d2):
-            return num.logical_and(((1.0) / k) > d1, ((1.0) / k) < d2)
+            return np.logical_and(((1.0) / k) > d1, ((1.0) / k) < d2)
 
         def curve_fit(k, p_spec):
             return sp.optimize.curve_fit(
@@ -546,7 +546,7 @@ class CovariancePlot(object):
                 sigma=None,
                 absolute_sigma=False,
                 check_finite=True,
-                bounds=(-num.inf, num.inf),
+                bounds=(-np.inf, np.inf),
                 method=None,
                 jac=None,
             )
@@ -554,12 +554,12 @@ class CovariancePlot(object):
         def covar_analyt(p, k):
             ps = behaviour(k[k > 0], *p)
             cov = sp.fftpack.dct(ps, type=2, n=None, axis=-1, norm="ortho")
-            d = num.arange(1, k[k > 0].size + 1) * self.scene.frame.dE
+            d = np.arange(1, k[k > 0].size + 1) * self.scene.frame.dE
             return cov, d
 
         power_spec, k, f_spec, k_x, k_y = self._covariance.noiseSpectrum()
         # Regimes accord. to Hanssen, 2001
-        reg1 = selectRegime(k_x, 2000.0, num.inf)
+        reg1 = selectRegime(k_x, 2000.0, np.inf)
         reg2 = selectRegime(k_x, 500.0, 2000.0)
         reg3 = selectRegime(k_x, 10.0, 500.0)
 
@@ -587,8 +587,8 @@ class SyntheticNoisePlot(object):
     def __init__(self, covariance, *args, **kwargs):
         self._covariance = covariance
         self.noise_data = self._covariance.noise_data
-        clim_max = num.nanmax(self.noise_data)
-        clim_min = num.nanmin(self.noise_data)
+        clim_max = np.nanmax(self.noise_data)
+        clim_min = np.nanmin(self.noise_data)
         self.clim = min(abs(clim_max), abs(clim_min))
         self.fig = plt.figure(figsize=(6.692, 3.149))
 
@@ -618,7 +618,7 @@ class SyntheticNoisePlot(object):
         noise_coord = self._covariance.noise_coord
 
         im = ax.imshow(
-            num.flipud(self.noise_data),
+            np.flipud(self.noise_data),
             aspect="equal",
             extent=(0, noise_coord[2], 0, noise_coord[3]),
         )
@@ -631,12 +631,12 @@ class SyntheticNoisePlot(object):
         im.set_clim(-self.clim, self.clim)
 
     def plotSynthNoise(self, ax):
-        noise_shape = num.shape(self.noise_data)
+        noise_shape = np.shape(self.noise_data)
         noise_data = self._covariance.syntheticNoise(noise_shape)
         noise_coord = self._covariance.noise_coord
 
         im = ax.imshow(
-            num.flipud(noise_data),
+            np.flipud(noise_data),
             aspect="equal",
             extent=(0, noise_coord[2], 0, noise_coord[3]),
         )

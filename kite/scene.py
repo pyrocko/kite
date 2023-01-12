@@ -6,7 +6,7 @@ import os.path as op
 import time
 from datetime import datetime as dt
 
-import numpy as num
+import numpy as np
 import utm
 from pyrocko.dataset.topo import srtmgl3
 from pyrocko.guts import Dict, Float, Object, String, StringChoice, Timestamp, load
@@ -38,7 +38,7 @@ def read(filename):
 
 
 def _setDataNumpy(obj, variable, value):
-    if isinstance(value, num.ndarray):
+    if isinstance(value, np.ndarray):
         return obj.__setattr__(variable, value)
     else:
         raise TypeError("value must be of type numpy.ndarray")
@@ -221,15 +221,15 @@ class Frame(object):
 
     @property_cached
     def E(self):
-        return num.arange(self.cols) * self.dE
+        return np.arange(self.cols) * self.dE
 
     @property_cached
     def Emeter(self):
-        return num.arange(self.cols) * self.dEmeter
+        return np.arange(self.cols) * self.dEmeter
 
     @property_cached
     def N(self):
-        return num.arange(self.rows) * self.dN
+        return np.arange(self.rows) * self.dN
 
     @property
     def lengthE(self):
@@ -241,7 +241,7 @@ class Frame(object):
 
     @property_cached
     def Nmeter(self):
-        return num.arange(self.rows) * self.dNmeter
+        return np.arange(self.rows) * self.dNmeter
 
     @property_cached
     def gridE(self):
@@ -250,9 +250,9 @@ class Frame(object):
 
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
-        valid_data = num.isnan(self._scene.displacement)
-        gridE = num.repeat(self.E[num.newaxis, :], self.rows, axis=0)
-        return num.ma.masked_array(gridE, valid_data, fill_value=num.nan)
+        valid_data = np.isnan(self._scene.displacement)
+        gridE = np.repeat(self.E[np.newaxis, :], self.rows, axis=0)
+        return np.ma.masked_array(gridE, valid_data, fill_value=np.nan)
 
     @property_cached
     def gridN(self):
@@ -261,9 +261,9 @@ class Frame(object):
 
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
-        valid_data = num.isnan(self._scene.displacement)
-        gridN = num.repeat(self.N[:, num.newaxis], self.cols, axis=1)
-        return num.ma.masked_array(gridN, valid_data, fill_value=num.nan)
+        valid_data = np.isnan(self._scene.displacement)
+        gridN = np.repeat(self.N[:, np.newaxis], self.cols, axis=1)
+        return np.ma.masked_array(gridN, valid_data, fill_value=np.nan)
 
     def _calculateMeterGrid(self):
         if self.isMeter():
@@ -280,12 +280,12 @@ class Frame(object):
                 self.llLon + self.gridE.data.ravel(),
             )
 
-            valid_data = num.isnan(self._scene.displacement)
-            gridE = num.ma.masked_array(
-                gridE.reshape(self.gridE.shape), valid_data, fill_value=num.nan
+            valid_data = np.isnan(self._scene.displacement)
+            gridE = np.ma.masked_array(
+                gridE.reshape(self.gridE.shape), valid_data, fill_value=np.nan
             )
-            gridN = num.ma.masked_array(
-                gridN.reshape(self.gridN.shape), valid_data, fill_value=num.nan
+            gridN = np.ma.masked_array(
+                gridN.reshape(self.gridN.shape), valid_data, fill_value=np.nan
             )
             self._meter_grid = (gridE, gridN)
 
@@ -311,13 +311,13 @@ class Frame(object):
 
         :type: :class:`numpy.ndarray`, size ``Nx2``
         """
-        coords = num.empty((self.rows * self.cols, 2))
-        coords[:, 0] = num.repeat(self.E[num.newaxis, :], self.rows, axis=0).flatten()
-        coords[:, 1] = num.repeat(self.N[:, num.newaxis], self.cols, axis=1).flatten()
+        coords = np.empty((self.rows * self.cols, 2))
+        coords[:, 0] = np.repeat(self.E[np.newaxis, :], self.rows, axis=0).flatten()
+        coords[:, 1] = np.repeat(self.N[:, np.newaxis], self.cols, axis=1).flatten()
 
         if self.isMeter():
             coords = ne_to_latlon(self.llLat, self.llLon, *coords.T)
-            coords = num.array(coords).T
+            coords = np.array(coords).T
 
         else:
             coords[:, 0] += self.llLon
@@ -332,12 +332,12 @@ class Frame(object):
 
         :type: :class:`numpy.ndarray`, size ``NxM``
         """
-        coords = num.empty((self.rows * self.cols, 2))
-        coords[:, 0] = num.repeat(
-            self.Emeter[num.newaxis, :], self.rows, axis=0
+        coords = np.empty((self.rows * self.cols, 2))
+        coords[:, 0] = np.repeat(
+            self.Emeter[np.newaxis, :], self.rows, axis=0
         ).flatten()
-        coords[:, 1] = num.repeat(
-            self.Nmeter[:, num.newaxis], self.cols, axis=1
+        coords[:, 1] = np.repeat(
+            self.Nmeter[:, np.newaxis], self.cols, axis=1
         ).flatten()
         return coords
 
@@ -531,7 +531,7 @@ class BaseScene(object):
 
         :type: :class:`numpy.ndarray`, dtype :class:`numpy.bool`
         """
-        return ~num.isfinite(self.displacement)
+        return ~np.isfinite(self.displacement)
 
     @property
     def shape(self):
@@ -603,7 +603,7 @@ class BaseScene(object):
 
         :type: :class:`numpy.ndarray`
         """
-        return num.rad2deg(self.theta)
+        return np.rad2deg(self.theta)
 
     @property_cached
     def phiDeg(self):
@@ -613,7 +613,7 @@ class BaseScene(object):
 
         :type: :class:`numpy.ndarray`
         """
-        return num.rad2deg(self.phi)
+        return np.rad2deg(self.phi)
 
     @property_cached
     def los_rotation_factors(self):
@@ -636,10 +636,10 @@ class BaseScene(object):
                 "LOS angles inconsistent with provided" " coordinate shape."
             )
         if self._los_factors is None:
-            self._los_factors = num.empty((self.theta.shape[0], self.theta.shape[1], 3))
-            self._los_factors[:, :, 0] = num.sin(self.theta)
-            self._los_factors[:, :, 1] = num.cos(self.theta) * num.cos(self.phi)
-            self._los_factors[:, :, 2] = num.cos(self.theta) * num.sin(self.phi)
+            self._los_factors = np.empty((self.theta.shape[0], self.theta.shape[1], 3))
+            self._los_factors[:, :, 0] = np.sin(self.theta)
+            self._los_factors[:, :, 1] = np.cos(self.theta) * np.cos(self.phi)
+            self._los_factors[:, :, 2] = np.cos(self.theta) * np.sin(self.phi)
         return self._los_factors
 
     def get_elevation(self, interpolation="nearest_neighbor"):
@@ -661,8 +661,8 @@ class BaseScene(object):
                 raise AssertionError("Cannot get SRTMGL3 topo dataset")
 
             if interpolation == "nearest_neighbor":
-                iy = num.rint((lats - tile.ymin) / tile.dy).astype(num.intp)
-                ix = num.rint((lons - tile.xmin) / tile.dx).astype(num.intp)
+                iy = np.rint((lats - tile.ymin) / tile.dy).astype(np.intp)
+                ix = np.rint((lons - tile.xmin) / tile.dx).astype(np.intp)
 
                 elevation = tile.data[(iy, ix)]
 
@@ -889,7 +889,7 @@ class Scene(BaseScene):
         components = ["_displacement", "theta", "phi"]
         self._log.debug("Saving scene data to %s.npz" % filename)
 
-        num.savez("%s.npz" % (filename), *[getattr(self, arr) for arr in components])
+        np.savez("%s.npz" % (filename), *[getattr(self, arr) for arr in components])
 
         self.gacos.save(op.dirname(op.abspath(filename)))
 
@@ -916,7 +916,7 @@ class Scene(BaseScene):
         basename = op.splitext(filename)[0]
 
         try:
-            data = num.load("%s.npz" % basename)
+            data = np.load("%s.npz" % basename)
             displacement = data["arr_0"]
             theta = data["arr_1"]
             phi = data["arr_2"]
@@ -1069,7 +1069,7 @@ class TestScene(Scene):
         scene.meta.title = "Synthetic Displacement | Uniform Random"
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        rand_state = num.random.RandomState(seed=kwargs.pop("seed", None))
+        rand_state = np.random.RandomState(seed=kwargs.pop("seed", None))
         scene.displacement = (rand_state.rand(nx, ny) - 0.5) * 2
 
         return scene
@@ -1082,19 +1082,19 @@ class TestScene(Scene):
         scene.meta.title = "Synthetic Displacement | Sine"
         scene = cls._prepareSceneTest(scene, nx, ny)
 
-        E, N = num.meshgrid(scene.frame.E, scene.frame.N)
-        displ = num.zeros_like(E)
+        E, N = np.meshgrid(scene.frame.E, scene.frame.N)
+        displ = np.zeros_like(E)
 
-        kE = num.random.rand(3) * kE
-        kN = num.random.rand(3) * kN
+        kE = np.random.rand(3) * kE
+        kN = np.random.rand(3) * kN
 
         for ke in kE:
-            phase = num.random.randn(1)[0]
-            displ += num.sin(ke * E + phase)
+            phase = np.random.randn(1)[0]
+            displ += np.sin(ke * E + phase)
         for kn in kN:
-            phase = num.random.randn(1)[0]
-            displ += num.sin(kn * N + phase)
-        displ -= num.mean(displ)
+            phase = np.random.randn(1)[0]
+            displ += np.sin(kn * N + phase)
+        displ -= np.mean(displ)
 
         scene.displacement = displ * amplitude
         if noise is not None:
@@ -1118,23 +1118,23 @@ class TestScene(Scene):
 
         dE, dN = (scene.frame.dE, scene.frame.dN)
 
-        rfield = num.random.rand(nE, nN)
-        spec = num.fft.fft2(rfield)
+        rfield = np.random.rand(nE, nN)
+        spec = np.fft.fft2(rfield)
 
-        kE = num.fft.fftfreq(nE, dE)
-        kN = num.fft.fftfreq(nN, dN)
-        k_rad = num.sqrt(kN[:, num.newaxis] ** 2 + kE[num.newaxis, :] ** 2)
+        kE = np.fft.fftfreq(nE, dE)
+        kN = np.fft.fftfreq(nN, dN)
+        k_rad = np.sqrt(kN[:, np.newaxis] ** 2 + kE[np.newaxis, :] ** 2)
 
-        regime = num.array(regime)
+        regime = np.array(regime)
         k0 = 0.0
         k1 = regime[0] * k_rad.max()
         k2 = regime[1] * k_rad.max()
 
-        r0 = num.logical_and(k_rad > k0, k_rad < k1)
-        r1 = num.logical_and(k_rad >= k1, k_rad < k2)
+        r0 = np.logical_and(k_rad > k0, k_rad < k1)
+        r1 = np.logical_and(k_rad >= k1, k_rad < k2)
         r2 = k_rad >= k2
 
-        beta = num.array(beta)
+        beta = np.array(beta)
         # From Hanssen (2001)
         #   beta+1 is used as beta, since, the power exponent
         #   is defined for a 1D slice of the 2D spectrum:
@@ -1151,7 +1151,7 @@ class TestScene(Scene):
         #   so we should take sqrt( k.^beta) = k.^(beta/2)  RH
         # beta /= 2.
 
-        amp = num.zeros_like(k_rad)
+        amp = np.zeros_like(k_rad)
         amp[r0] = k_rad[r0] ** -beta[0]
         amp[r0] /= amp[r0].max()
 
@@ -1163,15 +1163,15 @@ class TestScene(Scene):
 
         amp[k_rad == 0.0] = amp.max()
 
-        spec *= amplitude * num.sqrt(amp)
-        disp = num.abs(num.fft.ifft2(spec))
-        disp -= num.mean(disp)
+        spec *= amplitude * np.sqrt(amp)
+        disp = np.abs(np.fft.ifft2(spec))
+        disp -= np.mean(disp)
 
         scene.displacement = disp
         return scene
 
     def addNoise(self, noise_amplitude=1.0, seed=None):
-        rand = num.random.RandomState(seed)
+        rand = np.random.RandomState(seed)
         noise = rand.randn(*self.displacement.shape) * noise_amplitude
         self.displacement += noise
 
@@ -1181,11 +1181,11 @@ class TestScene(Scene):
         scene.frame.llLon = 0.0
         scene.frame.dLat = 5e-4
         scene.frame.dLon = 5e-4
-        # scene.frame.E = num.arange(nE) * 50.
-        # scene.frame.N = num.arange(nN) * 50.
-        scene.theta = num.repeat(num.linspace(0.8, 0.85, nE), nN).reshape((nE, nN))
-        scene.phi = num.rot90(scene.theta)
-        scene.displacement = num.zeros((nE, nN))
+        # scene.frame.E = np.arange(nE) * 50.
+        # scene.frame.N = np.arange(nN) * 50.
+        scene.theta = np.repeat(np.linspace(0.8, 0.85, nE), nN).reshape((nE, nN))
+        scene.phi = np.rot90(scene.theta)
+        scene.displacement = np.zeros((nE, nN))
         return scene
 
     @staticmethod
@@ -1196,9 +1196,9 @@ class TestScene(Scene):
             x0 = x.min() + abs(x.max() - x.min()) / 2
         if y0 is None:
             y0 = y.min() + abs(y.max() - y.min()) / 2
-        X, Y = num.meshgrid(x, y)
+        X, Y = np.meshgrid(x, y)
 
-        gauss_anomaly = amplitude * num.exp(
+        gauss_anomaly = amplitude * np.exp(
             -(((X - x0) ** 2 / 2 * sigma_x**2) + (Y - y0) ** 2 / 2 * sigma_y**2)
         )
 

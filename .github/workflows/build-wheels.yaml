@@ -21,7 +21,7 @@ jobs:
 
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.8.1
+        uses: pypa/cibuildwheel@v2.11.4
         # to supply options, put them in 'env', like:
         env:
           CIBW_ARCHS_MACOS: x86_64 universal2
@@ -60,7 +60,7 @@ jobs:
           name: artifact
           path: dist
 
-      - uses: pypa/gh-action-pypi-publish@v1.5.0
+      - uses: pypa/gh-action-pypi-publish@v1.6.2
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}

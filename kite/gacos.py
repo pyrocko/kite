@@ -4,7 +4,7 @@ import re
 import shutil
 from datetime import datetime, timedelta
 
-import numpy as num
+import numpy as np
 from pyrocko.guts import Bool, List
 
 from .plugin import Plugin, PluginConfig
@@ -84,13 +84,13 @@ class GACOSGrid(object):
         row_offset = (self.ulLat - ulLat) // -self.dLat
         col_offset = (ulLon - self.llLon) // self.dLon
 
-        idx_rows = row_offset + (num.arange(rows) * dLat // -self.dLat)
-        idx_cols = col_offset + (num.arange(cols) * dLon // self.dLon)
+        idx_rows = row_offset + (np.arange(rows) * dLat // -self.dLat)
+        idx_cols = col_offset + (np.arange(cols) * dLon // self.dLon)
 
-        idx_rows = num.repeat(idx_rows, cols).astype(num.intp)
-        idx_cols = num.tile(idx_cols, rows).astype(num.intp)
+        idx_rows = np.repeat(idx_rows, cols).astype(np.intp)
+        idx_cols = np.tile(idx_cols, rows).astype(np.intp)
 
-        return num.flipud(self.data[idx_rows, idx_cols].reshape(rows, cols))
+        return np.flipud(self.data[idx_rows, idx_cols].reshape(rows, cols))
 
     @classmethod
     def load(cls, filename):
@@ -115,7 +115,7 @@ class GACOSGrid(object):
         dLat = float(params["Y_STEP"])
         dLon = float(params["X_STEP"])
 
-        data = num.memmap(filename, dtype=num.float32, mode="r", shape=(rows, cols))
+        data = np.memmap(filename, dtype=np.float32, mode="r", shape=(rows, cols))
 
         return cls(filename, time, data, ulLat, ulLon, dLat, dLon)
 
@@ -211,7 +211,7 @@ class GACOSCorrection(Plugin):
     def apply(self, displacement):
         self._log.info("Applying GACOS model to displacement")
         correction = self.get_correction()
-        correction *= 1.0 / num.sin(self.scene.phi)
+        correction *= 1.0 / np.sin(self.scene.phi)
 
         displacement -= correction
         return displacement

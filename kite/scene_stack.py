@@ -1,6 +1,6 @@
 from datetime import datetime
 
-import numpy as num
+import numpy as np
 
 from .scene import BaseScene, Scene
 
@@ -72,7 +72,7 @@ class SceneStack(Scene):
 
     @property
     def displacement_mask(self):
-        return ~num.isfinite(self.displacement)
+        return ~np.isfinite(self.displacement)
 
     @displacement.setter
     def displacement(self):
@@ -80,7 +80,7 @@ class SceneStack(Scene):
 
     def get_scene_at(self, timestamp):
         times = self.times
-        time = times[num.abs(num.array(times) - timestamp).argmin()]
+        time = times[np.abs(np.array(times) - timestamp).argmin()]
         return time, self._scenes[time]
 
     def set_time_range(self, tmin, tmax):

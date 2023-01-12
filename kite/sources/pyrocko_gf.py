@@ -1,11 +1,11 @@
-import numpy as num
+import numpy as np
 from pyrocko import gf
 from pyrocko.guts import Float, Int, String
 
 from .base import SandboxSource, SandboxSourceRectangular, SourceProcessor
 
-d2r = num.pi / 180.0
-r2d = 180.0 / num.pi
+d2r = np.pi / 180.0
+r2d = 180.0 / np.pi
 km = 1e3
 km3 = 1e9
 
@@ -241,16 +241,16 @@ class PyrockoProcessor(SourceProcessor):
     def process(self, sources, sandbox, nthreads=0):
         result = {
             "processor_profile": dict(),
-            "displacement.n": num.zeros(sandbox.frame.npixel),
-            "displacement.e": num.zeros(sandbox.frame.npixel),
-            "displacement.d": num.zeros(sandbox.frame.npixel),
+            "displacement.n": np.zeros(sandbox.frame.npixel),
+            "displacement.e": np.zeros(sandbox.frame.npixel),
+            "displacement.d": np.zeros(sandbox.frame.npixel),
         }
 
         coords = sandbox.frame.coordinatesMeter
 
         target = gf.StaticTarget(
-            lats=num.full(sandbox.frame.npixel, sandbox.frame.llLat),
-            lons=num.full(sandbox.frame.npixel, sandbox.frame.llLon),
+            lats=np.full(sandbox.frame.npixel, sandbox.frame.llLat),
+            lons=np.full(sandbox.frame.npixel, sandbox.frame.llLon),
             east_shifts=coords[:, 0],
             north_shifts=coords[:, 1],
             interpolation="nearest_neighbor",

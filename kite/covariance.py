@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 from hashlib import sha1
 
-import numpy as num
+import numpy as np
 import scipy as sp
 
 try:
@@ -25,10 +25,10 @@ NOISE_PATCH_MIN_PX = 256 * 256
 NOISE_PATCH_MAX_NAN = 0.8
 
 noise_regimes = [
-    (1.0 / 2000, num.inf),
+    (1.0 / 2000, np.inf),
     (1.0 / 2000, 1.0 / 500),
     (1.0 / 500, 1.0 / 10),
-    (0, num.inf),
+    (0, np.inf),
 ]
 
 
@@ -51,7 +51,7 @@ def modelCovarianceExponential(distance, a, b):
     :returns: Covariance at ``distance``
     :rtype: :class:`numpy.ndarray`
     """
-    return a * num.exp(-distance / b)
+    return a * np.exp(-distance / b)
 
 
 def modelCovarianceExponentialCosine(distance, a, b, c, d):
@@ -77,7 +77,7 @@ def modelCovarianceExponentialCosine(distance, a, b, c, d):
     :returns: Covariance at ``distance``
     :rtype: :class:`numpy.ndarray`
     """
-    return a * num.exp(-distance / b) * num.cos((distance - c) / d)
+    return a * np.exp(-distance / b) * np.cos((distance - c) / d)
 
 
 def modelPowerspec(k, beta, D):
@@ -103,7 +103,7 @@ def modelPowerspec(k, beta, D):
 class CovarianceConfig(guts.Object):
     noise_coord = Array.T(
         shape=(None,),
-        dtype=num.float,
+        dtype=float,
         serialize_as="list",
         optional=True,
         help="Noise patch coordinates and size,",
@@ -135,7 +135,7 @@ class CovarianceConfig(guts.Object):
         default=True, help="Adaptive subsampling flag for full covariance calculation."
     )
     covariance_matrix = Array.T(
-        dtype=num.float,
+        dtype=float,
         optional=True,
         serialize_as="base64",
         help="Cached covariance matrix, "
@@ -262,7 +262,7 @@ class Covariance(object):
 
     @noise_coord.setter
     def noise_coord(self, values):
-        self.config.noise_coord = num.array(values)
+        self.config.noise_coord = np.array(values)
 
     @property
     def noise_patch_size_km2(self):
@@ -314,7 +314,7 @@ class Covariance(object):
     def noise_data(self, data):
         data = data.copy()
         data = derampMatrix(trimMatrix(data))
-        data[num.isnan(data)] = 0.0
+        data[np.isnan(data)] = 0.0
         self._noise_data = data
         self._clear()
 
@@ -367,16 +367,16 @@ class Covariance(object):
         lmax = max([n.std for n in node_selection])
 
         def costFunction(n):
-            nl = num.log2(n.length) / num.log2(lmax)
+            nl = np.log2(n.length) / np.log2(lmax)
             ns = n.std / stdmax
             return nl * (1.0 - ns) * (1.0 - n.nan_fraction)
 
-        fitness = num.array([costFunction(n) for n in node_selection])
+        fitness = np.array([costFunction(n) for n in node_selection])
 
         self._log.debug(
             "Fetched noise from Quadtree.nodes [%0.4f s]" % (time.time() - t0)
         )
-        node = node_selection[num.argmin(fitness)]
+        node = node_selection[np.argmin(fitness)]
         return node
 
     def _mapLeaves(self, nx, ny):
@@ -414,7 +414,7 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
-        if not isinstance(self.config.covariance_matrix, num.ndarray):
+        if not isinstance(self.config.covariance_matrix, np.ndarray):
             self.config.covariance_matrix = self._calcCovarianceMatrix(method="full")
             self.evChanged.notify()
         elif self.config.covariance_matrix.ndim == 1:
@@ -432,7 +432,7 @@ class Covariance(object):
     def covariance_matrix_focal(self):
         """Approximate Covariance matrix from quadtree leaf pair
             distance only. Fast, use for intermediate steps only and
-            finallly use approach :attr:`~kite.Covariance.covariance_matrix`.
+            finally use approach :attr:`~kite.Covariance.covariance_matrix`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x
@@ -448,7 +448,7 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
-        return num.linalg.inv(self.covariance_matrix)
+        return np.linalg.inv(self.covariance_matrix)
 
     @property_cached
     def weight_matrix_L2(self):
@@ -458,7 +458,7 @@ class Covariance(object):
             size (:class:`~kite.Quadtree.nleaves` x
             :class:`~kite.Quadtree.nleaves`)
         """
-        incov = num.linalg.inv(self.covariance_matrix)
+        incov = np.linalg.inv(self.covariance_matrix)
         return sp.linalg.sqrtm(incov)
 
     @property_cached
@@ -471,10 +471,10 @@ class Covariance(object):
             :class:`~kite.Quadtree.nleaves`)
         """
         try:
-            return num.linalg.inv(self.covariance_matrix_focal)
-        except num.linalg.LinAlgError as e:
+            return np.linalg.inv(self.covariance_matrix_focal)
+        except np.linalg.LinAlgError as e:
             self._log.exception(e)
-            return num.eye(self.covariance_matrix_focal.shape[0])
+            return np.eye(self.covariance_matrix_focal.shape[0])
 
     @property_cached
     def weight_vector(self):
@@ -482,7 +482,7 @@ class Covariance(object):
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves`)
         """
-        return num.sum(self.weight_matrix, axis=1)
+        return np.sum(self.weight_matrix, axis=1)
 
     @property_cached
     def weight_vector_focal(self):
@@ -491,7 +491,7 @@ class Covariance(object):
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves`)
         """
-        return num.sum(self.weight_matrix_focal, axis=1)
+        return np.sum(self.weight_matrix_focal, axis=1)
 
     def _calcCovarianceMatrix(self, method="focal", nthreads=None):
         """Constructs the covariance matrix.
@@ -516,9 +516,9 @@ class Covariance(object):
             model = self.getModelFunction()
 
             coords = self.quadtree.leaf_focal_points_meter
-            dist_matrix = num.sqrt(
-                (coords[:, 0] - coords[:, 0, num.newaxis]) ** 2
-                + (coords[:, 1] - coords[:, 1, num.newaxis]) ** 2
+            dist_matrix = np.sqrt(
+                (coords[:, 0] - coords[:, 0, np.newaxis]) ** 2
+                + (coords[:, 1] - coords[:, 1, np.newaxis]) ** 2
             )
             cov_matrix = model(dist_matrix, *self.covariance_model)
 
@@ -530,13 +530,13 @@ class Covariance(object):
             if self.quadtree.leaf_mean_px_var is not None:
                 self._log.debug("Adding variance from scene.displacement_px_var")
                 variance += self.quadtree.leaf_mean_px_var
-            num.fill_diagonal(cov_matrix, variance)
+            np.fill_diagonal(cov_matrix, variance)
 
-            for nx, ny in num.nditer(num.triu_indices_from(dist_matrix)):
+            for nx, ny in np.nditer(np.triu_indices_from(dist_matrix)):
                 self._mapLeaves(nx, ny)
 
         elif method == "full":
-            leaf_map = num.empty((len(self.quadtree.leaves), 4), dtype=num.uint32)
+            leaf_map = np.empty((len(self.quadtree.leaves), 4), dtype=np.uint32)
             for nl, leaf in enumerate(self.quadtree.leaves):
                 leaf, _ = self._mapLeaves(nl, nl)
                 leaf_map[nl, 0], leaf_map[nl, 1] = (
@@ -562,7 +562,7 @@ class Covariance(object):
             if self.quadtree.leaf_mean_px_var is not None:
                 self._log.debug("Adding variance from scene.displacement_px_var")
                 cov_matrix[
-                    num.diag_indices_from(cov_matrix)
+                    np.diag_indices_from(cov_matrix)
                 ] += self.quadtree.leaf_mean_px_var
 
         else:
@@ -581,11 +581,11 @@ class Covariance(object):
             matrix = self.covariance_matrix_focal
 
         try:
-            chol_decomp = num.linalg.cholesky(matrix)
-        except num.linalg.linalg.LinAlgError:
+            chol_decomp = np.linalg.cholesky(matrix)
+        except np.linalg.linalg.LinAlgError:
             pos_def = False
         else:
-            pos_def = ~num.all(num.iscomplex(chol_decomp))
+            pos_def = ~np.all(np.iscomplex(chol_decomp))
         finally:
             if not pos_def:
                 self._log.warning("Covariance matrix is not positive definite!")
@@ -593,7 +593,7 @@ class Covariance(object):
 
     @staticmethod
     def _leafFocalDistance(leaf1, leaf2):
-        return num.sqrt(
+        return np.sqrt(
             (leaf1.focal_point[0] - leaf2.focal_point[0]) ** 2
             + (leaf1.focal_point[1] - leaf2.focal_point[1]) ** 2
         )
@@ -641,7 +641,7 @@ class Covariance(object):
         """
         (nl, _) = self._leafMapping(leaf, leaf)
         weight_mat = self.weight_matrix_focal
-        return num.mean(weight_mat, axis=0)[nl]
+        return np.mean(weight_mat, axis=0)[nl]
 
     def syntheticNoise(
         self, shape=(1024, 1024), dEdN=None, anisotropic=False, rstate=None
@@ -674,64 +674,64 @@ class Covariance(object):
         nN = shape[0] + (shape[0] % 2)
 
         if rstate is None:
-            rstate = num.random.RandomState()
+            rstate = np.random.RandomState()
 
         rfield = rstate.rand(nN, nE)
-        spec = num.fft.fft2(rfield)
+        spec = np.fft.fft2(rfield)
 
         if not dEdN:
             dE, dN = (self.scene.frame.dEmeter, self.scene.frame.dNmeter)
-        kE = num.fft.fftfreq(nE, dE)
-        kN = num.fft.fftfreq(nN, dN)
-        k_rad = num.sqrt(kN[:, num.newaxis] ** 2 + kE[num.newaxis, :] ** 2)
+        kE = np.fft.fftfreq(nE, dE)
+        kN = np.fft.fftfreq(nN, dN)
+        k_rad = np.sqrt(kN[:, np.newaxis] ** 2 + kE[np.newaxis, :] ** 2)
 
-        amp = num.zeros_like(k_rad)
+        amp = np.zeros_like(k_rad)
 
         if not anisotropic:
             noise_pspec, k, _, _, _, _ = self.powerspecNoise2D()
-            k_bin = num.insert(k + k[0] / 2, 0, 0)
+            k_bin = np.insert(k + k[0] / 2, 0, 0)
 
             for i in range(k.size):
                 k_min = k_bin[i]
                 k_max = k_bin[i + 1]
-                r = num.logical_and(k_rad > k_min, k_rad <= k_max)
+                r = np.logical_and(k_rad > k_min, k_rad <= k_max)
                 if i == (k.size - 1):
                     r = k_rad > k_min
-                if not num.any(r):
+                if not np.any(r):
                     continue
                 amp[r] = noise_pspec[i]
             amp[k_rad == 0.0] = self.variance
-            amp[k_rad > k.max()] = noise_pspec[num.argmax(k)]
-            amp = num.sqrt(amp * self.noise_data.size * num.pi * 4)
+            amp[k_rad > k.max()] = noise_pspec[np.argmax(k)]
+            amp = np.sqrt(amp * self.noise_data.size * np.pi * 4)
 
         elif anisotropic:
             interp_pspec, _, _, _, skE, skN = self.powerspecNoise3D()
-            kE = num.fft.fftshift(kE)
-            kN = num.fft.fftshift(kN)
-            make = num.logical_and(kE >= skE.min(), kE <= skE.max())
-            mkN = num.logical_and(kN >= skN.min(), kN <= skN.max())
-            mkRad = num.where(  # noqa
-                k_rad < num.sqrt(kN[mkN].max() ** 2 + kE[make].max() ** 2)
+            kE = np.fft.fftshift(kE)
+            kN = np.fft.fftshift(kN)
+            make = np.logical_and(kE >= skE.min(), kE <= skE.max())
+            mkN = np.logical_and(kN >= skN.min(), kN <= skN.max())
+            mkRad = np.where(  # noqa
+                k_rad < np.sqrt(kN[mkN].max() ** 2 + kE[make].max() ** 2)
             )
-            res = interp_pspec(kN[mkN, num.newaxis], kE[num.newaxis, make], grid=True)
+            res = interp_pspec(kN[mkN, np.newaxis], kE[np.newaxis, make], grid=True)
             amp = res
-            amp = num.fft.fftshift(amp)
+            amp = np.fft.fftshift(amp)
 
         spec *= amp
-        noise = num.abs(num.fft.ifft2(spec))
-        noise -= num.mean(noise)
+        noise = np.abs(np.fft.ifft2(spec))
+        noise -= np.mean(noise)
 
         # remove shape % 2 padding
         return noise[: shape[0], : shape[1]]
 
-    def getQuadtreeNoise(self, rstate=None, gather=num.nanmedian):
+    def getQuadtreeNoise(self, rstate=None, gather=np.nanmedian):
         """Create noise for a :class:`~kite.quadtree.Quadtree`
 
         Use :meth:`~kite.covariance.Covariance.getSyntheticNoise` to create
         data-driven noise on each quadtree leaf, summarized by
 
         :param gather: Function gathering leaf's noise realisation,
-                       defaults to num.median.
+                       defaults to np.median.
         :type normalisation: callable, optional
         :returns: Array of noise level at each quadtree leaf.
         :rtype: :class:`numpy.ndarray`
@@ -741,8 +741,8 @@ class Covariance(object):
         syn_noise = self.syntheticNoise(
             shape=self.scene.displacement.shape, rstate=rstate
         )
-        syn_noise[self.scene.displacement_mask] = num.nan
-        noise_quadtree_arr = num.full(qt.nleaves, num.nan)
+        syn_noise[self.scene.displacement_mask] = np.nan
+        noise_quadtree_arr = np.full(qt.nleaves, np.nan)
 
         for il, lv in enumerate(qt.leaves):
             noise_quadtree_arr[il] = gather(syn_noise[lv._slice_rows, lv._slice_cols])
@@ -784,53 +784,53 @@ class Covariance(object):
             raise AttributeError("norm must be 1d, 2d or 3d")
 
         # noise = squareMatrix(noise)
-        shift = num.fft.fftshift
+        shift = np.fft.fftshift
 
-        spectrum = shift(num.fft.fft2(noise, axes=(0, 1), norm=None))
-        power_spec = (num.abs(spectrum) / spectrum.size) ** 2
+        spectrum = shift(np.fft.fft2(noise, axes=(0, 1), norm=None))
+        power_spec = (np.abs(spectrum) / spectrum.size) ** 2
 
-        kE = shift(num.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dEmeter))
-        kN = shift(num.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dNmeter))
-        k_rad = num.sqrt(kN[:, num.newaxis] ** 2 + kE[num.newaxis, :] ** 2)
+        kE = shift(np.fft.fftfreq(power_spec.shape[1], d=self.quadtree.frame.dEmeter))
+        kN = shift(np.fft.fftfreq(power_spec.shape[0], d=self.quadtree.frame.dNmeter))
+        k_rad = np.sqrt(kN[:, np.newaxis] ** 2 + kE[np.newaxis, :] ** 2)
         power_spec[k_rad == 0.0] = 0.0
 
         power_interp = sp.interpolate.RectBivariateSpline(kN, kE, power_spec)
 
         # def power1d(k):
-        #     theta = num.linspace(-num.pi, num.pi, ndeg, False)
-        #     power = num.empty_like(k)
+        #     theta = np.linspace(-np.pi, np.pi, ndeg, False)
+        #     power = np.empty_like(k)
         #     for i in range(k.size):
-        #         kE = num.cos(theta) * k[i]
-        #         kN = num.sin(theta) * k[i]
-        #         power[i] = num.median(power_interp.ev(kN, kE)) * k[i]\
-        #             * num.pi * 4
+        #         kE = np.cos(theta) * k[i]
+        #         kN = np.sin(theta) * k[i]
+        #         power[i] = np.median(power_interp.ev(kN, kE)) * k[i]\
+        #             * np.pi * 4
         #     return power
 
         def power1d(k):
-            theta = num.linspace(-num.pi, num.pi, ndeg, False)
-            power = num.empty_like(k)
+            theta = np.linspace(-np.pi, np.pi, ndeg, False)
+            power = np.empty_like(k)
 
-            cos_theta = num.cos(theta)
-            sin_theta = num.sin(theta)
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
             for i in range(k.size):
                 kE = cos_theta * k[i]
                 kN = sin_theta * k[i]
-                power[i] = num.mean(power_interp.ev(kN, kE))
+                power[i] = np.mean(power_interp.ev(kN, kE))
 
-            power *= 2 * num.pi
+            power *= 2 * np.pi
             return power
 
         def power2d(k):
             """Mean 2D Power works!"""
-            theta = num.linspace(-num.pi, num.pi, ndeg, False)
-            power = num.empty_like(k)
+            theta = np.linspace(-np.pi, np.pi, ndeg, False)
+            power = np.empty_like(k)
 
-            cos_theta = num.cos(theta)
-            sin_theta = num.sin(theta)
+            cos_theta = np.cos(theta)
+            sin_theta = np.sin(theta)
             for i in range(k.size):
                 kE = sin_theta * k[i]
                 kN = cos_theta * k[i]
-                power[i] = num.median(power_interp.ev(kN, kE))
+                power[i] = np.median(power_interp.ev(kN, kE))
                 # Median is more stable than the mean here
 
             return power
@@ -844,8 +844,8 @@ class Covariance(object):
         elif norm == "3d":
             power = power3d
 
-        k_rad = num.sqrt(kN[:, num.newaxis] ** 2 + kE[num.newaxis, :] ** 2)
-        k = num.linspace(k_rad[k_rad > 0].min(), k_rad.max(), nk)
+        k_rad = np.sqrt(kN[:, np.newaxis] ** 2 + kE[np.newaxis, :] ** 2)
+        k = np.linspace(k_rad[k_rad > 0].min(), k_rad.max(), nk)
         dk = 1.0 / (k[1] - k[0]) / (2 * nk)
         return power(k), k, dk, spectrum, kE, kN
 
@@ -902,7 +902,7 @@ class Covariance(object):
         power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
         # power_spec -= self.variance
 
-        d = num.arange(1, power_spec.size + 1) * dk
+        d = np.arange(1, power_spec.size + 1) * dk
         cov = self._powerCosineTransform(power_spec)
 
         return cov, d
@@ -920,44 +920,44 @@ class Covariance(object):
         grdN = self.noise_data_gridN
 
         max_distance = min(abs(grdE.min() - grdE.max()), abs(grdN.min() - grdN.max()))
-        dist_bins = num.linspace(0, max_distance, nbins + 1)
+        dist_bins = np.linspace(0, max_distance, nbins + 1)
 
         grdE = grdE.ravel()
         grdN = grdN.ravel()
 
         # Select random coordinates
-        rstate = num.random.RandomState(noise_data.size)
+        rstate = np.random.RandomState(noise_data.size)
         rand_idx = rstate.randint(0, noise_data.size, (2, npairs))
         idx0 = rand_idx[0, :]
         idx1 = rand_idx[1, :]
 
-        distances = num.sqrt(
+        distances = np.sqrt(
             (grdN[idx0] - grdN[idx1]) ** 2 + (grdE[idx0] - grdE[idx1]) ** 2
         )
 
         cov_all = noise_data[idx0] * noise_data[idx1]
         vario_all = (noise_data[idx0] - noise_data[idx1]) ** 2
 
-        bins = num.digitize(distances, dist_bins, right=True)
+        bins = np.digitize(distances, dist_bins, right=True)
         bin_distances = dist_bins[1:] - dist_bins[1] / 2
 
-        covariance = num.full_like(bin_distances, fill_value=num.nan)
-        variance = num.full_like(bin_distances, fill_value=num.nan)
+        covariance = np.full_like(bin_distances, fill_value=np.nan)
+        variance = np.full_like(bin_distances, fill_value=np.nan)
 
         for ib in range(nbins):
             selection = bins == ib
             if selection.sum() != 0:
-                covariance[ib] = num.nanmean(cov_all[selection])
-                variance[ib] = num.nanmean(vario_all[selection]) / 2
+                covariance[ib] = np.nanmean(cov_all[selection])
+                variance[ib] = np.nanmean(vario_all[selection]) / 2
 
         self._structure_spatial = (
-            variance[~num.isnan(variance)],
-            bin_distances[~num.isnan(variance)],
+            variance[~np.isnan(variance)],
+            bin_distances[~np.isnan(variance)],
         )
-        covariance[0] = num.nan
+        covariance[0] = np.nan
         return (
-            covariance[~num.isnan(covariance)],
-            bin_distances[~num.isnan(covariance)],
+            covariance[~np.isnan(covariance)],
+            bin_distances[~np.isnan(covariance)],
         )
 
     def getCovariance(self):
@@ -990,13 +990,13 @@ class Covariance(object):
             model = self.getModelFunction()
 
             if self.config.model_function == "exponential":
-                coeff = (num.mean(covariance), num.mean(distance))
+                coeff = (np.mean(covariance), np.mean(distance))
 
             elif self.config.model_function == "exponential_cosine":
                 coeff = (
-                    num.mean(covariance),
-                    num.mean(distance),
-                    num.mean(distance) * -0.1,
+                    np.mean(covariance),
+                    np.mean(distance),
+                    np.mean(distance) * -0.1,
                     0.1,
                 )
 
@@ -1040,7 +1040,7 @@ class Covariance(object):
         model = self.getModelFunction()
         cov_mod = model(d, *self.covariance_model)
 
-        return num.sqrt(num.mean((cov - cov_mod) ** 2))
+        return np.sqrt(np.mean((cov - cov_mod) ** 2))
 
     @property_cached
     def structure_spatial(self):
@@ -1056,13 +1056,13 @@ class Covariance(object):
         http://clouds.eos.ubc.ca/~phil/courses/atsc500/docs/strfun.pdf
         """
         power_spec, k, dk, _, _, _ = self.powerspecNoise1D()
-        d = num.arange(1, power_spec.size + 1) * dk
+        d = np.arange(1, power_spec.size + 1) * dk
 
         def structure_spectral(power_spec, d, k):
-            struc_func = num.zeros_like(k)
+            struc_func = np.zeros_like(k)
             for i, d in enumerate(d):
                 for ik, tk in enumerate(k):
-                    # struc_func[i] += (1. - num.cos(tk*d))*power_spec[ik]
+                    # struc_func[i] += (1. - np.cos(tk*d))*power_spec[ik]
                     struc_func[i] += (1.0 - sp.special.j0(tk * d)) * power_spec[ik]
             struc_func *= 2.0 / 1
             return struc_func
@@ -1111,7 +1111,7 @@ class Covariance(object):
             structure_spatial, dist = self.structure_spatial
 
             last_20p = -int(structure_spatial.size * 0.2)
-            self.config.variance = float(num.mean(structure_spatial[(last_20p):]))
+            self.config.variance = float(np.mean(structure_spatial[(last_20p):]))
 
         elif self.config.variance is None and self.config.sampling_method == "spectral":
             power_spec, k, dk, spectrum, _, _ = self.powerspecNoise1D()
@@ -1120,8 +1120,8 @@ class Covariance(object):
             # print(cov[1])
             ps = power_spec * spectrum.size
             # print(spectrum.size)
-            # print(num.mean(ps[-int(ps.size/9.):-1]))
-            var = num.median(ps[-int(ps.size / 9.0) :]) + ma
+            # print(np.mean(ps[-int(ps.size/9.):-1]))
+            var = np.median(ps[-int(ps.size / 9.0) :]) + ma
             self.config.variance = float(var)
 
         return self.config.variance
@@ -1140,7 +1140,7 @@ class Covariance(object):
             "\nThe matrix is symmetric and ordered by QuadNode.id:\n"
         )
         header += ", ".join([l.id for l in self.quadtree.leaves])
-        num.savetxt(filename, self.weight_matrix, header=header)
+        np.savetxt(filename, self.weight_matrix, header=header)
 
     def get_state_hash(self):
         sha = sha1()
