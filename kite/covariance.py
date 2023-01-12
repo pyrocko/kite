@@ -432,7 +432,7 @@ class Covariance(object):
     def covariance_matrix_focal(self):
         """Approximate Covariance matrix from quadtree leaf pair
             distance only. Fast, use for intermediate steps only and
-            finallly use approach :attr:`~kite.Covariance.covariance_matrix`.
+            finally use approach :attr:`~kite.Covariance.covariance_matrix`.
 
         :type: :class:`numpy.ndarray`,
             size (:class:`~kite.Quadtree.nleaves` x

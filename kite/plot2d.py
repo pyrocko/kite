@@ -250,7 +250,7 @@ class ScenePlot(Plot2D):
         self._component = "displacement"
 
     def plot(self, component="displacement", **kwargs):
-        """Plots any component fom Scene
+        """Plots any component from Scene
                 The following components are recognizes
 
                 - 'cartesian.dE'
