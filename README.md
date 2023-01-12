@@ -15,7 +15,15 @@ Install from pip:
 ```sh
 pip install kite
 ```
+
+With additional gdal dependency, used for GeoTIFF (GACOS and LiCSAR):
+
+```sh
+pip install kite[gdal]
+```
+
 ## Introduction
+
 This framework is streamlining InSAR displacement processing routines for earthquake inversion through [Pyrocko](https://www.pyrocko.org) and Grond.
 
 Kite features simple and efficient handling of displacement data:
@@ -27,16 +35,19 @@ Kite features simple and efficient handling of displacement data:
 * **APS removal** from [GACOS](http://ceg-research.ncl.ac.uk/v2/gacos/) atmoshperic models and empirical elevation correlation
 
 ## Citation
+
 Recommended citation for Kite
 
-> Isken, Marius; Sudhaus, Henriette; Heimann, Sebastian; Steinberg, Andreas; Daout, Simon; Vasyura-Bathke, Hannes (2017): Kite - Software for Rapid Earthquake Source Optimisation from InSAR Surface Displacement. V. 0.1. GFZ Data Services. http://doi.org/10.5880/GFZ.2.1.2017.002
+> Isken, Marius; Sudhaus, Henriette; Heimann, Sebastian; Steinberg, Andreas; Daout, Simon; Vasyura-Bathke, Hannes (2017): Kite - Software for Rapid Earthquake Source Optimisation from InSAR Surface Displacement. V. 0.1. GFZ Data Services. <http://doi.org/10.5880/GFZ.2.1.2017.002>
 
 [![DOI](https://img.shields.io/badge/DOI-10.5880%2FGFZ.2.1.2017.002-blue.svg)](http://doi.org/10.5880/GFZ.2.1.2017.002)
 
 # Documentation
-Find the documentation at https://pyrocko.org/kite/docs/current/.
+
+Find the documentation at <https://pyrocko.org/kite/docs/current/>.
 
 ## Short Example
+
 ```python
 from kite import Scene
 
