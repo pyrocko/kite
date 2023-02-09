@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from pyqtgraph import dockarea
 
 from kite.covariance import CovarianceConfig
@@ -241,10 +241,10 @@ class KiteNoisePowerspec(KiteSubplot):
 
 
 class KiteCovariogram(KiteSubplot):
-
     legend_template = {
         "exponential": "Model: {0:.2g} e^(-d/{1:.1f}) | RMS: {rms:.4e}",
-        "exponential_cosine": "Model: {0:.2g} e^(-d/{1:.1f}) - cos((d-({2:.1f}))/{3:.1f}) "
+        "exponential_cosine": "Model: {0:.2g}"
+        " e^(-d/{1:.1f}) - cos((d-({2:.1f}))/{3:.1f})"
         "| RMS: {rms:.4e}",
     }
 
@@ -717,7 +717,6 @@ The calculation is expensive and may take several minutes.
 
 
 class CovarianceCalcResultDialog(QtWidgets.QMessageBox):
-
     text_tmpl = (
         '<span style="font-family: monospace;">' "Covariance.covariance_matrix</span>"
     )
@@ -732,7 +731,6 @@ class CovarianceCalcResultDialog(QtWidgets.QMessageBox):
 
     @QtCore.pyqtSlot(object)
     def show(self, elapsed_time, *args, **kwargs):
-
         if self.model.covariance.isMatrixPosDefinite(full=True):
             self.setIcon(QtWidgets.QMessageBox.Information)
             self.setText("Finished, %s is positive definite!" % self.text_tmpl)

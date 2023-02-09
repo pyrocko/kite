@@ -2,7 +2,6 @@ import logging
 import os
 from os import path as op
 
-import pyqtgraph.parametertree.parameterTypes as pTypes
 from PyQt5 import QtCore, QtGui, QtWidgets, uic
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
@@ -283,7 +282,6 @@ class SceneLogModel(QtCore.QAbstractTableModel, logging.Handler):
 
 
 class SceneLog(QtWidgets.QDialog):
-
     levels = {
         50: "Critical",
         40: "Error",
@@ -294,7 +292,6 @@ class SceneLog(QtWidgets.QDialog):
     }
 
     class LogEntryDelegate(QtWidgets.QStyledItemDelegate):
-
         levels = {
             50: QtWidgets.QStyle.SP_MessageBoxCritical,
             40: QtWidgets.QStyle.SP_MessageBoxCritical,
@@ -788,7 +785,7 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
 
     def _handleMoveSplitter(self, xpos, index):
         """private method for handling moving splitter handles"""
-        hw = self._splitter.handleWidth()
+        self._splitter.handleWidth()
 
         def _lockWidth(widget):
             width = widget.size().width()
@@ -807,7 +804,7 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
                 return
 
             offset = -20
-            w = xpos + offset
+            xpos + offset
             self._setStart(v)
 
         elif index == self._SPLIT_END:
@@ -816,7 +813,7 @@ class QRangeSlider(QtWidgets.QWidget, Ui_Form):
                 return
 
             offset = -40
-            w = self.width() - xpos + offset
+            self.width() - xpos + offset
             self._setEnd(v)
 
         _unlockWidth(self._tail)

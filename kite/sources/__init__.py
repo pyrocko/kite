@@ -1,6 +1,6 @@
-from .compound_sources import *  # noqa
-from .okada import *  # noqa
-from .pyrocko_gf import *  # noqa
+from .compound_sources import EllipsoidSource, PointCompoundSource  # noqa
+from .okada import OkadaSource  # noqa
+from .pyrocko_gf import PyrockoMomentTensor, PyrockoRectangularSource  # noqa
 
 __sources__ = [
     OkadaSource,

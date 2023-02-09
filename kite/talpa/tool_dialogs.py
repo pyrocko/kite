@@ -67,7 +67,7 @@ class LosDialog(QtWidgets.QDialog):
         )
 
         self.sandbox = sandbox
-        model = self.sandbox.model
+        self.sandbox.model
         self.applyButton.released.connect(self.updateValues)
         self.okButton.released.connect(self.updateValues)
         self.okButton.released.connect(self.close)
@@ -75,9 +75,9 @@ class LosDialog(QtWidgets.QDialog):
         self.setValues()
 
     def setValues(self):
-        model = self.sandbox.model
-        phi = np.deg2rad(self.spinlos_phi.value())
-        theta = np.deg2rad(self.spinlos_theta.value())
+        self.sandbox.model
+        np.deg2rad(self.spinlos_phi.value())
+        np.deg2rad(self.spinlos_theta.value())
 
     @QtCore.pyqtSlot()
     def updateValues(self):

@@ -9,7 +9,6 @@ r2d = 180.0 / np.pi
 
 
 class EllipsoidSourceDelegate(SourceDelegate):
-
     __represents__ = "EllipsoidSource"
 
     display_backend = "Compound Model"
@@ -84,7 +83,6 @@ class EllipsoidSourceDelegate(SourceDelegate):
 
 
 class PointCompoundSourceDelegate(SourceDelegate):
-
     __represents__ = "PointCompoundSource"
 
     display_backend = "Compound Model"

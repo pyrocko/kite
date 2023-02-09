@@ -4,7 +4,6 @@ from pyrocko.guts import Bool, Object
 
 
 class PluginConfig(Object):
-
     applied = Bool.T(default=False)
 
     def get_hash(self):

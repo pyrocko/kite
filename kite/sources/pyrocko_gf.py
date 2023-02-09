@@ -231,7 +231,6 @@ class PyrockoVLVDSource(SandboxSource, PyrockoSource):
 
 
 class PyrockoProcessor(SourceProcessor):
-
     __implements__ = "pyrocko"
 
     def __init__(self, *args):

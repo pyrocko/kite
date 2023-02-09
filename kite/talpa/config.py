@@ -3,7 +3,7 @@ import os
 from os import path
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from pyrocko.guts import Bool, Float, Int, List, Object, String, Tuple, load
+from pyrocko.guts import Bool, Float, Int, Object, String, Tuple, load
 
 from kite.qt_utils import loadUi
 
@@ -87,7 +87,6 @@ def getConfig():
 
 
 class ConfigDialog(QtWidgets.QDialog):
-
     attributes = [
         "show_cursor",
         "default_gf_dir",

@@ -1,7 +1,7 @@
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 from pyqtgraph import dockarea
 
 from kite.qt_utils import loadUi
@@ -70,7 +70,6 @@ class KiteAPS(KiteView):
 
 
 class KiteAPSPlot(KitePlot):
-
     region_changed = QtCore.pyqtSignal()
 
     class TopoPatchROI(pg.RectROI):
@@ -121,7 +120,6 @@ class KiteAPSPlot(KitePlot):
 
 
 class KiteAPSCorrelation(KiteSubplot):
-
     MAXPOINTS = 10000
 
     def __init__(self, parent_plot):

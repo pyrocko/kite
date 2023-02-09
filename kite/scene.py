@@ -767,7 +767,6 @@ class Scene(BaseScene):
     @property
     def displacement(self):
         if self.has_processing_changed() or self._proc_displacement is None:
-
             self._proc_displacement = self._displacement.copy()
             for plugin, state in self.processing_states.items():
                 self.processing_states[plugin] = plugin.get_state_hash()

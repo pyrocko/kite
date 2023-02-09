@@ -19,7 +19,6 @@ class CursorTracker(QtCore.QObject):
 
 
 class SandboxModel(QtCore.QObject):
-
     sigModelUpdated = QtCore.pyqtSignal()
     sigModelChanged = QtCore.pyqtSignal()
     sigLogRecord = QtCore.pyqtSignal(object)
@@ -112,7 +111,6 @@ class SandboxModel(QtCore.QObject):
 
 
 class SourceModel(QtCore.QAbstractTableModel):
-
     selectionModelChanged = QtCore.pyqtSignal()
 
     def __init__(self, sandbox, *args, **kwargs):

@@ -10,7 +10,6 @@ km = 1e3
 
 
 class SandboxSource(Object):
-
     lat = Float.T(default=0.0, help="Latitude in [deg]")
     lon = Float.T(default=0.0, help="Longitude in [deg]")
     easting = Float.T(default=0.0, help="Easting in [m]")
@@ -39,7 +38,6 @@ class SandboxSource(Object):
 
 
 class SandboxSourceRectangular(SandboxSource):
-
     width = Float.T(
         help="Width, downdip in [m]",
         default=10000.0,
