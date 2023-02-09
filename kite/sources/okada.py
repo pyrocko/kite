@@ -105,7 +105,6 @@ class OkadaSegment(OkadaSource):
 
 
 class OkadaPath(SandboxSource):
-
     __implements__ = "disloc"
 
     depth = None

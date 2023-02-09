@@ -1,42 +1,45 @@
 [build-system]
-requires = ["wheel", "setuptools >= 61.0.0", "oldest-supported-numpy", "setuptools_scm[toml]>=6.2"]
+requires = [
+  "wheel",
+  "setuptools >= 61.0.0",
+  "oldest-supported-numpy",
+  "setuptools_scm[toml]>=6.2",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "kite"
 requires-python = ">=3.7"
-license = {text = "GPLv3"}
+license = { text = "GPLv3" }
 dynamic = ["version"]
 description = "InSAR unwrapped surface displacement processing for earthquake modelling."
 readme = "README.md"
 authors = [
-  {name = "Marius Paul Isken", email = "mi@gfz-potsdam.de"},
-  {name = "Henriette Sudhaus", email = "hsudhaus@ifg.uni-kiel.de"}
+  { name = "Marius Paul Isken", email = "mi@gfz-potsdam.de" },
+  { name = "Henriette Sudhaus", email = "hsudhaus@ifg.uni-kiel.de" },
 ]
-maintainers = [
-  {name = "Marius Paul Isken", email = "mi@gfz-potsdam.de"}
-]
+maintainers = [{ name = "Marius Paul Isken", email = "mi@gfz-potsdam.de" }]
 keywords = ["InSAR", "satellite", "radar", "earthquake", "optimization"]
 classifiers = [
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Atmospheric Science",
-    "Topic :: Scientific/Engineering :: Image Recognition",
-    "Topic :: Scientific/Engineering :: Physics",
-    "Topic :: Scientific/Engineering :: Visualization",
-    "Programming Language :: Python :: 3.7",
-    "Programming Language :: C",
-    "Operating System :: POSIX",
-    "Operating System :: MacOS"
+  "Intended Audience :: Science/Research",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: Atmospheric Science",
+  "Topic :: Scientific/Engineering :: Image Recognition",
+  "Topic :: Scientific/Engineering :: Physics",
+  "Topic :: Scientific/Engineering :: Visualization",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: C",
+  "Operating System :: POSIX",
+  "Operating System :: MacOS",
 ]
 dependencies = [
-    "numpy>=1.17.3",
-    "scipy>=1.8.0",
-    "PyQt5>=5.15.7",
-    "pyqtgraph==0.12.4",
-    "pyrocko>=2022.06.10",
-    "utm>=0.7.0",
-    "geojson>=2.5.0"
+  "numpy>=1.17.3",
+  "scipy>=1.8.0",
+  "PyQt5>=5.15.7",
+  "pyqtgraph==0.12.4",
+  "pyrocko>=2022.06.10",
+  "utm>=0.7.0",
+  "geojson>=2.5.0",
 ]
 
 [project.urls]
@@ -58,15 +61,15 @@ spool = "kite.spool.__main__:main"
 talpa = "kite.talpa.__main__:main"
 
 [tool.setuptools]
-packages=[
-    "kite",
-    "kite.util",
-    "kite.sources",
-    "kite.spool",
-    "kite.spool.res",
-    "kite.talpa",
-    "kite.talpa.res",
-    "kite.talpa.sources"
+packages = [
+  "kite",
+  "kite.util",
+  "kite.sources",
+  "kite.spool",
+  "kite.spool.res",
+  "kite.talpa",
+  "kite.talpa.res",
+  "kite.talpa.sources",
 ]
 
 [tool.setuptools.package-data]
@@ -74,3 +77,6 @@ packages=[
 "kite.talpa.res" = ["*.ui", "*.jpg", "*.png"]
 
 [tool.setuptools_scm]
+
+[tool.ruff]
+select = ["E", "F", "I"]

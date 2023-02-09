@@ -5,7 +5,6 @@ from .plugin import Plugin, PluginConfig
 
 
 class DerampConfig(PluginConfig):
-
     demean = Bool.T(optional=True, default=True)
 
 

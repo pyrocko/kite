@@ -11,7 +11,6 @@ km = 1e3
 
 
 class EllipsoidSource(SandboxSource):
-
     __implements__ = "CompoundModel"
 
     length_x = Float.T(
@@ -74,7 +73,6 @@ class EllipsoidSource(SandboxSource):
 
 
 class PointCompoundSource(SandboxSource):
-
     __implements__ = "CompoundModel"
 
     rotation_x = Float.T(
@@ -121,7 +119,6 @@ class PointCompoundSource(SandboxSource):
 
 
 class CompoundModelProcessor(SourceProcessor):
-
     __implements__ = "CompoundModel"
 
     def process(self, sources, sandbox, nthreads=0):

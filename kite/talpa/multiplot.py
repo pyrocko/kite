@@ -10,7 +10,6 @@ d2r = np.pi / 180.0
 
 
 class SandboxSceneLayout(pg.GraphicsLayoutWidget):
-
     PLOT_VIEWS = ["north", "east", "down", "los"]
 
     def __init__(self, sandbox, *args, **kwargs):
@@ -215,7 +214,6 @@ class DisplacementPlot(pg.PlotItem):
 
     @QtCore.pyqtSlot(object)
     def mouseMoved(self, event):
-
         if self.vb.sceneBoundingRect().contains(event[0]):
             map_pos = self.vb.mapSceneToView(event[0])
 
@@ -377,7 +375,6 @@ class DisplacementVectors(QtWidgets.QGraphicsItemGroup):
 
 
 class Vector(QtWidgets.QGraphicsItem):
-
     arrow_color = QtGui.QColor(*getConfig().vector_color)
     arrow_brush = QtGui.QBrush(arrow_color, QtCore.Qt.SolidPattern)
     arrow_pen = QtGui.QPen(

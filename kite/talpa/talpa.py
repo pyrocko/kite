@@ -1,5 +1,3 @@
-import sys
-
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from kite.qt_utils import SceneLog, loadUi, validateFilename

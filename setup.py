@@ -93,7 +93,6 @@ python setup.py build
 
 
 if _have_openmp():
-
     omp_arg = ["-fopenmp"]
     omp_lib = ["-lgomp"]
 

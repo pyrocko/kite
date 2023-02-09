@@ -217,15 +217,15 @@ class Subject(object):
             raise AttributeError("%s was not subscribed!", listener.__name__)
 
     def unsubscribeAll(self):
-        for l in self._listeners:
-            self.unsubscribe(l)
+        for listener in self._listeners:
+            self.unsubscribe(listener)
 
     def notify(self, *args, **kwargs):
         if self._mute:
             return
-        for l in self._listeners:
-            if callable(l):
-                self._call(l, *args, **kwargs)
+        for listener in self._listeners:
+            if callable(listener):
+                self._call(listener, *args, **kwargs)
 
     @staticmethod
     def _call(func, *args, **kwargs):

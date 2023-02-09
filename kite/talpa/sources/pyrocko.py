@@ -48,7 +48,6 @@ class PyrockoSourceDialog(SourceEditDialog):
 
 
 class PyrockoRectangularSourceDelegate(SourceDelegate):
-
     __represents__ = "PyrockoRectangularSource"
 
     display_backend = "pyrocko"
@@ -120,7 +119,6 @@ class PyrockoRectangularSourceDelegate(SourceDelegate):
 
 
 class PyrockoMomentTensorDelegate(SourceDelegate):
-
     __represents__ = "PyrockoMomentTensor"
 
     display_backend = "pyrocko"
@@ -141,7 +139,6 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
     ro_parameters = []
 
     class MomentTensorDialog(PyrockoSourceDialog):
-
         scaling_params = ["mnn", "mee", "mdd", "mne", "mnd", "med"]
 
         def __init__(self, *args, **kwargs):
@@ -210,7 +207,6 @@ class PyrockoMomentTensorDelegate(SourceDelegate):
 
 
 class PyrockoDoubleCoupleDelegate(SourceDelegate):
-
     __represents__ = "PyrockoDoubleCouple"
 
     display_backend = "pyrocko"
@@ -447,7 +443,6 @@ class PyrockoRingfaultDelegate(SourceDelegate):
 
 
 class PyrockoVLVDSourceDelegate(SourceDelegate):
-
     __represents__ = "PyrockoVLVDSource"
 
     display_backend = "pyrocko"
@@ -466,7 +461,6 @@ class PyrockoVLVDSourceDelegate(SourceDelegate):
     ro_parameters = []
 
     class VLVDSourceDialog(PyrockoSourceDialog):
-
         scaling_params = ["clvd_moment"]
 
         def __init__(self, *args, **kwargs):

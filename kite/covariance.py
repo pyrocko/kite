@@ -16,8 +16,12 @@ from pyrocko import guts
 from pyrocko.guts_array import Array
 
 from kite import covariance_ext
-from kite.util import property_cached  # noqa
-from kite.util import Subject, derampMatrix, squareMatrix, trimMatrix
+from kite.util import (
+    Subject,
+    derampMatrix,
+    property_cached,  # noqa
+    trimMatrix,
+)
 
 __all__ = ["Covariance", "CovarianceConfig"]
 
@@ -1106,7 +1110,6 @@ class Covariance(object):
 
     @variance.getter
     def variance(self):
-
         if self.config.variance is None and self.config.sampling_method == "spatial":
             structure_spatial, dist = self.structure_spatial
 
@@ -1139,7 +1142,7 @@ class Covariance(object):
             "for more information visit https://pyrocko.org\n"
             "\nThe matrix is symmetric and ordered by QuadNode.id:\n"
         )
-        header += ", ".join([l.id for l in self.quadtree.leaves])
+        header += ", ".join([lv.id for lv in self.quadtree.leaves])
         np.savetxt(filename, self.weight_matrix, header=header)
 
     def get_state_hash(self):

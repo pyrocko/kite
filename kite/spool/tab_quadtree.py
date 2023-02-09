@@ -1,10 +1,9 @@
 import math
-import time
 from collections import OrderedDict
 
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from kite.qt_utils import SliderWidgetParameterItem
 from kite.quadtree import QuadtreeConfig
@@ -48,7 +47,6 @@ class KiteQuadtree(KiteView):
 
 
 class QQuadLeaf(QtCore.QRectF):
-
     leaf_outline = pg.mkPen((255, 255, 255), width=1)
     leaf_fill = pg.mkBrush(0, 0, 0, 0)
 
@@ -75,7 +73,6 @@ class QQuadSelectedLeaf(QQuadLeaf):
 
 class KiteQuadtreePlot(KitePlot):
     def __init__(self, model):
-
         self.components_available = {
             "mean": [
                 "Node.mean displacement",

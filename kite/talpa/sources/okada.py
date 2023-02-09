@@ -9,7 +9,6 @@ r2d = 180.0 / np.pi
 
 
 class OkadaSourceDelegate(SourceDelegate):
-
     __represents__ = "OkadaSource"
 
     display_backend = "Okada"

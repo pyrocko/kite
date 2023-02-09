@@ -2,7 +2,7 @@ from datetime import datetime
 
 import numpy as np
 
-from .scene import BaseScene, Scene
+from .scene import Scene
 
 
 def dtime(timestamp):

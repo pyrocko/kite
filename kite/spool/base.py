@@ -113,7 +113,7 @@ class LOSArrow(pg.GraphicsWidget, pg.GraphicsWidgetAnchor):
         self.arrow.setRotation(angle)
 
         rect_label = self.label.boundingRect()
-        rect_arr = self.arrow.boundingRect()
+        self.arrow.boundingRect()
 
         self.label.setPos(-rect_label.width() / 2.0, rect_label.height() * 1.33)
 
@@ -207,8 +207,6 @@ class KitePlot(pg.PlotWidget):
         elevation = scene.get_elevation()
 
         contrast = 1.0
-        elevation_angle = 45.0
-        azimuth = 45.0
 
         size_ramp = 10
         ramp = np.linspace(-1, 1, size_ramp)[::-1]

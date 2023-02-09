@@ -11,7 +11,6 @@ r2d = 180.0 / np.pi
 
 
 class RectangularSourceROI(pg.ROI):
-
     newSourceParameters = QtCore.pyqtSignal(object)
 
     pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
@@ -48,7 +47,6 @@ class RectangularSourceROI(pg.ROI):
 
     @QtCore.pyqtSlot()
     def setSourceParametersFromROI(self):
-
         strike = float((-self.angle()) % 360)
         width = float(self.size().x())
         length = float(self.size().y())
@@ -96,7 +94,6 @@ class RectangularSourceROI(pg.ROI):
 
 
 class PointSourceROI(pg.EllipseROI):
-
     newSourceParameters = QtCore.pyqtSignal(object)
 
     pen_outline = pg.mkPen((46, 125, 50, 100), width=1.25)
@@ -172,7 +169,6 @@ class PointSourceROI(pg.EllipseROI):
 
 
 class SourceDelegate(QtCore.QObject):
-
     __represents__ = "SourceToImplement"
 
     sourceParametersChanged = QtCore.pyqtSignal()

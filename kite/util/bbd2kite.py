@@ -3,7 +3,6 @@ import os.path as op
 import re
 
 import numpy as np
-import pyrocko.orthodrome as od
 import shapefile
 import utm
 from scipy import stats
