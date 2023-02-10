@@ -10,4 +10,4 @@ def test_deramp():
     displ = (-3 + 5.4 * E) + (10 + 2.5 * N)
     sc = Scene(displacement=displ, llLat=0, llLon=0.0, dLat=0.3, dLon=0.3)
 
-    coeffs = sc.deramp.get_ramp_coefficients(sc.displacement)
+    sc.deramp.get_ramp_coefficients(sc.displacement)
