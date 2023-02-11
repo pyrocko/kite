@@ -1,12 +1,9 @@
 import logging
 import time
 
-import numpy as np
-
 from kite.quadtree import QuadNode
 from kite.scene import TestScene
 from kite.scene_stack import SceneStack, TSScene
-from kite.spool import spool
 
 logging.basicConfig(level=logging.DEBUG)
 QuadNode.MIN_PIXEL_LENGTH_NODE = 32
