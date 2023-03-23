@@ -4,12 +4,22 @@ from .compound_sources import (
     PointCompoundSource,
 )
 from .okada import DislocProcessor, OkadaSource
-from .pyrocko_gf import PyrockoMomentTensor, PyrockoProcessor, PyrockoRectangularSource
+from .pyrocko_gf import (
+    PyrockoDoubleCouple,
+    PyrockoMomentTensor,
+    PyrockoProcessor,
+    PyrockoRectangularSource,
+    PyrockoRingfaultSource,
+    PyrockoVLVDSource,
+)
 
 __sources__ = [
     OkadaSource,
     PyrockoMomentTensor,
     PyrockoRectangularSource,
+    PyrockoRingfaultSource,
+    PyrockoDoubleCouple,
+    PyrockoVLVDSource,
     EllipsoidSource,
     PointCompoundSource,
 ]

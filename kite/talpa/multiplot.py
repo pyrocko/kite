@@ -47,7 +47,7 @@ class SandboxSceneLayout(pg.GraphicsLayoutWidget):
         visible_plots = [plt for ip, plt in enumerate(self.plots) if config_mask[ip]]
 
         for ip, plt in enumerate(visible_plots):
-            row = ip / 2
+            row = ip // 2
             col = ip % 2 + 1
 
             self.addItem(plt, row=row, col=col)

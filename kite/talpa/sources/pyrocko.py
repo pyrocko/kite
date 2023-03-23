@@ -1,7 +1,7 @@
 import os
 
 import numpy as np
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 from kite.sources import (
     PyrockoDoubleCouple,
@@ -22,7 +22,7 @@ class PyrockoSourceDialog(SourceEditDialog):
     def __init__(self, delegate, ui_file, *args, **kwargs):
         SourceEditDialog.__init__(self, delegate, ui_file, *args, **kwargs)
 
-        self.completer = QtGui.QCompleter()
+        self.completer = QtWidgets.QCompleter()
         self.completer_model = QtGui.QFileSystemModel(self.completer)
         self.completer.setModel(self.completer_model)
         self.completer.setMaxVisibleItems(8)

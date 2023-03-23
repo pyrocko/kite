@@ -272,7 +272,7 @@ class SourceEditDialog(QtWidgets.QDialog):
     @QtCore.pyqtSlot()
     def getSourceParameters(self):
         for param, value in self.delegate.getSourceParameters().items():
-            self.__getattribute__(param).setValue(value)
+            self.__getattribute__(param).setValue(int(value))
 
     @QtCore.pyqtSlot()
     def setSourceParameters(self):

@@ -104,7 +104,7 @@ class ConfigDialog(QtWidgets.QDialog):
         QtWidgets.QDialog.__init__(self, *args, **kwargs)
 
         self.completer = QtWidgets.QCompleter()
-        self.completer_model = QtWidgets.QFileSystemModel(self.completer)
+        self.completer_model = QtGui.QFileSystemModel(self.completer)
         self.completer.setModel(self.completer_model)
         self.completer.setMaxVisibleItems(8)
 
