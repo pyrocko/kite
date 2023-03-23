@@ -1,19 +1,21 @@
 from .compound_sources import (
+    CompoundModelProcessor,
     EllipsoidSource,
     PointCompoundSource,
-    CompoundModelProcessor,
-)  # noqa
-from .okada import OkadaSource, DislocProcessor  # noqa
-from .pyrocko_gf import (
-    PyrockoMomentTensor,
-    PyrockoRectangularSource,
-    PyrockoProcessor,
-)  # noqa
+)
+from .okada import DislocProcessor, OkadaSource
+from .pyrocko_gf import PyrockoMomentTensor, PyrockoProcessor, PyrockoRectangularSource
 
 __sources__ = [
     OkadaSource,
     PyrockoMomentTensor,
-    PyrockoRectangularSource,  # noqa
+    PyrockoRectangularSource,
     EllipsoidSource,
     PointCompoundSource,
-]  # noqa
+]
+
+__processors__ = [
+    CompoundModelProcessor,
+    PyrockoProcessor,
+    DislocProcessor,
+]
