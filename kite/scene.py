@@ -205,7 +205,7 @@ class Frame(object):
     @property
     def dNdegree(self):
         if self.isDegree():
-            return self.dE
+            return self.dN
 
         lat, lon = ne_to_latlon(self.llLat, self.llLon, self.dN * self.rows, 0.0)
         distLat = lat - self.llLat
