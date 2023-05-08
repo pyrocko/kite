@@ -3,35 +3,43 @@ Installation
 
 Kite is written for `Python 3 <https://python.org>`_, the installation has been tested on Debian based distributions (e.g. Ubuntu and Mint), MacOSX, and `Anaconda <https://anaconda.org/pyrocko/kite>`_.
 
-Debian / Ubuntu
----------------
+System-wide installation on Debian / Ubuntu
+-------------------------------------------
 
 As a mandatory prerequisite you have to install Pyrocko, visit `Pyrocko installation instructions <https://pyrocko.org/docs/current/install/index.html>`_ for details.
 
 .. code-block :: sh
     :caption: Installation from source and ``apt-get``
 
-    sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy python3-pyqtgraph
+    # satisfy Kite's requirements with system packages
+    sudo apt-get install python3-dev python3-pyqt5 python3-pyqt5 python3-pyqt5.qtopengl python3-scipy python3-numpy python3-pyqtgraph python3-geojson python3-setuptools python3-setuptools-scm
 
-    git clone https://github.com/Turbo87/utm
-    cd utm
-    sudo python3 setup.py install
+    # install the utm package with pip (no system package available)
+    sudo pip3 install utm
 
+   # get Kite's source code with git
     git clone https://github.com/pyrocko/kite
     cd kite
-    sudo python3 setup.py install
+
+    # compile and install with pip, but disable automatic dependency resolution (--no-deps)
+    sudo pip3 install . --no-build-isolation --no-deps
 
 
-PIP
----
-
-An installation through ``pip`` requires the same prerequisites as above:
+Installation with ``pip`` into virtual environment ``venv``
+-----------------------------------------------------------
 
 .. code-block :: sh
-    :caption: Installation through pip
+    :caption: Installation into venv
 
-    sudo pip3 install utm
-    sudo pip3 install git+https://github.com/pyrocko/kite
+   # create and activate venv
+   python3 -m venv venv
+   source venv/bin/activate
+
+   # get Kite's source code with git
+   git clone https://github.com/pyrocko/kite
+   cd kite
+   # install prerequisites with pip, compile and install Kite
+   pip install .
 
 
 MacOS (Sierra, MacPorts)

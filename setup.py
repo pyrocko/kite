@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 import os
 import platform
+import sys
 import tempfile
 from distutils.sysconfig import get_python_inc
 from os.path import join as pjoin
 
+from pkg_resources import parse_version
 from setuptools import Extension, setup
+from setuptools import __version__ as setuptools_version
+
+have_pep621_support = parse_version(setuptools_version) >= parse_version("61.0.0")
 
 try:
     import numpy
@@ -117,6 +122,59 @@ else:
     omp_lib = []
 
 
+if not have_pep621_support:
+    try:
+        import toml
+    except ImportError:
+        sys.exit(
+            """Your setuptools version is too old to support PEP621-compliant
+            installs. You may either update setuptools or, if this is not
+            possible, install the "toml" package (python3-toml package on
+            deb-based systems) to enable a fallback mechanism."""
+        )
+
+    tomldata = toml.load(
+        open(os.path.join(os.path.dirname(__file__), "pyproject.toml"))
+    )
+    metadata = dict(
+        use_scm_version=True,
+        package_data={"kite": ["spool/res/*", "talpa/res/*"]},
+        ext_package="kite",
+    )
+    metadata["setup_requires"] = tomldata["build-system"]["requires"]
+    metadata["packages"] = tomldata["tool"]["setuptools"]["packages"]
+
+    for k in ["classifiers", "description", "name", "keywords"]:
+        metadata[k] = tomldata["project"][k]
+
+    metadata["license"] = tomldata["project"]["license"]["text"]
+
+    metadata["python_requires"] = tomldata["project"]["requires-python"]
+    first_author = list(tomldata["project"]["authors"])[0]
+    metadata["author"] = ", ".join(
+        author["name"] for author in tomldata["project"]["authors"]
+    )
+    metadata["author_email"] = first_author["email"]
+
+    metadata["extras_require"] = {}
+    for k_opt in tomldata["project"]["optional-dependencies"]:
+        metadata["extras_require"][k_opt] = tomldata["project"][
+            "optional-dependencies"
+        ][k_opt]
+
+    metadata["install_requires"] = tomldata["project"]["dependencies"]
+    metadata["entry_points"] = {
+        "console_scripts": [
+            "%s = %s" % (k, v) for (k, v) in tomldata["project"]["scripts"].items()
+        ],
+        "gui_scripts": [
+            "%s = %s" % (k, v) for (k, v) in tomldata["project"]["gui-scripts"].items()
+        ],
+    }
+else:
+    metadata = {}
+
+
 setup(
     ext_modules=[
         Extension(
@@ -135,5 +193,6 @@ setup(
             extra_link_args=omp_lib,
             language="c",
         ),
-    ]
+    ],
+    **metadata,
 )
