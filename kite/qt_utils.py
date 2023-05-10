@@ -156,7 +156,7 @@ class SliderWidget(QtWidgets.QWidget):
             val *= 99
             val = int(round(val))
 
-        self.slider.setValue(val)
+        self.slider.setValue(int(round(val)))
 
     def setRange(self, vmin, vmax):
         """
