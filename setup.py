@@ -178,7 +178,7 @@ else:
 setup(
     ext_modules=[
         Extension(
-            "kite.covariance_ext",
+            "covariance_ext",
             sources=[pjoin("kite/ext", "covariance.c")],
             include_dirs=[numpy.get_include(), get_python_inc()],
             extra_compile_args=omp_arg,
@@ -186,7 +186,7 @@ setup(
             language="c",
         ),
         Extension(
-            "kite.sources.disloc_ext",
+            "sources.disloc_ext",
             sources=[pjoin("kite/sources/ext", "disloc.c")],
             include_dirs=[numpy.get_include(), get_python_inc()],
             extra_compile_args=omp_arg,
