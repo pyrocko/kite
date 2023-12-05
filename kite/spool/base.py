@@ -3,7 +3,7 @@ from os import path
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from PyQt5 import QtCore
+from PyQt5 import QtCore, QtGui
 from pyqtgraph import dockarea
 
 from kite.qt_utils import _viridis_data
@@ -17,6 +17,12 @@ d2r = np.pi / 180.0
 
 def get_resource(filename):
     return path.join(path.dirname(path.realpath(__file__)), "res", filename)
+
+
+def set_scale(image, width, height):
+    tr = QtGui.QTransform()
+    tr.scale(width, height)
+    image.setTransform(tr)
 
 
 class KiteView(dockarea.DockArea):
@@ -239,13 +245,13 @@ class KitePlot(pg.PlotWidget):
             None, autoDownsample=False, border=None, useOpenGL=False
         )
         hillshade.resetTransform()
-        hillshade.scale(frame.dE, frame.dN)
+        set_scale(hillshade, frame.dE, frame.dN)
 
         elev_img = pg.ImageItem(
             None, autoDownsample=False, border=None, useOpenGL=False
         )
         elev_img.resetTransform()
-        elev_img.scale(frame.dE, frame.dN)
+        set_scale(elev_img, frame.dE, frame.dN)
 
         elev_img.updateImage(elevation.T, autoLevels=True)
         hillshade.updateImage(shad.T, autoLevels=True)
@@ -269,7 +275,7 @@ class KitePlot(pg.PlotWidget):
         frame = self.model.frame
 
         self.image.resetTransform()
-        self.image.scale(frame.dE, frame.dN)
+        set_scale(self.image, frame.dE, frame.dN)
 
     def scalebar(self):
         """Not working"""
@@ -437,12 +443,12 @@ class KiteParameterGroup(pTypes.GroupParameter):
         self.model = model
         self.model_attr = model_attr
 
+        pTypes.GroupParameter.__init__(self, **kwargs)
         self.parameters = getattr(self, "parameters", [])
 
         if isinstance(self.parameters, list):
             self.parameters = dict.fromkeys(self.parameters)
 
-        pTypes.GroupParameter.__init__(self, **kwargs)
         self.updateValues()
 
     def updateValues(self):
