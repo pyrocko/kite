@@ -172,7 +172,9 @@ if not have_pep621_support:
         ],
     }
 else:
-    metadata = {}
+    metadata = dict(
+        ext_package="kite",
+    )
 
 
 setup(
