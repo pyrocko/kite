@@ -27,6 +27,13 @@ uint32_t finished_combinations = 0;
 typedef npy_float32 float32_t;
 typedef npy_float64 float64_t;
 
+#ifndef max
+    #define max(a,b) \
+       ({ __typeof__ (a) _a = (a); \
+          __typeof__ (b) _b = (b); \
+         _a > _b ? _a : _b; })
+#endif
+
 typedef enum {
     SUCCESS = 0,
     SAUBSAMPLING_SPARSE_ERROR
@@ -127,7 +134,7 @@ static state_covariance calc_covariance_matrix(
     for (il1=0; il1<nleaves; il1++) {
         if (adaptive_subsampling) {
             l_length = map[il1*4+1] - map[il1*4+0];
-            subsampling[il1] = ceil(LOG2(l_length));
+            subsampling[il1] = max(ceil(LOG2(l_length)), 1);
         } else {
             subsampling[il1] = 1;
         }
