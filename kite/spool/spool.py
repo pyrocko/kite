@@ -202,7 +202,7 @@ class SpoolMainWindow(QtWidgets.QMainWindow):
 
         self.progress.setWindowTitle("Processing...")
         self.progress.setLabelText(text)
-        self.progress.setMaximum(maximum)
+        self.progress.setMaximum(int(maximum))
         self.progress.setValue(0)
 
         @QtCore.pyqtSlot()

@@ -8,7 +8,7 @@ from datetime import datetime as dt
 
 import numpy as np
 import utm
-from pyrocko.dataset.topo import srtmgl3
+from pyrocko.dataset import topo
 from pyrocko.guts import Dict, Float, Object, String, StringChoice, Timestamp, load
 from pyrocko.orthodrome import latlon_to_ne, latlon_to_ne_numpy, ne_to_latlon  # noqa
 from scipy import interpolate
@@ -643,6 +643,7 @@ class BaseScene(object):
         return self._los_factors
 
     def get_elevation(self, interpolation="nearest_neighbor"):
+        srtmgl3 = topo.dem("SRTMGL3")
         assert interpolation in ("nearest_neighbor", "bivariate")
 
         if self._elevation.get(interpolation, None) is None:

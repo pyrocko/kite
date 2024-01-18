@@ -3,7 +3,7 @@ from collections import OrderedDict
 import numpy as np
 import pyqtgraph as pg
 import pyqtgraph.parametertree.parameterTypes as pTypes
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import dockarea
 
 from kite.covariance import CovarianceConfig
@@ -24,6 +24,12 @@ pen_green_dash = pg.mkPen((115, 210, 22), width=2.5, style=QtCore.Qt.DashLine)
 
 pen_roi = pg.mkPen((78, 154, 6), width=2)
 pen_roi_highlight = pg.mkPen((115, 210, 22), width=2, style=QtCore.Qt.DashLine)
+
+
+def set_rotate(item, angle):
+    tr = QtGui.QTransform()
+    tr.rotate(angle)
+    item.setTransform(tr)
 
 
 class KiteCovariance(KiteView):
@@ -477,7 +483,7 @@ class KiteToolNoise(QtWidgets.QDialog):
                 ge.hist_syn.setData(*h)
 
             ge.hist_syn = pg.PlotDataItem(pen=hist_pen)
-            ge.hist_syn.rotate(90.0)
+            set_rotate(ge.hist_syn, 90.0)
             ge.vb.addItem(ge.hist_syn)
             updateHistogram()
 

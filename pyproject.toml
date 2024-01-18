@@ -36,7 +36,7 @@ dependencies = [
   "numpy>=1.17.3",
   "scipy>=1.6.0",
   "PyQt5>=5.15.0",
-  "pyqtgraph==0.11.0",
+  "pyqtgraph>=0.11.0",
   "pyrocko>=2022.06.10",
   "utm>=0.7.0",
   "geojson>=2.5.0",
