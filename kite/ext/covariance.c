@@ -322,12 +322,12 @@ static PyObject* w_get_finished_combinations(PyObject *m) {
 static PyMethodDef CovarianceExtMethods[] = {
     {
      "covariance_matrix",
-     (PyCFunctionWithKeywords) w_calc_covariance_matrix,
+     (PyCFunction)(void(*)(void))w_calc_covariance_matrix,
      METH_VARARGS | METH_KEYWORDS,
      "Calculates the covariance matrix for full resolution."
     }, {
      "get_finished_combinations",
-     (PyCFunction) w_get_finished_combinations,
+     (PyCFunction)(void(*)(void))w_get_finished_combinations,
      METH_NOARGS,
      "Get the number of calculated combinations. Total combinations are nleaves*(nleaves+1)/2."
     }, {NULL, NULL}         /* Sentinel */
