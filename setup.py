@@ -6,7 +6,11 @@ import tempfile
 from distutils.sysconfig import get_python_inc
 from os.path import join as pjoin
 
-from pkg_resources import parse_version
+try:
+    from packaging.version import Version as parse_version
+except ImportError:
+    from pkg_resources import parse_version
+
 from setuptools import Extension, setup
 from setuptools import __version__ as setuptools_version
 
