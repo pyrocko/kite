@@ -11,7 +11,7 @@ logger = logging.getLogger("kite.clients")
 
 def _download_file(url, outfile):
     logger.debug("Downloading %s to %s", url, outfile)
-    r = requests.get(url)
+    r = requests.get(url, timeout=30)
 
     with open(outfile, "wb") as f:
         for chunk in r.iter_content(chunk_size=8192):
